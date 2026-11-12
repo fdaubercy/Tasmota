@@ -180,14 +180,14 @@ routes `GET /remarques?env=`, `POST /remarques` (épingler, répondre, refuser),
 Forme d'une remarque : `{"id", "cible": {"objet": id} | {"zone": [x, y, l, h]} | {"page": n}, "texte", "date", "etat":
 "ouverte"|"proposee"|"appliquee"|"refusee", "proposition"?: {"texte", "operations": [{"op": "modifie"|"ajoute"|"retire",
 "id", "attributs"?}]}, "reponses": [..]}`.
-- [ ] Vérifier les options de `claude -p` qui imposent la LECTURE SEULE (liste d'outils permis, mode de permission non
+- [x] Vérifier les options de `claude -p` qui imposent la LECTURE SEULE — preuve : claude 2.1.319, --tools Read,Grep,Glob --permission-mode dontAsk --strict-mcp-config ; demande d'écrire un témoin : non écrit, outils vus Read/Grep/Glob seulement (2026-11-12) ; consigne par l'entrée standard (claude.CMD) (liste d'outils permis, mode de permission non
   interactif, jamais `bypassPermissions`) et la sortie JSON ; si impossible, livrer le repli (bouton qui copie la
   consigne) et le noter ici
-- [ ] Banc d'abord (rouge), `claude` remplacé par un faux exécutable : propositions valides écrites par la PAGE dans
+- [x] Banc d'abord (rouge), `claude` remplacé par un faux exécutable — preuve : test_atelier_ecrans_remarques.py 3 KO puis VERT (50), 3 mutants lus rouges (contrôle du dépôt, remarque ouverte, depuis ce PC) : propositions valides écrites par la PAGE dans
   `remarques.json` ; opération vers un `id` inconnu ou un attribut hors catalogue rejetée ; faux `claude` qui modifie un
   fichier du dépôt -> résultat rejeté (contrôle `git status` et empreintes) ; `claude` absent, code d'erreur, délai de
   10 min dépassé -> état `echec` avec message, `remarques.json` intact ; second lancement pendant `en_cours` -> refus
-- [ ] Module, routes et onglet « Remarques » (épingler sur un objet, une zone tracée, la page ; Appliquer / Refuser /
+- [x] Module, routes et onglet « Remarques » — preuve : commit A7, test_atelier_ecrans_remarques.py VERT, sonde Chrome VERTE (38, 2 passes), relecture dédiée traitée (hooks coupés par --settings disableAllHooks, prouvé par un hook témoin) (épingler sur un objet, une zone tracée, la page ; Appliquer / Refuser /
   Répondre ; journal dans `%LOCALAPPDATA%\outils_tasmota\atelier_ecrans\`) ; bancs VERT, sonde Chrome étendue VERT
 - [ ] Essai réel : une remarque traitée par le vrai `claude -p`, proposition appliquée sur le canevas ; commit
 

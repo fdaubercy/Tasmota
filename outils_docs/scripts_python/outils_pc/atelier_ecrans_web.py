@@ -23,6 +23,10 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
                        pages.jsonl, ecranLvgl.be (dossier de la carte), ecran.json ; diff avec le depot ; rien n'est ecrit
     POST /capture      {env} -> 200 image/bmp (octets de lv.screenshot()) ou 409 texte (refus : carte injoignable, sans
                        LVGL, fichier tronque, capture deja en cours)
+    GET  /remarques    ?env= : {remarques (remarques.json), traitement (etat)} ; GET /remarques/etat : etat du traitement
+    POST /remarques    {env, action: epingle|repond|refuse, ...} -> {remarques} (ecrit remarques.json, atelier_ecrans_remarques)
+    POST /remarques/appliquer {env, id, description} -> {description modifiee | null, erreurs, remarques} (ecran.json non ecrit)
+    POST /remarques/traiter   {env} -> etat ; claude -p en lecture seule, depuis ce PC seulement (403 sinon), 409 si en cours
 Refus : 400 (env inconnu, saisie, Content-Length hors 0..MAX_CORPS, JSON trop imbrique), 403 (en-tete, origine, jeton),
 404 (route, police), 409 (capture refusee), 500 (inattendu, avec le message).
 """
@@ -44,6 +48,7 @@ import atelier_ecrans_catalogue as cat
 import atelier_ecrans_description as aed
 import atelier_ecrans_haspmota as ah
 import atelier_ecrans_lvgl as al
+import atelier_ecrans_remarques as aer
 import atelier_graphiques_series as ags
 import build_ota_http
 import fichiers_berry_etat as fbe
@@ -164,8 +169,13 @@ def police(racine, nom):
     raise LookupError(f"police inconnue du catalogue : {nom!r}")
 
 
-def fabrique_gestionnaire(acces, racine, get=None):
+def depuis_ce_pc(handler):
+    return acces_web.est_local(handler.client_address)
+
+
+def fabrique_gestionnaire(acces, racine, get=None, traitement=None):
     get = get or build_ota_http._get
+    traitement = traitement or aer.Traitement(racine)
     muettes = {}                                # env -> instant du dernier echec de lecture
     une_capture = threading.Lock()
 
@@ -231,6 +241,11 @@ def fabrique_gestionnaire(acces, racine, get=None):
                     self._json(description_de(racine, env_atelier(racine, un("env"))))
                 elif url.path == "/valeurs":
                     self._json(valeurs(racine, env_atelier(racine, un("env")), un("simule") == "1", get, muettes))
+                elif url.path == "/remarques":
+                    env = env_atelier(racine, un("env"))
+                    self._json({"remarques": aer.charge(racine, env), "traitement": traitement.etat()})
+                elif url.path == "/remarques/etat":
+                    self._json(traitement.etat())
                 elif url.path == "/police":
                     self._envoie(200, police(racine, un("nom")), "font/ttf")
                 else:
@@ -256,6 +271,18 @@ def fabrique_gestionnaire(acces, racine, get=None):
                 chemin = urlsplit(self.path).path
                 if chemin == "/apercu":
                     self._json(apercu(racine, env_atelier(racine, demande.get("env")), demande.get("description")))
+                elif chemin == "/remarques":
+                    self._json({"remarques": aer.agit(racine, env_atelier(racine, demande.get("env")), demande)})
+                elif chemin == "/remarques/appliquer":
+                    self._json(aer.applique_remarque(racine, env_atelier(racine, demande.get("env")), demande.get("id"),
+                                                     demande.get("description")))
+                elif chemin == "/remarques/traiter":
+                    env = env_atelier(racine, demande.get("env"))
+                    if not depuis_ce_pc(self):     # spec 5.8 : claude -p lance depuis ce PC seulement
+                        self._envoie(403, "lancement de Claude permis depuis ce PC seulement".encode("utf-8"))
+                        return
+                    traitement.lance(env)
+                    self._json(traitement.etat())
                 elif chemin == "/capture":
                     self._envoie(200, capture(env_atelier(racine, demande.get("env"))), "image/bmp")
                 else:

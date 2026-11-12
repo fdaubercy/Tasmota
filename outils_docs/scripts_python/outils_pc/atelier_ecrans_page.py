@@ -10,6 +10,7 @@ le lit pour savoir si la page tourne.
 """
 from atelier_ecrans_page_canevas import JS as JS_CANEVAS
 from atelier_ecrans_page_js import JS
+from atelier_ecrans_page_remarques import JS as JS_REMARQUES
 import lieux
 
 CSS = """
@@ -74,6 +75,17 @@ td input{width:100%;border:none;background:transparent;padding:1px 2px} td.num i
 .ecran .indic{position:absolute;left:0;top:0;bottom:0}
 .ecran .poi{position:absolute;width:12px;height:12px;background:#ffd84a;border:2px solid #10161e;z-index:6}
 .ecran .ligneDiv{position:absolute;left:0;right:0;height:1px}
+.rq{border:1px solid var(--bord);border-radius:7px;padding:7px 9px;margin:6px 0;background:var(--champ);font-size:13px}
+.rq .num{display:inline-block;min-width:20px;height:20px;border-radius:10px;background:var(--orange);color:#fff;text-align:center;
+  font-size:12px;line-height:20px;margin-right:6px;padding:0 4px}
+.rq.proposee .num{background:var(--bleu)} .rq.appliquee,.rq.refusee{opacity:.65} .rq.appliquee .num{background:var(--vert)}
+.rq.refusee .num{background:var(--doux)} .rqTexte{margin:4px 0;white-space:pre-wrap} .rq ul{margin:2px 0 4px;padding-left:18px}
+textarea{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--bord);border-radius:5px;background:var(--champ);color:var(--texte)}
+.ecran .epingle{position:absolute;width:30px;height:30px;border-radius:15px;background:#FFA53F;color:#10161e;font:700 16px/30px Arial;
+  text-align:center;box-shadow:0 0 0 3px #10161e;pointer-events:none;z-index:7}
+.ecran .epingle.proposee{background:#3FA7FF}
+.ecran .zoneRq{position:absolute;border:2px dashed #FFA53F;border-radius:6px;pointer-events:none;z-index:7}
+.ecran .zoneRq.neuve{border-color:#ffd84a}
 #captureBoite img{max-width:100%;border:1px solid var(--bord);image-rendering:pixelated}
 details pre{max-height:240px}
 .fichiers{margin-top:10px}
@@ -84,7 +96,7 @@ HTML = """
  <h1>Atelier des écrans</h1>
  <label class="doux" for="carte">carte</label><select id="carte" style="font-weight:600"></select>
  <label class="doux" for="ecran">écran</label><select id="ecran"></select>
- <span id="etat" class="pastille">…</span><span id="interface" class="pastille bleu"></span>
+ <span id="etat" class="pastille">…</span><span id="interface" class="pastille bleu"></span><span id="pastilleRemarques" class="pastille or" hidden></span>
  <button id="theme" class="theme" type="button"></button>
 </header>
 <div style="padding:0 16px"><div id="bandeau" class="avert" hidden></div></div>
@@ -125,8 +137,8 @@ HTML = """
   </div>
  </div>
  <div class="carte">
-  <div class="onglets" id="panneaux"><button type="button" data-panneau="proprietes" class="actif">Propriétés</button><button type="button" data-panneau="liaison">Liaison</button></div>
-  <div class="panneau" id="proprietes"></div><div class="panneau" id="liaison" hidden></div>
+  <div class="onglets" id="panneaux"><button type="button" data-panneau="proprietes" class="actif">Propriétés</button><button type="button" data-panneau="liaison">Liaison</button><button type="button" data-panneau="remarques" id="ongletRemarques">Remarques</button></div>
+  <div class="panneau" id="proprietes"></div><div class="panneau" id="liaison" hidden></div><div class="panneau" id="remarques" hidden></div>
  </div>
 </div>
 """
@@ -139,4 +151,4 @@ THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getIt
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des écrans</title>"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
         + THEME_TETE + "<style>" + CSS + "</style></head><body>" + HTML
-        + "<script>" + lieux.JS + JS + JS_CANEVAS + "</script></body></html>")
+        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_CANEVAS + "</script></body></html>")

@@ -131,7 +131,8 @@ function chargeCarte(env) {          // la carte d'avant reste en place tant que
     else E.msgCarte = r.erreurs.length ? r.erreurs.join('\n') + "\nPage vierge proposée à la place : rien n'est écrit."
                                        : "Pas encore de description d'écran pour cette carte : page vierge, rien n'est écrit.";
     E.msgEcran = ''; afficheBandeau();
-    remplitEcrans(); zoomAjuste(); dessineTout(); apercu(); lisCarte();
+    R.liste = []; R.zone = null; R.outilZone = false; R.brouillon = ''; R.message = '';
+    remplitEcrans(); zoomAjuste(); dessineTout(); apercu(); lisCarte(); chargeRemarques();
   }).catch(function (e) {
     if (env !== E.demande) return;
     E.demande = E.env; $('carte').value = E.env;
@@ -381,7 +382,7 @@ function capture() {
 }
 
 function dessineTout() {
-  dessineListes(); dessineEcran(); dessineProprietes(); dessineLiaison(); dessineTableau();
+  dessineListes(); dessineEcran(); dessineProprietes(); dessineLiaison(); dessineTableau(); dessineRemarques();
   var ro = lecture();
   $('annuler').disabled = ro || !E.histo.length; $('retablir').disabled = ro || !E.futur.length; $('ajoutPage').disabled = ro;
   ['proprietes', 'liaison', 'tableau'].forEach(function (id) {

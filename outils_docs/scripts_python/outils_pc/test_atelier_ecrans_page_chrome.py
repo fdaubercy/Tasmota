@@ -13,6 +13,7 @@ depot inchangee. Chrome est arrete a la fin (profil temporaire `sonde_atelier_ec
 Code de sortie 0 = vert.
 """
 import json
+import os
 import shutil
 import struct
 import subprocess
@@ -23,6 +24,9 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import atelier_ecrans_remarques as aer                                              # noqa: E402
+import atelier_ecrans_web as aew                                                    # noqa: E402
+import test_atelier_ecrans_remarques as tar                                         # noqa: E402
 import test_atelier_ecrans_web as taw                                              # noqa: E402
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre     # noqa: E402
 
@@ -36,6 +40,10 @@ def verifie(obtenu, attendu, libelle):
     if not ok:
         ECHECS.append(libelle)
     return ok
+
+
+def instantane(racine):
+    return {k: v for k, v in taw.instantane(racine).items() if not k.startswith(".git/") and not k.endswith("/remarques.json")}
 
 
 def bmp_4x2():
@@ -160,12 +168,70 @@ def sonde(cdp, banc):
     verifie(any("temoin_sonde" in e for e in cdp.erreurs()), True, "temoin : une exception est bien detectee")
 
 
+def bouton_texte(debut):
+    return ("Array.prototype.filter.call(document.querySelectorAll('#remarques button'),function(b){return b.textContent.indexOf("
+            + json.dumps(debut) + ")===0})[0]")
+
+
+def ecrit_rq(js, texte):
+    js("(function(){var t=document.getElementById('rqTexte');t.value=" + json.dumps(texte) + ";t.dispatchEvent(new Event('input'));})()")
+    js(bouton_texte("Épingler") + ".click()")
+
+
+def sonde_remarques(cdp, banc):
+    js = cdp.js
+    js("document.querySelector('#panneaux button[data-panneau=remarques]').click()")
+    verifie(js("!document.getElementById('remarques').hidden && document.getElementById('proprietes').hidden"), True, "onglet Remarques affiche")
+    js("E.page = 1; selectionne(1, 11)")
+    ecrit_rq(js, "Noms trop petits de loin, passer en 28 ?")
+    n = attend(cdp, "R.liste.length === 1 && JSON.stringify(R.liste[0].cible)", 10)
+    verifie(n, '{"page":1,"objet":11}', "epingle sur l'objet choisi (page, id)")
+    verifie((js("document.querySelector('#ecranCarte .epingle').textContent"), js("document.getElementById('pastilleRemarques').hidden")), ("1", False),
+            "epingle dessinee sur l'ecran, pastille de l'en-tete")
+    fige = js("JSON.stringify(E.desc)")
+    js(bouton_texte("▭ Tracer") + ".click()")
+    r = js("(function(){var r=document.getElementById('ecranCarte').getBoundingClientRect();return [r.left, r.top];})()")
+    z = js("E.zoom")
+    souris(cdp, "mousePressed", r[0] + 100 * z, r[1] + 495 * z)
+    souris(cdp, "mouseMoved", r[0] + 250 * z, r[1] + 520 * z)
+    souris(cdp, "mouseReleased", r[0] + 400 * z, r[1] + 540 * z)
+    zone = js("R.zone")
+    verifie((zone is not None and abs(zone[0] - 100) <= 2 and abs(zone[2] - 300) <= 2, js("JSON.stringify(E.desc)") == fige), (True, True),
+            f"zone tracee a la souris ({zone}), aucun objet deplace")
+    ecrit_rq(js, "<b>gras</b><img src=x onerror=\"window.__xss2=1\">")
+    attend(cdp, "R.liste.length === 2", 10)
+    verifie((js("'zone' in R.liste[1].cible"), js("document.querySelectorAll('#remarques img, #remarques b.x').length"), js("window.__xss2 === undefined")),
+            (True, 0, True), "remarque sur la zone ; texte piege affiche comme du texte")
+    js(bouton_texte("▶ Traiter") + ".click()")
+    prop = attend(cdp, "R.liste[0].etat === 'proposee' && R.liste[0].proposition.texte", 40)
+    verifie(prop, "Police 28 pour le nom de la voie.", "traitement (faux claude) : proposition affichee")
+    verifie("text_font" in (js("document.getElementById('remarques').textContent") or ""), True, "operations de la proposition listees")
+    h = js("E.histo.length")
+    js(bouton_texte("Appliquer") + ".click()")
+    attend(cdp, "R.liste[0].etat === 'appliquee'", 10)
+    verifie((js("objet(1, 11).attributs.text_font"), js("E.histo.length"), js("R.liste[0].etat")), (tar.POLICE_28, h + 1, "appliquee"),
+            "Appliquer : description modifiee dans la page, une entree d'historique")
+    js("document.getElementById('annuler').click()")
+    verifie(js("objet(1, 11).attributs.text_font"), 24, "Annuler apres Appliquer : police d'avant")
+    erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
+    verifie(erreurs, [], "remarques : aucune erreur console")
+
+
 def main():
     t = Path(tempfile.mkdtemp(prefix="sonde_atelier_ecrans_"))
     banc = chrome = None
     try:
+        faux = t / "faux_claude.py"
+        faux.write_text(tar.FAUX, encoding="utf-8")
+        os.environ.update(FAUX_CLAUDE="ok", FAUX_CLAUDE_ARGV=str(t / "argv.json"), OUTILS_TASMOTA_DOSSIER=str(t / "donnees"))
+        vrai = aer.Traitement
+        aew.aer.Traitement = lambda racine: vrai(racine, programme=[sys.executable, str(faux)])     # jamais le vrai claude
         banc = BancPage(t)
-        avant = taw.instantane(banc.racine)
+        for f in banc.racine.glob("outils_docs/atelier_ecrans/cartes/*/remarques.json"):
+            f.unlink()                       # hermetique : les remarques du vrai depot ne viennent pas dans la copie
+        for args in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "copie"]):
+            tar.git(banc.racine, *args)
+        avant = instantane(banc.racine)
         exe = next((c for c in CHROMES if c.is_file()), None)
         if exe is None:
             raise FileNotFoundError("chrome.exe introuvable")
@@ -187,9 +253,14 @@ def main():
             cdp.appel(d)
         cdp.appel("Page.navigate", url=f"http://127.0.0.1:{banc.port}/?env={ENV}")
         sonde(cdp, banc)
-        verifie(taw.instantane(banc.racine) == avant, True, "copie du depot inchangee (rien n'est ecrit)")
+        sonde_remarques(cdp, banc)
+        verifie(instantane(banc.racine) == avant, True, "copie du depot inchangee hors remarques.json (ecran.json non ecrit)")
     finally:
         tue_arbre(chrome)
+        # tue_arbre manque parfois un fils de Chrome : balayage par le profil temporaire de cette passe
+        subprocess.run(["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | "
+                        f"Where-Object {{ $_.CommandLine -like '*{t.name}*' }} | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }}"],
+                       capture_output=True, timeout=60)
         if banc:
             banc.ferme()
         time.sleep(0.5)
