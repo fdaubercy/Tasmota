@@ -12,6 +12,7 @@ from atelier_ecrans_page_canevas import JS as JS_CANEVAS
 from atelier_ecrans_page_js import JS
 from atelier_ecrans_page_remarques import JS as JS_REMARQUES
 from atelier_ecrans_page_ecriture import JS as JS_ECRITURE
+from atelier_ecrans_page_polices import HTML as HTML_POLICES, JS as JS_POLICES
 import lieux
 
 CSS = """
@@ -109,6 +110,7 @@ HTML = """
   <h3>Palette (catalogue du firmware)</h3>
   <div id="palette" class="palette"></div>
   <p class="doux petit">Glisser un objet sur l'écran, ou cliquer pour l'ajouter en haut à gauche.</p>
+""" + HTML_POLICES + """
  </div>
  <div style="min-width:0">
   <div class="carte">
@@ -157,4 +159,4 @@ THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getIt
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des écrans</title>"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
         + THEME_TETE + "<style>" + CSS + "</style></head><body>" + HTML
-        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_CANEVAS + "</script></body></html>")
+        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_POLICES + JS_CANEVAS + "</script></body></html>")

@@ -5,7 +5,7 @@ UTILISATION
     Regle d'acces : acces_web.py (ce PC sans jeton, autre appareil avec le jeton du lien de la console).
 
 Spec : docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md (§ 5.5 page, § 5.8 securite) ; plan atelier-ecrans A6.
-Lecture seule du depot en A6 : aucune route n'ecrit (l'ecriture arrive en A8). Env = une carte du cenv (« Mes cartes »),
+Ecritures : /ecrire, /ecran/changer, /polices/importer, /remarques* (refus pendant un build). Env = une carte du cenv (« Mes cartes »),
 jamais un chemin ; adresse de la carte = celle du cenv / du maitre (atelier_graphiques_series._adresses), jamais celle
 de la requete (SSRF).
 
@@ -28,15 +28,20 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
                        (409 : build en cours, fichiers ou ecran.json changes depuis le diff ou le chargement)
     POST /ecran/diff   {env, ecran, description} -> {description a l'echelle, avertissements, refus, fichiers, empreinte}
     POST /ecran/changer {env, ecran, description, empreinte, empreinte_description} -> {ecrits, avertissements, build}
+    POST /polices/analyse  {nom, contenu (base64)} -> {nom, fichier, famille, licence, url_licence, libre, manque, poids, sites}
+    POST /polices/importer {env, nom, contenu, licence_confirmee} -> {ecrits, analyse} (police dans le dossier de la carte,
+                       licence hors de ce dossier, catalogue regenere) ; corps jusqu'a MAX_POLICE
     GET  /remarques    ?env= : {remarques (remarques.json), traitement (etat)} ; GET /remarques/etat : etat du traitement
     POST /remarques    {env, action: epingle|repond|refuse, ...} -> {remarques} (ecrit remarques.json, atelier_ecrans_remarques)
     POST /remarques/appliquer {env, id, description} -> {description modifiee | null, erreurs, remarques} (ecran.json non ecrit)
     POST /remarques/traiter   {env} -> etat ; claude -p en lecture seule, depuis ce PC seulement (403 sinon), 409 si en cours
-Refus : 400 (env inconnu, saisie, Content-Length hors 0..MAX_CORPS, JSON trop imbrique), 403 (en-tete, origine, jeton),
+Refus : 400 (env inconnu, saisie, Content-Length hors 0..MAX_CORPS ou MAX_POLICE, JSON trop imbrique), 403 (en-tete, origine, jeton),
 404 (route, police), 409 (capture refusee), 500 (inattendu, avec le message).
 """
 
 import argparse
+import base64
+import binascii
 import difflib
 import json
 import sys
@@ -55,6 +60,7 @@ import atelier_ecrans_ecran as aecr
 import atelier_ecrans_ecriture as aee
 import atelier_ecrans_haspmota as ah
 import atelier_ecrans_lvgl as al
+import atelier_ecrans_polices as aep
 import atelier_ecrans_remarques as aer
 import atelier_graphiques_series as ags
 import build_ota_http
@@ -65,6 +71,7 @@ import lieux
 PORT_DEFAUT = 7960
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 256 * 1024                  # ecran.json des debits : 24 Ko
+MAX_POLICE = aep.TAILLE_MAX * 4 // 3 + 64 * 1024    # police .ttf en base64 dans le JSON (routes /polices/*)
 ENTETE = "X-Atelier-Ecrans"
 DELAI = 4
 SILENCE = 30                            # s sans rappeler une carte muette (la page relit les valeurs en boucle)
@@ -188,6 +195,13 @@ def depuis_ce_pc(handler):
     return acces_web.est_local(handler.client_address)
 
 
+def _octets_police(demande):
+    try:
+        return base64.b64decode(demande.get("contenu") or "", validate=True)
+    except (binascii.Error, TypeError) as e:
+        raise ValueError(f"contenu de la police : base64 attendu ({e})")
+
+
 def _builds_defaut():
     import build_serie
     return build_serie.builds_en_cours_defaut()
@@ -283,15 +297,22 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                 return
 
             def route():
+                chemin = urlsplit(self.path).path
+                limite = MAX_POLICE if chemin.startswith("/polices/") else MAX_CORPS
                 longueur = int(self.headers.get("Content-Length", "0") or 0)
-                if not 0 <= longueur <= MAX_CORPS:            # negatif : read(-1) lirait jusqu'a la fermeture
+                if not 0 <= longueur <= limite:               # negatif : read(-1) lirait jusqu'a la fermeture
                     self.close_connection = True              # corps non lu : la connexion ne doit pas resservir
-                    raise ValueError(f"Content-Length hors 0..{MAX_CORPS}")
+                    raise ValueError(f"Content-Length hors 0..{limite}")
                 demande = json.loads(self.rfile.read(longueur).decode("utf-8") or "{}")
                 if not isinstance(demande, dict):
                     raise ValueError("corps JSON attendu")
-                chemin = urlsplit(self.path).path
-                if chemin == "/apercu":
+                if chemin == "/polices/analyse":
+                    self._json({**aep.analyse(demande.get("nom"), _octets_police(demande)), "sites": aep.SITES})
+                elif chemin == "/polices/importer":
+                    env = env_atelier(racine, demande.get("env"))
+                    self._json(aep.importe(racine, env, demande.get("nom"), _octets_police(demande),
+                                           demande.get("licence_confirmee") is True, builds_en_cours))
+                elif chemin == "/apercu":
                     self._json(apercu(racine, env_atelier(racine, demande.get("env")), demande.get("description")))
                 elif chemin == "/diff":
                     env = env_atelier(racine, demande.get("env"))

@@ -24,6 +24,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import atelier_ecrans_catalogue as cat                                              # noqa: E402
 import atelier_ecrans_remarques as aer                                              # noqa: E402
 import atelier_ecrans_web as aew                                                    # noqa: E402
 import test_atelier_ecrans_remarques as tar                                         # noqa: E402
@@ -264,6 +265,33 @@ def sonde_ecriture(cdp, banc):
     verifie(erreurs, [], "ecriture et changement : aucune erreur console")
 
 
+def sonde_polices(cdp, banc):
+    js = cdp.js
+    for rel in cat.SOURCES:                              # sources du firmware lues par cat.genere a l'import
+        (banc.racine / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(taw.DEPOT / rel, banc.racine / rel)
+    ttf = banc.racine.parent / "Essai-Sonde.ttf"         # hors de la copie : nom neuf, octets de la police du depot
+    shutil.copy2(banc.racine / "data/bureau/tasmota32s3-ecran-debits-pac/RobotoCondensed-Regular.ttf", ttf)
+    js(f"var c=document.getElementById('carte'); c.value='{ENV}'; c.dispatchEvent(new Event('change'))")
+    attend(cdp, f"E.env === '{ENV}' && !lecture()", 15)     # sonde_ecriture finit sur la carte serveur
+    js("document.getElementById('importPolice').open = true")
+    noeud = cdp.appel("DOM.querySelector", nodeId=cdp.appel("DOM.getDocument")["root"]["nodeId"], selector="#policeFichier")["nodeId"]
+    cdp.appel("DOM.setFileInputFiles", nodeId=noeud, files=[str(ttf)])
+    js("document.getElementById('policeFichier').dispatchEvent(new Event('change'))")
+    pret = attend(cdp, "!!document.getElementById('policeImporter') && document.getElementById('policeResultat').textContent", 20)
+    verifie(("Apache" in (pret or ""), js("document.getElementById('policeImporter').disabled")), (True, True),
+            f"police choisie : licence lue, Importer grise avant la case ({(pret or '')[:60]})")
+    js("var c=document.getElementById('policeLicence'); c.checked=true; c.dispatchEvent(new Event('change'))")
+    js("document.getElementById('policeImporter').click()")
+    fin = attend(cdp, "document.getElementById('policeResultat').textContent.indexOf('Importée') === 0 && "
+                      "E.catalogue.polices.some(function(p){return p.nom==='Essai-Sonde'})", 30)
+    importee = banc.racine / "data/bureau/tasmota32s3-ecran-debits-pac/Essai-Sonde.ttf"
+    verifie((bool(fin), importee.is_file() and importee.read_bytes() == ttf.read_bytes()),
+            (True, True), "Importer : police dans le dossier de la carte, catalogue relu par la page")
+    erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
+    verifie(erreurs, [], "import de police : aucune erreur console")
+
+
 def main():
     t = Path(tempfile.mkdtemp(prefix="sonde_atelier_ecrans_"))
     banc = chrome = None
@@ -304,6 +332,7 @@ def main():
         sonde_remarques(cdp, banc)
         verifie(instantane(banc.racine) == avant, True, "copie du depot inchangee hors remarques.json (ecran.json non ecrit)")
         sonde_ecriture(cdp, banc)
+        sonde_polices(cdp, banc)
     finally:
         tue_arbre(chrome)
         # tue_arbre manque parfois un fils de Chrome : balayage par le profil temporaire de cette passe

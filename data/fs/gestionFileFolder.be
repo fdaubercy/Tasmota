@@ -88,6 +88,10 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
             elif string.find(nameFile, ".css") > -1
                 path.mkdir("/sd/css")
                 filePath = "/sd/css/" + nameFile
+            # Images des ecrans HASPmota / LVGL (atelier des ecrans, 2026-11-12) : citees en "A:sd/images/<nom>"
+            elif string.endswith(nameFile, ".png", true) || string.endswith(nameFile, ".jpg", true) || string.endswith(nameFile, ".bmp", true)
+                path.mkdir("/sd/images")
+                filePath = "/sd/images/" + nameFile
             end
 
             tasmota.yield()

@@ -955,3 +955,17 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `atelier_graphiques_page_destination.py` et `atelier_graphiques_page_televerse.py` (JS de la page). Bancs `test_atelier_graphiques_graphiques.py`
     et `test_atelier_graphiques_televerse.py`. Cote carte : `data/sd/js/graphiques_moteur.js` (trace d'un graphique `moteur` par `PagesGraphiques.optionDe`) ;
     `graphiquesFonctions.be::valideComposition` accepte `"moteur": "pages"` (valide par `pagesGraphiquesValidation.be`). Mode d'emploi : `outils_docs/README.md`.
+  - `atelier_ecrans_web.py` (+ `atelier_ecrans_page.py`, `_page_js.py`, `_page_canevas.py`, `_page_remarques.py`, `_page_ecriture.py`,
+    `_page_polices.py`, `_catalogue.py`, `_description.py`, `_haspmota.py`, `_lvgl.py`, `_lvgl_moteur.py`, `_ecriture.py`, `_ecran.py`,
+    `_remarques.py`, `_polices.py`, `_capture.py`, `build/cible_atelier_ecrans.py`) — page « Atelier des ecrans » http://127.0.0.1:7960
+    (2026-11-12, palier 1 ; tuile de l'annuaire, groupe Maintenance, arret libre ; tache VS Code ; cible Custom detachee, `NOM_CIBLE`
+    atelier_ecrans). Ecran tactile d'une carte dessine d'apres une description neutre `outils_docs/atelier_ecrans/cartes/<env>/ecran.json`
+    (hors flash, avec `remarques.json`), catalogue `outils_docs/schemas/catalogue_ecran.json` ; deux interfaces generees dans le dossier
+    de la carte, `pages.jsonl` (HASPmota) et `ecranLvgl.be` (LVGL pur), choisies par `custom_interface_ecran` (`build/interface_ecran.py`).
+    Ecriture atomique, refusee pendant un build ou sur empreinte perimee ; changement d'ecran par proposition mise a l'echelle
+    (`display.ini` repris d'un env qui porte l'ecran, conflit de broches = refus) ; remarques epinglees et traitees par `claude -p` en
+    LECTURE SEULE (outils de lecture, hooks coupes, jamais bypassPermissions ; depuis ce PC seulement) ; import d'une police `.ttf`
+    (licence confirmee, Latin-1 complet, licence dans `outils_docs/atelier_ecrans/polices/`) ; images `.png/.jpg/.bmp` rangees sous
+    `/sd/images/` par `gestionFileFolder.be::listeEtRepartitLesFichiers`. Capture `lv.screenshot()` pas encore essayee sur carte.
+    Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
+    `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.

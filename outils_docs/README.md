@@ -1914,6 +1914,97 @@ Dans `outils_docs/scripts_python/outils_pc/` (Python de PlatformIO) : `test_atel
 `test_pages_graphiques_chrome.py` et `berry/banc_pages_graphiques.py` (cas partagés avec le validateur Python :
 `berry/bouchons_berry/pages_graphiques/cas_description.json`). Commandes exactes : skill `bancs`.
 
+## Atelier des écrans (page web)
+
+Une page qui dessine l'écran tactile d'une carte (HASPmota ou LVGL pur) d'après **une description neutre** : on place
+les objets sur un canevas à la taille de l'écran, et la page génère les deux interfaces, `pages.jsonl` (HASPmota) et
+`ecranLvgl.be` (LVGL pur). La carte n'en charge qu'une, celle que choisit `custom_interface_ecran` dans son cenv.
+Premier palier : sept objets, libellé (`label`), bouton (`btn`), barre (`bar`), cadre (`obj`), courbe (`chart`), arc
+(`arc`) et curseur (`slider`). Première carte : l'écran des débits (`tasmota32s3-bureau-ecran-debits-pac`, Waveshare
+ESP32-S3-Touch-LCD-7B).
+Conception : [spec](../docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md) ; plan `tasks/plans/atelier-ecrans.md` ;
+maquettes `outils_docs/atelier_ecrans/` ; savoir-faire HASPmota / LVGL : skill `lvgl-haspmota`.
+
+### Lancer la page
+
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Atelier des écrans ». Rien n'est écrit
+  avant « Écrire dans le dépôt », l'arrêt est libre.
+- **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : atelier des écrans (http://127.0.0.1:7960) ».
+- **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/atelier_ecrans_web.py` (`--http 7960`, `--local`,
+  `--sans-navigateur`).
+- **Cible PlatformIO** « Atelier des écrans (page web) » dans *Project Tasks > <env> > Custom* : démarre la page détachée
+  puis rend la main. Comme toute cible, **jamais pendant un build**.
+
+Port **7960**. Depuis un autre appareil : lien à jeton de la console (`acces_web.py`). Bascule Sombre / Clair mémorisée
+dans le navigateur.
+
+### Utilisation
+
+1. **Carte** : liste des cartes à écran, groupée par lieu. L'en-tête montre l'écran déclaré (présélectionné), l'état en
+   ligne de la carte et l'interface envoyée.
+2. **Canevas** : glisser un objet depuis la palette, le déplacer (grille aimantée à 8 px), le redimensionner ; zoom − / + /
+   100 % ; annuler / rétablir (`Ctrl+Z`, `Ctrl+Y`). L'onglet « Tableau des objets » donne une ligne par objet, cases
+   modifiables. Seules les polices du catalogue sont proposées ; une taille absente est refusée avec les tailles possibles.
+3. **Aperçu** : dessiné par le navigateur avec les vraies polices `.ttf`, valeurs liées simulées ou lues sur la carte en
+   ligne (`Status 10`). « Capture de la carte » affiche l'écran réel (`lv.screenshot()` par la commande `Br`) ; refusée si
+   la carte est hors ligne. Pas encore essayée sur la carte.
+4. **Fichiers générés** : onglets `pages.jsonl`, `ecranLvgl.be`, `ecran.json`, avec leurs différences au dépôt.
+5. **Écrire dans le dépôt** : confirmation avec la liste des fichiers, écriture atomique (copie horodatée). Refusée pendant
+   un build, et si un fichier a changé depuis le chargement ou le diff. Le message donne le lien « Envoyer par la page
+   Build ↗ » (`?env=` et fichier de l'interface coché).
+
+### Changer d'écran
+
+Choisir dans la liste un écran autre que celui de la carte ouvre une **proposition** : la description est mise à
+l'échelle (positions et tailles au rapport des résolutions, police ramenée à la taille compilée la plus proche), les
+boutons trop petits pour le doigt et les textes qui débordent sont signalés. Le diff montre aussi le `display.ini` de la
+carte, repris d'un env qui porte déjà cet écran ; broches de l'écran en conflit avec le persist = refus motivé. Revenir à
+l'écran de la carte annule la proposition. Après écriture : firmware à recompiler et téléverser par la page Build.
+
+### Remarques et Claude
+
+L'outil « Remarque » épingle un texte sur un objet, une zone tracée ou une page (`remarques.json`). « Traiter les
+remarques (Claude) » lance `claude -p` **en lecture seule** (outils de lecture seulement, hooks coupés, jamais
+`bypassPermissions`), depuis ce PC seulement : Claude rend des propositions, la page les valide puis les range dans
+`remarques.json`. Un fichier du dépôt changé pendant le traitement est signalé, sans rejet (d'autres conversations
+travaillent en même temps). « Appliquer » rejoue une proposition sur la description en mémoire ; l'écriture reste celle
+du bouton « Écrire dans le dépôt ». Un traitement à la fois, 10 min au plus, journal dans
+`%LOCALAPPDATA%\outils_tasmota\atelier_ecrans\`.
+
+### Importer une police
+
+Panneau « Importer une police (.ttf) » sous la palette, avec des liens vers Google Fonts et Font Squirrel. Le fichier
+choisi est analysé : famille, licence lue dans la police (table `name`), caractères français manquants. Import refusé si
+le Latin-1 est incomplet, tant que la case « J'ai vérifié la licence » n'est pas cochée, pendant un build, ou si une
+police du même nom existe déjà dans le dépôt. L'import écrit la police dans le dossier de la carte choisie
+(`data/<lieu>/<carte>/<nom>.ttf`, rangée au démarrage sous `/sd/polices/` par `ecranFonctions.rangePolices`), son texte de
+licence dans `outils_docs/atelier_ecrans/polices/` (hors du dossier de la carte, qui part en flash) et régénère le
+catalogue. Polices `.bin` de LVGL : pas encore importables.
+
+### Images
+
+Une image `.png`, `.jpg` ou `.bmp` posée à la racine du FS est rangée au démarrage sous `/sd/images/`
+(`gestionFileFolder.be::listeEtRepartitLesFichiers`) ; un écran la cite en `A:sd/images/<nom>`. Le module est solidifié :
+la règle n'agit qu'après recompilation du firmware de la carte. L'objet image arrive au palier 2.
+
+### Ce qui est écrit
+
+| Fichier | Où |
+|---|---|
+| `ecran.json` (description), `remarques.json` | `outils_docs/atelier_ecrans/cartes/<env>/` (hors flash) |
+| `pages.jsonl`, `ecranLvgl.be` | dossier de la carte `data/<lieu>/<carte>/` |
+| `display.ini` | dossier de la carte, au changement d'écran seulement |
+| police `.ttf` + licence + `outils_docs/schemas/catalogue_ecran.json` | à l'import d'une police |
+
+Les fichiers de l'interface non choisie sont exclus du FS par `build/interface_ecran.py::applique`.
+
+### Bancs
+
+`outils_pc/test_atelier_ecrans_catalogue.py`, `_description.py`, `_haspmota.py`, `_lvgl.py`, `_ecriture.py`, `_ecran.py`,
+`_remarques.py`, `_polices.py`, `_web.py`, puis la sonde Chrome `test_atelier_ecrans_page_chrome.py` (copie du dépôt,
+carte et `claude` simulés) ; `build/test_cible_atelier_ecrans.py` ; rangement des images : `berry/banc_repartition_fichiers.py`.
+Commandes exactes : skill `bancs`.
+
 ## Synchro du fork (page web)
 
 La page lance les scripts de synchro (`maintenance/synchronise_fork_tasmota.py`, merge, et sa variante rebase) tels

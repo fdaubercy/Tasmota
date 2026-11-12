@@ -211,15 +211,15 @@ de broches avec le persist -> refus motivé, avertissement si écran intégré �
 - [x] Commit — preuve : commit A8 (feat(atelier-ecrans): A8)
 
 ## A9 — Ressources sous `/sd`
-- [ ] Liste des ressources utiles (fonds, icônes, polices ajoutées) proposée à l'utilisateur, choix fait ; règle de
+- [x] Liste des ressources utiles (fonds, icônes, polices ajoutées) proposée à l'utilisateur, choix fait ; règle de — preuve : choix « Règle + import de polices » du 2026-11-12 ; branche images de `gestionFileFolder.be::listeEtRepartitLesFichiers` (.png/.jpg/.bmp -> /sd/images), `berry/banc_repartition_fichiers.py` VERT, 9 mutants rouges, relecteur-berry « prêt » ; aucune image déposée avant le palier 2
   rangement des images dans `data/fs/gestionFileFolder.be::listeEtRepartitLesFichiers` (accord pour `data/fs`)
-- [ ] Import d'une police nouvelle depuis la page (demande du 2026-11-11) : liens vers les sites de polices et de
+- [x] Import d'une police nouvelle depuis la page (demande du 2026-11-11) : liens vers les sites de polices et de — preuve : `atelier_ecrans_polices.py` + panneau `atelier_ecrans_page_polices.py`, routes /polices/analyse et /polices/importer ; `test_atelier_ecrans_polices.py` VERT (mutants licence, Latin-1, borne cmap 51 s, struct.error rouges) ; sonde Chrome 55 OK dont l'import par un vrai fichier ; relecteur-pages-web : B1, C1, C2, M1 à M3 corrigés. shortcut : .ttf seulement, pas de .bin LVGL (catalogue et générateurs ne les connaissent pas)
   conversion de la skill `lvgl-haspmota` (`references/polices.md`, « Trouver et importer une police nouvelle ») ; fichier
   `.ttf` ou `.bin` déposé par l'utilisateur, licence et couverture Latin-1 contrôlées, tailles proposées, rangé sous
   `/sd/polices/` et ajouté au catalogue (`atelier_ecrans_catalogue.genere` relancé) ; banc
 
 ## A10 — Documentation, relecture, essai réel
-- [ ] `outils_docs/README.md` (mode d'emploi), carte des documents du `CLAUDE.md`, `verifie_references_docs.py` 0 défaut
+- [x] `outils_docs/README.md` (mode d'emploi), carte des documents du `CLAUDE.md`, `verifie_references_docs.py` 0 défaut — preuve : section « Atelier des écrans (page web) » du README, entrée `atelier_ecrans_web.py` de CLAUDE.md, « 20 document(s), 0 defaut(s) »
 - [ ] `relecteur-pages-web` et `relecteur-berry` sur le chantier ; corrections confirmées faites
 - [ ] Essai avec l'utilisateur : un bouton ajouté à l'écran des débits par l'atelier, généré dans les deux interfaces,
   envoyé par la page Build, vu et touché sur la carte
