@@ -103,15 +103,26 @@ Produit :
   table de capacité ISO/IEC 18004 versions 1 à 40 pour M et H ; `modules = 17 + 4 * version` ;
   `module_mm = taille_mm / (modules + 8)` (marge de 4 modules de chaque côté comprise dans la taille) ; seuils 0,5 et
   0,35 mm, à recaler en A5. Correction : `H` si image, sinon `M`.
-- [ ] Bancs d'abord (rouge) : `test_fusion` (surcharge de `lignes` remplace la liste, de `style.couleur` garde
+Écarts à la réalisation (2026-11-12) : `valide_reglage(reglage, racine=None)` (avec `racine`, l'image est lue) ;
+`champs_standards(racine, env, envs=None)` (`liste_envs` coûte plusieurs secondes : la passer une fois) ; `resout` délègue à
+`resout_avec(reglage, champs, persist)` (pure) ; états `ok | introuvable | refuse` ; `fichier_carte(racine, reglage,
+resolu)` ; `image_data_uri(racine, nom)` (PNG/JPEG/SVG du dossier `images/`, contenu vérifié, SVG sans script ni `on*=`,
+8192 o au plus). Sans persist (ESP8266, `tasmota32-rdc-vr-porte`), hostname et topic introuvables : Tasmota tire le
+hostname du topic et de la MAC (limite notée en `shortcut:` dans `champs_standards`).
+**Encodage (découvert en A2)** : la bibliothèque ne code pas en UTF-8 (`255 & charCode`) ; la page (A4) et la carte (A6)
+lui donnent `String.fromCharCode(...new TextEncoder().encode(texte))` avec `qrOptions.mode = "Byte"` ; la table
+`CAPACITE` est alors exacte (80 cas sur 80, `lib/LISEZMOI.md`).
+- [ ] Scan du code UTF-8 par le téléphone de l'utilisateur (`essai3-utf8.png` du scratchpad : « l’œuf coûte 5 € », « été »,
+  barre oblique) ; s'il lit mal, limiter le texte au Latin-1 (page et verdict)
+- [x] Bancs — preuve : test_etiquettes_qr_verdict.py et test_etiquettes_qr_modele.py ; écrits APRÈS le module (écart au plan), leur pouvoir de détection est prouvé par les 4 mutants rouges ; cas prévus : `test_fusion` (surcharge de `lignes` remplace la liste, de `style.couleur` garde
   `style.points`), `test_secret_par_cle` (`serveur.wifi.mdp` absent de l'arbre), `test_secret_par_valeur` (une
   `url` contenant la valeur de `serveur.mqtt.password` absente), `test_introuvable` (`WIFI_IP_ADDRESS` 0.0.0.0 sans maître
   -> ligne IP omise, un avertissement), `test_esclave` (IP `<ipMaitre>:<8080+id-1>`), `test_image_refusee` (9000 o, puis
   un `data:text/html`), `test_verdict` (100 octets à 25 mm H -> attendu calculé à la main dans le test, un cas par
   niveau, 3000 octets -> `trop_long`), `test_octets_utf8` (« é » compte 2 octets) ; mutants : filtre par clé retiré,
   filtre par valeur retiré, seuil inversé -> chacun rouge
-- [ ] Modules ; bancs VERT, chaque mutant lu rouge
-- [ ] Commit
+- [x] Modules ; bancs VERT, chaque mutant lu rouge — preuve : BANC_ETIQUETTES_QR_VERDICT: OK (mutants seuils inversés et table décalée rouges) ; BANC_ETIQUETTES_QR_MODELE: OK (filtre par clé retiré : 5 échecs, par valeur : 3) ; dépôt réel : 17 cartes, 13 persist, 24 valeurs secrètes surveillées par un motif indépendant, aucune proposée
+- [x] Commit — preuve : commit « A2, modele et verdict » (git log)
 
 ## A3 — Écriture au dépôt
 Fichiers : créer `outils_pc/etiquettes_qr_ecriture.py`, `outils_pc/test_etiquettes_qr_ecriture.py`.

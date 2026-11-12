@@ -18,8 +18,15 @@ Utilisée par la page « Étiquettes QR code » (7970) et, compressée, par la p
 - Plusieurs codes SVG sur une même page : identifiants de `clipPath` propres à chaque code (`_instanceId`). Le défaut de la
   1.5.0 vu sur les maquettes (tous les codes prenaient les points du premier) n'existe plus.
 - Codes de 75 px nets en SVG et en canvas.
-- Nombre de modules (`_qr.getModuleCount()`) = table de capacité ISO/IEC 18004 en mode octet : 1 o -> 21, 35 o -> 29,
-  50 o et 61 o -> 33 (correction M), 63 o -> 45 (correction H). Le verdict Python de l'A2 peut s'appuyer sur cette table.
+- **Encodage : la bibliothèque n'écrit PAS d'UTF-8.** Sa fonction par défaut (`stringToBytesFuncs.default`) garde
+  `255 & charCodeAt` : un caractère = un octet (Latin-1 tronqué). « é », « « » passent (Latin-1, encodage par défaut des
+  QR codes) ; « ’ », « œ », « € » deviendraient des caractères de contrôle. La version UTF-8 existe dans le bundle mais
+  n'est pas branchée. **Règle pour la page et la carte (A2 à A6)** : donner les octets UTF-8 et forcer le mode octet :
+  `data: String.fromCharCode(...new TextEncoder().encode(texte))`, `qrOptions: {mode: "Byte", ...}`. Le texte vient
+  toujours d'un JSON (jamais recopié dans du code JS : `\ ` y deviendrait une espace).
+- Table de capacité ISO/IEC 18004 (mode octet, `etiquettes_qr_verdict.CAPACITE`) confrontée à la bibliothèque le
+  2026-11-12 avec les octets UTF-8 : 80 cas sur 80 (versions 1 à 40, niveaux M et H, capacité et capacité + 1 ; au-delà de
+  la version 40, la bibliothèque lève une erreur). Sans la conversion UTF-8, 80 écarts.
 
 Empreintes du fichier en fins de ligne LF, tel qu'enregistré dans git. Avec `core.autocrlf`, la copie extraite peut passer
 en CRLF : fabriquer le `.gz` à partir de l'objet git (`git show HEAD:outils_docs/etiquettes_qr/lib/qr-code-styling.min.js
