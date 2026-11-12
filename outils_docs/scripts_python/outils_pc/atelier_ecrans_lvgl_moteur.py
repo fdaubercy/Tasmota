@@ -7,7 +7,7 @@ MOTEUR = r'''
 # Classe LVGL d'un type HASPmota dont le nom differe (lv_haspmota.be : lvh_btn._lv_class = lv.button ; lv.btn n'existe pas dans
 # le firmware, seul lv_button est enregistre, be_lv_c_mapping.h) ; les autres types portent le nom de leur classe
 ecranLvgl.CLASSES = {"btn": "button", "img": "image", "btnmatrix": "buttonmatrix", "cpicker": "colorwheel"}
-ecranLvgl.cache = {}      # "p1b13.text" -> valeur brute deja ecrite
+ecranLvgl.cache = {}      # "p1b13" -> {"text": valeur brute deja ecrite} (aucune cle construite a chaque seconde)
 ecranLvgl.objets = {}     # "p1b13" -> objet LVGL ; "p<n>b0" -> ecran de la page n
 ecranLvgl.types = {}      # "p1b13" -> type de la description
 ecranLvgl.textes = {}     # "p0b91" -> label qui porte le texte (l'objet lui-meme pour un label)
@@ -42,6 +42,7 @@ def ecranLvgl_police(f)
                 p = lv.font_embedded(nom, taille)
             end
         end
+        if (p == nil)    raise "io_error", "chargement sans police"    end    # .ttf absent de /sd/polices : nil sans exception
     except .. as e, m
         logFonctions.log("ECRAN_LVGL_ERREUR: police " + str(f) + " absente : " + str(e) + " " + str(m) + " !", LOG_LEVEL_ERREUR)
     end
@@ -81,7 +82,7 @@ def ecranLvgl_applique(nom, k, v)
     import ecranLvgl
     var o = ecranLvgl.objets[nom]
     var t = ecranLvgl.types[nom]
-    var c = ecranLvgl.cache
+    var c = ecranLvgl.cache.find(nom, {})
     if (k == "text")    ecranLvgl.texte(nom).set_text(str(v))    return    end
     if (k == "align")
         var a = {0: lv.TEXT_ALIGN_LEFT, 1: lv.TEXT_ALIGN_CENTER, 2: lv.TEXT_ALIGN_RIGHT, "left": lv.TEXT_ALIGN_LEFT,
@@ -98,13 +99,13 @@ def ecranLvgl_applique(nom, k, v)
     if (k == "min")    o.set_range(v, o.get_max_value())    return    end
     if (k == "max")    o.set_range(o.get_min_value(), v)    return    end
     if (k == "y_min" || k == "y_max")
-        var mini = k == "y_min" ? v : c.find(nom + ".y_min", 0)
-        o.set_axis_range(lv.CHART_AXIS_PRIMARY_Y, mini, k == "y_max" ? v : c.find(nom + ".y_max", 100))
+        var mini = k == "y_min" ? v : c.find("y_min", 0)
+        o.set_axis_range(lv.CHART_AXIS_PRIMARY_Y, mini, k == "y_max" ? v : c.find("y_max", 100))
         return
     end
     if (k == "h_div_line_count" || k == "v_div_line_count")
-        o.set_div_line_count(k == "h_div_line_count" ? v : c.find(nom + ".h_div_line_count", 3),
-                             k == "v_div_line_count" ? v : c.find(nom + ".v_div_line_count", 5))
+        o.set_div_line_count(k == "h_div_line_count" ? v : c.find("h_div_line_count", 3),
+                             k == "v_div_line_count" ? v : c.find("v_div_line_count", 5))
         return
     end
     var sel = nil
@@ -124,11 +125,12 @@ ecranLvgl.applique = ecranLvgl_applique
 # Ecrit l'attribut `k` de `nom` seulement s'il a change ; valeur nil ou objet absent : rien
 def ecranLvgl_ecris(nom, k, v)
     import ecranLvgl
-    var c = nom + "." + k
-    if (v == nil || ecranLvgl.cache.find(c) == v)    return    end
-    if (!ecranLvgl.objets.contains(nom))    return    end
+    if (v == nil || !ecranLvgl.objets.contains(nom))    return    end
+    var c = ecranLvgl.cache.find(nom)
+    if (c == nil)    c = {}    ecranLvgl.cache[nom] = c    end
+    if (c.find(k) == v)    return    end
     ecranLvgl.applique(nom, k, v)
-    ecranLvgl.cache[c] = v
+    c[k] = v
 end
 ecranLvgl.ecris = ecranLvgl_ecris
 # Valeur du modele au bout de `chemin` (["a", 0, "b"] = m["a"][0]["b"]) ; nil si un maillon manque
@@ -207,6 +209,7 @@ def ecranLvgl_trace(m)
     var o = ecranLvgl.objets[c[0]]
     var h = ecranLvgl.valeur(m, c[1])
     var p = ecranLvgl.valeur(m, c[2])
+    if (p != nil && p < ecranLvgl.points)    ecranLvgl.points = 0    end    # compteur remis a zero par le modele : on repart
     var n = (p == nil ? 0 : p) - ecranLvgl.points
     if (h == nil || size(h) == 0 || n <= 0)    return    end
     var t = size(h[0])
@@ -214,7 +217,7 @@ def ecranLvgl_trace(m)
     for i: 0 .. size(s) - 1
         if (i >= size(h))    break    end
         for k: t - n .. t - 1
-            var v = h[i][k]
+            var v = k < size(h[i]) ? h[i][k] : nil
             o.set_next_value(s[i], v == nil ? lv.CHART_POINT_NONE : v)
         end
     end

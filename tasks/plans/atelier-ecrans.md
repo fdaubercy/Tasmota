@@ -220,7 +220,7 @@ de broches avec le persist -> refus motivé, avertissement si écran intégré �
 
 ## A10 — Documentation, relecture, essai réel
 - [x] `outils_docs/README.md` (mode d'emploi), carte des documents du `CLAUDE.md`, `verifie_references_docs.py` 0 défaut — preuve : section « Atelier des écrans (page web) » du README, entrée `atelier_ecrans_web.py` de CLAUDE.md, « 20 document(s), 0 defaut(s) »
-- [ ] `relecteur-pages-web` et `relecteur-berry` sur le chantier ; corrections confirmées faites
+- [x] `relecteur-pages-web` et `relecteur-berry` sur le chantier ; corrections confirmées faites — preuve : pages web relues à chaque action (A6b, A7, A8, A9, défauts corrigés) ; relecteur-berry sur `ecranLvgl.be` : toucher mort écarté (`lvgl_glob.be::lvgl_event_dispatch` rappelle l'instance enregistrée), police nil journalisée, courbe qui repart, cache par objet corrigés dans `atelier_ecrans_lvgl_moteur.py` ; `banc_ecran_lvgl.py` VERT avec 2 mutants de plus, `test_atelier_ecrans_lvgl.py` OK, `banc_demarrage.py` VERT. Laissés : `demarre()` rappelé (latent, un seul appel), cache des attributs statiques, un seul toucher en attente
 - [ ] Essai avec l'utilisateur : un bouton ajouté à l'écran des débits par l'atelier, généré dans les deux interfaces,
   envoyé par la page Build, vu et touché sur la carte
 - [ ] Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve, passer ce plan en `statut: clos`

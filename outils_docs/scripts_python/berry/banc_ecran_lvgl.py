@@ -24,8 +24,9 @@ VERT = "BANC_ECRAN_LVGL: OK"
 
 # (nom, texte du moteur genere, remplacement) : chaque mutant doit rendre le banc rouge
 MUTANTS = [
-    ("cache ignore : tout reecrit chaque seconde", "    if (v == nil || ecranLvgl.cache.find(c) == v)    return    end\n",
-     "    if (v == nil)    return    end\n"),
+    ("courbe gelee apres un compteur remis a zero", "    if (p != nil && p < ecranLvgl.points)    ecranLvgl.points = 0    end", "    if (false)    end"),
+    ("police nil sans log", "        if (p == nil)    raise \"io_error\", \"chargement sans police\"    end", ""),
+    ("cache ignore : tout reecrit chaque seconde", "    if (c.find(k) == v)    return    end\n", ""),
     ("position decalee", "    o.set_pos(d[3], d[4])\n", "    o.set_pos(d[3] + 1, d[4])\n"),
     ("taille oubliee", "    o.set_size(d[5], d[6])\n", ""),
     ("texte de bouton sans label enfant", "        t = lv.label(ecranLvgl.objets[nom])\n", "        t = ecranLvgl.objets[nom]\n"),

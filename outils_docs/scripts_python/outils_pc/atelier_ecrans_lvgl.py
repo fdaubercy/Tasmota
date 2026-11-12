@@ -7,7 +7,7 @@ pages.jsonl : un ecran lv.obj(0) par page n >= 1, page 0 sur lv.layer_top() (fon
 plus petite page n >= 1 ; attributs par setmember de HASPmota (text sur un label enfant centre hors label, text_font par
 parse_font, align, min / max / val, y_min / y_max, divisions, suffixe a 2 chiffres = partie | etat, sinon set_<k> puis
 set_style_<k>) ; couleurs #RRGGBB converties en entiers ici, lv.color a l'ecriture. affiche(modele) n'ecrit que ce qui a
-change (cache "p1b13.text" -> valeur brute). toucher page -> ecran charge ; commande -> tasmota.cmd ; fonction ->
+change (cache "p1b13" -> {"text": valeur brute}). toucher page -> ecran charge ; commande -> tasmota.cmd ; fonction ->
 <module>.<fonction>(args) ; tous differes par tasmota.defer (rien de long dans le rappel LVGL).
 
 Courbe : liaison `attribut: "series"` d'un chart, avec `points`, `max` et `couleurs` (forme dans atelier_ecrans_description) ;

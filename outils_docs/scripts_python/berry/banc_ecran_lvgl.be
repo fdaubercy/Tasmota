@@ -207,4 +207,16 @@ ecranLvgl.affiche(m)
 verifie("apres le changement de page : rien a reecrire", lv.appels == avant)
 verifie("touchers : aucune erreur", niveaux(global.LOG_LEVEL_ERREUR) == 0)
 
+# ---- Compteur de points remis a zero par le modele, police absente sans exception ----------------------------------
+var n0 = size(O["p2b70"].points[0])
+m["points"] = 2
+m["historique"] = historique(2)
+ecranLvgl.affiche(m)
+verifie("compteur de points remis a zero : la courbe repart (2 points par serie)", size(O["p2b70"].points[0]) == n0 + 2)
+var chargeTtf = lv.load_freetype_font
+lv.load_freetype_font = def (nom, t, s) return nil end            # .ttf absent de /sd/polices : nil, pas d'exception
+verifie("police .ttf absente (nil sans exception) : une erreur journalisee",
+        ecranLvgl.police("A:sd/polices/Absente.ttf-20") == nil && niveaux(global.LOG_LEVEL_ERREUR) == 1)
+lv.load_freetype_font = chargeTtf
+
 print("BANC_ECRAN_LVGL: " + (ok ? "OK" : "ECHEC"))
