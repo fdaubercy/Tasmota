@@ -113,7 +113,7 @@ sur 17 au 2026-11-12, `tasmota32-rdc-vr-porte` n'a encore ni persist ni config d
 **Encodage (découvert en A2)** : la bibliothèque ne code pas en UTF-8 (`255 & charCode`) ; la page (A4) et la carte (A6)
 lui donnent `String.fromCharCode(...new TextEncoder().encode(texte))` avec `qrOptions.mode = "Byte"` ; la table
 `CAPACITE` est alors exacte (80 cas sur 80, `lib/LISEZMOI.md`).
-- [ ] Scan du code UTF-8 par le téléphone de l'utilisateur (`essai3-utf8.png` du scratchpad : « l’œuf coûte 5 € », « été »,
+- [x] Scan du code UTF-8 par le téléphone de l'utilisateur — preuve : confirmé par l'utilisateur le 2026-11-12 (« l’œuf », « € », accents, barre oblique lus) ; sauts de ligne peu visibles, à éclaircir avant l'A4 (`essai3-utf8.png` du scratchpad : « l’œuf coûte 5 € », « été »,
   barre oblique) ; s'il lit mal, limiter le texte au Latin-1 (page et verdict)
 - [x] Bancs — preuve : test_etiquettes_qr_verdict.py et test_etiquettes_qr_modele.py ; écrits APRÈS le module (écart au plan), leur pouvoir de détection est prouvé par les 4 mutants rouges ; cas prévus : `test_fusion` (surcharge de `lignes` remplace la liste, de `style.couleur` garde
   `style.points`), `test_secret_par_cle` (`serveur.wifi.mdp` absent de l'arbre), `test_secret_par_valeur` (une
