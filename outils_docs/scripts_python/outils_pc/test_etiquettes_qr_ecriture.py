@@ -181,6 +181,11 @@ def test_impressions(racine):
     verifie((d[CUVE]["empreinte"], d[CUVE]["taille_mm"]), (modele.empreinte("Hostname : CUVE · IP : 192.168.0.60"), 25),
             "impression notee : empreinte et taille")
     verifie("192.168" in brut, False, "impressions.json sans le texte")
+    premiere = eqe.lit_impressions(racine)[CUVE]
+    avant = eqe.note_impression(racine, {CUVE: "Hostname : CUVE2"}, 30)
+    verifie(avant, {CUVE: premiere}, "reimpression : la note precedente est rendue")
+    eqe.annule_impression(racine, CUVE, avant[CUVE])
+    verifie(eqe.lit_impressions(racine), {CUVE: premiere}, "annulation d'une reimpression : la note precedente est remise")
     eqe.annule_impression(racine, CUVE)
     verifie(eqe.lit_impressions(racine), {}, "impression annulee")
     refuse(lambda: eqe.note_impression(racine, {"../x": "t"}, 25), ValueError, "env invalide refuse", "invalide")

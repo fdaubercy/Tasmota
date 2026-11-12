@@ -76,6 +76,7 @@ def apercu(racine, env, reglage, envs):
 def fabrique_gestionnaire(acces, racine, builds_en_cours):
     verrou = threading.Lock()
     cache = {"t": 0.0, "envs": []}
+    precedentes = {}       # shortcut: notes remplacees gardees en memoire ; perdues si l'outil redemarre avant l'annulation
 
     def envs():
         if time.monotonic() - cache["t"] > CACHE_S:
@@ -161,11 +162,12 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                     raise ValueError(f"{env} : " + " ; ".join(a["erreurs"]))
                 textes[env] = a["texte"]
             with verrou:
-                eqe.note_impression(racine, textes, taille)
+                precedentes.update(eqe.note_impression(racine, textes, taille))
             return {"notees": sorted(textes)}
         if chemin == "/impression/annule":
-            with verrou:
-                eqe.annule_impression(racine, env_ok(demande.get("env")))
+            env = env_ok(demande.get("env"))
+            with verrou:                                 # remet la note d'une impression anterieure, s'il y en avait une
+                eqe.annule_impression(racine, env, precedentes.pop(env, None))
             return {"ok": True}
         raise LookupError(chemin)
 

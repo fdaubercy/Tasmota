@@ -274,15 +274,25 @@ def _ecrit_impressions(racine, d):
 
 
 def note_impression(racine, textes, taille_mm):
-    """`textes` : {env: texte imprime}. Garde l'empreinte, la date et la taille, jamais le texte."""
+    """`textes` : {env: texte imprime}. Garde l'empreinte, la date et la taille, jamais le texte.
+    Rend les notes remplacees {env: note precedente | None}, pour qu'une annulation les remette."""
     d = lit_impressions(racine)
     date = datetime.datetime.now().isoformat(timespec="seconds")
+    avant = {}
     for env, texte in textes.items():
-        d[modele._env_valide(env)] = {"empreinte": modele.empreinte(texte), "date": date, "taille_mm": taille_mm}
+        env = modele._env_valide(env)
+        avant[env] = d.get(env)
+        d[env] = {"empreinte": modele.empreinte(texte), "date": date, "taille_mm": taille_mm}
     _ecrit_impressions(racine, d)
+    return avant
 
 
-def annule_impression(racine, env):
+def annule_impression(racine, env, precedente=None):
+    """Retire la note de `env`, ou remet `precedente` (rendue par note_impression) si la carte avait deja ete imprimee."""
     d = lit_impressions(racine)
-    if d.pop(modele._env_valide(env), None) is not None:
-        _ecrit_impressions(racine, d)
+    env = modele._env_valide(env)
+    if precedente is not None:
+        d[env] = precedente
+    elif d.pop(env, None) is None:
+        return
+    _ecrit_impressions(racine, d)

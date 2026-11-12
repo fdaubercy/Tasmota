@@ -179,6 +179,11 @@ def test_gabarit_impression(b):
     verifie(b.requete("POST", "/impression", dict(corps, impressions=[]))[0], 400, "POST /impression : liste vide, 400")
     verifie(b.requete("POST", "/impression/annule", {"env": TV})[0], 200, "POST /impression/annule")
     verifie(sorted(tqe.eqe.lit_impressions(b.racine)), [CUVE], "impressions.json : TV retiree")
+    premiere = tqe.eqe.lit_impressions(b.racine)[CUVE]
+    b.requete("POST", "/impression", {"impressions": [{"env": CUVE, "reglage": dict(gabarit(b), separateur=" > ")}], "taille_mm": 30})
+    verifie(tqe.eqe.lit_impressions(b.racine)[CUVE]["taille_mm"], 30, "reimpression de la cuve notee")
+    b.requete("POST", "/impression/annule", {"env": CUVE})
+    verifie(tqe.eqe.lit_impressions(b.racine)[CUVE], premiere, "annulation de la reimpression : note precedente remise")
 
 
 def main():

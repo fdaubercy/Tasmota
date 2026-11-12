@@ -7,7 +7,7 @@ Texte du QR code : TOUJOURS converti en octets UTF-8 (`octets`) et encode en mod
 
 JS = r"""
 const ETAT = {env: null, cartes: [], lieux: [], reglage: null, page: false, esp32: false, charge: '', arbre: [],
-              apercu: null, minuterie: null, demande: 0, envDemande: null, images: []};
+              apercu: null, minuterie: null, demande: 0, envDemande: null, images: [], planche: new Set()};
 const $ = id => document.getElementById(id);
 const LIBELLES = {hostname: 'Hostname', ip: 'IP', topic: 'Topic', env: 'Env', puce: 'Puce', lieu: 'Lieu'};
 const POINTS = [['rounded', 'arrondis'], ['square', 'carrés'], ['dots', 'ronds'], ['classy', 'classique'],
@@ -83,15 +83,22 @@ function dessineListe() {
     if (!cartes.length) return;
     liste.appendChild(el('div', {class: 'lieu'}, titre));
     cartes.forEach(c => {
+      const ligne = el('div', {class: 'env-ligne'});
+      const coche = el('input', {type: 'checkbox', 'aria-label': 'Planche : ' + c.nom});
+      coche.checked = ETAT.planche.has(c.nom);
+      coche.onchange = () => { if (coche.checked) ETAT.planche.add(c.nom); else ETAT.planche.delete(c.nom); majPlanche(); };
+      ligne.appendChild(coche);
       const b = el('button', {type: 'button', class: 'env' + (c.nom === ETAT.env ? ' sel' : ''), title: c.nom});
       b.appendChild(el('span', {class: 'nom'}, c.nom.replace(/^tasmota(32\w*)?-/, '')));
       b.appendChild(el('span', {class: 'doux petit'}, (c.puce || '').replace(/^ESP32-/, '')));   // P4 et S3 homonymes
       if (c.regle) b.appendChild(el('span', {class: 'pastille bleu'}, 'propre'));
       if (c.page) b.appendChild(el('span', {class: 'pastille ok'}, 'page'));
       b.onclick = () => choisit(c.nom);
-      liste.appendChild(b);
+      ligne.appendChild(b);
+      liste.appendChild(ligne);
     });
   });
+  majPlanche();
 }
 
 async function chargeCartes(choisi) {
@@ -142,6 +149,7 @@ async function ouvre(env) {
     $('bandeau').replaceChildren();
     dessineListe();
     dessineTout();
+    activeImpression();
   } catch (e) {
     if (ETAT.envDemande !== env) return;
     if (ETAT.env) $('choix-env').value = ETAT.env;   // la page montre toujours l'ancienne carte
@@ -384,6 +392,7 @@ window.addEventListener('beforeunload', e => { if (sale()) { e.preventDefault();
 (async () => {
   try {
     ETAT.images = (await api('/images')).images;
+    $('planche-taille').value = (await api('/gabarit')).gabarit.taille_mm || 25;   // spec 7.9 : taille du gabarit par defaut
     await chargeCartes(null);
     const demande = new URLSearchParams(location.search).get('env');
     const lieu = lieuDemande(ETAT.lieux);

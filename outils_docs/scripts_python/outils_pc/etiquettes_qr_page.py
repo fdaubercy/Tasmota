@@ -5,6 +5,7 @@ reglages en onglets au centre (Contenu, Style, Gabarit commun), apercu, texte lu
 sombre par l'interrupteur, comme l'atelier des graphiques. Le QR code est dessine par qr-code-styling (servi par /lib.js).
 """
 
+from etiquettes_qr_page_impression import CSS_IMPRESSION, JS_IMPRESSION
 from etiquettes_qr_page_js import JS
 import lieux
 
@@ -92,7 +93,14 @@ HTML = """<main>
 </header>
 <div id="bandeau"></div>
 <div class="colonnes">
-  <div class="carte"><h2>Cartes</h2><div id="liste-cartes"></div></div>
+  <div class="carte"><h2>Cartes</h2>
+    <label class="petit doux"><input type="checkbox" id="planche-tout"> tout cocher pour la planche</label>
+    <div id="liste-cartes"></div>
+    <h3>Planche A4</h3>
+    <div class="ligne petit">taille <input type="number" id="planche-taille" min="10" max="100" step="1" style="width:58px" aria-label="Taille de la planche en mm"> mm</div>
+    <div class="petit doux" id="planche-grille"></div>
+    <div class="ligne"><button class="btn" type="button" id="btn-planche" disabled>Planche (0 carte)</button></div>
+  </div>
   <div class="carte">
     <div class="onglets" role="tablist">
       <button type="button" class="actif" data-onglet="contenu">Contenu</button>
@@ -138,11 +146,19 @@ HTML = """<main>
     <h3>Ce que le téléphone affiche</h3><div class="lu" id="lu"></div>
     <div id="verdict" class="verdict"></div>
     <div id="avertissements"></div>
-    <div class="ligne" style="margin-top:10px"><button class="btn prim" type="button" id="btn-ecrire">Écrire dans le dépôt…</button></div>
+    <div class="ligne" style="margin-top:10px"><button class="btn prim" type="button" id="btn-ecrire">Écrire dans le dépôt…</button>
+      <button class="btn" type="button" id="btn-imprimer" disabled>Imprimer</button><button class="btn" type="button" id="btn-png" disabled>PNG</button>
+      <button class="btn" type="button" id="btn-svg" disabled>SVG</button></div>
+    <div class="ligne petit"><label><input type="checkbox" id="petit-nom"> petit nom sous le code</label>
+      <button class="btn mini" type="button" id="btn-essai" disabled title="Carte affichée à 15, 20, 25 et 30 mm, texte court et long">Planche d'essai</button></div>
+    <p class="doux petit">Dans la fenêtre d'impression : échelle 100 % (« Taille réelle »), marges par défaut ; la règle de
+      50 mm imprimée en bas de la feuille le vérifie.</p>
+    <div id="impression-messages"></div>
     <div id="ecriture"></div>
   </div>
 </div>
-</main>"""
+</main>
+<div id="impression"></div>"""
 
 THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getItem('etiquettes-qr-theme'); } catch (e) {}"
               " if (t !== 'clair' && t !== 'sombre') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)"
@@ -154,6 +170,6 @@ THEME_INTERRUPTEUR = ("<script>(function () { var c = document.getElementById('t
                       " try { localStorage.setItem('etiquettes-qr-theme', t); } catch (e) {} }; })();</script>")
 
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-        "<title>Étiquettes QR code</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE + "<style>" + CSS + "</style>"
+        "<title>Étiquettes QR code</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE + "<style>" + CSS + CSS_IMPRESSION + "</style>"
         "<script src=\"/lib.js\"></script></head><body>" + HTML + THEME_INTERRUPTEUR
-        + "<script>" + lieux.JS + JS + "</script></body></html>")
+        + "<script>" + lieux.JS + JS + JS_IMPRESSION + "</script></body></html>")

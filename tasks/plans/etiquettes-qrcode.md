@@ -192,24 +192,29 @@ Consomme : A1 à A3. Produit, routes JSON : `GET /cartes` (envs par `lieux.pour_
   l'autre carte affiché, confirmation si modifié), ajout d'une clé du persist, verdict qui change avec la taille,
   nombre de modules de la bibliothèque = `modules` de `verdict` pour trois textes, aucune erreur console, Chrome arrêté
   à la fin
-- [ ] Brique de l'annuaire (:7600) : outil `etiquettes_qr` dans `annuaire_registre.py` (titre « Étiquettes QR code »,
+- [x] Brique de l'annuaire (:7600) — preuve : bancs `test_annuaire.py` et `test_annuaire_lanceur.py` VERTS, tuile vue par l'utilisateur dans la page 7600 le 2026-11-12 ; outil `etiquettes_qr` dans `annuaire_registre.py` (titre « Étiquettes QR code »,
   description courte et longue sur le modèle des autres outils, groupe Maintenance, `_port("http", 7970)`, `lieu=True`,
   arrêt libre : rien n'est écrit sans « Écrire dans le dépôt ») ; la tuile lance l'outil, son lien « Ouvrir » porte
   `?lieu=` ; bancs `test_annuaire.py`, `test_annuaire_lanceur.py` VERT ; vérifié dans la page de l'annuaire
   (bancs VERTS le 2026-11-12, compte du banc passé à 14 outils ; reste : tuile vue dans la vraie page 7600)
 - [x] Tâche VS Code et cible Custom détachée — preuve : `build/test_cible_etiquettes_qr.py` VERT, `build/test_garde_build.py` VERT ; barres obliques simples du sous-agent corrigées (tasks.json, docstring de la cible, `\f` de `annuaire_registre.py`)
-- [ ] Commit
+- [x] Commit — preuve : `3c0bd2736`
 
 ## A5 — Impression, planche A4, export
 Fichiers : créer `outils_pc/etiquettes_qr_page_impression.py` (JS et CSS `@media print`) ; modifier
 `etiquettes_qr_page.py`, `test_etiquettes_qr_page_chrome.py`.
 Consomme : A4 (`POST /impression`).
-- [ ] Bouton « Imprimer » : page d'impression au format `@page { size: A4 }`, QR code en `mm`, consigne « échelle
-  100 % » affichée ; `window.print()` ; impression notée par `POST /impression`, « Annuler la note » disponible
-- [ ] Planche : cases des cartes, une taille pour toute la planche, grille automatique (marges 10 mm, espacement 5 mm,
+- [x] Bouton « Imprimer » — preuve : sonde « Imprimer : une feuille, un QR code de 25 mm, regle de 50 mm », « impression notee », « Annuler la note » ; media print mesuré à 94,5 px CSS = 25 mm ; page d'impression `@page { size: A4 }`, QR code en `mm`, consigne « échelle
+  100 % » affichée ; `window.print()` ; impression notée par `POST /impression`, « Annuler la note » disponible.
+  Ajouts : règle de 50 mm en bas de la 1re feuille ; fond blanc forcé à l'impression (le thème sombre peignait les marges) ;
+  annuler la note d'une RÉimpression remet la note précédente (`note_impression` la rend, le serveur la garde en mémoire ;
+  bancs `test_etiquettes_qr_ecriture.py` et `test_etiquettes_qr_web.py`), relevé par l'agent relecteur-pages-web
+- [x] Planche — preuve : sonde « planche 12 cartes a 25 mm » (grille 6 × 7, 1 page) et « a 70 mm » (2 × 3, 2 pages), PDF `Page.printToPDF` relu ; cases des cartes, une taille pour toute la planche (celle du gabarit par défaut), grille automatique (marges 10 mm, espacement 5 mm,
   traits de coupe fins), petit nom en option, autant de pages que nécessaire ; sonde : 12 cartes à 25 mm -> nombre de
-  pages et de codes attendu, sans impression réelle
-- [ ] Export PNG et SVG (`getRawData`) nommé `qr_<env>.png|svg`
+  pages et de codes attendu, sans impression réelle. Écarts : petit nom = nom d'env sans préfixe, puce ajoutée aux
+  homonymes, sur 2 lignes (7 mm réservés) ; carte sans aucune ligne lisible refusée avec la raison, jamais un QR vide ;
+  « Planche d'essai » ajoutée (carte affichée à 15, 20, 25, 30 mm, texte court et long, avec/sans image ; jamais notée)
+- [x] Export PNG et SVG — preuve : sonde « export PNG et SVG de la cuve » (image/png, image/svg+xml) ; `getRawData`, nommé `qr_<env>.png|svg`, PNG à 300 points par pouce de la taille réglée
 - [ ] Essai réel avec l'utilisateur : une planche aux tailles 15, 20, 25, 30 mm, texte court et texte long, avec et
   sans image ; scan au téléphone ; seuils de `verdict` recalés d'après le résultat (banc A2 mis à jour)
 - [ ] Commit

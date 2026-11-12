@@ -12,6 +12,7 @@ theme sombre, aucune erreur JS.
 """
 
 import argparse
+import base64
 import json
 import shutil
 import subprocess
@@ -44,7 +45,10 @@ def modules_page(cdp, texte):
 
 def sonde(cdp, url, banc, capture):
     cdp.appel("Page.navigate", url=url + "?env=" + CUVE)
-    s.attend(cdp, "document.getElementById('qr').querySelector('svg') !== null", 20)
+    debut = time.monotonic()
+    pret = s.attend(cdp, "document.getElementById('qr').querySelector('svg') !== null", 60)
+    print(f"     chargement : {time.monotonic() - debut:.1f} s" + ("" if pret is True else
+          f" ; bandeau {cdp.js(ETAT)['bandeau']!r} ; erreurs {cdp.erreurs()}"), flush=True)
     e = cdp.js(ETAT)
     s.verifie((e["env"], e["svg"], e["verdict"]), (CUVE, True, "verdict lisible"), "?env= : cuve ouverte, QR code dessine, lisible")
     s.verifie((e["lu"], e["lignes"], e["cartes"] >= 3), ("Hostname : CAPTEURS-CUVE · IP : 192.168.0.43:8081", 2, True),
@@ -101,6 +105,85 @@ def sonde(cdp, url, banc, capture):
     s.verifie(cdp.erreurs(), [], "aucune erreur JS")
 
 
+IMPRESSION = """(() => { const z = document.getElementById('impression');
+  return {feuilles: z.querySelectorAll('.feuille').length, cases: z.querySelectorAll('.etiq-case svg').length,
+          noms: z.querySelectorAll('.etiq-nom').length, regle: z.querySelectorAll('.regle').length,
+          largeur: (z.querySelector('.etiq-case svg') || {style: {}}).style.width, imprime: window._impressions || 0,
+          messages: document.getElementById('impression-messages').textContent,
+          grille: document.getElementById('planche-grille').textContent}; })()"""
+
+
+def notes(banc):
+    return sorted(tw.tqe.eqe.lit_impressions(banc.racine))
+
+
+def sonde_impression(cdp, url, banc, capture):
+    cdp.appel("Page.navigate", url=url + "?env=" + CUVE)
+    s.attend(cdp, "document.getElementById('qr').querySelector('svg') !== null", 20)
+    cdp.js("window.print = () => { window._impressions = (window._impressions || 0) + 1; }")   # pas de vraie fenetre
+    avant = notes(banc)
+
+    cdp.js("document.getElementById('btn-imprimer').click()")
+    s.attend(cdp, "document.getElementById('impression-messages').textContent.indexOf('notée') >= 0", 20)
+    e = cdp.js(IMPRESSION)
+    s.verifie((e["imprime"], e["feuilles"], e["cases"], e["largeur"], e["regle"]), (1, 1, 1, "25mm", 1),
+              "Imprimer : une feuille, un QR code de 25 mm, regle de 50 mm")
+    s.verifie(notes(banc), sorted(set(avant) | {CUVE}), "Imprimer : impression notee pour la cuve")
+    cdp.js("[...document.querySelectorAll('#impression-messages button')].find(b => b.textContent === 'Annuler la note').click()")
+    s.attend(cdp, "document.getElementById('impression-messages').textContent.indexOf('annulée') >= 0", 10)
+    s.verifie(notes(banc), avant, "Annuler la note : impression retiree")
+
+    cdp.js("""(() => { const c = [...document.querySelectorAll('#liste-cartes input[type=checkbox]')].slice(0, 12);
+      c.forEach(x => { x.checked = true; x.dispatchEvent(new Event('change')); });
+      const n = document.getElementById('petit-nom'); n.checked = true; n.dispatchEvent(new Event('change')); })()""")
+    imprimes = 0
+    for taille, grille in ((25, "6 × 7 par page, 1 page(s)"), (70, "2 × 3 par page, 2 page(s)")):
+        cdp.js("(() => { const t = document.getElementById('planche-taille'); t.value = %d; t.dispatchEvent(new Event('input')); })()" % taille)
+        s.verifie(cdp.js(IMPRESSION)["grille"], grille, f"planche {taille} mm : grille annoncee")
+        n = cdp.js("window._impressions")
+        cdp.js("document.getElementById('btn-planche').click()")
+        s.attend(cdp, "window._impressions === %d && !document.getElementById('btn-planche').disabled" % (n + 1), 60)
+        e = cdp.js(IMPRESSION)
+        # la copie de test n'a ni persist ni IP pour certaines cartes : refusees (aucune ligne lisible), jamais un QR vide
+        refus = e["messages"].count("absente de la planche")
+        s.verifie((e["cases"] + refus, refus == e["messages"].count("aucune ligne lisible"), e["cases"] == e["noms"], e["largeur"]),
+                  (12, True, True, f"{taille}mm"), f"planche 12 cartes a {taille} mm : {e['cases']} codes avec petit nom, {refus} refus motives")
+        s.verifie(e["feuilles"], -(-e["cases"] // (42 if taille == 25 else 6)), f"planche {taille} mm : {e['feuilles']} page(s) pour {e['cases']} codes")
+        noms = cdp.js("[...document.querySelectorAll('#impression .etiq-nom')].map(n => n.textContent)")
+        s.verifie(len(noms) == len(set(noms)) and all(n.endswith(("(ESP32)", "(S3)", "(P4)")) for n in noms if "serveur-rly" in n),
+                  True, f"planche {taille} mm : petits noms tous differents (puce des homonymes)")
+        imprimes = e["cases"]
+        if taille == 25:
+            cdp.appel("Emulation.setEmulatedMedia", media="print")
+            mesure = cdp.js("""(() => ({main: getComputedStyle(document.querySelector('main')).display,
+              zone: getComputedStyle(document.getElementById('impression')).display,
+              px: document.querySelector('#impression .etiq-case svg').getBoundingClientRect().width}))()""")
+            cdp.appel("Emulation.setEmulatedMedia", media="")
+            s.verifie((mesure["main"], mesure["zone"], round(mesure["px"], 1)), ("none", "block", round(25 / 25.4 * 96, 1)),
+                      "media print : seule la planche, QR code de 25 mm (94,5 px CSS)")
+            if capture:
+                pdf = cdp.appel("Page.printToPDF", preferCSSPageSize=True, printBackground=True)
+                (Path(capture) / "planche-25mm.pdf").write_bytes(base64.b64decode(pdf["data"]))
+                print(f"     PDF : {Path(capture) / 'planche-25mm.pdf'}", flush=True)
+    s.verifie(len(notes(banc)), len(set(avant)) + imprimes, f"planche : les {imprimes} cartes imprimees notees, pas les refusees")
+
+    types = cdp.js("""(async () => { const p = await exporte('png'), v = await exporte('svg');
+      return [p.type, p.size > 1000, v.type, v.size > 1000]; })()""")
+    s.verifie(types, ["image/png", True, "image/svg+xml", True], "export PNG et SVG de la cuve")
+
+    deja = notes(banc)
+    n = cdp.js("window._impressions")
+    cdp.js("document.getElementById('btn-essai').click()")
+    s.attend(cdp, "window._impressions === %d" % (n + 1), 60)
+    e = cdp.js(IMPRESSION)
+    s.verifie((e["cases"], e["noms"], notes(banc)), (8, 8, deja), "planche d'essai : 4 tailles x texte court et long, non notee")
+    if capture:
+        cdp.appel("Emulation.setEmulatedMedia", media="print")
+        cdp.capture(Path(capture) / "planche-essai.png")
+        cdp.appel("Emulation.setEmulatedMedia", media="")
+    s.verifie(cdp.erreurs(), [], "impression : aucune erreur JS")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome de la page Etiquettes QR code.")
     options.add_argument("--capture", help="dossier ou ecrire les captures PNG")
@@ -128,6 +211,7 @@ def principal():
         for domaine in ("Runtime.enable", "Log.enable", "Page.enable"):
             cdp.appel(domaine)
         sonde(cdp, f"http://127.0.0.1:{banc.port}/", banc, args.capture)
+        sonde_impression(cdp, f"http://127.0.0.1:{banc.port}/", banc, args.capture)
     except Exception as erreur:                              # noqa: BLE001
         s.verifie(repr(erreur), "pas d'exception de la sonde", "sonde : deroulement")
     finally:
