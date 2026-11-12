@@ -227,6 +227,17 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("atelier_graphiques") + ". Sauvegardes horodatées avant écriture : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
     Outil(
+        "atelier_ecrans", "Atelier des écrans", "Atelier des écrans", GROUPES[2],
+        "Compose l'écran tactile d'une carte et en génère les interfaces HASPmota et LVGL.",
+        "Page web qui montre, carte par carte, la description neutre de son écran (pages, objets, polices du "
+        "catalogue), les fichiers générés (pages.jsonl, ecranLvgl.be) et leurs différences avec le dépôt, les valeurs "
+        "de la carte (simulées si elle est injoignable) et une capture de son écran. Seul paramètre ici : le port de "
+        "la page (7960). Rien n'est écrit dans le dépôt : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/atelier_ecrans_web.py",
+        [_port("http", 7960)],
+        "http",
+        "Console capturée : " + CONSOLE.format("atelier_ecrans") + "."),
+    Outil(
         "fabrique_tapp", "Fabrique d'extensions", "Fabrique d'extensions", GROUPES[2],
         "Crée une extension .tapp depuis un modèle, la vérifie, la fabrique et l'envoie à une carte.",
         "Page web qui guide en quatre étapes : un dossier data/extensions/<nom>/ créé depuis un modèle, le manifeste, "
@@ -241,7 +252,7 @@ OUTILS = [
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.
 for _o in OUTILS:
-    _o.lieu = _o.id in ("build", "fichiers_berry", "assistant_persist", "atelier_graphiques", "fabrique_tapp",
+    _o.lieu = _o.id in ("build", "fichiers_berry", "assistant_persist", "atelier_graphiques", "atelier_ecrans", "fabrique_tapp",
                         "syslog", "sniffeur_mqtt")
 
 

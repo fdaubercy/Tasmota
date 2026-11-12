@@ -270,7 +270,7 @@ def principal():
     options.add_argument("--http", type=int, default=PORT_DEFAUT, help=f"port de la page (defaut {PORT_DEFAUT})")
     acces_web.ajoute_options(options)
     args = options.parse_args()
-    acces = acces_web.Acces(args.http, args.local, "Atelier des ecrans")
+    acces = acces_web.Acces(args.http, args.local, "Atelier des écrans")
     try:
         ThreadingHTTPServer.request_queue_size = 128   # la page lance plusieurs requetes d'un coup (voir atelier des graphiques)
         serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(acces, DEPOT))

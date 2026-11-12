@@ -701,6 +701,9 @@ cible_assistant_persist.enregistre(env)
 # CIBLE ATELIER DES GRAPHIQUES (meme menu Custom) : pages de graphiques des cartes S3/P4
 import cible_atelier_graphiques
 cible_atelier_graphiques.enregistre(env)
+# CIBLE ATELIER DES ECRANS (meme menu Custom) : ecrans HASPmota / LVGL des cartes
+import cible_atelier_ecrans
+cible_atelier_ecrans.enregistre(env)
 # CIBLE FABRIQUE D'EXTENSIONS (meme menu Custom) : creer, verifier, fabriquer et envoyer un .tapp
 import cible_tapp
 cible_tapp.enregistre(env)
@@ -718,12 +721,13 @@ cible_tapp.enregistre(env)
 #   - fichiers_berry  : lancement detache (ou ouverture) de la page Fichiers Berry par env ;
 #   - assistant_persist : lancement detache (ou ouverture) de la page Assistant persist ;
 #   - atelier_graphiques : lancement detache (ou ouverture) de la page Atelier des graphiques ;
+#   - atelier_ecrans : lancement detache (ou ouverture) de la page Atelier des ecrans ;
 #   - __idedata      : rafraichissement IntelliSense / Project Tasks par pioarduino
 #                       ('pio project init'), lance tout seul par VS Code.
 CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_sniffeur_mqtt.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
                      cible_sniffeur_modbus.NOM_CIBLE, cible_testeur_udp.NOM_CIBLE, cible_synchro_fork.NOM_CIBLE,
                      cible_annuaire.NOM_CIBLE, cible_build_web.NOM_CIBLE, cible_fichiers_berry.NOM_CIBLE,
-                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, cible_tapp.NOM_CIBLE, "__idedata")
+                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, cible_atelier_ecrans.NOM_CIBLE, cible_tapp.NOM_CIBLE, "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================
