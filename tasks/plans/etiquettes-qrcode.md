@@ -219,11 +219,11 @@ Consomme : A4 (`POST /impression`).
   `etiquettes_qr_verdict.py` recalés à 0,45 mm lisible (15 mm texte court = 25 modules) et 0,35 mm limite ;
   `test_etiquettes_qr_verdict.py` VERT avec le point d'essai. Planche aux tailles 15, 20, 25, 30 mm, texte court et texte long, avec et
   sans image ; scan au téléphone ; seuils de `verdict` recalés d'après le résultat (banc A2 mis à jour).
-  Écart : sous 15 mm rien n'est essayé, la zone « limite » (0,35 à 0,45 mm) reste une estimation ; le texte long n'a pas
-  fait l'objet d'un retour séparé.
+  Texte long (33 modules) : lu à 20 mm (0,49 mm), pas à 15 mm (0,37 mm) -> seuil « limite » relevé à 0,40 mm.
+  Écart : entre 0,40 et 0,45 mm rien n'est essayé, la zone « limite » reste une estimation.
   Corrigé au passage : perte du focus à chaque lettre (l'aperçu redessinait les lignes ; `majValeursLignes`, sonde avec
   témoin rouge) ; champ standard « Range extender » (SSID du point d'accès, proposé si `rangeExtender.activation` = ON)
-- [ ] Commit
+- [x] Commit — preuve : `6a0739ae4` (impression, planche, export), `17e83cb30` (focus, range extender), `93e24302f` (seuils)
 
 ## A6 — Page `/qrcode` de la carte
 Fichiers : créer `data/fs/qrcodePage.be` (driver posé à l'import, route `/qrcode`, bouton d'accueil « QR code »,

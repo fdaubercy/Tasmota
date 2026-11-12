@@ -17,9 +17,10 @@ CAPACITE = {
 }
 MARGE = 4               # modules blancs de chaque cote
 # mm par module, cales le 2026-11-12 sur l'essai reel (iPhone, planche d'essai, imprimante de l'utilisateur) :
-# toute la planche lue jusqu'a 15 mm en texte court = 25 modules = 0,45 mm. Plus petit : non essaye, d'ou « limite ».
+# texte court lu jusqu'a 15 mm (25 modules, 0,45 mm), texte long lu a 20 mm (33 modules, 0,49 mm) mais pas a 15 mm
+# (0,37 mm). Entre 0,40 et 0,45 : non essaye, d'ou « limite ».
 SEUIL_LISIBLE = 0.45
-SEUIL_LIMITE = 0.35
+SEUIL_LIMITE = 0.40
 
 
 def correction(avec_image):
