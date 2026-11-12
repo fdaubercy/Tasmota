@@ -58,6 +58,14 @@ def empreinte(octets):
     return hashlib.sha256(octets).hexdigest()
 
 
+def texte(d):
+    """Texte de l'ecran.json a la mise en forme du depot : une cle par ligne, un element de liste par ligne (UTF-8, \\n)."""
+    v = lambda x: json.dumps(x, ensure_ascii=False, separators=(",", ":"))
+    lignes = [f"{v(k)}:[\n" + ",\n".join(" " + v(e) for e in x) + "\n]" if isinstance(x, list) and x else f"{v(k)}:{v(x)}"
+              for k, x in d.items()]
+    return "{\n" + ",\n".join(lignes) + "\n}\n"
+
+
 def _indice(cle, indice, modele, qui, quoi, msgs):
     """Indice d'une cle de liste : entier dans 0 .. longueur - 1 de la section modele."""
     if "[]" not in cle:
