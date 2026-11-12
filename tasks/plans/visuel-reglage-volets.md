@@ -4,7 +4,7 @@ titre: Visuel des volets sur la page d'accueil et réglage des durées par les b
 objectif: Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-11
+maj: 2026-11-12
 ---
 # Visuel des volets et réglage des durées
 
@@ -236,7 +236,7 @@ l'envoi du FS ; durées du MPU6050 à côté quand `mpu` les porte ; cause d'un 
   « Carte des documents » de `CLAUDE.md` ; `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` : code 0 — preuve : 6f6d88006 (README, CLAUDE.md, skill bancs), verifie_references_docs.py : 0 défaut, code 0
 - [x] Compilation des 3 envs par la page Build (:7700), une à la fois, SUCCESS lu en fin de journal — preuve : journaux du 2026-11-12,
   `tasmota32s3-rdc-grenier` SUCCESS 01:24:34, `tasmota32s3-etage2-grenier` SUCCESS 01:47:36, `tasmota32p4-garage-serveur-modbus`
-  SUCCESS 01:02:00 ; il a fallu déplacer `I2Cdevlib-Core` de `commun` vers `sans_mpu6050` dans le cenv (I2Cdev.h, requis par le MPU6050 des greniers)
+  SUCCESS 01:02:00 ; il a fallu déplacer `I2Cdevlib-Core` de `commun` vers `sans_mpu6050` dans le cenv (I2Cdev.h, requis par le MPU6050 des greniers) ; recompilés après 210f68fe9 (journaux du 2026-11-12 05:30 à 07:15) : rdc-grenier SUCCESS 00:25:30, etage2-grenier SUCCESS 00:39:45, garage P4 SUCCESS 00:39:15, aucun fichier réécrit à commiter
 - [x] Commit `docs(volets): mode d'emploi du visuel et du reglage` (avec `platformio_override.ini` et
   `user_config_override.h` s'ils ont été réécrits par le build) — preuve : 6f6d88006 (documentation), c0b3df662 (cenv et fichiers réécrits par le build)
 
