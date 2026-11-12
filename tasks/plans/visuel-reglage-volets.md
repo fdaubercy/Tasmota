@@ -223,14 +223,16 @@ l'envoi du FS ; durées du MPU6050 à côté quand `mpu` les porte ; cause d'un 
 - [x] Écrire les trois fichiers ; sonde verte ; témoin : page sans l'avertissement « Sinon, Annuler » -> rouge — preuve : sonde VERT (76 OK, dont l'ordre refusé ; lecture replanifiée avant l'affichage), code 0 ;
   témoin (`reglageVolets.js` sans « Sinon, Annuler ») : ROUGE 6 échecs, tous « question du sens » ; `test_volets_chrome.py` VERT ; `banc_reglage_volets`,
   `banc_boot`, `banc_demarrage` verts après l'ajout des 3 fichiers à `volets_pages` ; 0 Chrome `sonde_*` restant
-- [ ] Commit `feat(volets): page de reglage des durees`
+- [x] Commit `feat(volets): page de reglage des durees` — preuve : 594616c2f et 824217c0e, relecture approuvée, sondes relancées par le contrôleur (VERT, 0 Chrome restant)
 
 ## A7 — Relectures, documentation, compilation
-- [ ] Agent `relecteur-berry` sur `vrFonctions.be`, `vrReglage.be`, `vrPages.be`, `controleVoletRoulants.be` ; agent
-  `relecteur-pages-web` sur `volets.js` et la page de réglage ; corrections faites et bancs relancés
-- [ ] `outils_docs/README.md` : mode d'emploi (façade dans le persist, réglage pas à pas, recopie des durées) ; ligne dans la
-  « Carte des documents » de `CLAUDE.md` ; `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` : code 0
-- [ ] Compilation des 3 envs par la page Build (:7700), une à la fois, SUCCESS lu en fin de journal
+- [x] Agent `relecteur-berry` sur `vrFonctions.be`, `vrReglage.be`, `vrPages.be`, `controleVoletRoulants.be` ; agent
+  `relecteur-pages-web` sur `volets.js` et la page de réglage ; corrections faites et bancs relancés — preuve : relecteur-berry et relecteur-pages-web (0 bloquant), 13 corrections C1 à C13 en 32351579b, relecture ciblée « tous adressés », bancs et sondes verts
+- [x] `outils_docs/README.md` : mode d'emploi (façade dans le persist, réglage pas à pas, recopie des durées) ; ligne dans la
+  « Carte des documents » de `CLAUDE.md` ; `python outils_docs/scripts_python/maintenance/verifie_references_docs.py` : code 0 — preuve : 6f6d88006 (README, CLAUDE.md, skill bancs), verifie_references_docs.py : 0 défaut, code 0
+- [x] Compilation des 3 envs par la page Build (:7700), une à la fois, SUCCESS lu en fin de journal — preuve : journaux du 2026-11-12,
+  `tasmota32s3-rdc-grenier` SUCCESS 01:24:34, `tasmota32s3-etage2-grenier` SUCCESS 01:47:36, `tasmota32p4-garage-serveur-modbus`
+  SUCCESS 01:02:00 ; il a fallu déplacer `I2Cdevlib-Core` de `commun` vers `sans_mpu6050` dans le cenv (I2Cdev.h, requis par le MPU6050 des greniers)
 - [ ] Commit `docs(volets): mode d'emploi du visuel et du reglage` (avec `platformio_override.ini` et
   `user_config_override.h` s'ils ont été réécrits par le build)
 
