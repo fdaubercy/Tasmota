@@ -75,7 +75,9 @@ class Banc:
             s.bind(("127.0.0.1", 0))
             self.port = s.getsockname()[1]
         acces = acces_web.Acces(self.port, True, "Atelier des ecrans")
-        self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), aew.fabrique_gestionnaire(acces, self.racine, get=self.get))
+        self.builds = []
+        self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), aew.fabrique_gestionnaire(acces, self.racine, get=self.get,
+                                                                                                builds_en_cours=lambda: self.builds))
         self.serveur.daemon_threads = True
         threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
 
@@ -153,14 +155,36 @@ def test_catalogue(b):
     verifie((statut, r), (200, cat.charge(b.racine)), "GET /catalogue : le catalogue du depot")
 
 
+def test_ecriture_routes(b):
+    desc = aed.charge(b.racine, DEBITS)
+    verifie(b.requete("POST", "/diff", {"env": DEBITS, "description": desc}, entetes={})[0], 403, "POST /diff sans en-tete -> 403")
+    verifie(b.requete("POST", "/diff", {"env": "inconnu", "description": desc})[0], 400, "POST /diff : env inconnu -> 400")
+    s, r = b.requete("POST", "/diff", {"env": DEBITS, "description": desc})
+    verifie((s, r["fichiers"]), (200, []), "POST /diff : description du depot, rien a ecrire")
+    autre = dict(desc, ecran="ILI9488_480x320")
+    verifie(b.requete("POST", "/ecrire", {"env": DEBITS, "description": autre, "empreinte": r["empreinte"],
+                                          "empreinte_description": None})[0], 400, "POST /ecrire : autre ecran que celui de la carte -> 400")
+    for builds, libelle in ((["upload"], "build en cours"), (None, "build indetectable")):
+        b.builds = builds
+        verifie(b.requete("POST", "/ecrire", {"env": DEBITS, "description": desc, "empreinte": r["empreinte"],
+                                              "empreinte_description": aed.empreinte(aed.chemin(b.racine, DEBITS).read_bytes())})[0],
+                409, f"POST /ecrire : {libelle} -> 409")
+    b.builds = []
+    s, r = b.requete("POST", "/ecran/diff", {"env": DEBITS, "ecran": "ILI9488_480x320", "description": desc})
+    verifie((s, r["refus"], any(f["chemin"].endswith("display.ini") for f in r["fichiers"])), (200, [], True), "POST /ecran/diff")
+    verifie(b.requete("POST", "/ecran/diff", {"env": DEBITS, "ecran": "INCONNU", "description": desc})[0], 400, "POST /ecran/diff : ecran inconnu -> 400")
+
+
 def test_description(b):
     fichier = aed.chemin(b.racine, DEBITS)
     statut, r = b.requete("GET", f"/description?env={DEBITS}")
     verifie((statut, r["description"], r["empreinte"], r["erreurs"], r["ecran"]),
             (200, aed.charge(b.racine, DEBITS), aed.empreinte(fichier.read_bytes()), [], "ST7262_1024x600"),
             "GET /description : description, empreinte des octets du fichier, valide")
-    verifie(b.requete("GET", f"/description?env={SANS_ECRAN}"),
-            (200, {"description": None, "empreinte": None, "erreurs": [], "ecran": None}), "GET /description : aucune description")
+    statut, r = b.requete("GET", f"/description?env={SANS_ECRAN}")
+    verifie((statut, {k: v for k, v in r.items() if k != "build"}, f"env={SANS_ECRAN}&" in r.get("build", "")),
+            (200, {"description": None, "empreinte": None, "erreurs": [], "ecran": None}, True),
+            "GET /description : aucune description (lien page Build de l'env)")
     fichier.write_text("{tronque", encoding="utf-8")
     statut, r = b.requete("GET", f"/description?env={DEBITS}")
     verifie((statut, r["description"], bool(r["erreurs"]), r["empreinte"]), (200, None, True, aed.empreinte(b"{tronque")),
@@ -254,7 +278,7 @@ def test_police(b):
         verifie(b.requete("GET", f"/police?nom={nom}")[0], 404, f"GET /police?nom={nom} : hors catalogue -> 404")
 
 
-TESTS = [test_page, test_cartes, test_catalogue, test_description, test_apercu, test_acces, test_valeurs, test_capture, test_police]
+TESTS = [test_page, test_cartes, test_catalogue, test_ecriture_routes, test_description, test_apercu, test_acces, test_valeurs, test_capture, test_police]
 
 
 if __name__ == "__main__":

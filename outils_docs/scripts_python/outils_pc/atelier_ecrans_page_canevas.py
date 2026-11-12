@@ -244,6 +244,7 @@ function demarre() {
   $('ajoutPage').onclick = ajoutePage;
   $('relire').onclick = lisCarte;
   $('capture').onclick = capture;
+  $('ecrire').onclick = prepareEcriture;
   $('carte').onchange = function () { chargeCarte($('carte').value); };
   $('ecran').onchange = function () { choisitEcran($('ecran').value); };
   brancheEcran();

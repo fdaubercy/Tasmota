@@ -123,6 +123,8 @@ function chargeCarte(env) {          // la carte d'avant reste en place tant que
     $('interface').textContent = c.interface ? 'interface envoyée : ' + c.interface : 'interface : non déclarée';
     $('captureBoite').hidden = true;
     E.ecranEnv = r.ecran;
+    W.changement = null; W.descAvant = null; fermeConfirmation(); messageEcriture('');
+    E.empreinteDesc = r.empreinte; E.build = r.build;
     E.desc = r.description || descriptionVide(r.ecran);
     E.ecran = r.ecran || E.desc.ecran || null;
     E.histo = []; E.futur = []; E.sel = null;
@@ -140,9 +142,11 @@ function chargeCarte(env) {          // la carte d'avant reste en place tant que
   });
 }
 function choisitEcran(cle) {
+  if (W.descAvant) oublieChangement(false);
+  fermeConfirmation();
   E.ecran = cle || null;
-  E.msgEcran = lecture() ? "Aperçu sur un autre écran que celui de la carte, en lecture seule : la disposition n'est pas "
-               + "mise à l'échelle. Revenir à l'écran de la carte pour l'éditer." : '';
+  E.msgEcran = lecture() ? "Aperçu sur un autre écran que celui de la carte, en lecture seule. « Proposer le changement » "
+               + "met la disposition à l'échelle et montre les fichiers ; revenir à l'écran de la carte pour l'éditer." : '';
   afficheBandeau(); zoomAjuste(); dessineTout();
 }
 
@@ -382,7 +386,7 @@ function capture() {
 }
 
 function dessineTout() {
-  dessineListes(); dessineEcran(); dessineProprietes(); dessineLiaison(); dessineTableau(); dessineRemarques();
+  dessineListes(); dessineEcran(); dessineProprietes(); dessineLiaison(); dessineTableau(); dessineRemarques(); dessineEcriture();
   var ro = lecture();
   $('annuler').disabled = ro || !E.histo.length; $('retablir').disabled = ro || !E.futur.length; $('ajoutPage').disabled = ro;
   ['proprietes', 'liaison', 'tableau'].forEach(function (id) {

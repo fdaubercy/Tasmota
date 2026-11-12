@@ -201,14 +201,14 @@ Consomme : A2 à A7, `fichiers_berry_sauvegarde.Transaction`, `atelier_graphique
 -> list[{"rel", "avant", "apres"}]` (`display.ini` repris de l'env qui porte l'écran, base de l'env si besoin, conflit
 de broches avec le persist -> refus motivé, avertissement si écran intégré à une autre carte) ; routes `POST /diff`,
 `POST /ecrire`, `POST /ecran/diff`, `POST /ecran/changer`.
-- [ ] Banc d'abord (rouge), copie temporaire : écriture de `ecran.json`, `pages.jsonl`, `ecranLvgl.be` en une
+- [x] Banc d'abord (rouge), copie temporaire — preuve : test_atelier_ecrans_ecriture.py et test_atelier_ecrans_ecran.py rouges puis VERTS (2026-11-12) ; écriture de `ecran.json`, `pages.jsonl`, `ecranLvgl.be` en une
   transaction ; description modifiée sur le disque après lecture -> refus, rien écrit ; build en cours -> refus ;
   mise à l'échelle 1024 × 600 -> 480 × 320 (positions et tailles au rapport, police ramenée à la taille la plus proche,
   bouton de 46 px -> 25 px signalé) ; changement d'écran : diff du `display.ini`, conflit de broches refusé
-- [ ] Modules et routes ; bancs VERT ; dans la page, « Écrire dans le dépôt » (diff puis confirmation), mode
+- [x] Modules et routes ; bancs VERT — preuve : commit A8, sonde Chrome VERTE (52, 2 passes), test_atelier_ecrans_web.py VERT (routes, 403, 400, 409), relecture traitée (broches :H RGB sans la fréquence) ; dans la page, « Écrire dans le dépôt » (diff puis confirmation), mode
   « changement d'écran » (diff, confirmation, rappel de recompiler par la page Build), lien « Envoyer par la page
   Build ↗ » (`?env=` et fichiers) ; sonde Chrome VERT
-- [ ] Commit
+- [x] Commit — preuve : commit A8 (feat(atelier-ecrans): A8)
 
 ## A9 — Ressources sous `/sd`
 - [ ] Liste des ressources utiles (fonds, icônes, polices ajoutées) proposée à l'utilisateur, choix fait ; règle de

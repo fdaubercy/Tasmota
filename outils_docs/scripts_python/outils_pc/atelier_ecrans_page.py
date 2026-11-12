@@ -11,6 +11,7 @@ le lit pour savoir si la page tourne.
 from atelier_ecrans_page_canevas import JS as JS_CANEVAS
 from atelier_ecrans_page_js import JS
 from atelier_ecrans_page_remarques import JS as JS_REMARQUES
+from atelier_ecrans_page_ecriture import JS as JS_ECRITURE
 import lieux
 
 CSS = """
@@ -99,7 +100,7 @@ HTML = """
  <span id="etat" class="pastille">…</span><span id="interface" class="pastille bleu"></span><span id="pastilleRemarques" class="pastille or" hidden></span>
  <button id="theme" class="theme" type="button"></button>
 </header>
-<div style="padding:0 16px"><div id="bandeau" class="avert" hidden></div></div>
+<div style="padding:0 16px"><div id="bandeau" class="avert" hidden></div><div id="changement" class="ligne" hidden></div></div>
 <div class="grille3">
  <div class="carte">
   <h2>Pages</h2><div id="pages" class="arbre"></div>
@@ -134,6 +135,11 @@ HTML = """
    <div class="ligne"><div class="onglets" id="ongletsFichiers"></div><span id="resumeFichiers" class="doux petit" style="margin-left:auto"></span></div>
    <div id="erreurs" class="avert" hidden></div>
    <pre id="fichier" class="code"></pre>
+   <div id="confirmation" class="carte" hidden style="margin-top:8px"></div>
+   <div class="ligne" style="margin-top:8px"><span class="doux petit">Écriture : ecran.json, pages.jsonl et ecranLvgl.be
+    (l'interface envoyée est celle du cenv)</span><button id="ecrire" class="btn prim" type="button" style="margin-left:auto">Écrire dans le dépôt</button>
+    <a id="build" class="btn" target="_blank" rel="noopener" hidden>Envoyer par la page Build ↗</a></div>
+   <div id="ecritureMessage" class="avert" hidden></div>
   </div>
  </div>
  <div class="carte">
@@ -151,4 +157,4 @@ THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getIt
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des écrans</title>"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
         + THEME_TETE + "<style>" + CSS + "</style></head><body>" + HTML
-        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_CANEVAS + "</script></body></html>")
+        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_CANEVAS + "</script></body></html>")

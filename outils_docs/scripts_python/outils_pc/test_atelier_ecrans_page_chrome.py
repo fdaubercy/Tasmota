@@ -217,6 +217,53 @@ def sonde_remarques(cdp, banc):
     verifie(erreurs, [], "remarques : aucune erreur console")
 
 
+def sonde_ecriture(cdp, banc):
+    js = cdp.js
+    serveur = "tasmota32s3-bureau-serveur-debits-pac"
+    js("modifie(function(){ objet(0, 1).attributs.text = 'Debits du chauffage'; })")
+    js("document.getElementById('ecrire').click()")
+    n = attend(cdp, "!document.getElementById('confirmation').hidden && document.querySelectorAll('#confirmation li').length", 15)
+    verifie(n, 3, "Ecrire : confirmation avec les trois fichiers")
+    js("document.getElementById('confirmer').click()")
+    msg = attend(cdp, "document.getElementById('ecritureMessage').textContent.indexOf('Écrit') === 0 && document.getElementById('ecritureMessage').textContent", 20)
+    verifie(bool(msg), True, f"Ecrire : ecrit dans la copie du depot ({msg})")
+    ej = (banc.racine / "outils_docs/atelier_ecrans/cartes" / ENV / "ecran.json").read_text(encoding="utf-8")
+    pj = (banc.racine / "data/bureau/tasmota32s3-ecran-debits-pac/pages.jsonl").read_text(encoding="utf-8")
+    verifie(("Debits du chauffage" in ej, "Debits du chauffage" in pj), (True, True), "Ecrire : ecran.json et pages.jsonl de la copie modifies")
+    verifie("fichiers=pages.jsonl" in (js("document.querySelector('#ecritureMessage a').href") or ""), True, "lien page Build avec le fichier de l'interface")
+    js("document.getElementById('ecrire').click()")
+    vide = attend(cdp, "!document.getElementById('confirmation').hidden && document.getElementById('confirmation').textContent.indexOf('Rien') >= 0", 15)
+    verifie(bool(vide), True, "Ecrire une seconde fois (bouton rendu actif) : rien a ecrire")
+    js("Array.prototype.filter.call(document.querySelectorAll('#confirmation button'),function(b){return b.textContent==='Fermer'})[0].click()")
+
+    js("var s=document.getElementById('ecran'); s.value='ILI9488_480x320'; s.dispatchEvent(new Event('change'))")
+    verifie(js("!document.getElementById('changement').hidden && !!document.getElementById('proposeChangement')"), True, "autre ecran : bouton Proposer le changement")
+    js("document.getElementById('proposeChangement').click()")
+    ok = attend(cdp, "!!document.getElementById('confirmer') && E.desc.ecran === 'ILI9488_480x320'", 20)
+    verifie((bool(ok), js("E.fichiers.some(function(f){return f.chemin.slice(-11)==='display.ini'})"),
+             js("objet(0, 91).h")), (True, True, 25), "proposition : description a l'echelle dessinee, display.ini au diff")
+    verifie(js("document.getElementById('confirmation').textContent.indexOf('cible tactile') >= 0"), True, "proposition : boutons trop petits signales")
+    js("document.getElementById('confirmer').click()")
+    fin = attend(cdp, "E.ecranEnv === 'ILI9488_480x320' && document.getElementById('ecritureMessage').textContent.indexOf('Écran changé') === 0", 30)
+    verifie(bool(fin), True, "changement d'ecran ecrit, page rechargee sur le nouvel ecran")
+    ini = (banc.racine / "data/bureau/tasmota32s3-ecran-debits-pac/display.ini").read_text(encoding="utf-8")
+    verifie(ini.startswith(":H,ILI9488"), True, "display.ini de la carte repris de l'ILI9488")
+
+    js(f"var c=document.getElementById('carte'); c.value='{serveur}'; c.dispatchEvent(new Event('change'))")
+    attend(cdp, f"E.env === '{serveur}'", 15)
+    avant = (banc.racine / "data/bureau/tasmota32s3-serveur-debits-pac/display.ini").read_bytes()
+    js("var s=document.getElementById('ecran'); s.value='ST7262_1024x600'; s.dispatchEvent(new Event('change'))")
+    js("document.getElementById('proposeChangement').click()")
+    refus = attend(cdp, "!document.getElementById('confirmation').hidden && document.getElementById('confirmation').textContent.indexOf('refusé') >= 0", 20)
+    verifie((bool(refus), js("!!document.getElementById('confirmer')")), (True, False), "conflit de broches : refus affiche, pas de bouton de confirmation")
+    js("var s=document.getElementById('ecran'); s.value='ILI9488_480x320'; s.dispatchEvent(new Event('change'))")
+    verifie((js("lecture()"), js("document.getElementById('confirmation').hidden"), js("E.desc.ecran")), (False, True, "ILI9488_480x320"),
+            "retour a l'ecran de la carte : proposition oubliee")
+    verifie((banc.racine / "data/bureau/tasmota32s3-serveur-debits-pac/display.ini").read_bytes(), avant, "refus : display.ini intact")
+    erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
+    verifie(erreurs, [], "ecriture et changement : aucune erreur console")
+
+
 def main():
     t = Path(tempfile.mkdtemp(prefix="sonde_atelier_ecrans_"))
     banc = chrome = None
@@ -226,6 +273,7 @@ def main():
         os.environ.update(FAUX_CLAUDE="ok", FAUX_CLAUDE_ARGV=str(t / "argv.json"), OUTILS_TASMOTA_DOSSIER=str(t / "donnees"))
         vrai = aer.Traitement
         aew.aer.Traitement = lambda racine: vrai(racine, programme=[sys.executable, str(faux)])     # jamais le vrai claude
+        aew._builds_defaut = lambda: []                                     # aucun build : pas de requete aux processus
         banc = BancPage(t)
         for f in banc.racine.glob("outils_docs/atelier_ecrans/cartes/*/remarques.json"):
             f.unlink()                       # hermetique : les remarques du vrai depot ne viennent pas dans la copie
@@ -255,6 +303,7 @@ def main():
         sonde(cdp, banc)
         sonde_remarques(cdp, banc)
         verifie(instantane(banc.racine) == avant, True, "copie du depot inchangee hors remarques.json (ecran.json non ecrit)")
+        sonde_ecriture(cdp, banc)
     finally:
         tue_arbre(chrome)
         # tue_arbre manque parfois un fils de Chrome : balayage par le profil temporaire de cette passe

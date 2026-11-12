@@ -14,7 +14,7 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
     GET  /cartes       {cartes: [{nom, lieu, ip, ecran (cle du catalogue | null), interface (custom_interface_ecran | null),
                        description (ecran.json present)}], lieux}
     GET  /catalogue    outils_docs/schemas/catalogue_ecran.json tel quel
-    GET  /description  ?env= : {description | null, empreinte (sha256 des octets du fichier) | null, erreurs, ecran}
+    GET  /description  ?env= : {description | null, empreinte (sha256 des octets du fichier) | null, erreurs, ecran, build}
     GET  /valeurs      ?env=[&simule=1] : {simule, motif, sensor (StatusSNS de Status 10) | null, modele {cle: exemple}} ;
                        carte muette : simule true, et les lectures des SILENCE s suivantes n'attendent pas la carte
     GET  /police       ?nom= : .ttf d'une police `source: sd` du catalogue (font/ttf), cherche par son nom de fichier
@@ -23,6 +23,11 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
                        pages.jsonl, ecranLvgl.be (dossier de la carte), ecran.json ; diff avec le depot ; rien n'est ecrit
     POST /capture      {env} -> 200 image/bmp (octets de lv.screenshot()) ou 409 texte (refus : carte injoignable, sans
                        LVGL, fichier tronque, capture deja en cours)
+    POST /diff         {env, description} -> {fichiers (comme /apercu, seulement ceux qui changent), empreinte}
+    POST /ecrire       {env, description, empreinte, empreinte_description} -> {ecrits, empreinte_description, build}
+                       (409 : build en cours, fichiers ou ecran.json changes depuis le diff ou le chargement)
+    POST /ecran/diff   {env, ecran, description} -> {description a l'echelle, avertissements, refus, fichiers, empreinte}
+    POST /ecran/changer {env, ecran, description, empreinte, empreinte_description} -> {ecrits, avertissements, build}
     GET  /remarques    ?env= : {remarques (remarques.json), traitement (etat)} ; GET /remarques/etat : etat du traitement
     POST /remarques    {env, action: epingle|repond|refuse, ...} -> {remarques} (ecrit remarques.json, atelier_ecrans_remarques)
     POST /remarques/appliquer {env, id, description} -> {description modifiee | null, erreurs, remarques} (ecran.json non ecrit)
@@ -46,6 +51,8 @@ import acces_web
 import atelier_ecrans_capture as aec
 import atelier_ecrans_catalogue as cat
 import atelier_ecrans_description as aed
+import atelier_ecrans_ecran as aecr
+import atelier_ecrans_ecriture as aee
 import atelier_ecrans_haspmota as ah
 import atelier_ecrans_lvgl as al
 import atelier_ecrans_remarques as aer
@@ -108,6 +115,17 @@ def description_de(racine, env):
     return {"description": d, "empreinte": aed.empreinte(octets), "erreurs": _valide(d, cat.charge(racine)), "ecran": ecran}
 
 
+def diff_fichier(nom, rel, avant, contenu):
+    """Entree de fichier pour la page : contenu, diff unifie avec le depot, lignes ajoutees et retirees."""
+    lignes = list(difflib.unified_diff((avant or "").splitlines(), (contenu or "").splitlines(), "a/" + rel, "b/" + rel, lineterm=""))
+    return {"nom": nom, "chemin": rel, "contenu": contenu, "diff": "\n".join(lignes),
+            "ajouts": sum(1 for l in lignes[2:] if l.startswith("+")), "retraits": sum(1 for l in lignes[2:] if l.startswith("-"))}
+
+
+def _fichiers_prevus(prevus):
+    return [diff_fichier(f["rel"].rsplit("/", 1)[-1], f["rel"], f["avant"], f["apres"]) for f in prevus]
+
+
 def apercu(racine, env, desc):
     if not isinstance(desc, dict):
         raise ValueError("description : objet attendu")
@@ -127,10 +145,7 @@ def apercu(racine, env, desc):
             avant = (Path(racine) / rel).read_text(encoding="utf-8")
         except FileNotFoundError:
             avant = ""
-        lignes = list(difflib.unified_diff(avant.splitlines(), contenu.splitlines(), "a/" + rel, "b/" + rel, lineterm=""))
-        fichiers.append({"nom": nom, "chemin": rel, "contenu": contenu, "diff": "\n".join(lignes),
-                         "ajouts": sum(1 for l in lignes[2:] if l.startswith("+")),
-                         "retraits": sum(1 for l in lignes[2:] if l.startswith("-"))})
+        fichiers.append(diff_fichier(nom, rel, avant, contenu))
     return {"erreurs": [], "fichiers": fichiers}
 
 
@@ -173,8 +188,14 @@ def depuis_ce_pc(handler):
     return acces_web.est_local(handler.client_address)
 
 
-def fabrique_gestionnaire(acces, racine, get=None, traitement=None):
+def _builds_defaut():
+    import build_serie
+    return build_serie.builds_en_cours_defaut()
+
+
+def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_cours=None):
     get = get or build_ota_http._get
+    builds_en_cours = builds_en_cours or _builds_defaut
     traitement = traitement or aer.Traitement(racine)
     muettes = {}                                # env -> instant du dernier echec de lecture
     une_capture = threading.Lock()
@@ -238,7 +259,8 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None):
                 elif url.path == "/catalogue":
                     self._json(cat.charge(racine))
                 elif url.path == "/description":
-                    self._json(description_de(racine, env_atelier(racine, un("env"))))
+                    env = env_atelier(racine, un("env"))
+                    self._json({**description_de(racine, env), "build": aee.url_build(racine, env)})
                 elif url.path == "/valeurs":
                     self._json(valeurs(racine, env_atelier(racine, un("env")), un("simule") == "1", get, muettes))
                 elif url.path == "/remarques":
@@ -271,6 +293,30 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None):
                 chemin = urlsplit(self.path).path
                 if chemin == "/apercu":
                     self._json(apercu(racine, env_atelier(racine, demande.get("env")), demande.get("description")))
+                elif chemin == "/diff":
+                    env = env_atelier(racine, demande.get("env"))
+                    p = aee.prevu(racine, env, demande.get("description"))
+                    self._json({"fichiers": _fichiers_prevus(p["fichiers"]), "empreinte": p["empreinte"]})
+                elif chemin == "/ecrire":
+                    env = env_atelier(racine, demande.get("env"))
+                    ecran = cat.ecrans_des_envs(racine).get(env)
+                    d = demande.get("description")
+                    if ecran and isinstance(d, dict) and d.get("ecran") != ecran:   # changer d'ecran : /ecran/changer
+                        raise ValueError(f"description pour l'ecran {d.get('ecran')!r}, la carte a {ecran!r} : "
+                                         "passer par le changement d'ecran")
+                    r = aee.ecrit(racine, env, demande.get("description"), demande.get("empreinte"),
+                                  demande.get("empreinte_description"), builds_en_cours)
+                    self._json({**r, "build": aee.url_build(racine, env)})
+                elif chemin == "/ecran/diff":
+                    env = env_atelier(racine, demande.get("env"))
+                    c = aecr.changement(racine, env, demande.get("ecran"), demande.get("description"))
+                    self._json({k: c[k] for k in ("description", "avertissements", "refus", "empreinte")}
+                               | {"fichiers": _fichiers_prevus(c["fichiers"])})
+                elif chemin == "/ecran/changer":
+                    env = env_atelier(racine, demande.get("env"))
+                    r = aecr.change(racine, env, demande.get("ecran"), demande.get("description"), demande.get("empreinte"),
+                                    demande.get("empreinte_description"), builds_en_cours)
+                    self._json({**r, "build": aee.url_build(racine, env)})
                 elif chemin == "/remarques":
                     self._json({"remarques": aer.agit(racine, env_atelier(racine, demande.get("env")), demande)})
                 elif chemin == "/remarques/appliquer":
