@@ -110,6 +110,10 @@ resolu)` ; `image_data_uri(racine, nom)` (PNG/JPEG/SVG du dossier `images/`, con
 8192 o au plus). Sans persist (ESP8266), hostname et topic lus dans le `config_decodee.json` du dossier de la carte
 (`serveur_de_config`, ces deux clés seulement : ses mots de passe `sta_pwd`, `mqtt_pwd` échappent au motif SECRET) ; 16 cartes
 sur 17 au 2026-11-12, `tasmota32-rdc-vr-porte` n'a encore ni persist ni config décodée.
+**Entre les lignes (2026-11-12)** : l'appareil photo et l'appli « QR Code » de l'iPhone de l'utilisateur n'affichent aucun saut
+de ligne (ni LF ni CR LF, essai4-lignes.png) : clé `entre_lignes` du réglage (`"
+"`, `" · "`, `" | "`,
+`ENTRE_LIGNES`), `" · "` par défaut dans le gabarit ; la page (A4) la propose à côté du séparateur.
 **Encodage (découvert en A2)** : la bibliothèque ne code pas en UTF-8 (`255 & charCode`) ; la page (A4) et la carte (A6)
 lui donnent `String.fromCharCode(...new TextEncoder().encode(texte))` avec `qrOptions.mode = "Byte"` ; la table
 `CAPACITE` est alors exacte (80 cas sur 80, `lib/LISEZMOI.md`).
@@ -169,7 +173,7 @@ Consomme : A1 à A3. Produit, routes JSON : `GET /cartes` (envs par `lieux.pour_
   `?env=` mise à jour ; modifications non écrites -> confirmation avant de changer) ; bouton Sombre / Clair, choix
   mémorisé par `localStorage` sous try/catch, thème du système par défaut
 - [ ] Page selon le modèle A (`outils_docs/etiquettes_qr/modele-A.png`, `modele-A-sombre.png`) : aperçu dessiné par la bibliothèque, texte lu à côté, compteur d'octets,
-  verdict coloré, ajout de ligne (standard, arbre du persist, libre), ordre par flèches, style, image (PNG/SVG/JPEG de
+  verdict coloré, ajout de ligne (standard, arbre du persist, libre), ordre par flèches, « Entre les lignes » (saut de ligne, « · », « | »), style, image (PNG/SVG/JPEG de
   `outils_docs/etiquettes_qr/images/`), case « Page sur la carte » (absente pour un ESP8266), onglet « Gabarit commun »,
   diff avant écriture
 - [ ] Sonde Chrome hermétique : bascule Sombre / Clair par le bouton, changement d'env par la liste (réglage de

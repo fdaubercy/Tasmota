@@ -5,6 +5,7 @@
     {"source": "standard", "cle": "ip", "libelle": "IP"}
   ],
   "separateur": " : ",
+  "entre_lignes": " · ",
   "style": {"points": "rounded", "coins": "extra-rounded", "couleur": "#000000", "fond": "#ffffff", "image": null},
   "taille_mm": 25
 }

@@ -76,7 +76,11 @@ def test_texte():
         {"source": "persist", "chemin": "liste.1.v", "libelle": "Actif"},
         {"source": "libre", "texte": "Tableau", "libelle": ""}]}
     r = m.resout_avec(reglage, champs, PERSIST)
-    verifie(r["texte"], "Hostname : CUVE\nModBus : 2\nNote : a b\nActif : oui\nTableau", "texte lu")
+    verifie(r["texte"], "Hostname : CUVE\nModBus : 2\nNote : a b\nActif : oui\nTableau", "texte lu (saut de ligne par defaut)")
+    verifie(m.resout_avec({**reglage, "entre_lignes": " · "}, champs, PERSIST)["texte"],
+            "Hostname : CUVE · ModBus : 2 · Note : a b · Actif : oui · Tableau", "texte lu sur une ligne")
+    verifie("entre les lignes" in " ".join(m.valide_reglage({**m.charge_gabarit(RACINE), "entre_lignes": "\t"})), True,
+            "separateur de lignes inconnu refuse")
     verifie([l["etat"] for l in r["lignes"]], ["ok", "introuvable", "ok", "refuse", "ok", "ok", "ok"], "etats des lignes")
     verifie(len(r["avertissements"]), 2, "IP introuvable et mot de passe refuse signales")
     verifie("motdepasse9" in json.dumps(r), False, "aucun secret dans le resultat")

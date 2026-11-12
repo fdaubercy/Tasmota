@@ -32,6 +32,9 @@ POINTS = ("square", "dots", "rounded", "classy", "classy-rounded", "extra-rounde
 COINS = ("square", "dot", "extra-rounded")
 IMAGE_MAX = 8192                         # octets de l'image en data URI
 TYPES_IMAGE = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml"}
+# Entre deux lignes du texte : l'appareil photo et l'appli « QR Code » de l'iPhone n'affichent aucun saut de ligne
+# (ni LF ni CR LF, essai du 2026-11-12) ; d'ou un separateur sur une seule ligne par defaut dans le gabarit.
+ENTRE_LIGNES = ("\n", " · ", " | ")
 NOM_ENV = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 COULEUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 SECRET_MIN = 4
@@ -99,6 +102,8 @@ def valide_reglage(reglage, racine=None):
     sep = reglage.get("separateur", " : ")
     if not isinstance(sep, str) or len(sep) > 5:
         err.append("séparateur de 5 caractères au plus")
+    if reglage.get("entre_lignes", "\n") not in ENTRE_LIGNES:
+        err.append("entre les lignes : saut de ligne, « · » ou « | »")
     style = reglage.get("style") or {}
     if not isinstance(style, dict):
         err.append("style : objet attendu")
@@ -289,7 +294,7 @@ def resout_avec(reglage, champs, persist):
             valeur = _texte_valeur(valeur)
             textes.append(f"{lib}{sep}{valeur}" if lib else valeur)
         lignes.append({"source": src, "cle": cle, "libelle": lib, "valeur": valeur, "etat": etat})
-    return {"texte": "\n".join(textes), "lignes": lignes, "avertissements": avert}
+    return {"texte": reglage.get("entre_lignes", "\n").join(textes), "lignes": lignes, "avertissements": avert}
 
 
 def resout(racine, env, reglage):
