@@ -520,9 +520,17 @@ def globalFonctions_modifEtatRelai(moduleCapteur, idRelai, typeOrdre, etat, bool
 			# Désactive temporairement les capteurs si Relai ON / Réactive les capteurs si Relai OFF
 			logFonctions.log("MODIF_ETAT_RELAI: " + (etat == "ON" ? "Desactivation" : "Reactivation") + " des capteurs !", LOG_LEVEL_DEBUG)
 			for cleCapteurs: capteurs.keys()
-				capteurs[cleCapteurs]["activation"] = (etat == "ON" ? "OFF" : "ON")
-				# 'suspendu' : desactive par cette marche (relu par controleGeneral::reactiveCapteursSuspendus, aussi au demarrage)
-				if (etat == "ON")	capteurs[cleCapteurs]["suspendu"] = "ON"	else	capteurs[cleCapteurs].remove("suspendu")	end
+				# 'suspendu' : desactive par cette marche (relu par controleGeneral::reactiveCapteursSuspendus, aussi au demarrage).
+				# Un capteur coupe a la main (activation OFF) n'est ni suspendu ni reactive.
+				if (etat == "ON")
+					if (capteurs[cleCapteurs].find("activation", "OFF") == "ON")
+						capteurs[cleCapteurs]["activation"] = "OFF"
+						capteurs[cleCapteurs]["suspendu"] = "ON"
+					end
+				elif (capteurs[cleCapteurs].find("suspendu", "OFF") == "ON")
+					capteurs[cleCapteurs]["activation"] = "ON"
+					capteurs[cleCapteurs].remove("suspendu")
+				end
 			end	
 		end
 	end

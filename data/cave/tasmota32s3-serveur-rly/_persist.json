@@ -177,6 +177,7 @@
 			"activation": "ON",
 			"reglage": "OFF",
 			"log": "detail",
+			"pannes": {"antiRebond": 5, "maxArretsMinuterie": 3},
 			"environnement": {
 				"boutons": {
 					"bouton1": {

@@ -29,6 +29,7 @@ class Driver end
 import logFonctions
 global.logFonctions = logFonctions
 import configDevices
+import mqtt
 
 var cg = nil                                       # instance de CONTROLE_GENERAL du scenario
 var modules = {}
@@ -39,14 +40,15 @@ var PERSIST = nil
 var NBRELAIS = 4
 
 class TasmotaStub
-    var puissance, timers, cmds
-    def init() self.puissance = [false, false, false, false] self.timers = {} self.cmds = [] end
+    var puissance, timers, cmds, t, sw, reponse
+    def init() self.puissance = [false, false, false, false] self.timers = {} self.cmds = [] self.t = 1000000 self.sw = {} self.reponse = "" end
+    def response_append(s) self.reponse += s end
     def yield() end
     def millis(n) return 0 end
-    def time_reached(t) return false end
-    def read_sensors() return "{}" end
+    def time_reached(t) return true end
+    def read_sensors() return json.dump(self.sw) end
     def memory() return {"program": 100, "program_free": 50, "heap_free": 1} end
-    def rtc() return {"local": 1000000, "utc": 1000000} end
+    def rtc() return {"local": self.t, "utc": self.t} end
     def add_driver(d) end
     def add_rule(a, b, c) end
     def add_cmd(n, f) end
@@ -109,6 +111,7 @@ end
 
 # Etat neuf pour chaque scenario. suspendus : capteurs deja suspendus (persist d'avant un redemarrage).
 var GF = nil
+var DRV = nil
 var CG = nil
 def monte(suspendus, sansCle)
     PERSIST = json.load(lis("data/cave/tasmota32s3-serveur-rly/_persist.json"))
@@ -128,6 +131,11 @@ def monte(suspendus, sansCle)
     tasmota.puissance = [false, false, false, false]
     tasmota.timers = {}
     tasmota.cmds = []
+    tasmota.t = 1000000
+    tasmota.sw = {}
+    tasmota.reponse = ""
+    mqtt.relie = false
+    mqtt.publies.clear()
     logFonctions.journal.clear()
     configDevices.activationAuBranchement = nil
     GF = charge_fichier(SOURCES + "/globalFonctions.be")
@@ -135,6 +143,8 @@ def monte(suspendus, sansCle)
     CG = charge_fichier(SOURCES + "/controleGeneral.be")
     cg = CG.init(CG)                                   # ce que fait 'import controleGeneral' au firmware
     global.controleGeneral = cg
+    charge_fichier("data/cave/tasmota32s3-serveur-rly/controlePompeVideCave.be")    # le driver de la carte
+    DRV = global.controlePompeVideCave
 end
 def pompe() return modules["pompeVideCave"]["environnement"] end
 def etatCapteurs()
@@ -181,5 +191,154 @@ verifie("relais 1 ON", true, tasmota.puissance[0])
 verifie("capteurs jamais touches", "ON/ON/nil/nil", etatCapteurs())
 appuiBouton()
 verifie("relais 1 OFF, capteurs toujours intacts", "false/ON/ON/nil/nil", str(tasmota.puissance[0]) + "/" + etatCapteurs())
+
+# --- A3 : pannes des flotteurs et etat publie -------------------------------------------------------
+def sw(bas, haut) tasmota.sw = {"Switch1": bas, "Switch2": haut} end
+def tick(dt) tasmota.t += dt  DRV.every_second() end
+def relai() return pompe()["relais"]["relai1"] end
+def alerte() return relai()["alerte"] end
+def depart() GF.modifEtatRelai("pompeVideCave", 1, "ON", "ON", false, true, 0) end
+# Marche automatique menee a terme par la minuterie de 120 s
+def cycleMinuterie()
+    depart()
+    tick(0)
+    tick(120)
+    tasmota.timers["timer_relai1"][1]()
+    tick(0)
+end
+# Marche manuelle (bouton) coupee par la minuterie
+def cycleManuel()
+    appuiBouton()
+    tick(0)
+    tick(120)
+    tasmota.timers["timer_relai1"][1]()
+    tick(0)
+end
+def evenements() var l = [] for p: mqtt.publies    l.push(json.load(p)["Evenement"])    end return str(l) end
+
+print("--- incoherence_apres_anti_rebond")
+monte([], false)
+mqtt.relie = true
+sw("OFF", "ON")
+tick(0)
+tick(4)
+verifie("pas d'alerte avant 5 s", "", alerte())
+tick(2)
+verifie("alerte incoherence apres 6 s", true, string.find(alerte(), "ncoherence") >= 0)
+verifie("publiee sur la voie ALERTE_POMPE", "['incoherence']", evenements())
+tick(10)
+verifie("une seule publication", "['incoherence']", evenements())
+
+print("--- incoherence_breve_ignoree")
+monte([], false)
+sw("OFF", "ON")
+tick(0)
+tick(3)
+sw("ON", "ON")
+tick(1)
+sw("OFF", "ON")
+tick(0)
+tick(3)
+verifie("deux episodes de 3 s : pas d'alerte", "", alerte())
+sw("OFF", "OFF")
+tick(10)
+verifie("plus incoherent ensuite : toujours pas d'alerte", "", alerte())
+
+print("--- flotteur_bas_apres_n_arrets")
+monte([], false)
+mqtt.relie = true
+sw("ON", "OFF")
+cycleMinuterie()
+cycleMinuterie()
+verifie("2 arrets : pas d'alerte", "", alerte())
+cycleMinuterie()
+verifie("3 arrets : alerte flotteurBas", true, string.find(alerte(), "bas") >= 0)
+verifie("publiee", "['flotteurBas']", evenements())
+cycleMinuterie()
+verifie("4e arret : l'alerte reste", true, string.find(alerte(), "bas") >= 0)
+verifie("sans nouvelle publication", "['flotteurBas']", evenements())
+DRV.acquitte()
+cycleMinuterie()
+cycleMinuterie()
+verifie("acquittement : compteur remis a 0", "", alerte())
+cycleMinuterie()
+verifie("3 arrets apres l'acquittement : alerte", true, string.find(alerte(), "bas") >= 0)
+
+print("--- arret_court_ne_compte_pas")
+monte([], false)
+sw("ON", "OFF")
+for i: 1 .. 4
+    depart()
+    tick(0)
+    tick(10)
+    GF.modifEtatRelai("pompeVideCave", 1, "OFF", "OFF", false, true, 0)
+    tick(0)
+end
+verifie("arrets a 10 s (pas la minuterie) : pas d'alerte", "", alerte())
+
+print("--- arret_normal_remet_compteur")
+monte([], false)
+sw("ON", "OFF")
+cycleMinuterie()
+cycleMinuterie()
+sw("OFF", "OFF")
+cycleMinuterie()                                      # arret avec le bas retombe
+sw("ON", "OFF")
+cycleMinuterie()
+verifie("1 arret apres la remise a 0 : pas d'alerte", "", alerte())
+cycleMinuterie()
+verifie("2 arrets apres la remise a 0 : pas d'alerte", "", alerte())
+
+print("--- manuel_ne_compte_pas")
+monte([], false)
+sw("ON", "OFF")
+cycleManuel()
+cycleManuel()
+cycleManuel()
+cycleManuel()
+verifie("4 marches manuelles : pas d'alerte", "", alerte())
+
+print("--- json_append_porte_pompe_vide_cave")
+monte([], false)
+sw("ON", "OFF")
+DRV.json_append()
+var j = json.load("{" + tasmota.reponse[1 ..] + "}")["PompeVideCave"]
+verifie("pompe, manuel, niveaux, alerte", "OFF/OFF/ON/OFF/", str(j["Pompe"]) + "/" + j["Manuel"] + "/" + j["Niveaux"]["Bas"] + "/" + j["Niveaux"]["Haut"] + "/" + j["Alerte"])
+appuiBouton()
+tasmota.reponse = ""
+sw("?", "?")
+tasmota.sw = {}
+DRV.json_append()
+j = json.load("{" + tasmota.reponse[1 ..] + "}")["PompeVideCave"]
+verifie("marche manuelle, niveaux inconnus", "ON/ON/?/?", j["Pompe"] + "/" + j["Manuel"] + "/" + j["Niveaux"]["Bas"] + "/" + j["Niveaux"]["Haut"])
+relai()["alerte"] = "texte d'alerte"
+tasmota.reponse = ""
+DRV.json_append()
+j = json.load("{" + tasmota.reponse[1 ..] + "}")["PompeVideCave"]
+verifie("alerte recopiee", "texte d'alerte", j["Alerte"])
+
+print("--- capteur_off_volontaire_reste_off")
+monte([], false)
+pompe()["capteurs"]["capteur1"]["activation"] = "OFF"          # coupe a la main par l'utilisateur
+appuiBouton()
+verifie("pendant la marche : seul capteur2 suspendu", "OFF/OFF/nil/ON", etatCapteurs())
+appuiBouton()
+verifie("apres : capteur1 reste OFF, capteur2 revient", "OFF/ON/nil/nil", etatCapteurs())
+
+print("--- fin_manuelle_garde_alerte_si_haut_actif")
+monte([], false)
+sw("OFF", "ON")
+appuiBouton()
+relai()["alerte"] = "defaut en cours"
+appuiBouton()                                          # fin manuelle, haut encore ON
+verifie("l'alerte defaut n'est pas effacee", "defaut en cours", alerte())
+
+print("--- fin_minuterie_manuelle_niveau_haut_on")
+monte([], false)
+sw("OFF", "ON")
+appuiBouton()
+tasmota.timers["timer_relai1"][1]()
+verifie("relance automatique reprise (1/3)", 1, cg.relances.find("pompeVideCave_1", 0))
+verifie("minuterie de relance armee", true, tasmota.timers.contains("relance_relai1"))
 
 print("BANC_POMPE_CAVE: " + (echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")") + " (" + str(nbControles) + " controles)")

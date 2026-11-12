@@ -642,6 +642,9 @@ class CONTROLE_GENERAL : Driver
 										end
 										relais[cleRLY]["timestamp"][etat] = tasmota.rtc()["local"]
 
+										# Arret : les flotteurs coupes par une marche manuelle reviennent AVANT la relance de securite (fin de minuterie, second appui...)
+										if (etat == "OFF")	self.reactiveCapteursSuspendus(cle)	end
+
 										# Relance de securite : un arret alors que le niveau haut est retombe est un
 										# cycle normal -> compteur de relances et alerte remis a zero.
 										if (etat == "OFF" && relais[cleRLY].find("relance", false))
@@ -649,9 +652,6 @@ class CONTROLE_GENERAL : Driver
 												self.acquitteRelance(cle, relais[cleRLY])
 											end
 										end
-
-										# Arret : les flotteurs coupes par une marche manuelle reviennent (fin de minuterie, second appui...)
-										if (etat == "OFF")	self.reactiveCapteursSuspendus(cle)	end
 
 										# Vérifie si il y a un timer paramétrer ou à annuler
 										if (etat == "ON" && relais[cleRLY]["id"] == nb + 1 && relais[cleRLY]["timer"] != 0)

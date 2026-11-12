@@ -23,6 +23,95 @@ def affiche_heure(timestamp)
 end
 
 class CONTROLE_POMPE_VIDE_CAVE : Driver
+    # Pannes des flotteurs (persist pompeVideCave.pannes = {"antiRebond": s, "maxArretsMinuterie": n}, sans la cle : rien)
+    #  - incoherence : haut ON et bas OFF depuis plus de antiRebond s (physiquement impossible)
+    #  - flotteurBas : n arrets de suite par la minuterie (duree >= timer - 1 s) alors que le haut est OFF et le bas encore ON ;
+    #    remis a 0 par un arret avec le bas OFF ; rien n'est compte pendant une marche manuelle (flotteurs suspendus)
+    # Alerte sur la voie de controleGeneral::publieAlerteRelance (topicAlerte, relai["alerte"], effacee par AcquittePompe).
+    var debutIncoh, alerteIncoh, arrets, etatPrec, manuelPrec
+
+    def init()
+        self.debutIncoh = 0
+        self.alerteIncoh = false
+        self.arrets = 0
+        self.etatPrec = "OFF"
+        self.manuelPrec = false
+    end
+
+    # ON tant qu'un flotteur est suspendu par une marche manuelle
+    def manuel(capteurs)
+        for cleCapteur: capteurs.keys()
+            if (type(capteurs[cleCapteur]) == "instance" && capteurs[cleCapteur].find("suspendu", "OFF") == "ON")    return true    end
+        end
+        return false
+    end
+
+    def leveAlerte(relai, evenement, message)
+        relai["alerte"] = message
+        logFonctions.log("POMPE_VIDE_CAVE_ERREUR: " + message, LOG_LEVEL_ERREUR)
+        controleGeneral.publieAlerteRelance("pompeVideCave", relai, evenement, message, 0, relai.find("relance", {}).find("maxRelances", 3))
+    end
+
+    def every_second()
+        var pompe = modules["pompeVideCave"]
+        var pannes = pompe.find("pannes", false)
+        if (!pannes || pompe.find("activation", "OFF") != "ON")    return    end
+
+        var relai = pompe["environnement"]["relais"]["relai1"]
+        var capteurs = pompe["environnement"]["capteurs"]
+        var sensors = controleGeneral.lectureSensors()
+        var bas = sensors.find("Switch" + str(capteurs["capteur1"]["id"]), "?")
+        var haut = sensors.find("Switch" + str(capteurs[relai["relance"]["capteur"]]["id"]), "?")
+        var maintenant = tasmota.rtc()["local"]
+        var etat = relai.find("etat", "OFF")
+
+        if (bas == "OFF" && haut == "ON")
+            if (self.debutIncoh == 0)
+                self.debutIncoh = maintenant
+            elif (!self.alerteIncoh && maintenant - self.debutIncoh >= pannes.find("antiRebond", 5))
+                self.alerteIncoh = true
+                self.leveAlerte(relai, "incoherence", "Incoherence des flotteurs : niveau haut actif alors que le niveau bas est inactif. Verifier les capteurs.")
+            end
+        else
+            self.debutIncoh = 0
+            self.alerteIncoh = false
+        end
+
+        if (self.etatPrec == "ON" && etat == "OFF" && !self.manuelPrec)
+            var timer = relai.find("timer", 0)
+            if (bas == "OFF")
+                self.arrets = 0
+            elif (haut == "OFF" && timer > 0 && relai["timestamp"]["OFF"] - relai["timestamp"]["ON"] >= timer - 1)
+                self.arrets += 1
+                var max = pannes.find("maxArretsMinuterie", 3)
+                var message = "Pompe arretee par la minuterie alors que le niveau bas reste actif : probable defaut du capteur de niveau bas (ou pompe inefficace)."
+                if (self.arrets == max)
+                    self.leveAlerte(relai, "flotteurBas", message)
+                elif (self.arrets > max)
+                    relai["alerte"] = message       # controleGeneral::finTimerRelai l'a effacee a cet arret : elle reste tant que ca dure
+                end
+            end
+        end
+        # memorise pendant la marche : a l'arret, controleGeneral a deja reactive les flotteurs
+        if (etat == "ON")    self.manuelPrec = self.manuel(capteurs)    end
+        self.etatPrec = etat
+    end
+
+    # Etat lu par l'ecran de la cave (SENSOR) : "PompeVideCave": {"Pompe", "Manuel", "Niveaux": {"Bas", "Haut"}, "Alerte"}
+    def json_append()
+        import json
+        var pompe = modules["pompeVideCave"]
+        if (pompe.find("activation", "OFF") != "ON")    return    end
+        var relai = pompe["environnement"]["relais"]["relai1"]
+        var capteurs = pompe["environnement"]["capteurs"]
+        var sensors = controleGeneral.lectureSensors()
+        var haut = capteurs.find(relai.find("relance", {}).find("capteur", "capteur2"), {})
+        tasmota.response_append(string.format(',"PompeVideCave":{"Pompe":"%s","Manuel":"%s","Niveaux":{"Bas":"%s","Haut":"%s"},"Alerte":%s}',
+            relai.find("etat", "OFF"), self.manuel(capteurs) ? "ON" : "OFF",
+            sensors.find("Switch" + str(capteurs["capteur1"]["id"]), "?"), sensors.find("Switch" + str(haut.find("id", 0)), "?"),
+            json.dump(relai.find("alerte", ""))))
+    end
+
     def web_sensor()
         var pompe = modules["pompeVideCave"]
 
@@ -140,6 +229,7 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
         var relai = modules["pompeVideCave"]["environnement"]["relais"]["relai1"]
         controleGeneral.acquitteRelance("pompeVideCave", relai)
         relai["alerte"] = ""
+        self.arrets = 0
     end
 end
 
