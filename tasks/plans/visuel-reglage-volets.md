@@ -254,10 +254,32 @@ Ce plan est l'action A14 de `tasks/plans/envs-grenier-rdc-sonoff-cave.md`.
 - [ ] Passer ce plan à `statut: clos`, puis cocher A14 et les étapes de réalisation d'A12 et d'A13 du plan d'origine, avec preuve
 - [ ] Taper `/suivi suivre envs-grenier-rdc-sonoff-cave` et reprendre à sa prochaine étape
 
+## A10 — Façade du rideau du garage (demande du 2026-11-12)
+Le rideau ne fait pas tourner le driver des volets : position lue chez le P4 (`Status 10`) à la demande de la page, repli sur ses
+fins de course. Décisions de l'utilisateur : position lue sur le P4, fins de course du rideau alignées sur le persist du P4.
+- [x] `controleRideau.be` : ajout à l'accueil, route `/rideau?f=position`, `positionMaitre`, `positionCapteurs` — preuve :
+  `berry/banc_rideau_facade.py` VERT, 8 mutants rouges (inversion, repli, fermeture du client, une erreur par changement, accès,
+  `</script>` orphelin, route redéclarée, maître muet réinterrogé à chaque rafraîchissement) ;
+  `verifie_berry.py` 0 erreur
+- [x] `volets.js` : ouverture à `source` (requête suivante après la réponse, grisé si muet, « ? » si inconnue) — preuve :
+  `test_volets_chrome.py` VERT deux fois (scénario rideau), témoin (volets.js de HEAD) ROUGE sur le rideau ; `test_volets.mjs` 32/32
+- [x] Persist du rideau : clé `facade` (driver et VR1, 5 lignes) ; fins de course déjà alignées sur le P4 (`capteurOuvert` = 1,
+  `capteurFerme` = 2 des deux côtés), rien à changer — preuve : `git diff` du persist, 5 lignes ajoutées ; les deux persists
+  nomment pourtant l'interrupteur 1 « Capteur Fermeture » : à trancher à l'essai sur carte
+- [x] Cenv : `volets.js` retiré des exclusions du rideau (après le build de la cave de l'autre session), `banc_demarrage.py` — preuve : section `[env:tasmota32s3-garage-rideau-garage-modbus]` de `platformio_tasmota_cenv.ini`, `${berry_commun.volets_pages}` remplacé par les 5 fichiers sans `volets.js` ; `banc_demarrage.py` : `OK tasmota32s3-garage-rideau-garage-modbus` (seule la cave est rouge, autoexec modifié par l'autre session, référence non réenregistrée)
+- [x] Relectures `relecteur-berry` et `relecteur-pages-web`, corrections faites — preuve : 0 bloquant hors cenv (étape ci-dessus) ;
+  corrigés : route déclarée une fois, `</script>` seulement si ouvert, maître muet interrogé toutes les 10 s, délai de 4 s sur le
+  `fetch`, ouverture non numérique = « ? » ; sonde : course entre le piège de `getElementById` et la pose du curseur (garage rouge
+  une passe sur deux, aussi avec le volets.js d'avant), corrigée par `querySelector` + contrôle de l'exception levée : 3 passes VERT
+- [x] Spec §3 révisée, README § « La façade du rideau du garage », `CLAUDE.md` ; `verifie_references_docs.py` code 0 — preuve :
+  0 défaut, 20 documents
+- [ ] Compilation du rideau par la page Build (`controleRideau` solidifié), SUCCESS lu en fin de journal
+- [ ] Essai sur carte : dessin qui suit la porte pendant une course du P4 ; P4 injoignable -> grisé, position des fins de course
+
 ## Améliorations restantes
 - [ ] [projet] Corriger en amont la boucle sans accolades de `CmndShutterButton` (`ShutterButton<x> 0`) : proposition à
   l'utilisateur, ce dépôt ne remonte pas chez arendst
-- [ ] [projet] Façade du rideau si l'utilisateur la redemande (aujourd'hui : P4 seulement)
+- [x] [projet] Façade du rideau si l'utilisateur la redemande (aujourd'hui : P4 seulement) — preuve : demandée le 2026-11-12, action A10
 
 ## Vérification
 Bancs `banc_inclinaison.py`, `banc_reglage_volets.py`, `banc_demarrage.py`, `test_volets.mjs`, sondes

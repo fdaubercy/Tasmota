@@ -55,6 +55,9 @@ la page Tasmota.
 Le module du rideau (`tasmota32s3-garage-rideau-garage-modbus`) n'a PAS de visuel (décision de l'utilisateur) : il
 ne fait pas tourner le driver des volets (`vrFonctions.be` et `controleVoletRoulants.be` sont dans son
 `custom_files_exclude`, c'est le P4 qui pilote la porte) ; il reste tel qu'il est.
+**Révisé le 2026-11-12 (demande de l'utilisateur)** : le rideau dessine la porte, sans driver des volets. `controleRideau.be`
+lit la position chez le P4 (`Status 10`) quand la page la demande, avec repli sur ses fins de course ; `volets.js` lit alors
+une adresse (`source`) au lieu du curseur. Plan `tasks/plans/visuel-reglage-volets.md`, A10.
 
 ## 4. Visuel : comportement
 

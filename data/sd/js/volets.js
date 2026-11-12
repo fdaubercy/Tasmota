@@ -5,6 +5,8 @@
 // Position : curseur s27<id> (lu a chaque image : Tasmota le change par .value, sans evenement), inverse si 'inverse' vaut 1 ;
 // trappe a MPU6050 actif : angle de la balise data-vi de la ligne d'inclinaison. Poursuite : le dessin rejoint la derniere
 // valeur lue a la vitesse du volet, sans la depasser (retard d'au plus un rafraichissement). Bancs : test_volets.mjs, test_volets_chrome.py.
+// Ouverture a 'source' (rideau du garage, controleRideau.be::route, 2026-11-12) : sans curseur, % d'ouverture lu a cette adresse
+// ({ouverture, muet}) a chaque rafraichissement, requete suivante apres la reponse ; dessin laisse a la place de #vf, grise si muet.
 (function () {
   var NS = 'http://www.w3.org/2000/svg';
   var ROUGE = '#e0453a';
@@ -160,6 +162,27 @@
     }
   }
 
+  // Ouverture a 'source' : derniere reponse dans v.lu ; erreur reseau, reponse illisible ou sans reponse en 4 s = muet, position
+  // inconnue (le delai garde la chaine vivante si la carte ne repond jamais) ; ouverture non numerique = inconnue
+  function interroge(v, periode) {
+    var suite = function () { setTimeout(function () { interroge(v, periode); }, periode); };
+    var options = {cache: 'no-store'};
+    if (window.AbortSignal && AbortSignal.timeout) options.signal = AbortSignal.timeout(4000);
+    fetch(v.o.source, options).then(function (r) { return r.json(); })
+      .then(function (j) {
+        var n = j && j.ouverture != null ? Number(j.ouverture) : NaN;
+        v.lu = {ouverture: isNaN(n) ? null : n, muet: !!(j && j.muet)};
+      }, function () { v.lu = {ouverture: null, muet: true}; }).then(suite, suite);
+  }
+
+  // Grise une ouverture a 'source' dont le maitre ne repond pas
+  function grise(v, muet) {
+    var t = muet ? ' (maître muet)' : '';
+    if (v.cause.textContent === t) return;
+    v.cause.textContent = t;
+    v.g.style.opacity = muet ? '0.45' : '';
+  }
+
   // Position reelle lue d'une ouverture : [% d'ouverture, cause de blocage] ou null (ni angle, ni curseur)
   function lit(v) {
     var o = v.o, b = o.inclinaison && Number.isInteger(o.id) ? document.querySelector("[data-vi='" + o.id + "']") : null;   // table remplacee a chaque rafraichissement
@@ -169,19 +192,38 @@
     return c ? [ouverture(c.value, o.inverse), bloque] : null;
   }
 
-  // Insere le dessin juste apres la table des curseurs (#s271) et l'anime ; rien sans #s271
+  // Insere le dessin juste apres la table des curseurs (#s271) et l'anime ; rien sans #s271, sauf ouverture a 'source' (dessin dans #vf)
   function demarre(facade) {
-    var s1 = document.getElementById('s271'), table = s1 && s1.closest('table');
-    if (!table || !facade || !facade.ouvertures || !facade.ouvertures.length) return null;
-    var vf = document.getElementById('vf') || document.createElement('div');
-    table.parentNode.insertBefore(vf, table.nextSibling);
+    var s1 = document.getElementById('s271'), table = s1 && s1.closest('table'), vf = document.getElementById('vf');
+    if (!facade || !facade.ouvertures || !facade.ouvertures.length) return null;
+    var source = facade.ouvertures.some(function (o) { return o.source; });
+    if (!table && !(source && vf)) return null;
+    if (table) {
+      vf = vf || document.createElement('div');
+      table.parentNode.insertBefore(vf, table.nextSibling);
+    }
     var svg = dessine(vf, facade), avant = null;
+    svg.volets.forEach(function (v) { if (v.o.source) interroge(v, facade.rafraichissement > 0 ? facade.rafraichissement : 2345); });
     function image() {
       requestAnimationFrame(image);                       // en tete : une exception de lit ou pose n'arrete pas l'animation
       var t = performance.now(), dt = avant == null ? 0 : t - avant;
       avant = t;
       svg.volets.forEach(function (v) {
-        var l = lit(v);
+        if (v.o.source) {
+          if (!v.lu) return;
+          grise(v, v.lu.muet);
+          if (v.lu.ouverture == null) {                     // position inconnue : dessin fige, « ? » a la place du %
+            if (v.pct.textContent !== '?') {                // une fois : DOM inchange ensuite
+              if (v.dessinee == null) v.dessinee = 0;
+              pose(v, v.dessinee, '');
+              v.p = null;
+              v.g.setAttribute('data-ouverture', '');
+              v.pct.textContent = '?';
+            }
+            return;
+          }
+        }
+        var l = v.o.source ? [borne(v.lu.ouverture), ''] : lit(v);
         if (!l) return;
         v.dessinee = poursuit(v.dessinee, l[0], dt, v.o);
         pose(v, v.dessinee, l[1]);

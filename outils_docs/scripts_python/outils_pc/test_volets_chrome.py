@@ -17,6 +17,9 @@ derniere valeur), curseur tire a la main (le dessin rejoint la valeur et y reste
 dessin place apres la table des curseurs, aucun s271 -> rien, trappe a MPU6050 (angle, retour au curseur, rouge « sens
 inverse » et « bloqué », texte en --c_txtwrn, angle a virgule du firmware fr_FR, id non entier sans selecteur), echelle du
 2e etage, animation vivante apres une exception dans une image, aucune erreur dans la console.
+Rideau du garage (2026-11-12, controleRideau.be) : aucun curseur, position lue a 'source' (reponse JSON de la sonde) : dessin
+laisse a la place de #vf, position suivie, maitre muet grise, position inconnue « ? », reponse illisible = muet, requetes
+jamais simultanees (reponse lente). Temoin : volets.js d'avant le mode source -> scenario rideau rouge.
 """
 
 import argparse
@@ -54,6 +57,9 @@ PAGES = {
         {"id": 1, "nom": "Trappe de Grenier 2eme", "type": "trappeEchelle", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3, "inclinaison": None}]},
         {1: 0}),
 }
+RIDEAU = {"toit": "unPan", "rafraichissement": 300, "ouvertures": [
+    {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3,
+     "inclinaison": None, "source": "/rideau?f=position&id=1"}]}
 TETE = ("<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'/>"
         "<title>Accueil</title><style>:root{--c_bg:#252525;--c_txt:#eaeaea;--c_txtwrn:#ff5661;--c_ttl:#eaeaea;--c_btn:#1fa3ec;--c_btntxt:#faffff}"
         "div,input{padding:5px;font-size:1em;}body{text-align:center;font-family:verdana,sans-serif;background:var(--c_bg);}"
@@ -75,8 +81,8 @@ def verifie(obtenu, attendu, libelle):
 
 def page(nom, js):
     """Accueil imite ; nom 'sans' : ajout des volets present mais aucune table de curseurs (aucun s271)."""
-    facade, valeurs = PAGES["rdc" if nom == "sans" else nom]
-    curseurs = "" if nom == "sans" else ("<table style='width:100%'>" + "".join(
+    facade, valeurs = (RIDEAU, {}) if nom == "rideau" else PAGES["rdc" if nom == "sans" else nom]
+    curseurs = "" if nom in ("sans", "rideau") else ("<table style='width:100%'>" + "".join(
         f"<tr><td style='width:15%'><button>&#9660;</button></td><td style='width:70%'><div style='padding:0px 2px;text-align:center;"
         f"font-size:12px;'><span>Shutter {n}</span><input id='s27{n}' type='range' min='0' max='100' value='{v}' "
         f"onchange='lc(\"u\",{n},value)'></div></td><td style='width:15%'><button>&#9650;</button></td></tr>"
@@ -88,16 +94,37 @@ def page(nom, js):
 
 class Carte(BaseHTTPRequestHandler):
     js: Path | None = None
+    position = {"ouverture": 30, "muet": False}       # reponse de /rideau?f=position ; None : reponse illisible (500 en texte)
+    verrou = threading.Lock()
+    simultanees = 0
+    max_simultanees = 0
+    requetes = 0
 
     def log_message(self, format, *args):
         pass
 
+    def position_rideau(self):
+        """Comme controleRideau.be::route, reponse lente (0,5 s > rafraichissement de 0,3 s) pour voir un chevauchement."""
+        with Carte.verrou:
+            Carte.simultanees += 1
+            Carte.requetes += 1
+            Carte.max_simultanees = max(Carte.max_simultanees, Carte.simultanees)
+        time.sleep(0.5)
+        with Carte.verrou:
+            Carte.simultanees -= 1
+        p = Carte.position
+        return (500, "panne", "text/plain") if p is None else (200, json.dumps(p), "application/json")
+
     def do_GET(self):
-        nom = urllib.parse.urlparse(self.path).path.strip("/")
-        code, corps = (200, page(nom, Carte.js)) if nom in PAGES or nom == "sans" else (404, "inconnu")
+        url = urllib.parse.urlparse(self.path)
+        nom, type_ = url.path.strip("/"), "text/html; charset=utf-8"
+        if nom == "rideau" and url.query:
+            code, corps, type_ = self.position_rideau()
+        else:
+            code, corps = (200, page(nom, Carte.js)) if nom in PAGES or nom in ("sans", "rideau") else (404, "inconnu")
         corps = corps.encode("utf-8")
         self.send_response(code)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Type", type_)
         self.send_header("Content-Length", str(len(corps)))
         self.end_headers()
         self.wfile.write(corps)
@@ -174,7 +201,8 @@ def ouv(m, id_):
 
 
 def pose(m, id_, valeur):
-    m.cdp.js(f"document.getElementById('s27{id_}').value = '{valeur}'; 1")      # comme eb('s27<n>').value='<v>' de Tasmota
+    # comme eb('s27<n>').value='<v>' de Tasmota ; querySelector : getElementById est piege par sonde_garage (panne du 1er appel)
+    m.cdp.js(f"document.querySelector('#s27{id_}').value = '{valeur}'; 1")
 
 
 def balise(m, angle, bloque):
@@ -260,8 +288,9 @@ def sonde_garage(m, capture):
     m.cdp.js("(() => { const g = document.getElementById.bind(document); let n = 0;"
              " document.getElementById = id => { if (id === 's271' && !n++) throw new Error('" + PANNE + "'); return g(id); }; return 1; })()")
     pose(m, 1, 0)
-    time.sleep(1.5)
-    verifie(ouv(m, 1)[0], "100", "garage (inverse 1) : curseur à 0 -> porte ouverte à 100 % (animation vivante après une exception dans une image)")
+    attend(m.cdp, "document.querySelector(\"#vf svg g[data-id='1']\").getAttribute('data-ouverture') === '100'", 5)
+    verifie([ouv(m, 1)[0], any(PANNE in x for x in m.cdp.erreurs())], ["100", True],
+            "garage (inverse 1) : curseur à 0 -> porte ouverte à 100 % (animation vivante après l'exception levée dans une image)")
     pose(m, 1, 60)
     time.sleep(2.0)
     if capture:
@@ -284,6 +313,50 @@ def sonde_etage2(m, capture):
         m.cdp.capture(str(Path(capture) / "facade_etage2.png"))
 
 
+def etat_rideau(m):
+    """[data-ouverture, texte du pourcentage, « maître muet » affiche, opacite] de la porte du rideau."""
+    o = ouv(m, 1)
+    return [o[0], o[1], "maître muet" in o[2], m.cdp.js("document.querySelector(\"#vf svg g[data-id='1']\").style.opacity")]
+
+
+def sonde_rideau(m, capture):
+    Carte.position, Carte.max_simultanees, Carte.requetes = {"ouverture": 30, "muet": False}, 0, 0
+    verifie(bool(m.ouvre("rideau")), True, "rideau : page chargée")
+    time.sleep(1.2)
+    place = m.cdp.js("(() => { const vf = document.getElementById('vf'); return [vf.previousElementSibling.id, !!vf.querySelector('svg')]; })()")
+    verifie(place, ["entre", True], "rideau : aucun curseur : dessin laissé à la place de #vf")
+    verifie(etat_rideau(m), ["30", "30 %", False, ""], "rideau : position lue à 'source' (30 %), sans grisé")
+    Carte.position = {"ouverture": 90, "muet": False}
+    time.sleep(1.0)
+    milieu = int(ouv(m, 1)[0])
+    verifie(31 <= milieu <= 89, True, f"rideau : poursuite 30 -> 90 ({milieu} % peu après)")
+    time.sleep(2.5)
+    verifie(etat_rideau(m), ["90", "90 %", False, ""], "rideau : arrivée sur 90 %")
+    Carte.position = {"ouverture": 100, "muet": True}
+    time.sleep(1.5)
+    verifie(etat_rideau(m), ["100", "100 %", True, "0.45"], "rideau : maître muet, fin de course ouverte : 100 %, grisé, « maître muet »")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_rideau_muet.png"))
+    Carte.position = {"ouverture": None, "muet": True}
+    time.sleep(1.2)
+    verifie(etat_rideau(m), ["", "?", True, "0.45"], "rideau : maître muet entre les fins de course : « ? », grisé")
+    Carte.position = {"ouverture": 20, "muet": False}
+    time.sleep(3.5)
+    verifie(etat_rideau(m), ["20", "20 %", False, ""], "rideau : maître revenu : 20 %, plus de grisé")
+    Carte.position = None
+    time.sleep(1.2)
+    verifie(etat_rideau(m)[1:], ["?", True, "0.45"], "rideau : réponse illisible (500 en texte) : muet, « ? »")
+    Carte.position = {"ouverture": 40, "muet": False}
+    time.sleep(2.5)
+    Carte.position = {"ouverture": "abc", "muet": False}
+    time.sleep(1.2)
+    verifie(etat_rideau(m)[:2], ["", "?"], "rideau : ouverture non numérique : « ? », jamais « NaN »")
+    Carte.position = {"ouverture": 20, "muet": False}
+    time.sleep(1.2)
+    verifie([Carte.max_simultanees, Carte.requetes >= 8], [1, True],
+            f"rideau : requêtes jamais simultanées malgré une réponse lente ({Carte.requetes} requêtes)")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome du dessin de la façade des volets.")
     options.add_argument("--js", default=str(RACINE / "data/sd/js/volets.js"), help="volets.js à éprouver")
@@ -299,11 +372,13 @@ def principal():
         sonde_rdc(m, args.capture)
         sonde_garage(m, args.capture)
         sonde_etage2(m, args.capture)
+        sonde_rideau(m, args.capture)
         verifie(bool(m.ouvre("sans")), True, "sans curseur : page chargée")
         time.sleep(0.3)
         verifie(m.cdp.js("[document.getElementById('vf').childElementCount, document.querySelectorAll('svg').length,"
                          " typeof window.Volets.demarre]"), [0, 0, "function"], "aucun s271 : rien n'est dessiné")
-        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x and PANNE not in x], [], "aucune erreur dans la console")
+        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x and PANNE not in x and not ("rideau?f=position" in x and "500" in x)],
+                [], "aucune erreur dans la console (hors le 500 voulu du rideau)")
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")
         return 3

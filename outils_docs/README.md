@@ -591,7 +591,7 @@ apprentissage, blocage, ligne web). Code de sortie 0 = vert. Ne teste ni le vrai
 
 ## Visuel des volets et réglage de leurs durées (cartes à volets)
 
-Deux ajouts au driver des volets (`data/fs/controleVoletRoulants.be`), sur les cartes dont le persist décrit une façade : le grenier du RDC, le P4 du garage et le grenier du 2e étage. Le rideau du garage n'en a pas (c'est le P4 qui pilote la porte). Spec : `docs/superpowers/specs/2026-11-11-visuel-volets-reglage-durees-design.md` ; plan : `tasks/plans/visuel-reglage-volets.md`. Maquettes : `outils_docs/volets_visuels/`.
+Deux ajouts au driver des volets (`data/fs/controleVoletRoulants.be`), sur les cartes dont le persist décrit une façade : le grenier du RDC, le P4 du garage et le grenier du 2e étage. Le rideau du garage dessine aussi la porte, avec la position lue chez le P4 (§ « La façade du rideau du garage »). Spec : `docs/superpowers/specs/2026-11-11-visuel-volets-reglage-durees-design.md` ; plan : `tasks/plans/visuel-reglage-volets.md`. Maquettes : `outils_docs/volets_visuels/`.
 
 ### La façade sous les curseurs
 
@@ -636,6 +636,15 @@ Un appui peut venir du bouton unique, de l'un ou l'autre des deux boutons du vol
 - Porte du garage (`mode` 3) : chronomètre seul. La carte ne commande rien. Porte fermée, lancer la porte comme d'habitude (télécommande, curseur) et cliquer « Départ », puis « Arrivée » quand elle est en haut ; même chose pour la descente.
 - Un redémarrage pendant le mode le perd sans rien écrire.
 
+### La façade du rideau du garage
+
+Le rideau ne fait pas tourner le driver des volets : c'est le P4 qui pilote la porte. Sa page d'accueil dessine pourtant la même porte (2026-11-12), par `data/garage/tasmota32s3-rideau-garage-modbus/controleRideau.be` et le même `volets.js` :
+
+- Description : la clé `facade` du bloc `drivers.voletRoulants` du persist du rideau et de son VR, comme sur le P4. Ce bloc ne sert qu'à la façade (durées et `capteursPosition`) : il doit suivre celui du P4.
+- Position : la page interroge `GET /rideau?f=position&id=1` à chaque rafraichissement (`WebRefresh`), et la carte demande alors `Status 10` au P4 (`serveur.rangeExtender.ipMaitre`). Aucune requête sans page ouverte.
+- P4 muet : position tirée des fins de course de la carte (état des interrupteurs désignés par `capteursPosition`, celui que le P4 reçoit par ModBus) : 100 % en butée haute, 0 % en butée basse, « ? » entre les deux. Le dessin est grisé avec « (maître muet) », et une ligne `CONTROLE_RIDEAU_ERREUR` est écrite au passage en muet (une seule, puis une ligne info au retour).
+- Pas de page de réglage sur le rideau : les durées se règlent sur le P4.
+
 ### Recopier les durées dans le dépôt
 
 Les durées sont écrites dans le persist **de la carte**. Un flash série ou un envoi du FS remet celles du dépôt. La page affiche, en fin de réglage, les deux lignes à recopier dans `data/<lieu>/<carte>/_persist.json` (`drivers.voletRoulants.environnement.VRs.<VR>.tempsMontee` et `tempsDescente`).
@@ -645,6 +654,7 @@ Les durées sont écrites dans le persist **de la carte**. Un flash série ou un
 - Berry : `python outils_docs/scripts_python/berry/banc_reglage_volets.py` (déroulé complet, annulation, délai, bouton unique en `toggle`, porte en chronomètre ; code 0 = vert) et `python outils_docs/scripts_python/berry/banc_inclinaison.py`.
 - Dessin : `node outils_docs/scripts_python/outils_pc/test_volets.mjs` (fonctions pures), puis les sondes Chrome avec le Python de PlatformIO :
   `%USERPROFILE%\.platformio\penv\Scripts\python.exe outils_docs/scripts_python/outils_pc/test_volets_chrome.py` et `.../test_reglage_volets_chrome.py`. Elles arrêtent leur Chrome en fin d'usage ; jamais pendant un build.
+- Rideau du garage : `python outils_docs/scripts_python/berry/banc_rideau_facade.py` (route, P4 muet, fins de course ; mutants) ; scénario « rideau » de `test_volets_chrome.py`.
 - Démarrage des cartes à façade : `python outils_docs/scripts_python/berry/banc_demarrage.py`.
 - Ces bancs ne remplacent pas l'essai sur carte (vrai Shutter, vrais boutons, moteur).
 

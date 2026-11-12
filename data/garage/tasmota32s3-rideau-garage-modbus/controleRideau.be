@@ -13,8 +13,20 @@ class CONTROLE_RIDEAU : Driver
     var nbLogsFilesMax
     var fileLogSize_Ko
 
-    # Squelette (2026-10-12) : la porte est pilotee par le driver voletRoulants (et nativement par
-    # le maitre P4). Ce driver est pret a recevoir l'affichage web, la telemetrie et le journal.
+    var maitreMuet      # Facade : dernier etat du maitre (nil inconnu, true muet), pour ne loguer qu'au changement
+    var essaiMaitre     # Facade : tasmota.millis() de la derniere requete au maitre (muet : une requete toutes les 10 s)
+    var routePosee      # Facade : route /rideau deja declaree (init puis FUNC_WEB_ADD_HANDLER)
+
+    # Squelette (2026-10-12) : la porte est pilotee par le driver voletRoulants DU MAITRE P4 ; celui de cette carte ne
+    # tourne pas (vrFonctions et controleVoletRoulants exclus de son FS), son bloc du persist ne sert qu'a la facade.
+    #
+    # Facade (2026-11-12, plan tasks/plans/visuel-reglage-volets.md, A10) : la porte dessinee sur la page d'accueil, comme
+    # sur le P4, par /sd/js/volets.js. Activee par drivers.voletRoulants.facade.activation "ON" ; volets dessines : ceux
+    # du bloc qui portent un bloc 'facade' (type, place). Position : GET /rideau?f=position, que la page interroge a
+    # chaque rafraichissement ; la carte la demande alors au maitre (Status 10, StatusSNS.Shutter<id>.Position, a
+    # l'adresse serveur.rangeExtender.ipMaitre), JAMAIS sans page ouverte. Maitre muet : la position vient des fins de
+    # course de CETTE carte (etat des interrupteurs designes par capteursPosition, celui que le maitre recoit par ModBus),
+    # 100 ou 0, inconnue entre les deux ; la page grise alors le dessin.
     def init()
         self.flagINIT = 0
 
@@ -23,6 +35,7 @@ class CONTROLE_RIDEAU : Driver
         self.nbLogsFilesMax = modules["rideau"].find("logs", {}).find("nbLogsFiles", 0)
         self.fileLogSize_Ko = modules["rideau"].find("logs", {}).find("fileLogSize_Ko", 10000)
 
+        self.web_add_handler()          # le serveur web peut deja tourner : FUNC_WEB_ADD_HANDLER ne viendrait plus
         logFonctions.log("CONTROLE_RIDEAU: Driver charge (squelette) !", LOG_LEVEL_DEBUG, "rideau")
         self.flagINIT = 1
     end
@@ -30,7 +43,139 @@ class CONTROLE_RIDEAU : Driver
     def every_second()
     end
 
-    # Affiche les capteurs du module cuve sur la page web
+    # Volets a dessiner : [bloc du driver, liste des VRs actifs qui portent un bloc 'facade'], ou nil si la facade est inactive
+    def facade()
+        var vrs = drivers.find("voletRoulants", {})
+        var f = vrs.find("facade")
+        if (type(f) != "instance" || f.find("activation", "OFF") != "ON")    return nil    end
+        var liste = []
+        for vr: vrs.find("environnement", {}).find("VRs", {})
+            if (type(vr) == "instance" && vr.find("activation", "OFF") == "ON" && type(vr.find("facade")) == "instance")    liste.push(vr)    end
+        end
+        return [f, liste]
+    end
+
+    # Ajout a la page d'accueil (forme de data/fs/vrPages.be::facade, plus 'source'). Une erreur ne casse jamais l'accueil.
+    def web_add_main_button()
+        var fa = self.facade()
+        if (fa == nil || size(fa[1]) == 0)    return    end
+        import webserver
+        import json
+        import string
+        import gestionFileFolder
+        var ouvert = false
+        try
+            var ouvertures = []
+            for vr: fa[1]
+                ouvertures.push({"id": vr.find("id"), "nom": vr.find("nom", "Volet"), "type": vr["facade"].find("type"),
+                    "place": vr["facade"].find("place", 0), "inverse": vr.find("inverse", 1), "tempsMontee": vr.find("tempsMontee", 0),
+                    "tempsDescente": vr.find("tempsDescente", 0), "inclinaison": nil, "source": "/rideau?f=position&id=" + str(vr.find("id"))})
+            end
+            var r = tasmota.cmd("WebRefresh", boolMute)
+            var ms = (isinstance(r, map) ? r.find("WebRefresh") : nil)
+            var v = {"toit": fa[0].find("toit", "aucun"), "rafraichissement": (type(ms) == "int" && ms > 0 ? ms : 2345), "ouvertures": ouvertures}
+            webserver.content_send("<div id='vf'></div><script>window.VOLETS=" + string.replace(json.dump(v), "<", "\\u003c") + ";</script><script>")
+            ouvert = true
+            gestionFileFolder.readFileByLineAndContentSend("/sd/js/volets.js")
+        except .. as erreur, message
+            logFonctions.log("CONTROLE_RIDEAU_ERREUR: Facade : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR, "rideau")
+        end
+        if ouvert    webserver.content_send("</script>")    end
+    end
+
+    def web_add_handler()
+        if (self.routePosee || self.facade() == nil)    return    end
+        import webserver
+        self.routePosee = true
+        webserver.on("/rideau", / -> self.route(), webserver.HTTP_GET)
+    end
+
+    # GET /rideau?f=position&id=<n> -> {"ouverture": % ou null, "muet": true si le maitre n'a pas repondu}
+    def route()
+        import webserver
+        import json
+        if (!webserver.check_privileged_access())    return nil    end
+        var id = (webserver.has_arg("id") ? int(webserver.arg("id")) : 0)
+        var vr = nil
+        var fa = self.facade()
+        for v: (fa != nil ? fa[1] : [])
+            if (v.find("id") == id)    vr = v    end
+        end
+        if (vr == nil || !webserver.has_arg("f") || webserver.arg("f") != "position")
+            webserver.content_open(400, "application/json")
+            webserver.content_send("{\"erreur\":\"f=position et id d'un volet de la facade attendus\"}")
+            webserver.content_close()
+            return
+        end
+        var p = self.positionMaitre(id)
+        var rep = (p != nil ? {"ouverture": (vr.find("inverse", 1) == 1 ? 100 - p : p), "muet": false} : {"ouverture": self.positionCapteurs(vr), "muet": true})
+        webserver.content_open(200, "application/json")
+        webserver.content_send(json.dump(rep))
+        webserver.content_close()
+    end
+
+    # Position du volet 'id' lue chez le maitre (valeur du curseur : 100 - position si ShutterInvert), nil s'il ne repond pas
+    def positionMaitre(id)
+        import json
+        import string
+        var ip = str(serveur.find("rangeExtender", {}).find("ipMaitre", ""))
+        if (size(string.split(ip, ".")) != 4)    return nil    end
+        # Maitre muet : une requete toutes les 10 s, chacune bloque le serveur web jusqu'a 1,4 s (fins de course entre-temps)
+        if (self.maitreMuet == true && self.essaiMaitre != nil && tasmota.millis() - self.essaiMaitre < 10000)    return nil    end
+        self.essaiMaitre = tasmota.millis()
+        var cl = webclient()
+        var p = nil
+        var cause = ""
+        try
+            cl.set_timeouts(800, 600)           # reponse, connexion : sous USE_BERRY_TIMEOUT (4 s par callback)
+            cl.begin("http://" + ip + "/cm?cmnd=Status%2010")
+            var code = cl.GET()
+            if (code == 200)
+                var sh = json.load(cl.get_string())
+                sh = (isinstance(sh, map) ? sh.find("StatusSNS", {}).find("Shutter" + str(id)) : nil)
+                p = (isinstance(sh, map) ? sh.find("Position") : nil)
+                if (type(p) != "int")    p = nil    cause = "pas de Shutter" + str(id)    end
+            else
+                cause = "code " + str(code)
+            end
+        except .. as erreur, message
+            cause = str(erreur) + " " + str(message)
+        end
+        try    cl.close()    except .. end
+        var muet = (p == nil)
+        if (muet != self.maitreMuet)        # une ligne par changement, pas une par rafraichissement de la page
+            self.maitreMuet = muet
+            if muet
+                logFonctions.log("CONTROLE_RIDEAU_ERREUR: Position du maitre " + ip + " illisible (" + cause + "), fins de course de la carte !", LOG_LEVEL_ERREUR, "rideau")
+            else
+                logFonctions.log("CONTROLE_RIDEAU: Position lue chez le maitre " + ip + " !", LOG_LEVEL_INFO, "rideau")
+            end
+        end
+        return p
+    end
+
+    # Repli : % d'ouverture d'apres les fins de course de la carte (100 ouvert, 0 ferme), nil entre les deux ou sans capteur.
+    # Etat logique de l'interrupteur (cle 'etat', "ON" = en butee), celui que la carte envoie au maitre par ModBus.
+    def positionCapteurs(vr)
+        var cp = vr.find("capteursPosition", {})
+        if (cp.find("activation", "OFF") != "ON")    return nil    end
+        var ouvert = self.etatInterrupteur(cp.find("capteurOuvert")) == "ON"
+        var ferme = self.etatInterrupteur(cp.find("capteurFerme")) == "ON"
+        return (ouvert && !ferme ? 100 : (ferme && !ouvert ? 0 : nil))
+    end
+
+    # Etat ("ON"/"OFF") de l'interrupteur "Switch<n>" de modules.rideau, nil s'il n'existe pas
+    def etatInterrupteur(nom)
+        import string
+        nom = str(nom)
+        if (string.find(nom, "Switch") != 0)    return nil    end
+        var n = int(nom[6..])
+        for i: modules["rideau"].find("environnement", {}).find("interrupteurs", {})
+            if (type(i) == "instance" && i.find("id") == n)    return i.find("etat")    end
+        end
+        return nil
+    end
+
     def web_sensor()
         # Rien à afficher
     end

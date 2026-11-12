@@ -684,6 +684,10 @@
 			"activation": "ON",
 			"name": "Driver Volet Roulant",
 			"mode": 3,
+			"facade": {
+				"activation": "ON",
+				"toit": "unPan"
+			},
 			"log": "info",
 			"environnement": {
 				"VRs": {
@@ -691,6 +695,7 @@
 						"activation": "ON",
 						"nom": "Volet Roulant Garage",
 						"id": 1,
+						"facade": {"type": "garage", "place": 1},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 1,
