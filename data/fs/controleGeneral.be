@@ -398,7 +398,9 @@ class CONTROLE_GENERAL : Driver
 	# Lit les sensors A LA DEMANDE, avec un cache d'1 s.
 	# read_sensors() reconstruit toute la telemetrie SENSOR (MqttShowSensor, qui appelle aussi le
 	# json_append() de CHAQUE driver Berry) : le faire chaque seconde jetait 150 a 290 objets/s.
-	# Garde de reentrance : un json_append() qui appellerait lectureSensors() recoit la copie en cours.
+	# Garde de reentrance (lectureSensorsEnCours) : elle ne protege QUE contre un appel pendant la lecture. Un json_append() ne doit
+	# JAMAIS appeler lectureSensors() : read_sensors() commence par vider le tampon de reponse, donc la telemetrie SENSOR en cours
+	# de construction deviendrait invalide ; il lit des valeurs deja en cache.
 	def lectureSensors()
 		import json
 

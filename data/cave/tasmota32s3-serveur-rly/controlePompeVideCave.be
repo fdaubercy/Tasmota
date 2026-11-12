@@ -28,7 +28,13 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
     #  - flotteurBas : n arrets de suite par la minuterie (duree >= timer - 1 s) alors que le haut est OFF et le bas encore ON ;
     #    remis a 0 par un arret avec le bas OFF ; rien n'est compte pendant une marche manuelle (flotteurs suspendus)
     # Alerte sur la voie de controleGeneral::publieAlerteRelance (topicAlerte, relai["alerte"], effacee par AcquittePompe).
-    var debutIncoh, alerteIncoh, arrets, etatPrec, manuelPrec
+    # Limites connues : l'alerte flotteurBas peut etre vide jusqu'a 1 s apres chaque arret (finTimerRelai l'efface, le tick
+    # suivant la repose) ; AcquittePompe pendant une incoherence en cours acquitte l'episode, elle ne revient qu'a un nouvel episode.
+    # Niveaux des flotteurs : jamais de read_sensors() ici (every_second et json_append, ce dernier appele DANS la telemetrie
+    # SENSOR dont read_sensors() vide le tampon). Ils viennent d'une regle SwitchN#Action propre au driver (elle tourne meme
+    # flotteur suspendu par une marche manuelle), amorcee par l'etat memorise du persist (corrige au demarrage par
+    # controleGeneral::resynchroniseCapteurs, qui rejoue l'etat reel).
+    var debutIncoh, alerteIncoh, arrets, etatPrec, manuelPrec, niv, idBas, idHaut
 
     def init()
         self.debutIncoh = 0
@@ -36,6 +42,19 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
         self.arrets = 0
         self.etatPrec = "OFF"
         self.manuelPrec = false
+        self.niv = {"Bas": "?", "Haut": "?"}
+        var pompe = modules.find("pompeVideCave")
+        if (type(pompe) != "instance")    return    end
+        var capteurs = pompe.find("environnement", {}).find("capteurs", {})
+        var cleHaut = pompe.find("environnement", {}).find("relais", {}).find("relai1", {}).find("relance", {}).find("capteur", "")
+        for role: [["Bas", "capteur1"], ["Haut", cleHaut]]
+            var capteur = capteurs.find(role[1])
+            if (type(capteur) != "instance" || type(capteur.find("id")) != "int")    continue    end
+            var nom = role[0]
+            self.niv[nom] = capteur.find("etat", "?")
+            if (nom == "Bas")    self.idBas = capteur["id"]    else    self.idHaut = capteur["id"]    end
+            tasmota.add_rule(string.format("Switch%i#Action", capteur["id"]), def(value, trigger, msg) self.niv[nom] = str(value) end)
+        end
     end
 
     # ON tant qu'un flotteur est suspendu par une marche manuelle
@@ -55,13 +74,12 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
     def every_second()
         var pompe = modules["pompeVideCave"]
         var pannes = pompe.find("pannes", false)
-        if (!pannes || pompe.find("activation", "OFF") != "ON")    return    end
+        if (!pannes || pompe.find("activation", "OFF") != "ON" || self.idBas == nil || self.idHaut == nil)    return    end
 
         var relai = pompe["environnement"]["relais"]["relai1"]
         var capteurs = pompe["environnement"]["capteurs"]
-        var sensors = controleGeneral.lectureSensors()
-        var bas = sensors.find("Switch" + str(capteurs["capteur1"]["id"]), "?")
-        var haut = sensors.find("Switch" + str(capteurs[relai["relance"]["capteur"]]["id"]), "?")
+        var bas = self.niv["Bas"]
+        var haut = self.niv["Haut"]
         var maintenant = tasmota.rtc()["local"]
         var etat = relai.find("etat", "OFF")
 
@@ -104,11 +122,9 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
         if (pompe.find("activation", "OFF") != "ON")    return    end
         var relai = pompe["environnement"]["relais"]["relai1"]
         var capteurs = pompe["environnement"]["capteurs"]
-        var sensors = controleGeneral.lectureSensors()
-        var haut = capteurs.find(relai.find("relance", {}).find("capteur", "capteur2"), {})
         tasmota.response_append(string.format(',"PompeVideCave":{"Pompe":"%s","Manuel":"%s","Niveaux":{"Bas":"%s","Haut":"%s"},"Alerte":%s}',
             relai.find("etat", "OFF"), self.manuel(capteurs) ? "ON" : "OFF",
-            sensors.find("Switch" + str(capteurs["capteur1"]["id"]), "?"), sensors.find("Switch" + str(haut.find("id", 0)), "?"),
+            self.niv["Bas"], self.niv["Haut"],
             json.dump(relai.find("alerte", ""))))
     end
 

@@ -40,17 +40,21 @@ var PERSIST = nil
 var NBRELAIS = 4
 
 class TasmotaStub
-    var puissance, timers, cmds, t, sw, reponse
-    def init() self.puissance = [false, false, false, false] self.timers = {} self.cmds = [] self.t = 1000000 self.sw = {} self.reponse = "" end
+    var puissance, timers, cmds, t, sw, reponse, nbLectures, rules
+    def init() self.puissance = [false, false, false, false] self.timers = {} self.cmds = [] self.t = 1000000 self.sw = {} self.reponse = "" self.nbLectures = 0 self.rules = [] end
     def response_append(s) self.reponse += s end
     def yield() end
     def millis(n) return 0 end
     def time_reached(t) return true end
-    def read_sensors() return json.dump(self.sw) end
+    def read_sensors()
+        self.nbLectures += 1
+        self.reponse = ""                               # comme l_read_sensors du firmware : ResponseClear() avant de rebatir SENSOR
+        return json.dump(self.sw)
+    end
     def memory() return {"program": 100, "program_free": 50, "heap_free": 1} end
     def rtc() return {"local": self.t, "utc": self.t} end
     def add_driver(d) end
-    def add_rule(a, b, c) end
+    def add_rule(a, b, c) self.rules.push([a, b]) end
     def add_cmd(n, f) end
     def add_cron(c, f, id) end
     def remove_cron(id) end
@@ -112,6 +116,10 @@ end
 # Etat neuf pour chaque scenario. suspendus : capteurs deja suspendus (persist d'avant un redemarrage).
 var GF = nil
 var DRV = nil
+def chargeDriver()
+    charge_fichier("data/cave/tasmota32s3-serveur-rly/controlePompeVideCave.be")    # le driver de la carte
+    DRV = global.controlePompeVideCave
+end
 var CG = nil
 def monte(suspendus, sansCle)
     PERSIST = json.load(lis("data/cave/tasmota32s3-serveur-rly/_persist.json"))
@@ -134,6 +142,8 @@ def monte(suspendus, sansCle)
     tasmota.t = 1000000
     tasmota.sw = {}
     tasmota.reponse = ""
+    tasmota.nbLectures = 0
+    tasmota.rules = []
     mqtt.relie = false
     mqtt.publies.clear()
     logFonctions.journal.clear()
@@ -143,8 +153,7 @@ def monte(suspendus, sansCle)
     CG = charge_fichier(SOURCES + "/controleGeneral.be")
     cg = CG.init(CG)                                   # ce que fait 'import controleGeneral' au firmware
     global.controleGeneral = cg
-    charge_fichier("data/cave/tasmota32s3-serveur-rly/controlePompeVideCave.be")    # le driver de la carte
-    DRV = global.controlePompeVideCave
+    chargeDriver()
 end
 def pompe() return modules["pompeVideCave"]["environnement"] end
 def etatCapteurs()
@@ -193,7 +202,14 @@ appuiBouton()
 verifie("relais 1 OFF, capteurs toujours intacts", "false/ON/ON/nil/nil", str(tasmota.puissance[0]) + "/" + etatCapteurs())
 
 # --- A3 : pannes des flotteurs et etat publie -------------------------------------------------------
-def sw(bas, haut) tasmota.sw = {"Switch1": bas, "Switch2": haut} end
+# Etat des flotteurs : lu par read_sensors (controleGeneral) et rejoue comme evenement SwitchN#Action (regles du driver)
+def sw(bas, haut)
+    tasmota.sw = {"Switch1": bas, "Switch2": haut}
+    for r: tasmota.rules
+        if (r[0] == "Switch1#Action")    r[1](bas, r[0], nil)    end
+        if (r[0] == "Switch2#Action")    r[1](haut, r[0], nil)    end
+    end
+end
 def tick(dt) tasmota.t += dt  DRV.every_second() end
 def relai() return pompe()["relais"]["relai1"] end
 def alerte() return relai()["alerte"] end
@@ -301,13 +317,16 @@ verifie("4 marches manuelles : pas d'alerte", "", alerte())
 print("--- json_append_porte_pompe_vide_cave")
 monte([], false)
 sw("ON", "OFF")
+tasmota.reponse = '{"Time":"x","Switch1":"ON"'                    # SENSOR en cours de construction par la telemetrie
 DRV.json_append()
-var j = json.load("{" + tasmota.reponse[1 ..] + "}")["PompeVideCave"]
+verifie("json_append ne vide pas le tampon SENSOR (pas de read_sensors)", '{"Time":"x","Switch1":"ON",', tasmota.reponse[0 .. 26])
+var j = json.load(tasmota.reponse + "}")["PompeVideCave"]
 verifie("pompe, manuel, niveaux, alerte", "OFF/OFF/ON/OFF/", str(j["Pompe"]) + "/" + j["Manuel"] + "/" + j["Niveaux"]["Bas"] + "/" + j["Niveaux"]["Haut"] + "/" + j["Alerte"])
 appuiBouton()
 tasmota.reponse = ""
-sw("?", "?")
-tasmota.sw = {}
+for c: ["capteur1", "capteur2"]    pompe()["capteurs"][c].remove("etat")    end
+tasmota.rules = []
+chargeDriver()                                         # aucun evenement ni etat memorise : niveaux inconnus
 DRV.json_append()
 j = json.load("{" + tasmota.reponse[1 ..] + "}")["PompeVideCave"]
 verifie("marche manuelle, niveaux inconnus", "ON/ON/?/?", j["Pompe"] + "/" + j["Manuel"] + "/" + j["Niveaux"]["Bas"] + "/" + j["Niveaux"]["Haut"])
@@ -340,5 +359,25 @@ appuiBouton()
 tasmota.timers["timer_relai1"][1]()
 verifie("relance automatique reprise (1/3)", 1, cg.relances.find("pompeVideCave_1", 0))
 verifie("minuterie de relance armee", true, tasmota.timers.contains("relance_relai1"))
+
+print("--- no_read_sensors_en_every_second")
+monte([], false)
+sw("OFF", "ON")
+var avant = tasmota.nbLectures
+for i: 1 .. 6    tick(1)    end
+verifie("aucune lecture de la telemetrie en 6 ticks", avant, tasmota.nbLectures)
+DRV.json_append()
+verifie("ni dans json_append", avant, tasmota.nbLectures)
+
+print("--- sans_relance_ne_leve_pas")
+monte([], false)
+relai().remove("relance")
+chargeDriver()
+sw("OFF", "ON")
+tick(0)
+tick(10)
+verifie("pannes sans relance : rien, pas d'exception", "", alerte())
+DRV.json_append()
+verifie("json_append repond quand meme", true, string.find(tasmota.reponse, "PompeVideCave") >= 0)
 
 print("BANC_POMPE_CAVE: " + (echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")") + " (" + str(nbControles) + " controles)")
