@@ -273,7 +273,7 @@ fins de course. Décisions de l'utilisateur : position lue sur le P4, fins de co
   une passe sur deux, aussi avec le volets.js d'avant), corrigée par `querySelector` + contrôle de l'exception levée : 3 passes VERT
 - [x] Spec §3 révisée, README § « La façade du rideau du garage », `CLAUDE.md` ; `verifie_references_docs.py` code 0 — preuve :
   0 défaut, 20 documents
-- [ ] Compilation du rideau par la page Build (`controleRideau` solidifié), SUCCESS lu en fin de journal
+- [x] Compilation du rideau par la page Build (`controleRideau` solidifié), SUCCESS lu en fin de journal — preuve : journal `20261112-111138-tasmota32s3-garage-rideau-garage-modbus-compiler.log`, « 1 succeeded in 01:33:42 », code de sortie 0, lancé après 97653e414
 - [ ] Essai sur carte : dessin qui suit la porte pendant une course du P4 ; P4 injoignable -> grisé, position des fins de course
 
 ## Améliorations restantes
