@@ -151,7 +151,7 @@ def monte(avecModule)
     configDevices.activationAuBranchement = nil
     global.commandesEsclave = nil
     GF = charge_fichier(SOURCES + "/globalFonctions.be")
-    global.globalFonctions = GF
+    global.globalFonctions = nil                       # solidifie sur la carte : un module (import), pas une globale ; compile() l a creee
     CG = charge_fichier(SOURCES + "/controleGeneral.be")
     cg = CG.init(CG)
     global.controleGeneral = cg

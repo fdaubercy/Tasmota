@@ -20,6 +20,7 @@ class COMMANDES_ECRAN
 
     def recoit(esclave, numero, mot)
         import global
+        import globalFonctions
         var cfg = global.modules.find("ecranCave")
         if (type(cfg) != "instance" || cfg.find("activation", "OFF") != "ON" || cfg.find("esclave") != esclave)    return    end
 
@@ -49,7 +50,7 @@ class COMMANDES_ECRAN
                 end
             else
                 logFonctions.log(string.format("COMMANDES_ECRAN: touche %s -> %s relai %s = %s !", str(numero), action["module"], str(action["relai"]), voulu), LOG_LEVEL_INFO)
-                global.globalFonctions.modifEtatRelai(action["module"], action["relai"], voulu, voulu, action.find("manuel", "OFF") == "ON", true, 0)
+                globalFonctions.modifEtatRelai(action["module"], action["relai"], voulu, voulu, action.find("manuel", "OFF") == "ON", true, 0)
             end
         except .. as e, m
             logFonctions.log(string.format("COMMANDES_ECRAN_ERREUR: touche %s : %s - %s !", str(numero), str(e), str(m)), LOG_LEVEL_ERREUR)
