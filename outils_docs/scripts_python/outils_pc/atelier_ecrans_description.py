@@ -5,6 +5,13 @@ Forme : {"version": 1, "ecran": <cle du catalogue>, "orientation": 0|90|180|270,
          "pages": [{"n", "titre", "attributs"?, "commentaire"?}],     page 0 = commun a toutes les pages
          "objets": [{"id", "page", "type", "x", "y", "l", "h", "attributs": {}, "liaison"?, "toucher"?, "commentaire"?}]}
   liaison : {"cle", "attribut", "indice"?}   indice obligatoire pour une cle de liste (`voies[].debit`)
+  liaison.table (facultatif) : la valeur du modele est un NOM, converti en couleur par `couleurs[table]` (pastille : "vert")
+  couleur_selon : [regle] sur un objet, couleur d'un attribut recalculee a chaque rafraichissement d'apres une valeur du modele :
+      {"attribut", "cle", "indice"?, "table", "sauf"?: {valeur: "#RRGGBB"}}     couleurs[table][valeur], sauf pour les valeurs de `sauf`
+      {"attribut", "cle", "indice"?, "si": {valeur: "#RRGGBB"}, "sinon": "#RRGGBB"}
+  actif : {attribut couleur: "#RRGGBB"} sur un bouton qui change de page : ces valeurs quand sa page est la page courante,
+      sinon ses `attributs`
+  couleurs (racine) : {table: {nom: "#RRGGBB"}}, p. ex. "etat" = ecranDebitsFonctions.COULEURS
   toucher : un seul de {"page": n} | {"commande": "<commande Tasmota>"} | {"fonction": "<module.fonction>", "args"?: [..]}
 `valide` ne lit que la description et le catalogue (atelier_ecrans_catalogue) ; la section `modele` est comparee a la map
 rendue par le module metier dans berry/banc_ecran_debits.py."""
@@ -99,6 +106,34 @@ def _attributs(catalogue, type_, attrs, qui, msgs):
             msgs.append(f"{qui} : {k} doit être un texte")
 
 
+def _couleur(v, qui, quoi, msgs):
+    if not (isinstance(v, str) and COULEUR.fullmatch(v)):
+        msgs.append(f"{qui} : couleur « {v} » de {quoi} mal formée (attendu #RRGGBB)")
+
+
+def _regle(catalogue, t, regle, qui, cles, tables, msgs):
+    """Une regle de `couleur_selon` : attribut de type couleur, cle du modele (indice si liste), table, couleurs."""
+    a = regle.get("attribut", "")
+    if _type_attribut(catalogue, t, a) != "couleur":
+        msgs.append(f"{qui} : couleur_selon : « {a} » n'est pas un attribut de couleur du type {t}")
+    c = regle.get("cle")
+    if c not in cles:
+        msgs.append(f"{qui} : couleur_selon : clé « {c} » absente de la section modèle")
+    elif "[]" in c and not (_entier(regle.get("indice")) and regle["indice"] >= 0):
+        msgs.append(f"{qui} : couleur_selon : clé de liste « {c} » sans indice")
+    if "table" in regle:
+        if regle["table"] not in tables:
+            msgs.append(f"{qui} : couleur_selon : table « {regle['table']} » absente de couleurs")
+        for k, v in regle.get("sauf", {}).items():
+            _couleur(v, qui, f"sauf[{k}]", msgs)
+    elif "si" in regle and "sinon" in regle:
+        for k, v in regle["si"].items():
+            _couleur(v, qui, f"si[{k}]", msgs)
+        _couleur(regle["sinon"], qui, "sinon", msgs)
+    else:
+        msgs.append(f"{qui} : couleur_selon : une règle porte « table » ou « si » et « sinon »")
+
+
 def valide(d, catalogue):
     """Messages d'erreur en francais ; liste vide = description valide."""
     msgs = []
@@ -119,6 +154,10 @@ def valide(d, catalogue):
         cles.append(m.get("cle"))
         if m.get("type") not in TYPES_MODELE:
             msgs.append(f"modèle : type « {m.get('type')} » de {m.get('cle')} inconnu ({', '.join(TYPES_MODELE)})")
+    tables = d.get("couleurs", {})
+    for nom, table in tables.items():
+        for k, v in table.items():
+            _couleur(v, f"couleurs[{nom}]", k, msgs)
     pages = []
     for p in d.get("pages", []):
         if p.get("n") in pages:
@@ -149,9 +188,22 @@ def valide(d, catalogue):
                 msgs.append(f"{qui} : liaison vers « {li.get('cle')} » absente de la section modèle")
             elif "[]" in li["cle"] and not (_entier(li.get("indice")) and li["indice"] >= 0):
                 msgs.append(f"{qui} : liaison de liste « {li['cle']} » sans indice")
+            if "table" in li:
+                if li["table"] not in tables:
+                    msgs.append(f"{qui} : liaison : table « {li['table']} » absente de couleurs")
+                if _type_attribut(catalogue, t, li.get("attribut", "")) != "couleur":
+                    msgs.append(f"{qui} : liaison : table de couleurs sur « {li.get('attribut')} », qui n'est pas une couleur")
             if li.get("attribut") not in ATTRIBUTS_LIAISON_SPECIAUX and \
                     (t not in catalogue["objets"] or _type_attribut(catalogue, t, li.get("attribut", "")) is None):
                 msgs.append(f"{qui} : liaison vers l'attribut « {li.get('attribut')} » inconnu du type {t}")
+        for regle in o.get("couleur_selon", []):
+            _regle(catalogue, t, regle, qui, cles, tables, msgs)
+        for k, v in o.get("actif", {}).items():
+            if _type_attribut(catalogue, t, k) != "couleur":
+                msgs.append(f"{qui} : actif : « {k} » n'est pas un attribut de couleur du type {t}")
+            _couleur(v, qui, f"actif[{k}]", msgs)
+        if "actif" in o and "page" not in (o.get("toucher") or {}):
+            msgs.append(f"{qui} : actif : réservé à un objet dont le toucher change de page")
         to = o.get("toucher")
         if to:
             cle = [k for k in TOUCHER if k in to]
