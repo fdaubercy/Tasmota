@@ -204,7 +204,66 @@
 				"cave": 900,
 				"cuve": 900
 			},
-			"environnement": {}
+			"touches": {"1": "power3", "2": "power5", "3": "power4", "4": "power1", "5": "redemarre"},
+			"environnement": {
+				"boutons": {
+					"bouton1": {
+						"activation": "ON",
+						"nom": "Touche 1 Lumieres",
+						"id": 1,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"}
+					},
+					"bouton2": {
+						"activation": "ON",
+						"nom": "Touche 2 Lave-linge",
+						"id": 2,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"}
+					},
+					"bouton3": {
+						"activation": "ON",
+						"nom": "Touche 3 Pompe cuve",
+						"id": 3,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"}
+					},
+					"bouton4": {
+						"activation": "ON",
+						"nom": "Touche 4 Pompe vide-cave",
+						"id": 4,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"}
+					},
+					"bouton5": {
+						"activation": "ON",
+						"nom": "Touche 5 Redemarrer le serveur",
+						"id": 5,
+						"pin": -1,
+						"type": 32,
+						"virtuel": "ModBus_TasmotaSlaveModBus1",
+						"SwitchMode": 1,
+						"etat": "OFF",
+						"relaisLie": {"modules": [], "ids": [], "type": "ON/OFF"}
+					}
+				}
+			}
 		}
 	},
 	"drivers": {

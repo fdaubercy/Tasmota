@@ -6,6 +6,7 @@
 # Interface produite (lue par l'interface d'ecran, A7) : modele() -> {"valeurs": {cle: {"valeur", "perime"}}, "alertes": [texte],
 # "broker": bool} ; perime(source) -> bool. Cles : temperature, humidite, pompe, manuel, niveauBas, niveauHaut, alerte,
 # power1..power5, taux (0 a 1), volume (L). Sources : "cave", "cuve".
+# Touches (A5) : touche(numero) -> "envoye" / "refuse" / "inconnu" (voir plus bas) ; reinitialise() remet seq et relances a zero.
 # Compile en .bec par demarrage.compile(["ecranCaveFonctions"], "modules.ecranCave"), importe par controleEcranCave.be.
 # Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
 var ecranCaveFonctions = module("ecranCaveFonctions")
@@ -113,5 +114,83 @@ def ecranCaveFonctions_modele()
     return {"valeurs": vals, "alertes": alertes, "broker": mqtt.connected()}
 end
 ecranCaveFonctions.modele = ecranCaveFonctions_modele
+
+
+# ---- Touches (A5) : l'ecran pousse l'ETAT VOULU de la touche au serveur de la cave par un push ModBus 0x10 (registre 32 + numero - 1).
+# Mot = (seq << 1) | (voulu == ON) ; seq de 1 a 127 propre a chaque touche, en RAM (jamais 0 : le serveur ignore une seq deja vue).
+# Correspondance touche -> etat affiche : persist modules.ecranCave.touches = {"1": "power3", ..., "5": "redemarre"}.
+# Relance du MEME mot (meme seq : le serveur n'agit qu'une fois) toutes les 2 s, 5 fois au plus, jusqu'a ce que l'etat recu par MQTT
+# egale `voulu`. La touche « redemarre » n'est JAMAIS relancee : le serveur oublie ses seq en redemarrant, une relance le ferait boucler.
+ecranCaveFonctions.seqs = {}       # numero -> derniere seq emise
+ecranCaveFonctions.relances = {}   # numero -> {"mot", "cle", "voulu", "n"}
+
+def ecranCaveFonctions_reinitialise()
+    for n: ecranCaveFonctions.relances.keys()
+        tasmota.remove_timer("ecran_cave_touche" + str(n))
+    end
+    ecranCaveFonctions.seqs = {}
+    ecranCaveFonctions.relances = {}
+end
+ecranCaveFonctions.reinitialise = ecranCaveFonctions_reinitialise
+
+def ecranCaveFonctions_pousse(numero, mot)
+    import modbusFonctions
+    return modbusFonctions.pousseEtat(32 + numero - 1, "uint16", [mot]) != nil
+end
+
+# Minuterie de relance de la touche `numero`
+def ecranCaveFonctions_relance(numero)
+    var r = ecranCaveFonctions.relances.find(numero)
+    if (r == nil)    return    end
+    var e = ecranCaveFonctions.valeurs.find(r["cle"])
+    if (e != nil && e["v"] == r["voulu"])    # etat confirme par MQTT
+        ecranCaveFonctions.relances.remove(numero)
+        return
+    end
+    if (r["n"] >= 5)
+        ecranCaveFonctions.relances.remove(numero)
+        ecranCaveFonctions_log("ECRAN_CAVE_ERREUR: touche " + str(numero) + " sans confirmation apres 5 relances, abandon !", LOG_LEVEL_ERREUR)
+        return
+    end
+    r["n"] += 1
+    ecranCaveFonctions_log("ECRAN_CAVE: relance " + str(r["n"]) + " de la touche " + str(numero) + " !", LOG_LEVEL_DEBUG)
+    ecranCaveFonctions_pousse(numero, r["mot"])
+    tasmota.set_timer(2000, def () ecranCaveFonctions_relance(numero) end, "ecran_cave_touche" + str(numero))
+end
+
+# Appui sur la touche `numero` : "envoye", "refuse" (etat inconnu ou perime, ou serveur injoignable) ou "inconnu" (numero absent du persist)
+def ecranCaveFonctions_touche(numero)
+    import global
+    var cfg = global.modules.find("ecranCave")
+    var touches = (type(cfg) == "instance") ? cfg.find("touches") : nil
+    var cle = (type(touches) == "instance") ? touches.find(str(numero)) : nil
+    if (cle == nil)    return "inconnu"    end
+    var voulu = "ON"
+    var e = nil
+    if (cle != "redemarre")
+        e = ecranCaveFonctions.valeurs.find(cle)
+        if (e == nil || ecranCaveFonctions_vieux(e["source"], e["t"]))
+            ecranCaveFonctions_log("ECRAN_CAVE: touche " + str(numero) + " refusee, etat de " + cle + " inconnu ou perime !", LOG_LEVEL_INFO)
+            return "refuse"
+        end
+        voulu = (e["v"] == "ON") ? "OFF" : "ON"
+    end
+    tasmota.remove_timer("ecran_cave_touche" + str(numero))
+    ecranCaveFonctions.relances.remove(numero)
+    var seq = ecranCaveFonctions.seqs.find(numero, 0) % 127 + 1
+    ecranCaveFonctions.seqs[numero] = seq
+    var mot = (seq << 1) | (voulu == "ON" ? 1 : 0)
+    if (!ecranCaveFonctions_pousse(numero, mot))
+        ecranCaveFonctions_log("ECRAN_CAVE_ERREUR: touche " + str(numero) + " non envoyee, serveur injoignable par ModBus !", LOG_LEVEL_ERREUR)
+        return "refuse"
+    end
+    ecranCaveFonctions_log("ECRAN_CAVE: touche " + str(numero) + " (" + cle + ") -> " + voulu + " !", LOG_LEVEL_INFO)
+    if (cle != "redemarre")
+        ecranCaveFonctions.relances[numero] = {"mot": mot, "cle": cle, "voulu": voulu, "n": 0}
+        tasmota.set_timer(2000, def () ecranCaveFonctions_relance(numero) end, "ecran_cave_touche" + str(numero))
+    end
+    return "envoye"
+end
+ecranCaveFonctions.touche = ecranCaveFonctions_touche
 
 return ecranCaveFonctions
