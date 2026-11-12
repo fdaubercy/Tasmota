@@ -137,8 +137,8 @@ Abonnements (`mqtt.subscribe`, modèle `fsMqtt.be`) : `tele/<cave>/SENSOR` (AM23
 `cuveFonctions.sensorsCuve` pour les noms du taux et du volume). À la connexion MQTT : `cmnd/<cave>/STATE` et
 `cmnd/<cave>/STATUS 10` pour ne pas attendre la télémétrie. Chaque valeur garde son heure ; `perime(source) -> bool`.
 Interface produite : `ecranCaveFonctions.modele() -> map` (valeurs, `perime` par valeur, alertes) lu par l'interface (A7).
-- [ ] Banc rouge d'abord : `sensor_cave_lu`, `power_lu_par_result`, `cuve_lue`, `perime_apres_delai`, `json_invalide_ignore_sans_planter`, `topics_lus_dans_le_persist`
-- [ ] Code ; banc VERT ; mutants rouges
+- [x] Banc rouge d'abord : `sensor_cave_lu`, `power_lu_par_result`, `cuve_lue`, `perime_apres_delai`, `json_invalide_ignore_sans_planter`, `topics_lus_dans_le_persist` — preuve : `banc_ecran_cave.{py,be}` neuf, sortie ROUGE avant le code (`io_error: cannot open file 'data/cave/tasmota32s3-ecran/ecranCaveFonctions.be'`) ; 9 scénarios dont les six nommés, plus STATUS10 et la demande de l'état à la connexion
+- [x] Code ; banc VERT ; mutants rouges — preuve : `data/cave/tasmota32s3-ecran/ecranCaveFonctions.be` + `controleEcranCave.be` (topics VERIFIES : `cave/serveur-rly-cave-v2` = `serveur.mqtt.topic` du persist du serveur de la cave, `jardin/cuve` = celui de la cuve, littéraux) ; persist écran : `sources` et `peremption` (ancre texte), schéma 0 erreur, autoexec compile puis charge sous `modules.ecranCave` ; `banc_ecran_cave.py` `OK (28 controles)`, `banc_demarrage.py` VERT (écran réenregistré seul : +2 sources), `banc_ecran_debits` VERT, `banc_test_modbus` 386 PASS, `banc_commandes_ecran` OK ; mutants ROUGES : péremption (ECHEC 5), heure de source (3), JSON invalide (1), STATUS10 (1), abonnement cuve (6)
 - [ ] Commit `feat(ecran-cave): affichage par MQTT, valeurs datees et perimees`
 
 ## A7 — Pages HASPmota de l'écran

@@ -196,6 +196,14 @@
 			"activation": "OFF",
 			"reglage": "OFF",
 			"log": "info",
+			"sources": {
+				"cave": "cave/serveur-rly-cave-v2",
+				"cuve": "jardin/cuve"
+			},
+			"peremption": {
+				"cave": 900,
+				"cuve": 900
+			},
 			"environnement": {}
 		}
 	},

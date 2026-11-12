@@ -10,10 +10,12 @@ if demarrage.prologue()
     demarrage.compileSocle()
     demarrage.compile(["udpFonctions"], "serveur.udp")
     demarrage.compile(["rangeExtenderFonctions"], "serveur.rangeExtender")
+    demarrage.compile(["ecranCaveFonctions"], "modules.ecranCave")             # modele MQTT de l'affichage (A6), compile AVANT son controle
 
     demarrage.charge(["controleGeneral", "controleLedTemoin", "i2c_ads1115", "i2c_mcp23017", "modBus_Conn16channels", "modBus_TasmotaSlaveModBus", "controleWeb", "fsMqtt"])
     demarrage.charge(["controleUDP"], "serveur.udp")
     demarrage.charge(["controleModbus"])                                    # ouvre le port serie RS485 (GPIO 16/15)
     demarrage.charge(["controleDiscovery"], "serveur.discovery")            # fiche ImAlive au maitre : son RoutageRangeExtender (:8080) en depend
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")   # esclave (id 1) derriere SERVEUR-RLY-CAVE-GATEWAY
+    demarrage.chargeFichier("controleEcranCave", "modules.ecranCave")      # abonnements MQTT de l'affichage (A6)
 end
