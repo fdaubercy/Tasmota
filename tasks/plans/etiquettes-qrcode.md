@@ -61,15 +61,18 @@ Fichiers : créer `outils_docs/etiquettes_qr/maquettes_etiquettes_qr.html`, imag
   noté dans `outils_docs/etiquettes_qr/README.md` ; planche selon `modele-P.png`
 
 ## A1 — Bibliothèque de dessin du QR code
-Fichiers : créer `outils_docs/etiquettes_qr/lib/qr-code-styling.min.js` (PC), `data/sd/js/qr-code-styling.min.js.gz`
-(carte, `gzip -9 -n`), `outils_docs/etiquettes_qr/lib/LISEZMOI.md` (paquet, version, licence, sha512 du registre, sha256
-du `.gz`, comme l'en-tête de `data/fs/cuvePageFonctions.be`).
+Fichiers : créer `outils_docs/etiquettes_qr/lib/qr-code-styling.min.js` (PC), `LICENSE-qr-code-styling.txt`,
+`outils_docs/etiquettes_qr/lib/LISEZMOI.md` (paquet, version, licence, sha512 du registre, sha256 du `.js` et du futur
+`.gz`). Le `.gz` des cartes (`data/sd/js/qr-code-styling.min.js.gz`) est écrit en A6, avec la liste `etiquette_qr` qui
+l'exclut des autres envs (écrit avant, il partirait dans le FS de toutes les cartes).
 Produit : bundle UMD autonome exposant `QRCodeStyling` (options `data`, `width`, `height`, `type: "svg"`,
 `qrOptions.errorCorrectionLevel`, `dotsOptions`, `cornersSquareOptions`, `cornersDotOptions`, `backgroundOptions`,
 `image`, `imageOptions`), `getRawData("png"|"svg")`.
-- [ ] Paquet npm `qr-code-styling` : dernière version stable publiée depuis au moins deux semaines, licence MIT lue,
-  intégrité sha512 du registre vérifiée sur le tarball ; bundle sans dépendance à charger à part
-- [ ] Copies PC et `.gz` écrites, empreintes notées dans `LISEZMOI.md`
+- [x] Paquet npm `qr-code-styling` vérifié — preuve : 1.9.2 du 2025-04-11 (latest), MIT lue, sha512 du tarball = registre
+  (INTEGRITE_OK), bundle sans `require` (`qrcode-generator` inclus), ids de clipPath par instance ; essai Chrome à
+  plusieurs codes et à 75 px relu ; modules = table ISO (1 o -> 21 ... 63 o H -> 45)
+- [x] Copie PC, licence et empreintes écrites — preuve : `outils_docs/etiquettes_qr/lib/` (`cmp` identique au tarball,
+  sha256 du .js et du futur .gz notés dans `LISEZMOI.md`) ; `.gz` reporté en A6
 - [ ] Essai navigateur (page de test jetable dans le scratchpad) : texte `Hostname : cuve\nIP : 192.168.0.60\nNote :
   « été » "x" \ 100 %` dessiné en points ronds, coins arrondis, image au centre, niveau H ; scanné par le téléphone de
   l'utilisateur, texte lu identique (vérification par l'utilisateur, notée en preuve)
@@ -185,7 +188,8 @@ Consomme : A4 (`POST /impression`).
 ## A6 — Page `/qrcode` de la carte
 Fichiers : créer `data/fs/qrcodePage.be` (driver posé à l'import, route `/qrcode`, bouton d'accueil « QR code »,
 `?f=lib.js.gz`, `?f=etat` -> `{"ip": <IP réelle>, "hostname"}` ; rien chargé si `/json/qrcode.json` est absent ;
-solidifiable : aucun état dans le module), `data/sd/html/qrcode.html`, `data/sd/css/qrcode.css`, `data/sd/js/qrcode.js` ;
+solidifiable : aucun état dans le module), `data/sd/html/qrcode.html`, `data/sd/css/qrcode.css`, `data/sd/js/qrcode.js`,
+`data/sd/js/qr-code-styling.min.js.gz` (`gzip -9 -n` du `.js` de l'A1, sha256 attendu dans `lib/LISEZMOI.md`) ;
 `outils_docs/scripts_python/berry/banc_qrcode_page.py` + `.be` (+ bouchons) ; `outils_pc/test_qrcode_carte_chrome.py` ;
 modifier `platformio_tasmota_cenv.ini` (liste `etiquette_qr` de `[berry_commun]` : les 4 fichiers de `data/sd` ;
 exclue de tous les envs ESP32 ; entrée de `globs` de `solidify_all_python.be` si une globale est créée).
