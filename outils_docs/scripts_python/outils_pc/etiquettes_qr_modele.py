@@ -314,8 +314,10 @@ def fichier_carte(racine, reglage, resolu):
     image = image_data_uri(racine, nom) if nom else None
     ip = next((l["valeur"] for l in resolu["lignes"]
                if l["source"] == "standard" and l["cle"] == "ip" and l["etat"] == "ok"), None)
-    return {"version": 1, "texte": resolu["texte"], "style": style, "image": image,
-            "correction": verdict.correction(bool(image)), "ip_inscrite": ip}
+    correction = verdict.correction(bool(image))
+    # modules : la page /qrcode de la carte en tire la marge de 4 modules (et la sonde compare au QR code dessine)
+    return {"version": 1, "texte": resolu["texte"], "style": style, "image": image, "correction": correction,
+            "modules": verdict.verdict(resolu["texte"], 25, correction)["modules"], "ip_inscrite": ip}
 
 
 def empreinte(texte):

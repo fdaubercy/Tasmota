@@ -86,6 +86,8 @@ def test_texte():
     verifie("motdepasse9" in json.dumps(r), False, "aucun secret dans le resultat")
     f = m.fichier_carte(RACINE, {"style": {"points": "rounded", "image": None}}, r)
     verifie((f["ip_inscrite"], f["correction"], f["image"]), (None, "M", None), "fichier de carte sans IP ni image")
+    n = len(r["texte"].encode("utf-8"))                     # M : 42 octets -> version 3 (29 modules), 62 -> version 4 (33)
+    verifie(f["modules"], 29 if n <= 42 else 33 if n <= 62 else 37, f"modules du fichier de carte ({n} octets)")
 
 
 def test_esclave():

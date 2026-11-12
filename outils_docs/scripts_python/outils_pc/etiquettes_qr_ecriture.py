@@ -36,7 +36,7 @@ import fichiers_berry_ini as fbi
 LISTE = "etiquette_qr"
 REF = "${berry_commun." + LISTE + "}"
 FICHIERS_PAGE = ("data/fs/qrcodePage.be", "data/sd/html/qrcode.html", "data/sd/css/qrcode.css", "data/sd/js/qrcode.js",
-                 "data/sd/js/qr-code-styling.min.js.gz")
+                 "data/sd/js/qrcode_options.js", "data/sd/js/qr-code-styling.min.js.gz")
 SOLIDES = ("data/fs/qrcodePage.be",)
 NOMS = {Path(f).name for f in FICHIERS_PAGE}
 LIGNE_AUTOEXEC = 'demarrage.charge(["qrcodePage"])'

@@ -1,0 +1,7 @@
+/* Page /qrcode (data/fs/qrcodePage.be) : couleurs du theme Tasmota, QR code toujours sur fond blanc (lisible au scan) */
+#q_zone{text-align:center}
+#q_code{display:inline-block;background:#fff;padding:8px;border-radius:6px;line-height:0}
+#q_code:empty{display:none}
+#q_texte{text-align:left;white-space:pre-wrap;word-break:break-word;font-size:.9em;margin:12px 0}
+#q_avert{background:#e8a200;color:#000;padding:8px;border-radius:6px;text-align:left}
+#q_msg.erreur{color:#f66}

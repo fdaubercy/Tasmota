@@ -234,12 +234,20 @@ solidifiable : aucun état dans le module), `data/sd/html/qrcode.html`, `data/sd
 modifier `platformio_tasmota_cenv.ini` (liste `etiquette_qr` de `[berry_commun]` : les 4 fichiers de `data/sd` ;
 exclue de tous les envs ESP32 ; entrée de `globs` de `solidify_all_python.be` si une globale est créée).
 Consomme : `fichier_carte` (A2), A3 pour poser l'env d'essai.
-- [ ] Banc Berry d'abord (rouge) : route servie avec `qrcode.json` présent ; absent -> pas de bouton, pas de route ;
-  `?f=etat` rend l'IP du bouchon ; charte des logs sans avertissement
-- [ ] Module et page ; banc VERT ; `verifie_berry.py` VERT
-- [ ] Sonde Chrome de la page (serveur de fichiers local imitant la carte) : QR code dessiné avec le style du fichier ;
-  IP inscrite différente sans port -> avertissement ; IP inscrite `192.168.0.51:8081` -> aucun avertissement
-  (vigilance 1) ; mode sombre lisible
+- [x] Banc Berry d'abord (rouge) — preuve : `berry/banc_qrcode_page.py`, témoins rouges ; route servie avec `qrcode.json`
+  présent ; absent -> pas de bouton, pas de route ; `?f=etat` rend l'IP du bouchon ; charte des logs sans avertissement ;
+  23 contrôles Berry + bibliothèque reçue octet par octet, empreinte ; témoins `--sources` sur copie : sans `path.exists` dans init
+  -> ECHEC (2), sans `check_privileged_access` -> ECHEC (3)
+- [x] Module et page ; banc VERT ; `verifie_berry.py` VERT — preuve : `data/fs/qrcodePage.be` (routes `?f=lib.js.gz`,
+  `?f=reglage` par morceaux, `?f=etat`), `data/sd/{html,css,js}/qrcode.*`, `qrcode_options.js` partagé avec l'outil
+  (`etiquettes_qr_page_js.py::OPTIONS`) ; `BANC_QRCODE_PAGE: OK`, verifie_berry 0 erreur 0 avertissement ; relecteur-berry
+  sans bloquant ; liste `etiquette_qr` posée et exclue des 19 envs ESP32 (`ecrit_exclusions`, second calcul vide),
+  `banc_demarrage.py` VERT ; bancs `test_etiquettes_qr_*` et sonde de l'outil VERTS
+- [x] Sonde Chrome de la page — preuve : `outils_pc/test_qrcode_carte_chrome.py` VERT ; serveur local imitant la carte :
+  QR code dessiné avec le style du fichier ; IP inscrite différente sans port -> avertissement ; IP inscrite
+  `192.168.0.51:8081` -> aucun avertissement (vigilance 1) ; mode sombre lisible (page du vrai module par
+  `banc_qrcode_page.py --garde`, 15 contrôles : modules = verdict, couleur du style, IP .61 / IP:port / sans IP, texte
+  hostile, bibliothèque demandée 1 fois en 5 chargements, thème sombre, réglage absent -> 404 affiché)
 - [ ] Essai sur une carte choisie par l'utilisateur : réglage écrit par la page 7970, firmware recompilé et FS envoyé
   par la page Build, QR code de la carte scanné = QR code de l'outil ; RAM libre avant/après notée
 - [ ] Commit
@@ -261,6 +269,13 @@ Produit : `etats(racine, env, *, get=None) -> {"a_reimprimer": bool, "a_regenere
   de `atelier_graphiques_televerse.url`) ; sonde `test_build_page_fichiers_chrome.py` VERT
 - [ ] Lien « Étiquette QR à refaire » dans le message de fin d'un renommage (Fichiers Berry) et d'une modification
   (assistant persist) ; leurs bancs VERT
+- [ ] Régénération au build (demande du 2026-11-12) : le pré-script (`build/pre_utilitaires_platformio.py`), avant
+  chaque `buildfs` (et upload série qui écrit le FS), recalcule le texte de `cartes/<env>.json` contre le persist et le
+  `.h` du moment ; s'il diffère du `qrcode.json` du dossier de la carte, il le réécrit (même `fichier_carte`) et
+  l'étiquette passe « à réimprimer » ; une ligne `QR code de <env> : régénéré` dans la sortie de pio. Rien si l'env n'a
+  pas de `cartes/<env>.json` ; une erreur de lecture n'arrête jamais le build (ligne d'avertissement). Module neuf
+  `build/qrcode_build.py` (+ `test_qrcode_build.py`, rouge d'abord : persist changé -> réécrit ; inchangé -> fichier
+  intact, date comprise ; env sans réglage -> rien ; persist illisible -> build continue)
 - [ ] Commit
 
 ## A8 — QR code à l'écran des cartes (après l'atelier des écrans)

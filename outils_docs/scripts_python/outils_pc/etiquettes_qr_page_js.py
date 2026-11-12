@@ -1,11 +1,14 @@
 r"""Script de la page « Etiquettes QR code » (plan A4). Aucune donnee du serveur n'entre par innerHTML : textContent seul.
 
 Texte du QR code : TOUJOURS converti en octets UTF-8 (`octets`) et encode en mode Byte ; qr-code-styling garde sinon
-`255 & charCode` (outils_docs/etiquettes_qr/lib/LISEZMOI.md). `optionsQR` est la seule source des options : la page
-/qrcode de la carte (A6) en reprendra le texte pour dessiner EXACTEMENT le meme QR code.
+`255 & charCode` (outils_docs/etiquettes_qr/lib/LISEZMOI.md). `octets` et `optionsQR` vivent dans
+data/sd/js/qrcode_options.js, embarque ici et servi par la page /qrcode de la carte : meme QR code des deux cotes.
 """
+from pathlib import Path
 
-JS = r"""
+OPTIONS = (Path(__file__).resolve().parents[3] / "data" / "sd" / "js" / "qrcode_options.js").read_text(encoding="utf-8")
+
+JS = OPTIONS + r"""
 const ETAT = {env: null, cartes: [], lieux: [], reglage: null, page: false, esp32: false, charge: '', arbre: [],
               apercu: null, minuterie: null, demande: 0, envDemande: null, images: [], planche: new Set()};
 const $ = id => document.getElementById(id);
@@ -35,24 +38,6 @@ function el(balise, attributs, texte) {
 function options(select, liste, valeur) {
   select.replaceChildren(...liste.map(([v, t]) => { const o = el('option', {}, t); o.value = v; return o; }));
   select.value = valeur;
-}
-
-function octets(texte) {
-  let s = '';
-  new TextEncoder().encode(texte).forEach(b => { s += String.fromCharCode(b); });
-  return s;
-}
-
-function optionsQR(texte, style, correction, image, px, modules) {
-  const couleur = style.couleur || '#000000';
-  return {width: px, height: px, type: 'svg', data: octets(texte), image: image || undefined,
-    margin: modules ? Math.round(4 * px / (modules + 8)) : 0,
-    qrOptions: {typeNumber: 0, mode: 'Byte', errorCorrectionLevel: correction},
-    dotsOptions: {type: style.points || 'square', color: couleur},
-    cornersSquareOptions: {type: style.coins || 'square', color: couleur},
-    cornersDotOptions: {type: style.coins === 'square' ? 'square' : 'dot', color: couleur},
-    backgroundOptions: {color: style.fond || '#ffffff'},
-    imageOptions: {margin: 2, imageSize: 0.3, hideBackgroundDots: true}};
 }
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
