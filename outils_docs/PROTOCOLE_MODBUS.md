@@ -1137,3 +1137,116 @@ signalé) ; défaut `--persist p4`, le maître du garage.
 - Déployer l'acquisition avant l'affichage (un maître à jour face à un esclave d'avant affiche « inconnu »).
 - L'assistant persist (:7900) refuse de modifier l'acquisition (« esclave sans maitre du parc ») : son point d'accès
   ne suit pas le nom `<HOSTNAME du maître>-GATEWAY`. Modifier son persist à la main.
+
+## 10. Paires serveur S3 + écran 7B : qui est maître, par quelle voie (état au 2026-11-12)
+
+Relevé dans les `_persist.json` du dépôt (blocs `drivers.ModBus`, `serveur.rangeExtender`, `serveur.udp`) et dans les
+plans `envs-grenier-rdc-sonoff-cave.md` et `debits-deux-cartes.md`. L'écran est toujours une carte à part (Waveshare
+ESP32-S3-Touch-LCD-7B, RS485 sur 16/15) : aucun serveur n'a de broches libres pour piloter la dalle RGB.
+
+| Paire | Maître (ModBus + range extender id 0) | Esclave | Mode de communication | Voie | État |
+|---|---|---|---|---|---|
+| Débitmètres de la PAC (bureau) | Écran `tasmota32s3-bureau-ecran-debits-pac` (192.168.0.51, AP `SERVEUR-DEBITS-PAC-GATEWAY`, NAPT ON) | Acquisition `tasmota32s3-bureau-serveur-debits-pac` (ModBus id 1, range extender id 1, `ipMaitre` .51) | ModBus RTU (relevé groupé, registres 4704 à 4710, période 10 s) + push UDP multi-valeurs de l'esclave | Les deux : **filaire** RS485 (écran 16/15, acquisition 17/18, 19 200 8N1, voie de commande `Serial`) et **Wi-Fi** (l'acquisition est cliente du point d'accès de l'écran) ; chaque voie suffit seule | Configuré au dépôt, pas encore essayé sur carte |
+| Grenier du rez-de-chaussée (volets) | Serveur `tasmota32s3-rdc-grenier` (Waveshare 8DI-8RO, AP `SERVEUR-GRENIER-RDC-GATEWAY`, NAPT ON) | Écran à venir : `TasmotaSlaveModBus1` id 1 « ECRAN-GRENIER-RDC », **inactif** | ModBus (Serial ON + UDP ON au maître) ; l'esclave se présentera par `ImAlive` | **Filaire** RS485 (grenier RX 18 / TX 17, 7B 16/15) et **Wi-Fi** par le range extender du grenier (décisions de l'utilisateur du 2026-11-11 et du 2026-11-12) | Maître prêt dans le persist, env de l'écran pas encore créé |
+| Serveur relais de la cave | Serveur `tasmota32s3-serveur-rly` (range extender id 0, AP `SERVEUR-RLY-CAVE-GATEWAY`, NAPT ON, ModBus ON depuis le 2026-11-12) | Écran 7B `tasmota32s3-cave-ecran` (ECRAN-CAVE, topic `cave/ecran`) : ModBus id 1, range extender id 1 client de `SERVEUR-RLY-CAVE-GATEWAY` ; côté maître `TasmotaSlaveModBus1` id 1 « ECRAN-CAVE », **inactif** jusqu'au flash | ModBus (Serial ON + UDP ON au maître) ; l'esclave se présentera par `ImAlive` | **Filaire** RS485 (cave RX 18 / TX 17, 7B 16/15) et **Wi-Fi** par le range extender de la cave (décision de l'utilisateur du 2026-11-12) | Maître compilé le 2026-11-12 ; env de l'écran créé le 2026-11-12 (sans vues, A9), à compiler et flasher |
+
+Les rôles s'inversent d'une paire à l'autre. Aux débits, l'écran est maître parce qu'il interroge l'acquisition et
+tient le point d'accès ; au grenier, le serveur garde les deux rôles (choix de l'utilisateur) et l'écran sera esclave.
+La cave suit désormais le modèle du grenier (décision du 2026-11-12).
+
+Le Sonoff de la porte de la cave (ESP8285, sans Berry) n'est l'esclave de personne : il reste sur le Wi-Fi de la
+maison et dialogue avec le serveur de la cave par MQTT et Rules (plan `envs-grenier-rdc-sonoff-cave.md`, A11).
+
+### Maître ou esclave : avantages et inconvénients, paire par paire (analyse du 2026-11-12, rien de décidé)
+
+Ce qui pèse dans le choix, d'après le code et les incidents déjà vécus :
+
+- Le maître ModBus **commande** (écritures 0x05/0x06/0x10 sur les registres de l'esclave) et **relève** (polling, ou
+  push UDP de l'esclave). L'esclave n'écrit pas dans les registres du maître, mais il lui pousse en UDP, dès qu'ils
+  changent, ses boutons, interrupteurs, capteurs et rubans (`globalFonctions.be::changementEtatCapteur` ->
+  `modbusFonctions.be::pousseEtat`). Le maître les range et les ajoute au JSON SENSOR ; un interrupteur recale déjà un
+  volet du maître (`vrFonctions.be::capteurVirtuel`), un bouton ne déclenche encore rien. Sur RS485, pas de push :
+  le maître les relève à sa période.
+- Le maître ModBus est forcément le maître du range extender (id 0) : il tient le point d'accès et le NAPT, l'esclave
+  est client de ce point d'accès. Au démarrage, `controleRangeExtender.be` recopie `serveur.rangeExtender.id` dans
+  `drivers.ModBus.id` et `serveur.udp.id` puis redémarre (`controleModbus.be` aligne de même UDP et TCP sur ModBus), et
+  `modbusFonctions.be::incoherenceId` signale toute fiche où ils diffèrent. Séparer les deux rôles demanderait de
+  modifier ce code.
+- Un esclave derrière le NAPT dépend du maître pour tout : MQTT, syslog, historique, OTA (par `build_ota_maitre.py`,
+  maître en `Sleep 0`), accès web par `<ip maître>:<8080 + id - 1>`. Ses push multicast n'atteignent pas le PC
+  (sniffeur muet), et un `MqttLog` en debug sur un tel esclave l'a fait planter (cuve, 2026-10-11).
+- Le maître du range extender doit bien recevoir la box ; l'esclave peut en être loin. La puissance mesurée à
+  l'emplacement de chaque carte tranche à elle seule si l'une est hors de portée.
+- Sur RS485, le push est impossible (bus partagé) : l'esclave n'est relevé que par polling.
+
+#### Débitmètres de la PAC (aujourd'hui : écran maître)
+
+| | Écran maître, acquisition esclave (actuel) | Acquisition maître, écran esclave |
+|---|---|---|
+| Avantages | L'écran est le seul consommateur des débits : il relève à son rythme (10 s), par lecture groupée. L'acquisition n'a aucun actionneur, perdre le réseau ne coupe rien de physique (`timerRebootSansWifi` à 0). Code écrit et testé au banc dans ce sens (lecture groupée, push multi-valeurs). | L'acquisition reste joignable sur le Wi-Fi de la maison sans dépendre de l'écran : historique, MQTT et page `/equilibrage` tiennent écran éteint. L'écran, déjà chargé par LVGL, n'a plus ni point d'accès ni NAPT. |
+| Inconvénients | Écran planté ou en mise à jour : l'acquisition n'a plus de MQTT ni d'historique, et `/equilibrage` (servie par l'acquisition via `192.168.0.51:8080`) disparaît. L'écran cumule LVGL, point d'accès, NAPT et maître ModBus : c'est la carte la plus chargée. | Un maître qui pousse des valeurs vers un afficheur esclave, c'est le sens inverse du code : lecture groupée et push multi-valeurs seraient à réécrire. L'acquisition doit bien recevoir la box. |
+
+Lecture de Claude : garder l'écran maître. Le seul vrai coût est la perte de l'historique quand l'écran tombe ; il
+disparaît si l'acquisition passe en Wi-Fi maison (sortie du range extender) tout en restant esclave ModBus par le RS485.
+
+#### Grenier du rez-de-chaussée (aujourd'hui : grenier maître, écran prévu esclave)
+
+| | Grenier maître, écran esclave (prévu) | Écran maître, grenier esclave |
+|---|---|---|
+| Avantages | Le serveur des volets reste autonome : Wi-Fi maison direct, MQTT, boutons DI et réglages sans l'écran. Écran en panne = plus d'affichage, rien d'autre. Même schéma que le garage (P4 maître), déjà éprouvé sur carte. | La commande suit le sens naturel de ModBus : l'écran écrit les registres du grenier (relais des volets, dialecte `TasmotaSlaveModBus`) et relève leur état. Même modèle que les débits : un seul code d'écran pour les trois paires. |
+| Inconvénients | Un appui sur l'écran remonte au grenier par le push UDP existant (bouton ou interrupteur virtuel de l'écran), ou par le relevé sur RS485. Le grenier le reçoit déjà ; il manque seulement l'action qu'il en tire (un appel à la réception, comme `capteurVirtuel` pour les interrupteurs). L'affichage des positions demande aussi un canal grenier vers écran. | Les volets (dont celui de la porte) deviennent injoignables par MQTT et par le réseau dès que l'écran plante, redémarre ou se met à jour. OTA du grenier par l'écran. Risque de plantage connu des esclaves derrière le NAPT. Le grenier, sous les combles, devrait-il passer par l'écran pour atteindre la box ? À mesurer. |
+
+Lecture de Claude : garder le grenier maître, parce qu'il porte les actionneurs. Pour les ordres venus de l'écran, la
+voie la moins coûteuse est MQTT (l'écran publie les mêmes commandes que le reste de la maison). Séparer les rôles
+(écran maître ModBus, grenier maître du range extender) cumulerait les deux avantages, mais le code aligne les deux id
+au démarrage : ce n'est possible qu'en le modifiant.
+
+#### Serveur relais de la cave (rien de décidé, plan A9)
+
+| | Serveur maître, écran esclave (proposé) | Écran maître, serveur esclave | Ni l'un ni l'autre : MQTT seul |
+|---|---|---|---|
+| Avantages | La pompe de vidange et la lumière restent pilotées sans l'écran : c'est la sûreté contre l'inondation qui compte ici. Le Sonoff de la porte continue de joindre le serveur par le broker. Schéma identique au grenier. | Commande naturelle des relais par ModBus, code des débits réutilisé tel quel. | Aucun module ModBus ni range extender à ajouter à la cave (ModBus est OFF et le NAPT aussi aujourd'hui) : A10 n'a plus d'objet. Les deux cartes restent sur le Wi-Fi de la maison, indépendantes. Mécanisme natif de Tasmota, déjà retenu pour le Sonoff (A11). |
+| Inconvénients | Il faut activer ModBus maître et le NAPT sur la cave (modules Berry à solidifier, RAM, compilation). Même point que le grenier : l'appui sur l'écran arrive par le push UDP existant, il manque l'action que le serveur en tire. | La pompe dépend de l'écran pour son réseau : alerte ou commande à distance perdues si l'écran tombe. Inacceptable pour un actionneur de sûreté. | Tout dépend du broker (Pi 192.168.0.5) : broker en panne, l'écran ne voit et ne commande plus rien. Pas de secours filaire. Les deux cartes doivent bien recevoir la box à la cave. |
+
+Lecture de Claude (avant la décision du 2026-11-12, qui retient le serveur maître par RS485 et range extender) : écarter l'écran maître à cause de la pompe. Entre serveur maître et MQTT seul, MQTT demande le
+moins de travail et laisse la cave telle qu'elle est ; le serveur maître ne vaut l'effort que si l'écran doit marcher
+sans broker, et dans ce cas un câble RS485 (cave 17/18, 7B 16/15) donne un secours que le Wi-Fi ne donne pas.
+
+### Ce que Claude aurait fait, et ce qui est activé (2026-11-12)
+
+Le code liant les deux rôles (voir plus haut), la question se ramène à : quelle carte doit garder son réseau quand
+l'autre tombe ? Réponse de Claude : celle qui porte des actionneurs. D'où :
+
+| Paire | Avis de Claude | Raison principale | Voies ModBus actives au dépôt |
+|---|---|---|---|
+| Débitmètres | **Écran maître**, acquisition esclave (inchangé) | L'acquisition ne commande rien ; l'écran est le seul lecteur ; le code est écrit dans ce sens | RS485 + UDP par le range extender, sur les deux cartes (déjà en place) |
+| Grenier du RDC | **Grenier maître**, écran esclave (inchangé) | Les volets, dont celui de la porte, restent commandables sans l'écran | RS485 17/18 + UDP par le range extender, au maître (déjà en place) ; esclave id 1 réservé, inactif |
+| Cave | **Serveur maître**, écran esclave | La pompe de vidange ne doit dépendre d'aucune autre carte | RS485 17/18 + UDP par le range extender, NAPT ON (activés le 2026-11-12) ; esclave id 1 réservé, inactif |
+
+Sur la cave, Claude préférait MQTT seul (moins de travail) ; l'utilisateur a retenu le RS485 et le range extender
+(2026-11-12), qui donnent en plus un secours filaire quand le Wi-Fi ou le broker tombe.
+
+Ce que la cave a reçu au dépôt pour ModBus : persist (`drivers.ModBus` ON, `typeComm.Serial` et `UDP` ON, broches
+RX 18 / TX 17 actives, l'ancien 4/5 tombait sur le bouton de la pompe ; `rangeExtender.AP.routeNAPT` ON), pile
+`${berry_commun.modbus}` solidifiée et retirée de la liste noire du cenv, autoexec dans l'ordre du grenier. Rien à
+changer dans le `.h` : le NAPT y est défini pour toute carte à `USE_WIFI_RANGE_EXTENDER`.
+
+Les esclaves des écrans restent inactifs au grenier et à la cave : déclarés actifs sans carte, ils feraient tomber le
+relevé en timeout à chaque cycle. Les activer au flash de l'écran (décision de l'utilisateur du 2026-11-12 pour la cave).
+
+Ce que l'écran de la cave a reçu (env `tasmota32s3-cave-ecran`, créé le 2026-11-12 par `fichiers_berry_creation` à partir de
+l'écran des débits) : `drivers.ModBus.id` 1, `serveur.udp.id` 1, `rangeExtender.id` 1 et `ipMaitre` 192.168.0.243,
+broches RS485 16/15 en « Série Rx/Tx » (3232/3200, types d'esclave), découverte ON et `controleDiscovery` chargé
+(l'`ImAlive` alimente le `RoutageRangeExtender` du maître), `wifi.reseau1` et `STA_SSID1` du `.h` = point d'accès de la
+cave, passerelle 192.168.4.1, MAISON en secours. Le métier des débits et l'interface d'écran sont retirés en attendant
+la maquette des vues.
+
+Reste ouvert pour les deux écrans esclaves (vérifié dans le code le 2026-11-12). Le transport existe : chaque touche
+de l'écran, déclarée comme bouton ou interrupteur de l'esclave, part vers le maître en push UDP dès l'appui
+(`globalFonctions.be::changementEtatCapteur`, `modbusFonctions.be::pousseEtat`), et le RS485 la rattrape au relevé
+suivant si le Wi-Fi manque. À la réception (`modBus_TasmotaSlaveModBus.be`, branches `interrupteurs` et `boutons`),
+le maître met à jour l'état et le JSON SENSOR. Un interrupteur appelle déjà `vrFonctions.be::capteurVirtuel` (fin de
+course d'un volet) ; un bouton n'appelle rien. Une règle Tasmota sur ce JSON ne se déclencherait qu'au TelePeriod.
+Il reste donc à écrire l'appel, à la réception, qui traduit la touche en ordre de volet ou de relais (sur le modèle
+de `capteurVirtuel`), et le chemin inverse pour afficher les états sur l'écran : écriture du maître dans les registres
+de l'esclave, ou lecture MQTT par l'écran.

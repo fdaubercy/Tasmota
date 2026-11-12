@@ -54,7 +54,7 @@
 	"serveur": {
 		"activation": "ON",
 		"nom": "Serveur Relais Cave",
-		"hostname": "SERVEUR-RLY-CAVE",
+		"hostname": "SERVEUR-RLY-CAVE-V2",
 		"mDNS": "ON",
 		"apiHTTP": "ON",
 		"log": "info",
@@ -99,7 +99,7 @@
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
-				"routeNAPT": "OFF",
+				"routeNAPT": "ON",
 				"SSID": "SERVEUR-RLY-CAVE-GATEWAY",
 				"mdp": "Lune5676"
 			}
@@ -563,7 +563,7 @@
 						"etat": "OFF",
 						"timer": 0,
 						"publishMQTT": {
-							"topic": ["cmnd/cave/lumiere/POWER1"]
+							"topic": []
 						},
 						"timestamp": {
 							"ON": 0,
@@ -1014,7 +1014,7 @@
 			}
 		},
 		"ModBus": {
-			"activation": "OFF",
+			"activation": "ON",
 			"name": "ModBus RS485",
 			"id": 0,
 			"debit": 19200,
@@ -1026,25 +1026,25 @@
 			"activationReponseCMD": "ON",
 			"relaisPushMQTT": "OFF",
 			"typeComm": {
-				"Serial": "OFF",
-				"UDP": "OFF",
+				"Serial": "ON",
+				"UDP": "ON",
 				"MQTT": "OFF",
 				"TCP": "OFF"
 			},
 			"environnement": {
 				"pinsModBus": {
 					"RX": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "ModBr Rx",
-						"pin": 4,
+						"pin": 18,
 						"id": 1,
 						"type": 9440,
 						"virtuel": "OFF"
 					},
 					"TX": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "ModBr Tx",
-						"pin": 5,
+						"pin": 17,
 						"id": 1,
 						"type": 9408,
 						"virtuel": "OFF"
@@ -1063,8 +1063,8 @@
 					"log": "info",
 					"TasmotaSlaveModBus1": {
 						"activation": "OFF",
-						"name": "Capteurs Cuve ModBus",
-						"id": 2
+						"name": "ECRAN-CAVE (carte à venir)",
+						"id": 1
 					},
 					"TasmotaSlaveModBus2": {
 						"activation": "OFF",

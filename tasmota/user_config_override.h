@@ -707,7 +707,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // ESP32-S3 N16R8 ont la MEME identite (IP, topic, client MQTT). Seul le template differe.
         #if defined(FIRMWARE_ESP32_CAVE_SERVEUR_RLY) || defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
             #undef CFG_HOLDER
-            #define CFG_HOLDER  1610    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            #define CFG_HOLDER  1611    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
@@ -862,7 +862,11 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef USER_BACKLOG
                 #undef USER_BACKLOG
             #endif
-            #define USER_BACKLOG      "Backlog Module 0; Hostname SERVEUR-RLY-CAVE"
+            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)    // identite d'essai -V2 (plan envs-grenier-rdc-sonoff-cave, A6)
+                #define USER_BACKLOG  "Backlog Module 0; Hostname SERVEUR-RLY-CAVE-V2"
+            #else
+                #define USER_BACKLOG  "Backlog Module 0; Hostname SERVEUR-RLY-CAVE"
+            #endif
 
             // -- Utilisation des WebSockets ------------------------------
             #define USE_WSSERVER
@@ -2094,7 +2098,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef USER_BACKLOG
             #endif
             #define USER_BACKLOG      "Backlog Hostname SERVEUR-GARAGE"
-        #elif defined(FIRMWARE_ESP8266_POMPE_PISCINE)
+        #elif defined(FIRMWARE_ESP8266_JARDIN_POMPE_PISCINE)
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
                 #undef CODE_IMAGE_STR
@@ -2148,6 +2152,127 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef USE_WEBSERVER
             #endif
             #define USE_WEBSERVER        // Optionnel : Conserver le serveur web pour l'interface de gestion
+
+        // -- Options for tasmota-cave-lumiere-porte (Sonoff ESP8285 1 Mo, SANS Berry ni FS) ------
+        // Identite relevee le 2026-11-12 sur 192.168.0.45 (/dl decode : data/cave/tasmota-lumiere-porte/config_decodee.json).
+        // Rules corrigees le 2026-11-12 (plan A8, A11), coupees en deux (512 car. au plus par Rule sans compression). Posees par
+        // Tasmota a chaque remise a zero de la config (CFG_HOLDER different : settings.ino::SettingsDefaultSet3) ; la carte en
+        // service garde les siennes tant qu'on ne les change pas en console. Sauvegarde et restauration de toute la config :
+        // onglet « Sauvegarde configuration » de la page build (A15).
+        #elif defined(FIRMWARE_ESP8266_CAVE_LUMIERE_PORTE)
+            #ifdef CODE_IMAGE_STR
+                #undef CODE_IMAGE_STR
+            #endif
+            #define CODE_IMAGE_STR      "Lumiere et Porte de Cave"
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
+
+            #ifdef PROJECT
+                #undef PROJECT
+            #endif
+            #define PROJECT             "PORTE-CAVE"
+
+            #ifdef MODULE
+                #undef MODULE
+            #endif
+            #define MODULE              USER_MODULE              // template ci-dessous (BASE 2 = famille Sonoff Dual)
+            #ifdef USER_TEMPLATE
+                #undef USER_TEMPLATE
+            #endif
+            #define USER_TEMPLATE       "{\"NAME\":\"Contacteur Cave\",\"GPIO\":[32,1,1,161,225,0,0,0,224,320,1,0,0,0],\"FLAG\":0,\"BASE\":2}"
+
+            // -- Wi-Fi ---------------------------------------
+            #ifdef WIFI_IP_ADDRESS
+                #undef WIFI_IP_ADDRESS
+            #endif
+            #define WIFI_IP_ADDRESS     "192.168.0.45"           // [IpAddress1]
+
+            // -- MQTT ----------------------------------------
+            #ifdef MQTT_CLIENT_ID
+                #undef MQTT_CLIENT_ID
+            #endif
+            #define MQTT_CLIENT_ID      "PORTE-CAVE"             // [MqttClient]
+            #ifdef MQTT_TOPIC
+                #undef MQTT_TOPIC
+            #endif
+            #define MQTT_TOPIC          "cave/lumiere"           // [Topic]
+            #ifdef MQTT_GRPTOPIC
+                #undef MQTT_GRPTOPIC
+            #endif
+            #define MQTT_GRPTOPIC       "tasmotas/cave"          // [GroupTopic]
+            #ifdef FRIENDLY_NAME
+                #undef FRIENDLY_NAME
+            #endif
+            #define FRIENDLY_NAME       "Lumière de Cave"        // [FriendlyName1]
+
+            #ifdef USER_BACKLOG
+                #undef USER_BACKLOG
+            #endif
+            // Rule1 : bouton ; porte ouverte (Switch2 = 1) -> lumiere et relais 2, 15 min ; fermee -> tout eteint, minuterie annulee.
+            // Rule2 : etat de la lumiere sur stat/cave/lumiere/RESULT, et lien avec le serveur par le groupe tasmotas/cave, garde-fou
+            //         anti-echo par Var1 (A11 : le serveur doit porter la Rule symetrique, Event#lumPorte / lumSrv)
+            #ifdef USER_RULE1
+                #undef USER_RULE1
+            #endif
+            #define USER_RULE1          "ON Button1#state=10 DO POWER1 TOGGLE ENDON ON Switch2#state=1 DO Backlog POWER1 ON; POWER2 ON; RuleTimer1 900; Publish stat/cave/porte/RESULT {\"SWITCH\":\"ON\"} ENDON ON Switch2#state=0 DO Backlog RuleTimer1 0; POWER1 OFF; POWER2 OFF; Publish stat/cave/porte/RESULT {\"SWITCH\":\"OFF\"} ENDON ON Rules#Timer=1 DO POWER1 OFF ENDON"
+            #ifdef USER_RULE2
+                #undef USER_RULE2
+            #endif
+            #define USER_RULE2          "ON Power1#state=0 DO Publish stat/cave/lumiere/RESULT {\"POWER\":\"OFF\"} ENDON ON Power1#state=1 DO Publish stat/cave/lumiere/RESULT {\"POWER\":\"ON\"} ENDON ON Event#lumSrv DO Backlog Var1 %value%; Power1 %value% ENDON ON Power1#State!=%var1% DO Backlog Var1 %value%; Publish cmnd/tasmotas/cave/Event lumPorte=%value% ENDON"
+            #define USER_BACKLOG        "Backlog Hostname PORTE-CAVE; FriendlyName2 Porte de Cave; DeviceName Porte de Cave; Rule1 1; Rule2 1"
+
+        // -- Options for tasmota-rdc-tv-salon (Sonoff Basic ESP8266EX 1 Mo, SANS Berry ni FS) ------
+        // Identite relevee le 2026-11-12 sur 192.168.0.42 (/dl decode : data/rdc/tasmota-tv-salon/config_decodee.json).
+        #elif defined(FIRMWARE_ESP8266_RDC_TV_SALON)
+            #ifdef CODE_IMAGE_STR
+                #undef CODE_IMAGE_STR
+            #endif
+            #define CODE_IMAGE_STR      "TV de Salon"
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
+
+            #ifdef PROJECT
+                #undef PROJECT
+            #endif
+            #define PROJECT             "TV"
+
+            #ifdef MODULE
+                #undef MODULE
+            #endif
+            #define MODULE              SONOFF_BASIC             // module 0 relu sur la carte
+
+            // -- Wi-Fi ---------------------------------------
+            #ifdef WIFI_IP_ADDRESS
+                #undef WIFI_IP_ADDRESS
+            #endif
+            #define WIFI_IP_ADDRESS     "192.168.0.42"           // [IpAddress1]
+
+            // -- MQTT ----------------------------------------
+            #ifdef MQTT_CLIENT_ID
+                #undef MQTT_CLIENT_ID
+            #endif
+            #define MQTT_CLIENT_ID      "TV"                     // [MqttClient]
+            #ifdef MQTT_TOPIC
+                #undef MQTT_TOPIC
+            #endif
+            #define MQTT_TOPIC          "salon/tv"               // [Topic]
+            #ifdef MQTT_GRPTOPIC
+                #undef MQTT_GRPTOPIC
+            #endif
+            #define MQTT_GRPTOPIC       "tasmotas/salon"         // [GroupTopic]
+            #ifdef FRIENDLY_NAME
+                #undef FRIENDLY_NAME
+            #endif
+            #define FRIENDLY_NAME       "TV"                     // [FriendlyName1]
+
+            #ifdef USER_BACKLOG
+                #undef USER_BACKLOG
+            #endif
+            // Timers relus sur la carte le 2026-11-12 (config_decodee.json, cle timer) : TV eteinte toutes les 30 min de 00:00 a
+            // 04:00, tous les jours ; poses a chaque remise a zero de la config, comme le reste de USER_BACKLOG
+            #define USER_BACKLOG        "Backlog Hostname TV; DeviceName TV de Salon; Timers 1; Timer1 {\"Enable\":1,\"Time\":\"00:00\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer2 {\"Enable\":1,\"Time\":\"00:30\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer3 {\"Enable\":1,\"Time\":\"01:00\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer4 {\"Enable\":1,\"Time\":\"01:30\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer5 {\"Enable\":1,\"Time\":\"02:00\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer6 {\"Enable\":1,\"Time\":\"02:30\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer7 {\"Enable\":1,\"Time\":\"03:00\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer8 {\"Enable\":1,\"Time\":\"03:30\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}; Timer9 {\"Enable\":1,\"Time\":\"04:00\",\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}"
 
         // -- Options for tasmota32s3-bureau-serveur-debits-pac ------
         #elif defined(FIRMWARE_ESP32S3_BUREAU_SERVEUR_DEBITS_PAC)
@@ -2430,6 +2555,147 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef USER_BACKLOG
             #endif
             #define USER_BACKLOG      "Backlog Hostname ECRAN-DEBITS-PAC"
+
+            // -- Bloc modbus (assistant de persist) --
+            #define USE_MODBUS
+        // -- Options for tasmota32s3-cave-ecran ------
+        #elif defined(FIRMWARE_ESP32S3_CAVE_ECRAN)
+            // -- CODE_IMAGE_STR is the name shown between brackets on the
+            //    Information page or in INFO MQTT messages
+            #undef CODE_IMAGE_STR
+                #define CODE_IMAGE_STR "Ecran cave"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
+
+            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
+            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
+            // #define FILE_LOG_SIZE       100
+            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`
+            // #define FILE_LOG_NAME       "/logs/fileLog %02d.txt"
+
+            // -- Project -------------------------------------
+            #undef PROJECT
+                #define PROJECT           "ECRAN-CAVE"         	 // PROJECT is used as the default topic delimiter
+
+            #ifdef USER_TEMPLATE
+                #undef USER_TEMPLATE
+            #endif
+            #define USER_TEMPLATE 		"{\"NAME\":\"Ecran cave\",\"GPIO\":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+
+            // -- Pile de la boucle : 24 Ko, comme quand FIRMWARE_LVGL la fixait (LVGL retire le 2026-10-24, audit P2.1)
+            #undef SET_ESP32_STACK_SIZE
+                #define SET_ESP32_STACK_SIZE (24 * 1024)
+
+            #ifdef MODULE
+                #undef MODULE
+            #endif
+            #define MODULE USER_MODULE                       // Set template enabled by default
+
+            // -- Wi-Fi ---------------------------------------
+            #undef WIFI_IP_ADDRESS
+                #define WIFI_IP_ADDRESS        "0.0.0.0"         // [IpAddress1] DHCP du point d'acces du serveur de la cave (esclave id 1)
+            #undef WIFI_GATEWAY
+                #define WIFI_GATEWAY           "192.168.4.1"      // [IpAddress2] If not using DHCP set Gateway IP address
+            #undef WIFI_DNS
+                #define WIFI_DNS               "192.168.0.254"      // [IpAddress4] If not using DHCP set DNS1 IP address (might be equal to WIFI_GATEWAY)
+
+            #undef STA_SSID1
+                #define STA_SSID1              "SERVEUR-RLY-CAVE-GATEWAY"                // [Ssid1] point d'acces du serveur de la cave (maitre id 0)
+            #undef STA_PASS1
+                #define STA_PASS1              "Lune5676"                // [Password1] Wi-Fi password
+            #undef STA_SSID2
+                #define STA_SSID2              "MAISON"                // [Ssid2] Optional alternate AP Wi-Fi SSID
+            #undef STA_PASS2
+                #define STA_PASS2              "obdormisti-pervigile%.-ficiendus"                // [Password2] Optional alternate AP Wi-Fi password
+
+
+            // -- Setup your own RANGE EXTENDER settings  -----
+            // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier
+            // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1
+            // RgxPort tcp, 8080, 192.168.4.1, 80
+            #define USE_WIFI_RANGE_EXTENDER
+            #ifdef USE_WIFI_RANGE_EXTENDER
+                #define WIFI_RGX_SSID           "ECRAN-CAVE-GATEWAY"
+                #define WIFI_RGX_PASSWORD       "Lune5676"
+            #endif
+
+            // You might even pass some parameters from the command line ----------------------------
+            // Ie:  export PLATFORMIO_BUILD_FLAGS='-DUSE_CONFIG_OVERRIDE -DMY_IP="192.168.1.99" -DMY_GW="192.168.1.1" -DMY_DNS="192.168.1.1"'
+
+            // -- Setup your own MQTT settings  ---------------
+            #undef MQTT_CLIENT_ID
+                #define MQTT_CLIENT_ID "ECRAN-CAVE" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+            #undef MQTT_TOPIC
+                #define MQTT_TOPIC "cave/ecran" // [Topic] unique MQTT device topic including (part of) device MAC address
+            #undef MQTT_GRPTOPIC
+                #define MQTT_GRPTOPIC "tasmotas/cave" // [GroupTopic] MQTT Group topic
+            #undef FRIENDLY_NAME
+                #define FRIENDLY_NAME "Écran cave" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
+            #undef EMULATION
+                #define EMULATION EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
+
+            // -- ESP-NOW -------------------------------------
+            // Plus d'info dans le dossier : "Tasmota\info\xdrv_57_tasmesh.md"
+
+            // -- Optional modules ----------------------------
+
+            // -- Ecran Waveshare ESP32-S3-Touch-LCD-7B : ST7262 1024x600 RGB 16 bits + tactile GT911 (plan debits-deux-cartes, A8) --
+            // Rien a definir ici : FIRMWARE_LVGL (env de base tasmota32s3-base-N16R8) apporte LVGL, HASPmota, le pilote universel
+            // (USE_UNIVERSAL_DISPLAY), le tactile par script (USE_UNIVERSAL_TOUCH, :UTI GT911) et l'I2C. Broches de la dalle dans
+            // display.ini du dossier de la carte ; alimentation, retroeclairage et reset du tactile par l'expandeur I2C 0x24.
+            // USE_ILI9488 retire le 2026-11-11 : il ajoutait le SPI de l'ancien ecran.
+
+            // -- LCD I2C -----------------------
+            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)
+            //#define USE_DISPLAY         // Add I2C/TM1637/MAX7219 Display Support (+2k code)
+            //#define USE_DISPLAY_SSD1306 // [DisplayModel 2] [I2cDriver4] Enable SSD1306 Oled 128x64 display (I2C addresses 0x3C and 0x3D) (+16k code)
+            //#define USE_DISPLAY_SH1106  // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)
+            //#define USE_GRAPH           // Enable line charts with displays
+            //#define NUM_GRAPHS 4        // Max 16
+
+            // -- I2C sensors ---------------------------------
+
+
+            // -- Optional light modules ----------------------
+            #define USE_LIGHT                                // Add support for light control
+            //  #define USE_WS2812_DMA                         // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow
+            //  #define USE_WS2812_I2S  0                      // ESP32 only, hardware I2S support. Specify the I2S channel 0..2. This is exclusive from RMT. By default, prefer RMT support
+            //  #define USE_WS2812_INVERTED                    // Use inverted data signal
+                #define USE_WS2812_HARDWARE  NEO_HW_WS2812     // Hardware type (NEO_HW_WS2812, NEO_HW_WS2812X, NEO_HW_WS2813, NEO_HW_SK6812, NEO_HW_LC8812, NEO_HW_APA106, NEO_HW_P9813)
+                #undef USE_WS2812_CTYPE
+                #define USE_WS2812_CTYPE     NEO_GRB           // Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)
+
+            // -- One wire sensors ----------------------------
+            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
+
+            // -- One wire sensors ----------------------------
+            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
+
+            // -- Serial sensors ------------------------------
+            #define USE_MODBUS                               // Maitre ModBus RS485 (GPIO RX 16 / TX 15, SP3485 integre au 7B) vers la carte d'acquisition des debits
+            // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)
+                                                            // GPIO4=Slave TX / GPIO5=Slave RX
+
+            // -- LoRaWan 868MHz ------------------------------
+
+
+            // -- Rules or Script  ----------------------------
+            // Select none or only one of the below defines USE_RULES or USE_SCRIPT
+            #define USE_RULES                                                       // Add support for rules (+8k code)
+            #ifdef USE_RULES
+                #define SUPPORT_MQTT_EVENT                                          // Support trigger event with MQTT subscriptions (+1k8 code)
+                #define USE_EXPRESSION                                              // Add support for expression evaluation in rules (+1k7 code)
+                    #define SUPPORT_IF_STATEMENT                                    // Add support for IF statement in rules (+2k7)
+                //#define USER_RULE2 "<Any rule2 data>"                             // Add rule2 data saved at initial firmware load or when command reset is executed
+                //#define USER_RULE3 "<Any rule3 data>"                             // Add rule3 data saved at initial firmware load or when command reset is executed
+                #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)
+            #endif
+            #ifdef USER_BACKLOG
+                #undef USER_BACKLOG
+            #endif
+            #define USER_BACKLOG      "Backlog Hostname ECRAN-CAVE"
 
             // -- Bloc modbus (assistant de persist) --
             #define USE_MODBUS
