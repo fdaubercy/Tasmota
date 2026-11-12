@@ -88,6 +88,25 @@ def test_texte():
     verifie((f["ip_inscrite"], f["correction"], f["image"]), (None, "M", None), "fichier de carte sans IP ni image")
     n = len(r["texte"].encode("utf-8"))                     # M : 42 octets -> version 3 (29 modules), 62 -> version 4 (33)
     verifie(f["modules"], 29 if n <= 42 else 33 if n <= 62 else 37, f"modules du fichier de carte ({n} octets)")
+    verifie(f["entre_lignes"], "\n", "separateur par defaut (retour a la ligne) dans le fichier de carte")
+    verifie(m.fichier_carte(RACINE, {"style": {}, "entre_lignes": " · "}, r)["entre_lignes"], " · ",
+            "separateur « · » dans le fichier de carte : la page de la carte le remplace par des retours a la ligne")
+
+
+def test_avant_apres():
+    """Texte avant et apres la valeur d'une ligne persist ou standard (demande du 2026-11-12), colle a la valeur."""
+    reglage = {"lignes": [{"source": "persist", "chemin": "modules.x.id", "libelle": "ModBus", "avant": "id ", "apres": " (esclave)"},
+                          {"source": "standard", "cle": "hostname", "libelle": "Hostname", "apres": ".local"},
+                          {"source": "persist", "chemin": "modules.x.absent", "libelle": "Absent", "avant": "x"}],
+               "entre_lignes": "\n"}
+    r = m.resout_avec(reglage, {"hostname": "CUVE"}, PERSIST)
+    verifie(r["texte"], "ModBus : id 2 (esclave)\nHostname : CUVE.local", "avant et apres colles a la valeur ; ligne introuvable omise")
+    verifie(r["lignes"][0]["valeur"], "id 2 (esclave)", "valeur montree dans la page : avec avant et apres")
+    for mauvais, motif in (({"avant": 5}, "non texte"), ({"apres": "x" * 21}, "21 caracteres"), ({"avant": "a\nb"}, "retour a la ligne")):
+        l = {"source": "persist", "chemin": "modules.x.id", **mauvais}
+        verifie(any("avant" in e or "après" in e for e in m.valide_reglage({"lignes": [l]})), True, f"avant/apres refuse : {motif}")
+    verifie(m.valide_reglage({"lignes": [{"source": "persist", "chemin": "modules.x.id", "avant": "id ", "apres": " cm"}]}), [],
+            "avant/apres valides acceptes")
 
 
 def test_esclave():
@@ -189,7 +208,7 @@ def test_depot_reel():
     verifie(avec_persist >= 10, True, "au moins 10 cartes avec persist (temoin que la lecture marche)")
 
 
-TESTS = [test_fusion, test_secret_par_cle, test_secret_par_valeur, test_texte, test_esclave, test_range_extender, test_config_decodee, test_image,
+TESTS = [test_fusion, test_secret_par_cle, test_secret_par_valeur, test_texte, test_avant_apres, test_esclave, test_range_extender, test_config_decodee, test_image,
          test_validation, test_depot_reel]
 
 

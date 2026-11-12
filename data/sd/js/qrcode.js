@@ -64,7 +64,8 @@
     var d = r[1];
     if (!d || typeof d.texte !== 'string' || !d.texte) throw new Error('Réglage du QR code invalide (texte absent).');
     new QRCodeStyling(optionsQR(d.texte, d.style || {}, d.correction || 'M', d.image, 260, d.modules)).append($('q_code'));
-    $('q_texte').textContent = d.texte;
+    // une ligne par champ sous le QR code ; le QR code garde le separateur choisi dans l'outil (« · », « | »)
+    $('q_texte').textContent = d.entre_lignes ? d.texte.split(d.entre_lignes).join('\n') : d.texte;
     message('');
     return json('/qrcode?f=etat').then(function (etat) { compareIP(d.ip_inscrite, etat); },
       function () { /* etat indisponible : le QR code reste affiche, sans comparaison */ });

@@ -99,6 +99,10 @@ def valide_reglage(reglage, racine=None):
             err.append(f"ligne {i} : texte libre de 120 caractères au plus")
         elif src not in ("standard", "persist", "libre"):
             err.append(f"ligne {i} : source inconnue {src!r}")
+        for cle, nom in (("avant", "avant"), ("apres", "après")):     # colles a la valeur (unite, prefixe)
+            v = l.get(cle, "")
+            if not isinstance(v, str) or len(v) > 20 or "\n" in v or "\r" in v:
+                err.append(f"ligne {i} : texte {nom} la valeur de 20 caractères au plus, sur une ligne")
     sep = reglage.get("separateur", " : ")
     if not isinstance(sep, str) or len(sep) > 5:
         err.append("séparateur de 5 caractères au plus")
@@ -296,6 +300,8 @@ def resout_avec(reglage, champs, persist):
             avert.append(f"Ligne « {lib or cle or src} » : {raison}, omise du QR code")
         else:
             valeur = _texte_valeur(valeur)
+            if src != "libre":
+                valeur = f"{l.get('avant', '')}{valeur}{l.get('apres', '')}"
             textes.append(f"{lib}{sep}{valeur}" if lib else valeur)
         lignes.append({"source": src, "cle": cle, "libelle": lib, "valeur": valeur, "etat": etat})
     return {"texte": reglage.get("entre_lignes", "\n").join(textes), "lignes": lignes, "avertissements": avert}
@@ -315,9 +321,11 @@ def fichier_carte(racine, reglage, resolu):
     ip = next((l["valeur"] for l in resolu["lignes"]
                if l["source"] == "standard" and l["cle"] == "ip" and l["etat"] == "ok"), None)
     correction = verdict.correction(bool(image))
-    # modules : la page /qrcode de la carte en tire la marge de 4 modules (et la sonde compare au QR code dessine)
+    # modules : la page /qrcode de la carte en tire la marge de 4 modules (et la sonde compare au QR code dessine) ;
+    # entre_lignes : la page affiche le texte sous le QR code une ligne par champ (le QR code, lui, garde le separateur)
     return {"version": 1, "texte": resolu["texte"], "style": style, "image": image, "correction": correction,
-            "modules": verdict.verdict(resolu["texte"], 25, correction)["modules"], "ip_inscrite": ip}
+            "modules": verdict.verdict(resolu["texte"], 25, correction)["modules"], "ip_inscrite": ip,
+            "entre_lignes": reglage.get("entre_lignes", "\n")}
 
 
 def empreinte(texte):

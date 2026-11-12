@@ -3,14 +3,15 @@
  *
  * Plan tasks/plans/etiquettes-qrcode.md (A6), spec docs/superpowers/specs/2026-11-12-etiquettes-qrcode-design.md §7.7.
  * Charge par l'autoexec (ligne demarrage.charge(["qrcodePage"]) posee par l'outil 7970). L'import appelle init(m), qui
- * pose le driver QRCODE_PAGE SEULEMENT si /json/qrcode.json existe : sans reglage, ni bouton ni route.
+ * pose le driver QRCODE_PAGE SEULEMENT si /json/qrcode.json existe : sans reglage, ni bouton ni route. Bouton « QR code »
+ * dans le menu Outils (web_add_management_button), retour de la page vers ce menu.
  *
  * Route /qrcode (acces privilegie : Tasmota exige un Referer qui designe la carte) :
  *     /qrcode              -> la page (gabarit /sd/html/qrcode.html, style /sd/css/qrcode.css, scripts
  *                             /sd/js/qrcode_options.js, le meme que l'outil 7970, et /sd/js/qrcode.js)
  *     /qrcode?f=lib.js.gz  -> /sd/js/qr-code-styling.min.js.gz (qr-code-styling 1.9.2, gzip ; empreintes dans
  *                             outils_docs/etiquettes_qr/lib/LISEZMOI.md), decompresse par la page
- *     /qrcode?f=reglage    -> /json/qrcode.json tel quel (texte, style, image, correction, ip_inscrite, modules)
+ *     /qrcode?f=reglage    -> /json/qrcode.json tel quel (texte, style, image, correction, ip_inscrite, modules, entre_lignes)
  *     /qrcode?f=etat       -> {"ip": IP reelle (diversFonctions.ipLAN), "hostname"} : la page la compare a l'IP inscrite
  * Les fichiers partent par morceaux : le reglage peut porter une image en data URI, jamais lue en entier en RAM.
  *
@@ -92,7 +93,7 @@ def qrcodePage_page()
     gestionFileFolder.readFileByLineAndContentSend("/sd/js/qrcode_options.js")
     gestionFileFolder.readFileByLineAndContentSend("/sd/js/qrcode.js")
     webserver.content_send("</script>")
-    webserver.content_button(webserver.BUTTON_MAIN)
+    webserver.content_button(webserver.BUTTON_MANAGEMENT)
     webserver.content_stop()
 end
 qrcodePage.page = qrcodePage_page
@@ -122,7 +123,7 @@ class QRCODE_PAGE : Driver
         import webserver
         webserver.on("/qrcode", def () import qrcodePage qrcodePage.route() end, webserver.HTTP_GET)
     end
-    def web_add_main_button()
+    def web_add_management_button()     # menu Outils, pas l'accueil (demande du 2026-11-12)
         import webserver
         webserver.content_send("<p></p><form action='/qrcode' method='get'><button>QR code</button></form>")
     end

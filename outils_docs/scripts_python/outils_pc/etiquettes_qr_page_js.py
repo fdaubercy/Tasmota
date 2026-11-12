@@ -185,6 +185,17 @@ function dessineLignes() {
     x.onclick = () => { lignes.splice(i, 1); dessineLignes(); change(); };
     act.appendChild(x);
     d.appendChild(act);
+    if (l.source !== 'libre') {          // texte colle a la valeur : unite, prefixe (demande du 2026-11-12)
+      const aa = el('span', {class: 'aa'});
+      [['avant', 'texte avant la valeur', 'avant (ex. « id »)'], ['apres', 'texte après la valeur', 'après (ex. « cm »)']]
+        .forEach(([cle, nom, ph]) => {
+          const t = el('input', {type: 'text', maxlength: '20', 'aria-label': nom, placeholder: ph, class: 'aa-' + cle});
+          t.value = l[cle] || '';
+          t.oninput = () => { if (t.value) l[cle] = t.value; else delete l[cle]; change(); };
+          aa.appendChild(t);
+        });
+      d.appendChild(aa);
+    }
     d.appendChild(el('span', {class: 'val'}));
     zone.appendChild(d);
   });

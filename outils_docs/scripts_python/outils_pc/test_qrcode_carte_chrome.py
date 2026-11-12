@@ -90,7 +90,7 @@ class Carte:
 def reglage(texte=TEXTE, ip_inscrite=IP, **style):
     correction = "M"
     return {"version": 1, "texte": texte, "style": style, "image": None, "correction": correction,
-            "modules": verdict.verdict(texte, 25, correction)["modules"], "ip_inscrite": ip_inscrite}
+            "modules": verdict.verdict(texte, 25, correction)["modules"], "ip_inscrite": ip_inscrite, "entre_lignes": " · "}
 
 
 def charge(cdp, carte, url, scenario, attente):
@@ -107,8 +107,8 @@ def sonde(cdp, carte, capture):
     etat = {"ip": IP, "hostname": "tasmota-tv-salon"}
 
     e = charge(cdp, carte, url, {"reglage": reglage(couleur="#123456", points="rounded"), "etat": etat}, dessine)
-    s.verifie((e["svg"], e["largeur"], e["texte"], e["msg_cache"]), (True, "260", TEXTE, True),
-              "QR code dessine (260 px), texte affiche, plus de message")
+    s.verifie((e["svg"], e["largeur"], e["texte"], e["msg_cache"]), (True, "260", TEXTE.replace(" · ", "\n"), True),
+              "QR code dessine (260 px), texte affiche une ligne par champ (« · » -> retour a la ligne), plus de message")
     s.verifie("#123456" in e["svg_html"], True, "couleur du style (#123456) dans le SVG")
     s.verifie(e["avert"], None, "meme IP que la carte : aucun avertissement")
     attendu = verdict.verdict(TEXTE, 25, "M")["modules"]
@@ -129,8 +129,10 @@ def sonde(cdp, carte, capture):
     e = charge(cdp, carte, url, {"reglage": reglage(ip_inscrite="192.168.0.51:8081"), "etat": etat}, dessine)
     s.verifie((e["svg"], e["avert"]), (True, None), "IP inscrite 192.168.0.51:8081 (esclave par le maitre) : aucun avertissement")
 
-    e = charge(cdp, carte, url, {"reglage": reglage(ip_inscrite=None), "etat": {"ip": "", "hostname": ""}}, dessine)
+    ancien = {k: v for k, v in reglage(ip_inscrite=None).items() if k != "entre_lignes"}   # qrcode.json d'avant la cle
+    e = charge(cdp, carte, url, {"reglage": ancien, "etat": {"ip": "", "hostname": ""}}, dessine)
     s.verifie((e["svg"], e["avert"]), (True, None), "ni IP inscrite ni IP connue : QR code, aucun avertissement")
+    s.verifie(e["texte"], TEXTE, "qrcode.json sans entre_lignes : texte affiche tel quel")
 
     hostile = "Note : </script><img src=x onerror=window.pirate=1>"
     e = charge(cdp, carte, url, {"reglage": reglage(texte=hostile), "etat": etat}, dessine)

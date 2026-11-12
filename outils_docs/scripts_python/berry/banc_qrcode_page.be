@@ -111,8 +111,10 @@ verifie(size(pilotes) == 1, "init avec qrcode.json : un driver pose")
 var pilote = pilotes[0]
 pilote.web_add_handler()
 verifie(routes.contains("/qrcode") && routes["/qrcode"][1] == webserver.HTTP_GET && size(routes) == 1, "web_add_handler declare GET /qrcode, seule route")
-var bouton = sert({}, def () pilote.web_add_main_button() end, "bouton.html")
-verifie(string.find(bouton, "action='/qrcode'") > 0 && string.find(bouton, "<button>QR code</button>") > 0, "bouton d'accueil « QR code » vers /qrcode")
+import introspect
+verifie(introspect.get(pilote, "web_add_main_button") == nil, "aucun bouton sur la page d'accueil (demande du 2026-11-12)")
+var bouton = sert({}, def () pilote.web_add_management_button() end, "bouton.html")
+verifie(string.find(bouton, "action='/qrcode'") > 0 && string.find(bouton, "<button>QR code</button>") > 0, "bouton « QR code » du menu Outils vers /qrcode")
 
 # ---- 3. Acces refuse -----------------------------------------------------------------------------
 print("3. Acces non privilegie")
@@ -158,8 +160,8 @@ tasmota.status5 = {"StatusNET": {"Hostname": "tasmota-tv-salon"}}
 print("6. Page /qrcode")
 avant = size(journal)
 var page = sert({}, def () routes["/qrcode"][0]() end, "page.html")
-verifie(webserver.debut == "QR code" && webserver.bouton == webserver.BUTTON_MAIN && webserver.termine && string.find(page, "EXCEPTION") != 0,
-        "gabarit Tasmota : content_start, bouton Menu principal, content_stop")
+verifie(webserver.debut == "QR code" && webserver.bouton == webserver.BUTTON_MANAGEMENT && webserver.termine && string.find(page, "EXCEPTION") != 0,
+        "gabarit Tasmota : content_start, bouton de retour au menu Outils, content_stop")
 var pcss = string.find(page, "#q_zone", string.find(page, "</head>"))
 var phtml = string.find(page, "id='q_zone'")
 var popt = string.find(page, "function optionsQR")

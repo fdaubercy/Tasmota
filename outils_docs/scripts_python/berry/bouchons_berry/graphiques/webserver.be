@@ -6,6 +6,7 @@ var webserver = module("webserver")
 webserver.HTTP_GET = 1
 webserver.HTTP_POST = 2
 webserver.BUTTON_MAIN = 0
+webserver.BUTTON_MANAGEMENT = 6     # menu Outils (valeur sans importance, distincte de BUTTON_MAIN)
 webserver.sortie = nil          # fichier ouvert par le banc
 webserver.code = nil            # code et type de content_open
 webserver.mime = nil

@@ -1,0 +1,31 @@
+{
+ "lignes": [
+  {
+   "source": "standard",
+   "cle": "hostname",
+   "libelle": "Hostname"
+  },
+  {
+   "source": "standard",
+   "cle": "range_extender",
+   "libelle": "Passerelle Wifi"
+  },
+  {
+   "source": "standard",
+   "cle": "ip",
+   "libelle": "IP"
+  },
+  {
+   "source": "standard",
+   "cle": "ip",
+   "libelle": "URL",
+   "avant": "http://"
+  },
+  {
+   "source": "standard",
+   "cle": "topic",
+   "libelle": "Topic MQTT"
+  }
+ ],
+ "taille_mm": 35
+}

@@ -71,6 +71,18 @@ def sonde(cdp, url, banc, capture):
     s.verifie("range_extender" in cdp.js("[...document.querySelectorAll('#ajout-standard option')].map(o => o.value)"), True,
               "cuve : champ « Range extender » propose (range extender actif)")
     cdp.js("(() => { const i = document.querySelector('#lignes .lq input'); i.value = 'Hostname'; i.dispatchEvent(new Event('input')); })()")
+    # Texte apres la valeur (2026-11-12) : colle a la valeur dans le QR code, focus garde pendant la saisie
+    cdp.js("document.querySelector('#lignes .lq .aa-apres').focus()")
+    for lettre in ".local":
+        cdp.appel("Input.insertText", text=lettre)
+        time.sleep(0.35)
+    s.attend(cdp, "document.getElementById('lu').textContent.indexOf('CAPTEURS-CUVE.local') >= 0", 10)
+    s.verifie(cdp.js("(() => { const i = document.querySelector('#lignes .lq .aa-apres');"
+                     " return [document.getElementById('lu').textContent.indexOf('Hostname : CAPTEURS-CUVE.local') >= 0,"
+                     " document.activeElement === i, ETAT.reglage.lignes[0].apres]; })()"),
+              [True, True, ".local"], "texte apres la valeur : « Hostname : CAPTEURS-CUVE.local », focus garde")
+    cdp.js("(() => { const i = document.querySelector('#lignes .lq .aa-apres'); i.value = ''; i.dispatchEvent(new Event('input')); })()")
+    s.verifie(cdp.js("'apres' in ETAT.reglage.lignes[0]"), False, "champ apres vide : cle retiree du reglage")
     # XSS : une ligne libre en HTML doit rester du texte, sans rien executer
     piege = '<img src=x onerror="window._xss=1">'
     cdp.js("(() => { ETAT.reglage.lignes.push({source: 'libre', texte: %s}); dessineLignes(); change(); })()" % json.dumps(piege))

@@ -21,5 +21,6 @@ if demarrage.prologue()
     demarrage.charge(["controleES8311"])
     demarrage.charge(["controleCoprocesseur"], "serveur.coprocesseur")    # alerte « firmware du C6 pas a jour » (accueil web)
     demarrage.historique()                                                  # AVANT controleGarage, qui l'importe
+    demarrage.charge(["qrcodePage"])
     demarrage.chargeFichier("controleGarage", "modules.garage")             # non solidifie : depuis le LittleFS
 end

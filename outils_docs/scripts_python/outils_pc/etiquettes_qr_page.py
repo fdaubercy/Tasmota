@@ -65,6 +65,7 @@ input[type=color]{width:30px;height:24px;padding:0;border:1px solid var(--bord);
 .lq.introuvable,.lq.refuse{border-color:var(--orange)} .lq input,.lq select{width:100%}
 .lq .src{font-size:11px;color:var(--doux)} .lq .val{grid-column:2 / 4;font-size:12px;color:var(--doux);overflow-wrap:anywhere}
 .lq .act{display:flex;gap:2px}
+.lq .aa{grid-column:2 / 4;display:flex;gap:6px} .lq .aa input{flex:1;min-width:0;font-size:12px}
 .persist{max-height:220px;overflow:auto;border:1px solid var(--bord);border-radius:6px;margin-top:4px}
 .persist button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--bord);background:none;color:inherit;
   font:12.5px Consolas,monospace;padding:3px 6px;cursor:pointer;overflow-wrap:anywhere}
