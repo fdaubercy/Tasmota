@@ -283,7 +283,7 @@ est faux pour un fournisseur externe ; le SVG rendu passe par `atelier_visuels_f
   contrôle des fichiers changés) et en importer les fonctions communes au lieu de les recopier ; remarques épinglées sur une
   zone de la photo (états ouverte, proposée, appliquée, refusée) dans `outils_docs/visuels_accueil/cartes/<env>/remarques.json`
 - [x] Fournisseur *Claude Code local* (`claude -p`, lecture seule, jamais bypassPermissions, hooks coupés) puis Ollama,
-  puis une API externe au choix de l'utilisateur ; chacun avec un faux fournisseur dans le banc
+  puis une API externe au choix de l'utilisateur ; chacun avec un faux fournisseur dans le banc — preuve : `atelier_visuels_ia.py` (ClaudeLocal, Ollama, ApiExterne) et `test_atelier_visuels_ia.py` VERT (faux claude, faux serveurs locaux, faux fournisseurs ; aucun essai réel)
 - [ ] Panneau de la page : consigne, choix du procédé, avertissement avant envoi, compteur de quota, résultat ouvert dans
   l'éditeur ; sonde Chrome avec faux fournisseur
 - [ ] Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
