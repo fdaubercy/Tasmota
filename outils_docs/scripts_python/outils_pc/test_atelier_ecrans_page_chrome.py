@@ -8,7 +8,7 @@ Hermetique : serveur dans ce processus sur une COPIE du depot (test_atelier_ecra
 `get` (aucun acces reseau ; la capture rend un vrai BMP 4 x 2, 16 bits BI_BITFIELDS, comme lv.screenshot()).
 Verifie : en-tete (carte, ecran de l'env, etat en ligne), apercu identique au depot, zoom 100 %, ajout par la palette
 (DragEvent drop), deplacement a la souris (Input.dispatchMouseEvent) aimante a 8 px, annuler, refus d'une taille de
-police absente, tableau, theme memorise, capture affichee, aucune erreur console (temoin `throw` detecte), copie du
+police absente, tableau, theme memorise, capture affichee, onglet display.ini (A15), aucune erreur console (temoin `throw` detecte), copie du
 depot inchangee. Chrome est arrete a la fin (profil temporaire `sonde_atelier_ecrans_*`).
 Code de sortie 0 = vert.
 """
@@ -303,6 +303,72 @@ def sonde_polices(cdp, banc):
     verifie(erreurs, [], "import de police : aucune erreur console")
 
 
+def sonde_display(cdp, banc):
+    """Onglet display.ini : liste, analyse expliquee, erreur en direct, Ajouter a sa place, enregistrement, note."""
+    js = cdp.js
+    ref = banc.racine / aew.adi.REFERENCE
+    ref.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(taw.DEPOT / aew.adi.REFERENCE, ref)
+    ini = "data/bureau/tasmota32s3-ecran-debits-pac/display.ini"        # sonde_ecriture l'a change en ILI9488 (PAR)
+    shutil.copy2(taw.DEPOT / ini, banc.racine / ini)
+    js("document.querySelector('#modes button[data-mode=display]').click()")
+    n = attend(cdp, "!document.getElementById('vueDisplay').hidden && document.getElementById('vueInterface').hidden && D.liste.length", 20)
+    verifie((n or 0) >= 60, True, f"bascule display.ini : {n} fichiers listes, vue Interface masquee")
+    js(f"ouvreDisplay('carte', '{ENV}')")
+    lignes = attend(cdp, "D.fichier && D.fichier.source === 'carte' && document.querySelectorAll('#diLignes tr').length", 15)
+    titre = js("document.querySelector('#diLignes .arg').title")
+    params = js("Array.prototype.map.call(document.querySelectorAll('#diParams .rq b'), function(b){return b.textContent}).join(' ')")
+    verifie(((lignes or 0) > 5, js("document.getElementById('diErreurs').hidden"), js("document.getElementById('diBus').textContent"),
+             titre.startswith("nom"), " :IS " in f" {params} ", " :A " in f" {params} "), (True, True, "RGB", True, True, False),
+            "fichier de la carte : lignes expliquees, sans erreur, parametres du bus RGB seulement")
+    js("var t=document.getElementById('diTexte'); t.value=t.value.replace(':S,2,', ':S,2, '); t.dispatchEvent(new Event('input'))")
+    e = attend(cdp, "!document.getElementById('diErreurs').hidden && document.getElementById('diErreurs').textContent", 10)
+    verifie("espace" in (e or ""), True, f"frappe : erreur affichee en direct ({(e or '')[:60]})")
+    js("var t=document.getElementById('diTexte'); t.value=t.value.replace(':S,2, ', ':S,2,'); t.dispatchEvent(new Event('input'))")
+    attend(cdp, "document.getElementById('diErreurs').hidden", 10)
+    js("Array.prototype.filter.call(document.querySelectorAll('#diParams .rq'), function(r){return r.querySelector('b').textContent === ':B'})[0]"
+       ".querySelector('button').click()")
+    ajout = attend(cdp, "document.getElementById('diTexte').value.indexOf(':B,') >= 0 && document.getElementById('diTexte').value", 10)
+    l = (ajout or "").splitlines()
+    verifie((l[l.index(":3,03") + 1].startswith(":B,") if ":3,03" in l else None), True, "Ajouter :B : ligne inseree apres :3 (rang)")
+    js("document.getElementById('diNom').value = 'essai-sonde'; document.getElementById('diEnregistrer').click()")
+    c = attend(cdp, "!document.getElementById('diConfirmation').hidden && document.getElementById('diConfirmation').textContent", 10)
+    verifie((c or "").startswith("Créer " + cat.PERSO + "/essai-sonde.ini"), True, "Enregistrer : diff a confirmer (creation)")
+    js("document.getElementById('diNom').dispatchEvent(new Event('input'))")
+    verifie((js("document.getElementById('diConfirmation').hidden"), js("D.prevu")), (True, None),
+            "frappe apres le diff : confirmation perimee retiree")
+    js("document.getElementById('diEnregistrer').click()")
+    attend(cdp, "!document.getElementById('diConfirmation').hidden && !!document.querySelector('#diConfirmation .btn.prim')", 10)
+    js("document.querySelector('#diConfirmation .btn.prim').click()")
+    attend(cdp, "D.fichier && D.fichier.source === 'perso' && D.fichier.nom === 'essai-sonde' && "
+                "document.getElementById('diMessage').textContent.indexOf('Enregistré') === 0", 15)
+    time.sleep(1)
+    verifie(js("document.getElementById('diMessage').textContent.indexOf('Enregistré') === 0"), True,
+            "message « Enregistré » garde apres la relecture du fichier")
+    fichier = banc.racine / cat.PERSO / "essai-sonde.ini"
+    verifie((fichier.is_file() and fichier.read_text(encoding="utf-8").splitlines() == l,
+             js("document.getElementById('diNotesBoite').hidden")), (True, False),
+            "fichier ecrit dans la bibliotheque, rouvert avec ses notes")
+    js("document.getElementById('diNote').value = 'luminosite trop forte'; document.getElementById('diAjoutNote').click()")
+    attend(cdp, "document.getElementById('diNotes').textContent.indexOf('luminosite trop forte') >= 0", 10)
+    notes = banc.racine / cat.PERSO / "essai-sonde.notes.md"
+    verifie(notes.is_file() and "luminosite trop forte" in notes.read_text(encoding="utf-8"), True, "note de terrain ecrite")
+    js("document.getElementById('diAppliquer').click()")
+    p = attend(cdp, "!document.getElementById('vueInterface').hidden && !!W.changement && !document.getElementById('confirmation').hidden && "
+                    "document.getElementById('confirmation').textContent", 30)
+    verifie(("display.ini" in (p or ""), "refusé" in (p or "")), (True, False),
+            f"Appliquer a la carte : proposition de changement d'ecran avec le display.ini ({(p or '')[:70]})")
+    js("document.getElementById('confirmer').click()")
+    attend(cdp, "document.getElementById('ecritureMessage').textContent.indexOf('Écran changé') === 0", 30)
+    ini_carte = (banc.racine / ini).read_text(encoding="utf-8").splitlines()
+    verifie(ini_carte == fichier.read_text(encoding="utf-8").splitlines(), True, "display.ini de la carte = fichier de la bibliotheque")
+    js("document.querySelector('#modes button[data-mode=interface]').click()")
+    verifie((js("document.getElementById('vueInterface').hidden"), js("document.getElementById('vueDisplay').hidden")), (False, True),
+            "retour a l'interface")
+    erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
+    verifie(erreurs, [], "onglet display.ini : aucune erreur console")
+
+
 def main():
     t = Path(tempfile.mkdtemp(prefix="sonde_atelier_ecrans_"))
     banc = chrome = None
@@ -343,6 +409,7 @@ def main():
         verifie(instantane(banc.racine) == avant, True, "copie du depot inchangee hors remarques.json (ecran.json non ecrit)")
         sonde_ecriture(cdp, banc)
         sonde_polices(cdp, banc)
+        sonde_display(cdp, banc)
     finally:
         tue_arbre(chrome)
         # tue_arbre manque parfois un fils de Chrome : balayage par le profil temporaire de cette passe

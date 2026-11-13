@@ -1998,11 +1998,35 @@ Une image `.png`, `.jpg` ou `.bmp` posée à la racine du FS est rangée au dém
 (`gestionFileFolder.be::listeEtRepartitLesFichiers`) ; un écran la cite en `A:sd/images/<nom>`. Le module est solidifié :
 la règle n'agit qu'après recompilation du firmware de la carte. L'objet image arrive au palier 2.
 
+### Onglet « display.ini »
+
+Bascule « Interface | display.ini » en haut de la page. À gauche, les `display.ini` en trois groupes : **cartes**
+(lecture seule), **ma bibliothèque** (`outils_docs/atelier_ecrans/display/<nom>.ini`, suivie par git, hors flash) et
+**Tasmota** (`tasmota/displaydesc/`, lecture seule : la synchro du fork les remplace). Au centre, le texte du fichier et
+son analyse ligne par ligne, lue comme le pilote la lit (`uDisplay.cpp::uDisplay::uDisplay`) : section, arguments nommés
+(explication, valeurs, défaut au survol), erreurs et avertissements. L'analyse suit la frappe. À droite, le panneau
+**Paramètres** liste les lignes `:X` valables pour le bus de `:H`, avec leurs arguments et leurs pièges ; « Ajouter »
+insère la ligne à sa place (ordre de lecture du pilote) avec ses valeurs par défaut, à régler ensuite.
+
+Contrôles (référence `outils_docs/schemas/display_ini_parametres.json`) : `:H` en première ligne, bus connu, nombre de
+broches par bus, espace dans une ligne de valeurs (le pilote coupe la ligne à chaque espace), ligne de 256 caractères ou
+plus, `#` final, `:F` avant `:A`, `:I` avant `:f` avant `:p`, `:B` sans drapeaux (255 : tous les bits), base
+hexadécimale ou décimale, `*` dans une broche RGB, QSPI ou DSI, mot `I2C`/`SPI`/`PAR` dans un commentaire. Les
+tolérances du pilote ne sont que des avertissements (commentaire en fin de ligne, `0;`, fréquence RGB absente). Le banc
+`test_atelier_ecrans_display.py` vérifie que la référence couvre toutes les sections lues par le code : après une synchro
+du fork qui ajoute un paramètre, il devient rouge.
+
+« Enregistrer dans ma bibliothèque » montre le diff puis écrit (refus pendant un build, ou si le fichier a changé depuis
+le diff). Pour partir d'un fichier Tasmota ou d'une carte : l'ouvrir, choisir un nom, enregistrer. Un fichier de la
+bibliothèque a ses **notes de terrain** (`<nom>.notes.md`) : observations datées, avec la carte choisie en haut.
+« Appliquer à la carte » passe par le changement d'écran (diff, broches du persist, lien vers la page Build).
+
 ### Ce qui est écrit
 
 | Fichier | Où |
 |---|---|
 | `ecran.json` (description), `remarques.json` | `outils_docs/atelier_ecrans/cartes/<env>/` (hors flash) |
+| `<nom>.ini`, `<nom>.notes.md` | `outils_docs/atelier_ecrans/display/` (onglet « display.ini ») |
 | `pages.jsonl`, `ecranLvgl.be` | dossier de la carte `data/<lieu>/<carte>/` |
 | `display.ini` | dossier de la carte, au changement d'écran seulement |
 | police `.ttf` + licence + `outils_docs/schemas/catalogue_ecran.json` | à l'import d'une police |
@@ -2012,7 +2036,7 @@ Les fichiers de l'interface non choisie sont exclus du FS par `build/interface_e
 ### Bancs
 
 `outils_pc/test_atelier_ecrans_catalogue.py`, `_description.py`, `_haspmota.py`, `_lvgl.py`, `_ecriture.py`, `_ecran.py`,
-`_remarques.py`, `_polices.py`, `_web.py`, puis la sonde Chrome `test_atelier_ecrans_page_chrome.py` (copie du dépôt,
+`_remarques.py`, `_polices.py`, `_display.py`, `_display_fichiers.py`, `_web.py`, puis la sonde Chrome `test_atelier_ecrans_page_chrome.py` (copie du dépôt,
 carte et `claude` simulés) ; `build/test_cible_atelier_ecrans.py` ; rangement des images : `berry/banc_repartition_fichiers.py`.
 Commandes exactes : skill `bancs`.
 

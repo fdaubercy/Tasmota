@@ -3,7 +3,8 @@
 Disposition : maquette `outils_docs/atelier_ecrans/modele-retenu.png` (spec 2026-11-11-atelier-ecrans-design.md § 5.5).
 En-tete (cartes par lieu, ecrans du catalogue, etat de la carte, interface, theme), colonne gauche (pages, objets,
 palette), centre (onglets « Ecran » / « Tableau des objets », zoom, grille, annuler, capture ; fichiers generes et leurs
-differences), colonne droite (onglets « Proprietes » / « Liaison »).
+differences), colonne droite (onglets « Proprietes » / « Liaison »). Bascule « Interface | display.ini » de l'en-tete :
+l'onglet display.ini est dans atelier_ecrans_page_display.py.
 Code : atelier_ecrans_page_js.py (etat, requetes, panneaux) et atelier_ecrans_page_canevas.py (dessin, glisser).
 Le `<title>Atelier des écrans</title>` doit rester dans les 4096 premiers octets : build/cible_atelier_ecrans.py::repond
 le lit pour savoir si la page tourne.
@@ -13,6 +14,7 @@ from atelier_ecrans_page_js import JS
 from atelier_ecrans_page_remarques import JS as JS_REMARQUES
 from atelier_ecrans_page_ecriture import JS as JS_ECRITURE
 from atelier_ecrans_page_polices import HTML as HTML_POLICES, JS as JS_POLICES
+from atelier_ecrans_page_display import CSS as CSS_DISPLAY, HTML as HTML_DISPLAY, JS as JS_DISPLAY
 import lieux
 
 CSS = """
@@ -96,13 +98,14 @@ details pre{max-height:240px}
 HTML = """
 <header>
  <h1>Atelier des écrans</h1>
+ <div class="onglets" id="modes"><button type="button" data-mode="interface" class="actif">Interface</button><button type="button" data-mode="display">display.ini</button></div>
  <label class="doux" for="carte">carte</label><select id="carte" style="font-weight:600"></select>
  <label class="doux" for="ecran">écran</label><select id="ecran"></select>
  <span id="etat" class="pastille">…</span><span id="interface" class="pastille bleu"></span><span id="pastilleRemarques" class="pastille or" hidden></span>
  <button id="theme" class="theme" type="button"></button>
 </header>
 <div style="padding:0 16px"><div id="bandeau" class="avert" hidden></div><div id="changement" class="ligne" hidden></div></div>
-<div class="grille3">
+<div class="grille3" id="vueInterface">
  <div class="carte">
   <h2>Pages</h2><div id="pages" class="arbre"></div>
   <div class="ligne"><button id="ajoutPage" class="btn" type="button">+ page</button></div>
@@ -149,6 +152,7 @@ HTML = """
   <div class="panneau" id="proprietes"></div><div class="panneau" id="liaison" hidden></div><div class="panneau" id="remarques" hidden></div>
  </div>
 </div>
+""" + HTML_DISPLAY + """
 """
 
 # Theme pose avant le premier dessin (pas de flash) ; localStorage indisponible : choix du systeme
@@ -158,5 +162,5 @@ THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getIt
 
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des écrans</title>"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
-        + THEME_TETE + "<style>" + CSS + "</style></head><body>" + HTML
-        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_POLICES + JS_CANEVAS + "</script></body></html>")
+        + THEME_TETE + "<style>" + CSS + CSS_DISPLAY + "</style></head><body>" + HTML
+        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_POLICES + JS_CANEVAS + JS_DISPLAY + "</script></body></html>")

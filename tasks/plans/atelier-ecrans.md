@@ -4,7 +4,7 @@ titre: Atelier des écrans (page 7960) : une description d'écran, deux interfac
 objectif: Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-12 (A11 livraison regroupée ; A12 à A15 : quatre améliorations)
+maj: 2026-11-13 (A15 : référence et analyseur du display.ini)
 ---
 # Atelier des écrans
 
@@ -256,16 +256,25 @@ A12, A15, A13, A14 (§ 8).
 
 ## A15 — Onglet « display.ini » : lire, expliquer, valider, créer
 Conception : § 6 de la même spec. Bibliothèque personnelle `outils_docs/atelier_ecrans/display/` (+ `<nom>.notes.md`).
-- [ ] Référence `outils_docs/schemas/display_ini_parametres.json` (sections, arguments, bases, ordre, pièges, sources) ;
+- [x] Référence `outils_docs/schemas/display_ini_parametres.json` (sections, arguments, bases, ordre, pièges, sources) ;
   banc de concordance avec `uDisplay.cpp::uDisplay::uDisplay` (section absente de la référence ou référence sans lecture
-  dans le code -> rouge), mutants
-- [ ] Analyseur et contrôles du § 6.4 (`atelier_ecrans_display.py`) : banc d'abord (rouge) sur les trois `display.ini` du
-  dépôt et les 60 amont (aucune erreur fausse sur un fichier amont), pièges fabriqués un par un ; puis VERT
-- [ ] Routes (liste, lecture expliquée, diff, enregistrement dans la bibliothèque, copie depuis l'amont, notes) ; refus
-  pendant un build, empreinte périmée, nom de fichier hors bibliothèque ; banc VERT
-- [ ] Onglet de la page : liste des fichiers, éditeur ligne par ligne expliqué, panneau « Paramètres » avec « Ajouter » à la
-  bonne place, notes de terrain ; sonde Chrome VERT ; relecture `relecteur-pages-web`
-- [ ] « Appliquer à la carte » par le chemin du changement d'écran (diff, broches du persist, lien page Build)
+  dans le code -> rouge), mutants — preuve : `test_atelier_ecrans_display.py::test_concordance` VERT ; mutants
+  référence sans `:TR` et avec `:Z` inventée lus rouges (2026-11-13)
+- [x] Analyseur et contrôles du § 6.4 (`atelier_ecrans_display.py`) : banc d'abord (rouge) sur les trois `display.ini` du
+  dépôt et les 60 amont (aucune erreur fausse sur un fichier amont), pièges fabriqués un par un ; puis VERT — preuve :
+  `test_atelier_ecrans_display.py` VERT (63 fichiers, 14 pièges, tolérances lues dans `uDisplay_utils.cpp::strlen_ln`
+  et `::next_val`, insertion par rang) ; six mutants de `atelier_ecrans_display.py` lus rouges (2026-11-13)
+- [x] Routes (liste, lecture expliquée, diff, enregistrement dans la bibliothèque, copie depuis l'amont, notes) ; refus
+  pendant un build, empreinte périmée, nom de fichier hors bibliothèque ; banc VERT — preuve : `test_atelier_ecrans_display_fichiers.py`
+  VERT (21 contrôles ; copie amont = enregistrer son texte sous un nom de la bibliothèque) ; mutants build, empreinte, nom,
+  catalogue lus rouges ; `test_atelier_ecrans_web.py` VERT (2026-11-13)
+- [x] Onglet de la page : liste des fichiers, éditeur ligne par ligne expliqué, panneau « Paramètres » avec « Ajouter » à la
+  bonne place, notes de terrain ; sonde Chrome VERT ; relecture `relecteur-pages-web` — preuve : `atelier_ecrans_page_display.py` ;
+  `test_atelier_ecrans_page_chrome.py::sonde_display` VERT ; relecture : sécurité conforme, 4 défauts d'état corrigés
+  (confirmation périmée, message effacé, réponses tardives, catalogue annoncé) et contrôlés par la sonde (2026-11-13)
+- [x] « Appliquer à la carte » par le chemin du changement d'écran (diff, broches du persist, lien page Build) — preuve :
+  `atelier_ecrans_page_display.py::appliqueACarte` ; sonde : proposition puis display.ini de la carte = fichier de la
+  bibliothèque (2026-11-13)
 - [ ] Essai sur la carte (192.168.0.51 joignable) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`, « Garder » /
   « Revenir » ; comportement de `DisplayReinit` avec LVGL noté ; commandes à chaud `DisplayDimmer`, `DisplayRotate`
 - [ ] Mode d'emploi (`outils_docs/README.md`), carte des documents du `CLAUDE.md` ; commit

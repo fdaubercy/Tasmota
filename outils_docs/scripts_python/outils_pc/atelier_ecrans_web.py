@@ -5,7 +5,7 @@ UTILISATION
     Regle d'acces : acces_web.py (ce PC sans jeton, autre appareil avec le jeton du lien de la console).
 
 Spec : docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md (§ 5.5 page, § 5.8 securite) ; plan atelier-ecrans A6.
-Ecritures : /ecrire, /ecran/changer, /polices/importer, /remarques* (refus pendant un build). Env = une carte du cenv (« Mes cartes »),
+Ecritures : /ecrire, /ecran/changer, /polices/importer, /remarques*, /display/enregistrer, /display/notes (refus pendant un build). Env = une carte du cenv (« Mes cartes »),
 jamais un chemin ; adresse de la carte = celle du cenv / du maitre (atelier_graphiques_series._adresses), jamais celle
 de la requete (SSRF).
 
@@ -36,6 +36,16 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
     POST /remarques    {env, action: epingle|repond|refuse, ...} -> {remarques} (ecrit remarques.json, atelier_ecrans_remarques)
     POST /remarques/appliquer {env, id, description} -> {description modifiee | null, erreurs, remarques} (rien n'est ecrit)
     POST /remarques/traiter   {env} -> etat ; claude -p en lecture seule, depuis ce PC seulement (403 sinon), 409 si en cours
+  Onglet « display.ini » (A15, atelier_ecrans_display_fichiers ; source = carte | perso | amont, nom = env, nom de la
+  bibliotheque sans .ini, ou nom du fichier amont) :
+    GET  /display/liste      {fichiers: [{source, nom, rel, envs, pilote, largeur, hauteur, bpp, bus, tactile}]}
+    GET  /display/reference  outils_docs/schemas/display_ini_parametres.json tel quel
+    GET  /display/lire       ?source=&nom= : {texte, empreinte, analyse, notes, modifiable...} (404 si absent)
+    POST /display/analyse    {texte} -> analyse (atelier_ecrans_display.analyse) ; rien n'est ecrit
+    POST /display/inserer    {texte, ligne} -> {texte, analyse} : ligne `:X` de la reference ajoutee a sa place
+    POST /display/diff       {nom, texte} -> {rel, diff, ajouts, retraits, change, empreinte} (bibliotheque seulement)
+    POST /display/enregistrer {nom, texte, empreinte} -> {ecrits} (409 : build en cours, fichier change depuis le diff)
+    POST /display/notes      {nom, carte?, texte} -> {notes} : observation datee dans <nom>.notes.md
 Refus : 400 (env inconnu, saisie, Content-Length hors 0..MAX_CORPS ou MAX_POLICE, JSON trop imbrique), 403 (en-tete, origine, jeton),
 404 (route, police), 409 (capture refusee), 500 (inattendu, avec le message).
 """
@@ -57,6 +67,8 @@ import acces_web
 import atelier_ecrans_capture as aec
 import atelier_ecrans_catalogue as cat
 import atelier_ecrans_description as aed
+import atelier_ecrans_display as adi
+import atelier_ecrans_display_fichiers as adf
 import atelier_ecrans_ecran as aecr
 import atelier_ecrans_ecriture as aee
 import atelier_ecrans_haspmota as ah
@@ -283,6 +295,12 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                     self._json({"remarques": aer.charge(racine, env), "traitement": traitement.etat()})
                 elif url.path == "/remarques/etat":
                     self._json(traitement.etat())
+                elif url.path == "/display/liste":
+                    self._json({"fichiers": adf.liste(racine)})
+                elif url.path == "/display/reference":
+                    self._json(adi.charge_reference(racine))
+                elif url.path == "/display/lire":
+                    self._json(adf.lire(racine, un("source"), un("nom"), adi.charge_reference(racine)))
                 elif url.path == "/police":
                     self._envoie(200, police(racine, un("nom")), "font/ttf")
                 else:
@@ -313,6 +331,22 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                     env = env_atelier(racine, demande.get("env"))
                     self._json(aep.importe(racine, env, demande.get("nom"), _octets_police(demande),
                                            demande.get("licence_confirmee") is True, builds_en_cours))
+                elif chemin == "/display/analyse":
+                    self._json(adi.analyse(adf.texte_valide(demande.get("texte")), adi.charge_reference(racine)))
+                elif chemin == "/display/inserer":
+                    ref = adi.charge_reference(racine)
+                    if demande.get("ligne") not in {s["ligne"] for s in ref["sections"]}:
+                        raise ValueError(f"parametre inconnu de la reference : {demande.get('ligne')!r}")
+                    texte = adi.insere(adf.texte_valide(demande.get("texte")), demande["ligne"], ref)
+                    self._json({"texte": texte, "analyse": adi.analyse(texte, ref)})
+                elif chemin == "/display/diff":
+                    self._json(adf.diff(racine, demande.get("nom"), demande.get("texte")))
+                elif chemin == "/display/enregistrer":
+                    self._json(adf.enregistre(racine, demande.get("nom"), demande.get("texte"), demande.get("empreinte"),
+                                              builds_en_cours))
+                elif chemin == "/display/notes":
+                    carte = demande.get("carte") and env_atelier(racine, demande.get("carte"))
+                    self._json(adf.ajoute_note(racine, demande.get("nom"), carte, demande.get("texte"), builds_en_cours))
                 elif chemin == "/apercu":
                     self._json(apercu(racine, env_atelier(racine, demande.get("env")), demande.get("description")))
                 elif chemin == "/diff":
