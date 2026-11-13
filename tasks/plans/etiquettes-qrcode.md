@@ -248,9 +248,9 @@ Consomme : `fichier_carte` (A2), A3 pour poser l'env d'essai.
   `192.168.0.51:8081` -> aucun avertissement (vigilance 1) ; mode sombre lisible (page du vrai module par
   `banc_qrcode_page.py --garde`, 15 contrôles : modules = verdict, couleur du style, IP .61 / IP:port / sans IP, texte
   hostile, bibliothèque demandée 1 fois en 5 chargements, thème sombre, réglage absent -> 404 affiché)
-- [ ] Essai sur une carte choisie par l'utilisateur : réglage écrit par la page 7970, firmware recompilé et FS envoyé
+- [x] Essai sur une carte choisie par l'utilisateur — preuve : essai fait par l'utilisateur sur le P4 (tasmota32p4-garage-serveur-modbus), confirmé le 2026-11-12 et le 2026-11-13 ; vérifié sur la carte : bouton dans Outils, texte sur plusieurs lignes aligné sur le QR code, heap_free stable à 242 Ko ; réglage écrit par la page 7970, firmware recompilé et FS envoyé
   par la page Build, QR code de la carte scanné = QR code de l'outil ; RAM libre avant/après notée
-- [ ] Commit
+- [x] Commit — preuve : commits 0794f504a, 0028bfa1a, e75b442e2, 8c7d0409f
 
 ## A7 — Suivi des changements, téléversement, liens des autres outils
 Fichiers : créer `outils_pc/etiquettes_qr_suivi.py`, `test_etiquettes_qr_suivi.py` ; modifier
