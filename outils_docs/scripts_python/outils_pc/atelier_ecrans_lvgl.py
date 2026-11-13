@@ -24,6 +24,8 @@ IDENT = re.compile(r"[A-Za-z_]\w*")
 # Types HASPmota sans classe LVGL propre (_lv_class nil : sous-objets d'un parent) ou construits autrement qu'un objet LVGL
 # nu (fixed, flex : lv.obj + styles de post_init ; scale_line : lv.line enfant d'un scale) : refuses. Les noms qui different
 # de la classe LVGL (btn -> button, img -> image...) sont traduits par ecranLvgl.CLASSES du moteur.
+DERNIERS = ("val", "qr_text")
+CHANGE = ("switch", "dropdown", "roller")     # action au changement de valeur (moteur : EVENT_VALUE_CHANGED)
 SANS_CLASSE = ("dropdown_list", "scale_section", "span", "tab", "scr", "fixed", "flex", "scale_line")
 
 
@@ -89,9 +91,10 @@ def _est_couleur(k):
 
 
 def attributs(attrs, qui):
-    """[[k, v]] dans l'ordre de la description, couleurs converties, `val` en dernier (post_config de HASPmota)."""
+    """[[k, v]] dans l'ordre de la description, couleurs converties, `val` et `qr_text` en dernier (post_config de HASPmota ;
+    lv_qrcode_set_size et les couleurs effacent le code, update le redessine)."""
     r = [[k, couleur(v, f"{qui}.{k}") if _est_couleur(k) else v] for k, v in attrs.items()]
-    return [a for a in r if a[0] != "val"] + [a for a in r if a[0] == "val"]
+    return [a for a in r if a[0] not in DERNIERS] + [a for a in r if a[0] in DERNIERS]
 
 
 def chemin(cle, indice):
@@ -109,20 +112,23 @@ def couleurs_map(m, qui):
     return {k: couleur(v, f"{qui}[{k}]") for k, v in m.items()}
 
 
-def _toucher(nom, t):
-    """(nom de la fonction Berry, ligne de sa definition) d'un toucher."""
-    f = f"ecranLvgl_{nom}"
+def _toucher(nom, t, type_=None):
+    """(nom de la fonction Berry, ligne de sa definition) d'un toucher. Objet a valeur (CHANGE : interrupteur, liste
+    deroulante, roue) : la fonction recoit la valeur choisie `v` (moteur : 1 / 0 ou index), passee en DERNIER argument
+    d'une fonction et a la place de %val% dans une commande."""
+    f, change = f"ecranLvgl_{nom}", type_ in CHANGE
     if "page" in t:
         corps = f"import ecranLvgl    ecranLvgl.montre({int(t['page'])})"
     elif "commande" in t:
-        corps = f"tasmota.cmd({chaine(t['commande'])})"
+        corps = (f"import string    tasmota.cmd(string.replace({chaine(t['commande'])}, \"%val%\", str(v)))"
+                 if change and "%val%" in t["commande"] else f"tasmota.cmd({chaine(t['commande'])})")
     else:
         morceaux = str(t.get("fonction", "")).split(".")
         if len(morceaux) != 2 or not all(IDENT.fullmatch(x) for x in morceaux):
             raise ValueError(f"{nom} : toucher.fonction « {t.get('fonction')} » : forme module.fonction attendue")
-        args = ", ".join(berry(a) for a in t.get("args", []))
+        args = ", ".join([berry(a) for a in t.get("args", [])] + (["v"] if change else []))
         corps = f"import {morceaux[0]}    {morceaux[0]}.{morceaux[1]}({args})"
-    return f, f"def {f}()    {corps}    end"
+    return f, f"def {f}({'v' if change else ''})    {corps}    end"
 
 
 def genere(desc):
@@ -139,7 +145,7 @@ def genere(desc):
             raise ValueError(f"{nom} : type {o['type']} sans objet LVGL propre, non pris en charge en LVGL pur")
         f, liaisons = None, []
         if o.get("toucher"):
-            f, ligne = _toucher(nom, o["toucher"])
+            f, ligne = _toucher(nom, o["toucher"], o["type"])
             touchers.append(ligne)
         objets.append(f"[{o['page']}, {o['id']}, {chaine(o['type'])}, {o['x']}, {o['y']}, {o['l']}, {o['h']}, "
                       f"{table(attributs(o.get('attributs', {}), nom))}, {f or 'nil'}]")

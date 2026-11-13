@@ -2,7 +2,9 @@
 
 Genere `outils_docs/schemas/catalogue_ecran.json` d'apres les SOURCES du depot (liste `SOURCES`) :
   objets   : classes `lvh_*` de lv_haspmota.be (setters et _attr_map, heritage resolu) + setters natifs LVGL a une
-             valeur (lv_funcs.h) + attributs de style (`lv_obj_set_style_*`) ; palier 1 = les 7 types de l'atelier.
+             valeur (lv_funcs.h) + attributs de style (`lv_obj_set_style_*`) ; palier 1 et 2 = types de l'atelier (PALIER1, PALIER2),
+             palier 3 = les autres ; `textarea` absent (pas de clavier dans l'atelier). Types d'attribut : entier,
+             texte, couleur, police, booleen, action, liste (tableau JSON), lignes (texte, une option par ligne).
   polices  : polices EMBARQUEES activees dans tasmota_lv_conf.h / xdrv_52_3_berry_lvgl.ino, et `.ttf` des dossiers de cartes.
   ecrans   : ligne `:H` des `display.ini`, par priorite : cartes du depot (sauf display.ini exclu du FS de l'env),
              bibliotheque personnelle `PERSO`, descriptions amont `AMONT` (lecture seule) ; clef `<pilote>_<l>x<h>` au
@@ -28,6 +30,12 @@ PERSO = "outils_docs/atelier_ecrans/display"     # display.ini personnels (hors 
 AMONT = "tasmota/displaydesc"                    # descriptions fournies par Tasmota : jamais modifiees (synchro du fork)
 TACTILES = (":UTI", ":TI", ":TS", ":TR")         # pilote universel, anciens GT911/FT5206/CST816S, XPT2046, resistif
 PALIER1 = ("label", "btn", "bar", "obj", "chart", "arc", "slider")
+PALIER2 = ("img", "dropdown", "switch", "roller", "qrcode")      # plan atelier-ecrans A14, spec 2026-11-12 § 7
+RETIRES = ("root", "page", "textarea")
+# Types d'attribut propres a une classe (lv_haspmota.be) : set_options(l) / set_points(t) prennent une liste ; les options
+# d'une liste deroulante ou d'une roue sont UN texte, une option par ligne ; set_val d'un switch = set_toggle (booleen).
+TYPES_PROPRES = {("btnmatrix", "options"): "liste", ("msgbox", "options"): "liste", ("line", "points"): "liste",
+                 ("dropdown", "options"): "lignes", ("roller", "options"): "lignes", ("switch", "val"): "booleen"}
 # Grille de tailles proposee pour un .ttf : FreeType rend toute taille (cout RAM croissant), on ajoute celles deja utilisees.
 TAILLES_TTF = (12, 14, 16, 20, 24, 28, 32, 36, 40, 48)
 NON_ATTRIBUTS = {"delete", "tostring"}                 # set_delete : detruit l'objet ; pas un reglage d'apparence
@@ -102,11 +110,20 @@ def _styles(racine):
     return [n for n in dict.fromkeys(noms) if not n.endswith(("_dsc_array", "_dsc"))]
 
 
+def _palier(nom):
+    return 1 if nom in PALIER1 else 2 if nom in PALIER2 else 3
+
+
+def dans_atelier(catalogue, type_):
+    """Vrai si l'atelier sait poser et editer un objet de ce type (paliers 1 et 2)."""
+    return catalogue["objets"].get(type_, {}).get("palier") in (1, 2)
+
+
 def objets(racine):
     classes, natifs, styles = _classes(racine), _natifs(racine), _styles(racine)
     res = {}
-    for nom in sorted(classes, key=lambda n: (n not in PALIER1, n)):
-        if nom in ("root", "page"):
+    for nom in sorted(classes, key=lambda n: (_palier(n), n)):
+        if nom in RETIRES:
             continue
         chaine, c = [], nom
         while c:
@@ -125,7 +142,10 @@ def objets(racine):
                 attrs.setdefault(n, _attr(n, t))
         for sans in ("id", "obj", "page", "comment", "parentid", "berry_run"):
             attrs.pop(sans, None)
-        res[nom] = {"palier": 1 if nom in PALIER1 else 2, "attributs": dict(sorted(attrs.items()))}
+        for (classe, n), t in TYPES_PROPRES.items():
+            if classe == nom and n in attrs:
+                attrs[n] = {"type": t}
+        res[nom] = {"palier": _palier(nom), "attributs": dict(sorted(attrs.items()))}
     return res
 
 
@@ -224,7 +244,8 @@ def polices(racine):
     res = [{"nom": "robotocondensed", "tailles": roboto, "source": "firmware", "ecriture": "<taille> (entier)"},
            {"nom": "montserrat", "tailles": mont, "source": "firmware", "ecriture": "montserrat-<taille>"},
            {"nom": "seg7", "tailles": seg7, "source": "firmware", "ecriture": "seg7-<taille>"}]
-    for ttf in sorted(Path(racine).glob("data/*/*/*.ttf")):
+    # meme police sur plusieurs cartes (debits et cave) : une seule entree, l'ecriture A:sd/polices/<fichier> ne depend pas de la carte
+    for ttf in sorted({t.name: t for t in sorted(Path(racine).glob("data/*/*/*.ttf"))}.values()):
         utilises = set()
         for pj in Path(racine).glob("data/*/*/pages.jsonl"):
             utilises |= {int(n) for n in re.findall(re.escape(ttf.name) + r"-(\d+)", pj.read_text(encoding="utf-8"))}

@@ -7,8 +7,8 @@ changer de page (`lv_haspmota.be::page_show` : prev, next, back, p<n>) ; ces bou
 `hasp#p<page>b<id>#event` (ecranHaspmota.BOUTONS pour les debits), pas par le pages.jsonl.
 actif : le pages.jsonl porte l'etat de DEMARRAGE (page de demarrage = premiere page de contenu, n >= 1) : le bouton qui
 mene a cette page prend les attributs `actif`. liaison, couleur_selon, couleurs, modele : dynamiques, appliques par
-l'interface Berry, absents du fichier. `genere` ne valide pas (`atelier_ecrans_description.valide` avant) : un type ou un
-attribut hors catalogue est rendu tel quel."""
+l'interface Berry, absents du fichier. QR code : `qr_size` = l (objet carre, atelier_ecrans_description).
+`genere` ne valide pas (`atelier_ecrans_description.valide` avant) : un type ou un attribut hors catalogue est rendu tel quel."""
 
 import json
 
@@ -25,6 +25,8 @@ def _objet(o, depart):
     if "page" in t and t["page"] == depart:
         attrs.update(o.get("actif", {}))
     l = {"page": o["page"], "id": o["id"], "obj": o["type"], "x": o["x"], "y": o["y"], "w": o["l"], "h": o["h"], **attrs}
+    if o["type"] == "qrcode":           # cote du code = largeur de l'objet (carre), jamais saisi dans la description
+        l["qr_size"] = o["l"]
     if "page" in t:
         l["action"] = f"p{t['page']}"
     if "commentaire" in o:

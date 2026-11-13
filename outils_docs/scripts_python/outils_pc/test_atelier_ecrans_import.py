@@ -117,10 +117,31 @@ def test_pieges(catalogue):
     verifie(("p1b2" not in lv, "1 ligne brute" in lv), (True, True), "LVGL pur : objet brut absent et signale en tete")
 
 
+def test_palier2(catalogue):
+    tete = '{"page":1,"comment":"Accueil"}\n'
+    lignes = ['{"page":1,"id":1,"obj":"img","x":0,"y":0,"w":64,"h":64,"src":"A:sd/images/PNG/pompe.png"}',
+              '{"page":1,"id":2,"obj":"dropdown","x":0,"y":70,"w":120,"h":40,"options":"Auto\\nMarche","val":1}',
+              '{"page":1,"id":3,"obj":"switch","x":0,"y":120,"w":60,"h":30,"val":true}',
+              '{"page":1,"id":4,"obj":"roller","x":0,"y":160,"w":90,"h":90,"options":"1\\n2","val":0}',
+              '{"page":1,"id":5,"obj":"qrcode","x":100,"y":0,"w":80,"h":80,"qr_size":80,"qr_text":"http://x"}']
+    r = aller_retour(tete + "\n".join(lignes) + "\n", catalogue, "palier 2")
+    d = r["description"]
+    verifie((len(bruts(d)), [o["type"] for o in d["objets"]]), (0, ["img", "dropdown", "switch", "roller", "qrcode"]),
+            "palier 2 : un objet de chaque type, tous editables")
+    verifie("qr_size" in d["objets"][4]["attributs"], False, "palier 2 : qr_size retire (pose par le generateur)")
+    for ligne, libelle in (('{"page":1,"id":6,"obj":"qrcode","x":0,"y":0,"w":80,"h":80,"qr_size":60,"qr_text":"x"}', "qr_size different de w"),
+                           ('{"page":1,"id":6,"obj":"img","x":0,"y":0,"w":9,"h":9,"src":"A:/demo.tapp#fan.png"}', "image hors sd/images/PNG"),
+                           ('{"page":1,"id":6,"obj":"switch","x":0,"y":0,"w":9,"h":9,"val":1}', "interrupteur a val entier"),
+                           ('{"page":1,"id":6,"obj":"msgbox","x":0,"y":0,"w":9,"h":9}', "type de palier 3")):
+        r = aller_retour(tete + ligne + "\n", catalogue, f"palier 2 {libelle}")
+        verifie(len(bruts(r["description"])), 1, f"palier 2 {libelle} : ligne gardee en brut")
+
+
 def main():
     catalogue = cat.charge(RACINE)
     test_depot(catalogue)
     test_pieges(catalogue)
+    test_palier2(catalogue)
     print(f"\n{len(ECHECS)} echec(s) : " + ("VERT" if not ECHECS else "ROUGE"))
     return 1 if ECHECS else 0
 

@@ -116,6 +116,40 @@ def test_courbe():
     verifie(li["couleurs"] == json.loads(series), "ecran.json : couleurs de la courbe = ecranDebitsFonctions.SERIES", series)
 
 
+def test_palier2():
+    """Un objet de chaque type du palier 2 : classe LVGL, appels du moteur (journal du bouchon lv), rappel VALUE_CHANGED ;
+    l'action recoit la valeur choisie (fonction : dernier argument ; commande : %val%, interrupteur en 1 / 0)."""
+    d = mini([{"id": 1, "page": 1, "type": "img", "x": 0, "y": 0, "l": 64, "h": 64, "attributs": {"src": "A:sd/images/PNG/pompe.png"}},
+              {"id": 2, "page": 1, "type": "img", "x": 70, "y": 0, "l": 64, "h": 64, "attributs": {"src": "tasmota_logo"}},
+              {"id": 3, "page": 1, "type": "dropdown", "x": 0, "y": 80, "l": 160, "h": 40,
+               "attributs": {"options": "Auto\nMarche", "val": 1, "text": "Mode"},
+               "toucher": {"fonction": "ecranDebitsFonctions.ajuste", "args": ["mode"]}},
+              {"id": 4, "page": 1, "type": "switch", "x": 0, "y": 130, "l": 60, "h": 30, "attributs": {"val": True},
+               "toucher": {"commande": "Power2 %val%"}},
+              {"id": 5, "page": 1, "type": "switch", "x": 70, "y": 130, "l": 60, "h": 30, "attributs": {"val": False}},
+              {"id": 6, "page": 1, "type": "roller", "x": 0, "y": 170, "l": 100, "h": 90, "attributs": {"options": "1\n2\n3", "val": 2},
+               "toucher": {"fonction": "ecranDebitsFonctions.ajuste", "args": ["roue"]}},
+              {"id": 7, "page": 1, "type": "qrcode", "x": 200, "y": 0, "l": 80, "h": 80,
+               "attributs": {"qr_text": "http://x", "qr_dark_color": "#000000"}}])
+    with tempfile.TemporaryDirectory() as t:
+        sortie = banc_mini(lvgl.genere(d), t)
+    lignes = sortie.splitlines()
+    appels = [l for l in lignes if l.startswith(("APPEL ", "RAPPEL ", "OBJET ", "CLIC "))]
+    for attendu in ("OBJET p1b1 image", "OBJET p1b3 dropdown", "OBJET p1b4 switch", "OBJET p1b6 roller", "OBJET p1b7 qrcode",
+                    "APPEL p1b1 set_src ['A:sd/images/PNG/pompe.png']", "APPEL p1b2 set_tasmota_logo []",
+                    "APPEL p1b3 set_options ['Auto\\nMarche']", "APPEL p1b3 set_text ['Mode']", "APPEL p1b3 set_selected [1]",
+                    "APPEL p1b4 add_state [1]", "APPEL p1b5 remove_state [1]",
+                    "APPEL p1b6 set_options ['1\\n2\\n3', 0]", "APPEL p1b6 set_selected [2, 0]",
+                    "APPEL p1b7 set_size [80]", "RAPPEL p1b3 35", "RAPPEL p1b4 35",
+                    "CLIC p1b3 AJUSTE mode 1", "CLIC p1b4 CMD Power2 1", "CLIC p1b6 AJUSTE roue 2"):
+        verifie(any(l.startswith(attendu) for l in appels), f"palier 2 : {attendu}", sortie[-1500:])
+    q = [l for l in appels if l.startswith("APPEL p1b7 ")]
+    verifie([l.split()[2] for l in q][-1:] == ["update"] and "APPEL p1b7 update ['http://x', 8]" in q
+            and any(" set_dark_color " in l for l in q), "palier 2 : QR code mis a jour apres taille et couleurs", q)
+    verifie(not any(l.startswith("TEXTE p1b3") for l in lignes), "palier 2 : texte d'une liste deroulante sans label enfant")
+    verifie("BANC_ECRAN_LVGL: OK" in sortie and "ERREUR" not in sortie, "palier 2 : demarre sans erreur", sortie[-800:])
+
+
 def test_refus():
     for nom, o in (("fonction sans module", {"toucher": {"fonction": "ajuste"}}),
                    ("couleur mal formee", {"attributs": {"bg_color": "rouge"}}),
@@ -129,7 +163,7 @@ def test_refus():
             pass
 
 
-for t in (test_compile, test_texte_special, test_fichier_a_jour, test_taille, test_generique, test_courbe, test_refus):
+for t in (test_compile, test_texte_special, test_fichier_a_jour, test_taille, test_generique, test_courbe, test_palier2, test_refus):
     try:
         t()
     except Exception as e:  # noqa: BLE001 - un test qui leve compte rouge, les suivants tournent

@@ -183,7 +183,7 @@ ecranLvgl.textes = {}     # "p0b91" -> label qui porte le texte (l'objet lui-mem
 ecranLvgl.ecrans = {}     # n -> ecran de la page n
 ecranLvgl.polices = {}    # forme de text_font -> police chargee (une seule fois)
 ecranLvgl.touchers = []   # [objet LVGL, fonction] des objets tactiles
-ecranLvgl.attente = nil   # fonction du dernier toucher, executee hors du rappel LVGL
+ecranLvgl.attente = nil   # [fonction, valeur] du dernier toucher, executee hors du rappel LVGL
 ecranLvgl.series = nil    # series LVGL de la courbe
 ecranLvgl.points = 0      # points du modele deja pousses sur la courbe
 ecranLvgl.page = nil      # page affichee
@@ -252,7 +252,7 @@ def ecranLvgl_applique(nom, k, v)
     var o = ecranLvgl.objets[nom]
     var t = ecranLvgl.types[nom]
     var c = ecranLvgl.cache.find(nom, {})
-    if (k == "text")    ecranLvgl.texte(nom).set_text(str(v))    return    end
+    if (k == "text")    var l = t == "dropdown" ? o : ecranLvgl.texte(nom)    l.set_text(str(v))    return    end    # dropdown : texte fixe
     if (k == "align")
         var a = {0: lv.TEXT_ALIGN_LEFT, 1: lv.TEXT_ALIGN_CENTER, 2: lv.TEXT_ALIGN_RIGHT, "left": lv.TEXT_ALIGN_LEFT,
                  "center": lv.TEXT_ALIGN_CENTER, "right": lv.TEXT_ALIGN_RIGHT}
@@ -264,7 +264,14 @@ def ecranLvgl_applique(nom, k, v)
         if (p != nil)    o.set_style_text_font(p, 0)    end
         return
     end
+    if (k == "val" && t == "switch")    if (v)    o.add_state(lv.STATE_CHECKED)    else    o.remove_state(lv.STATE_CHECKED)    end    return    end
+    if (k == "val" && t == "dropdown")    o.set_selected(v)    return    end
+    if (k == "val" && t == "roller")    o.set_selected(v, lv.ANIM_OFF)    return    end
     if (k == "val")    if (t == "bar" || t == "slider")    o.set_value(v, lv.ANIM_OFF)    else    o.set_value(v)    end    return    end
+    if (k == "options" && t == "roller")    o.set_options(v, lv.ROLLER_MODE_NORMAL)    return    end
+    if (k == "src" && v == "tasmota_logo")    o.set_tasmota_logo()    return    end
+    if (t == "qrcode" && k == "qr_text")    var q = str(v)    o.update(q, size(q))    return    end    # ecrit en dernier
+    if (t == "qrcode" && string.startswith(k, "qr_"))    k = k[3 ..]    end
     if (k == "min")    o.set_range(v, o.get_max_value())    return    end
     if (k == "max")    o.set_range(o.get_min_value(), v)    return    end
     if (k == "y_min" || k == "y_max")
@@ -333,22 +340,22 @@ def ecranLvgl_preparePage(p)
     ecranLvgl.objets[nom] = e
 end
 ecranLvgl.preparePage = ecranLvgl_preparePage
-# Objet d (OBJETS) cree sur l'ecran de sa page, place, attributs ecrits par le cache, toucher sur EVENT_CLICKED
+# Objet d (OBJETS) cree sur l'ecran de sa page, place, attributs ecrits par le cache, toucher sur EVENT_CLICKED (VALUE_CHANGED : switch...)
 def ecranLvgl_cree(d)
     import lv
     import ecranLvgl
     var nom = "p" + str(d[0]) + "b" + str(d[1])
     var o = lv.(ecranLvgl.CLASSES.find(d[2], d[2]))(ecranLvgl.ecrans[d[0]])
     o.set_pos(d[3], d[4])
-    o.set_size(d[5], d[6])
+    if (d[2] == "qrcode")    o.set_size(d[5])    else    o.set_size(d[5], d[6])    end    # lv_qrcode_set_size : un cote
     ecranLvgl.objets[nom] = o
     ecranLvgl.types[nom] = d[2]
     if (d[2] == "label")    ecranLvgl.textes[nom] = o    end
     if (d[2] == "chart")    o.set_update_mode(lv.CHART_UPDATE_MODE_SHIFT)    end
     for a: d[7]    ecranLvgl.ecris(nom, a[0], a[1])    end
     if (d[8] != nil)
-        o.add_event_cb(ecranLvgl.evenement, lv.EVENT_CLICKED, 0)
-        ecranLvgl.touchers.push([o, d[8]])
+        o.add_event_cb(ecranLvgl.evenement, ["switch", "dropdown", "roller"].find(d[2]) != nil ? lv.EVENT_VALUE_CHANGED : lv.EVENT_CLICKED, 0)
+        ecranLvgl.touchers.push([o, d[8], d[2]])
     end
 end
 ecranLvgl.cree = ecranLvgl_cree
@@ -413,12 +420,14 @@ def ecranLvgl_montre(n)
     ecranLvgl.actifs()
 end
 ecranLvgl.montre = ecranLvgl_montre
-# Rappel LVGL d'un objet tactile (EVENT_CLICKED) : son action est differee hors de la boucle LVGL
+# Rappel LVGL d'un objet tactile : son action est differee hors de la boucle LVGL, avec la valeur choisie (interrupteur 1 / 0,
+# index d'une liste deroulante ou d'une roue ; nil pour un simple appui)
 def ecranLvgl_evenement(obj, event)
+    import lv
     import ecranLvgl
     for t: ecranLvgl.touchers
         if (t[0] == obj)
-            ecranLvgl.attente = t[1]
+            ecranLvgl.attente = [t[1], t[2] == "switch" ? (obj.has_state(lv.STATE_CHECKED) ? 1 : 0) : (t[2] == "dropdown" || t[2] == "roller") ? obj.get_selected() : nil]
             tasmota.defer(ecranLvgl.execute)
             return
         end
@@ -432,7 +441,7 @@ def ecranLvgl_execute()
     ecranLvgl.attente = nil
     if (f == nil)    return    end
     try
-        f()
+        f[0](f[1])          # une fonction sans parametre ignore l'argument
     except .. as e, m
         logFonctions.log("ECRAN_LVGL_ERREUR: action du toucher en echec : " + str(e) + " " + str(m) + " !", LOG_LEVEL_ERREUR)
     end
@@ -449,12 +458,8 @@ def ecranLvgl_demarre()
             return false
         end
         lv.start()
-        ecranLvgl.cache = {}
-        ecranLvgl.objets = {}
-        ecranLvgl.types = {}
-        ecranLvgl.textes = {}
-        ecranLvgl.ecrans = {}
-        ecranLvgl.touchers = []
+        ecranLvgl.cache = {}    ecranLvgl.objets = {}    ecranLvgl.types = {}
+        ecranLvgl.textes = {}    ecranLvgl.ecrans = {}    ecranLvgl.touchers = []
         for p: ecranLvgl.PAGES    ecranLvgl.preparePage(p)    end
         for d: ecranLvgl.OBJETS    ecranLvgl.cree(d)    end
         ecranLvgl.prepareCourbe()

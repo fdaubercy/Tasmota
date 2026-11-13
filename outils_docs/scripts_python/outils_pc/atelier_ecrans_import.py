@@ -4,7 +4,7 @@
 Lecture comme HASPmota (`lv_haspmota.be`) : une ligne JSON par objet, la page courante change a chaque cle `page` et
 s'herite sinon, lignes vides ignorees. Par page : son premier `{"page":n,"comment"}` -> commentaire (et titre) de la page,
 son `{"id":0, ...}` place avant tout objet -> reglages de la page, s'ils sont des attributs connus de `obj`. Objet du
-palier 1 du catalogue, x, y, w, h entiers, attributs connus et valides, `action` p<n> vers une page du fichier -> objet
+palier 1 ou 2 du catalogue, x, y, w, h entiers (QR code : qr_size = w = h), attributs connus et valides, `action` p<n> vers une page du fichier -> objet
 EDITABLE (`toucher`). Tout le reste -> objet `brut` : la ligne d'origine gardee telle quelle (`ligne`, ou `texte` pour
 une ligne non JSON, signalee), reecrite a l'identique par le generateur HASPmota, absente de l'interface LVGL pur.
 Sur la carte (lu dans `lv_haspmota.be::HASPmota._load`, pas encore vu sur carte) : une ligne commencant par `#` est sautee
@@ -61,7 +61,7 @@ def lignes_effectives(texte):
 def _editable(d, p, pages, ecran, catalogue, pris):
     """Objet editable tire de la ligne `d` (page courante p), ou None si la ligne doit rester brute."""
     t = d.get("obj")
-    if catalogue["objets"].get(t, {}).get("palier") != 1:
+    if not cat.dans_atelier(catalogue, t):
         return None
     if any(HASPMOTA_SEUL.fullmatch(k) for k in d):
         return None
@@ -69,6 +69,8 @@ def _editable(d, p, pages, ecran, catalogue, pris):
         return None
     o = {"id": d["id"], "page": p, "type": t, "x": d["x"], "y": d["y"], "l": d["w"], "h": d["h"],
          "attributs": {k: v for k, v in d.items() if k not in BASE}}
+    if t == "qrcode" and d.get("qr_size") == d["w"] == d["h"]:      # pose par le generateur HASPmota d'apres l
+        del o["attributs"]["qr_size"]
     if "action" in d:
         m = ACTION_PAGE.fullmatch(str(d["action"]))
         if not m or int(m.group(1)) not in pages:

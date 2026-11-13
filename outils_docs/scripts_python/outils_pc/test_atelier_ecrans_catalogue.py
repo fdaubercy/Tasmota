@@ -35,10 +35,19 @@ def copie_sources(dest):
 def test_objets_palier(c):
     for t in ("label", "btn", "bar", "obj", "chart", "arc", "slider"):
         verifie(c["objets"].get(t, {}).get("palier") == 1, f"palier 1 : {t}")
-    autres = [t for t, o in c["objets"].items() if t not in cat.PALIER1]
-    verifie(len(autres) >= 10 and all(c["objets"][t]["palier"] == 2 for t in autres), "autres classes en palier 2", autres)
-    for t in ("dropdown", "roller", "img", "switch"):
-        verifie(t in c["objets"], f"classe {t} presente")
+    for t in ("img", "dropdown", "switch", "roller", "qrcode"):
+        verifie(c["objets"].get(t, {}).get("palier") == 2, f"palier 2 : {t}")
+    autres = [t for t in c["objets"] if t not in cat.PALIER1 + cat.PALIER2]
+    verifie(len(autres) >= 10 and all(c["objets"][t]["palier"] == 3 for t in autres), "autres classes en palier 3", autres)
+    verifie(all(cat.dans_atelier(c, t) for t in cat.PALIER1 + cat.PALIER2) and not cat.dans_atelier(c, "msgbox")
+            and not cat.dans_atelier(c, "machin"), "dans_atelier : paliers 1 et 2 seulement")
+    verifie("textarea" not in c["objets"], "textarea retire du catalogue")
+    types = {(t, k): c["objets"][t]["attributs"][k]["type"] for t, k in
+             (("btnmatrix", "options"), ("msgbox", "options"), ("line", "points"), ("dropdown", "options"),
+              ("roller", "options"), ("switch", "val"), ("img", "src"), ("qrcode", "qr_text"))}
+    verifie(types == {("btnmatrix", "options"): "liste", ("msgbox", "options"): "liste", ("line", "points"): "liste",
+                      ("dropdown", "options"): "lignes", ("roller", "options"): "lignes", ("switch", "val"): "booleen",
+                      ("img", "src"): "texte", ("qrcode", "qr_text"): "texte"}, "types liste, lignes, booleen", types)
 
 
 def test_attributs_pages_debits(c):

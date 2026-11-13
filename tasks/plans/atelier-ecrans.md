@@ -4,7 +4,7 @@ titre: Atelier des écrans (page 7960) : une description d'écran, deux interfac
 objectif: Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 ajouté)
+maj: 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 et A17 ajoutés ; A14 : bancs, catalogue, générateurs faits)
 ---
 # Atelier des écrans
 
@@ -304,14 +304,25 @@ Conception : § 5 de la même spec.
 
 ## A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code
 Conception : § 7 de la même spec.
-- [ ] Bancs d'abord (rouge) : `img` (PNG seul), `dropdown`, `switch`, `roller`, `qrcode` dans le validateur et les deux
-  générateurs ; type « liste » pour `options` et `points` ; `textarea` absent du catalogue
-- [ ] Catalogue, validateur, générateur HASPmota, moteur LVGL pur (`lv.image`, `lv.dropdown`, `lv.switch`, `lv.roller`,
-  `lv.qrcode` ; `add_state`, `set_options`, `update`) ; `banc_ecran_lvgl.py` VERT avec mutants
+- [x] Bancs d'abord (rouge) : `img` (PNG seul), `dropdown`, `switch`, `roller`, `qrcode` dans le validateur et les deux
+  générateurs ; type « liste » pour `options` et `points` ; `textarea` absent du catalogue — preuve : bancs `_catalogue`,
+  `_description` (mutants palier 3, image hors `PNG/`, interrupteur à `val` entier, QR code non carré, `qr_size` saisi),
+  `_haspmota::test_palier2`, `_lvgl::test_palier2`, `_import::test_palier2` lus ROUGES avant le code (2026-11-13)
+- [x] Catalogue, validateur, générateur HASPmota, moteur LVGL pur (`lv.image`, `lv.dropdown`, `lv.switch`, `lv.roller`,
+  `lv.qrcode` ; `add_state`, `set_options`, `update`) ; `banc_ecran_lvgl.py` VERT avec mutants — preuve : 13 bancs
+  `test_atelier_ecrans_*` VERT, `banc_ecran_lvgl.py` VERT (16 témoins rouges), `banc_demarrage.py` VERT (2026-11-13) ;
+  paliers 1, 2, 3 (`atelier_ecrans_catalogue.py::dans_atelier`), types `liste`, `lignes`, `booleen` ; QR code carré,
+  `qr_size` = l posé par les générateurs ; action d'un interrupteur, d'une liste ou d'une roue au changement de valeur,
+  valeur choisie passée à l'action (dernier argument d'une fonction, `%val%` d'une commande, interrupteur en 1 / 0) ;
+  police `.ttf` présente sur deux cartes : une seule entrée ; `ecranLvgl.be` des débits régénéré (interface `haspmota`
+  de la carte : fichier hors de son FS)
 - [ ] Page : palette, propriétés (éditeur de liste d'options, choix d'un PNG du dossier de la carte), dessin approché,
   QR code par la bibliothèque de la page des étiquettes ; sonde Chrome VERT ; relecture
-- [ ] Règle de rangement des images ramenée au `.png` (`gestionFileFolder.be`, accord de l'utilisateur) ;
-  `banc_repartition_fichiers.py` VERT
+- [ ] Rangement des images par format (décision de l'utilisateur du 2026-11-13, au lieu du `.png` seul) : `.png`, `.jpg`,
+  `.bmp` vers `/sd/images/PNG|JPG|BMP/` (`gestionFileFolder.be`, accord donné) ; scripts Berry, pages.jsonl et pages
+  web des cartes (`data/sd/html|css|js`, routes Berry qui servent des fichiers : `qrcodePage`, `pagesGraphiques`,
+  `cuvePageFonctions`, `equilibragePage`) recherchés le 2026-11-13 : aucun ne charge d'image du FS, aucune image dans `data/` ; `banc_repartition_fichiers.py` VERT avec mutants ; README, `CLAUDE.md`,
+  `ICONES_IMAGES_SOURCES.md` à jour ; l'objet `img` de l'atelier ne propose que `PNG/`
 - [ ] Essai sur la carte : un objet de chaque type sur l'écran des débits, vu et touché (avec A11) ; commit
 
 ## A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran »)
@@ -329,7 +340,22 @@ Après A14 (l'import d'un PNG aboutit dans l'objet `img`).
   rangé sous `/sd/images`, choisi dans l'objet `img` (A14)
 - [ ] Banc, sonde Chrome, relecture `relecteur-pages-web` ; commit
 
+## A17 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13)
+Les mêmes informations que la page web `/qrcode` (`data/fs/qrcodePage.be`) : le QR code du texte réglé dans
+`/json/qrcode.json` par l'outil des étiquettes (7970), l'IP réelle de la carte comparée à l'IP inscrite, le nom d'hôte.
+Cartes visées : toutes celles qui ont un écran (aujourd'hui `tasmota32s3-bureau-ecran-debits-pac`, `tasmota32s3-cave-ecran`).
+Après A14 (objet `qrcode`). Limites connues : QR code LVGL à deux couleurs (ni modules arrondis ni dégradé) ; logo central
+seulement par un PNG sous `/sd/images/PNG/` posé en `img` (le data URI de `qrcode.json` n'est pas lisible par LVGL).
+- [ ] `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un)
+- [ ] Valeurs du modèle de chaque module métier d'écran : texte du QR code, IP réelle (`diversFonctions.ipLAN`), IP
+  inscrite, nom d'hôte, accord des deux IP ; lues au démarrage, pas à chaque seconde
+- [ ] Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave :
+  accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire son `pages.jsonl`
+- [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A11)
+
 ## Améliorations restantes
+- [ ] [projet] Menu construit d'après les pages de la description (évalué le 2026-11-13, faisable à la génération ; décision
+  de l'utilisateur en attente)
 - [ ] [projet] Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)
 
 ## Vérification

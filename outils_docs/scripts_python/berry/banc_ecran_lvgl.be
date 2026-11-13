@@ -94,7 +94,7 @@ def clic(nom)
     var o = ecranLvgl.objets[nom]
     var page = ecranLvgl.page
     global.EFFETS = []
-    for r: o.rappels    if (r[1] == lv.EVENT_CLICKED)    r[0](o, nil)    end    end
+    for r: o.rappels    if (r[1] == lv.EVENT_CLICKED || r[1] == lv.EVENT_VALUE_CHANGED)    r[0](o, nil)    end    end
     var d = global.DIFFERES
     if (size(d) != 1)    global.EFFETS.push("NON_DIFFERE")    end    # l'action part hors du rappel LVGL (tasmota.defer)
     global.DIFFERES = []
@@ -105,6 +105,14 @@ def clic(nom)
 end
 
 if MINI
+    # Appels LVGL des objets nommes (hors styles), dans l'ordre : APPEL <nom> <methode> <arguments> (sauts de ligne
+    # ecrits \n) ; puis RAPPEL <nom> <evenement> de chaque objet tactile
+    def nomDe(o)    for n: ecranLvgl.objets.keys()    if (ecranLvgl.objets[n] == o)    return n    end    end    return nil    end
+    for j: lv.journal
+        var n = nomDe(j[0])
+        if (n != nil && !string.startswith(j[1], "set_style_"))    print("APPEL " + n + " " + j[1] + " " + string.replace(str(j[2]), "\n", "\\n"))    end
+    end
+    for t: ecranLvgl.touchers    for r: t[0].rappels    print("RAPPEL " + nomDe(t[0]) + " " + str(r[1]))    end    end
     for t: ecranLvgl.touchers
         for nom: ecranLvgl.objets.keys()    if (ecranLvgl.objets[nom] == t[0])    clic(nom)    end    end
     end

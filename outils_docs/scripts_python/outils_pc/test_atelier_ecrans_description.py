@@ -57,6 +57,19 @@ REFERENCE = {
 }
 
 
+# Un objet de chaque type du palier 2 (page 1, hors des objets de REFERENCE), valides tels quels
+PALIER2 = [
+    {"id": 81, "page": 1, "type": "img", "x": 10, "y": 300, "l": 64, "h": 64, "attributs": {"src": "A:sd/images/PNG/pompe.png"}},
+    {"id": 82, "page": 1, "type": "dropdown", "x": 90, "y": 300, "l": 160, "h": 40,
+     "attributs": {"options": "Auto\nMarche\nArret", "val": 1}, "toucher": {"fonction": "ecranDebitsFonctions.mode"}},
+    {"id": 83, "page": 1, "type": "switch", "x": 260, "y": 300, "l": 60, "h": 30, "attributs": {"val": True},
+     "toucher": {"commande": "Power1 TOGGLE"}},
+    {"id": 84, "page": 1, "type": "roller", "x": 330, "y": 300, "l": 100, "h": 90, "attributs": {"options": "1\n2\n3", "val": 0}},
+    {"id": 85, "page": 1, "type": "qrcode", "x": 440, "y": 300, "l": 80, "h": 80,
+     "attributs": {"qr_text": "http://192.168.0.51", "qr_dark_color": "#000000", "qr_light_color": "#FFFFFF"}},
+]
+
+
 def mutant(f):
     d = copy.deepcopy(REFERENCE)
     f(d)
@@ -79,7 +92,14 @@ MUTANTS = [
     ("taille de ttf nulle", lambda d: objet(d, 0)["attributs"].update(text_font="A:sd/polices/RobotoCondensed-Regular.ttf-0"), "taille 0"),
     ("attribut inconnu du type", lambda d: objet(d, 0)["attributs"].update(zorglub=1), "zorglub"),
     ("attribut d'un autre type (point_count sur un label)", lambda d: objet(d, 0)["attributs"].update(point_count=3), "point_count"),
-    ("type de palier 2", lambda d: objet(d, 0).update(type="dropdown"), "palier 2"),
+    ("type de palier 3", lambda d: objet(d, 0).update(type="msgbox", attributs={}), "palier 3"),
+    ("image hors de sd/images/PNG", lambda d: d["objets"].append(PALIER2[0] | {"attributs": {"src": "A:sd/images/fond.png"}}), "PNG"),
+    ("image JPG", lambda d: d["objets"].append(PALIER2[0] | {"attributs": {"src": "A:sd/images/JPG/fond.jpg"}}), "PNG"),
+    ("interrupteur : val entier", lambda d: d["objets"].append(PALIER2[2] | {"attributs": {"val": 1}}), "booléen"),
+    ("liste deroulante : options non texte", lambda d: d["objets"].append(PALIER2[1] | {"attributs": {"options": ["a", "b"]}}), "options"),
+    ("roue : options vides", lambda d: d["objets"].append(PALIER2[3] | {"attributs": {"options": ""}}), "options"),
+    ("QR code pas carre", lambda d: d["objets"].append(PALIER2[4] | {"h": 90}), "carré"),
+    ("QR code : qr_size ecrit a la main", lambda d: d["objets"].append(PALIER2[4] | {"attributs": {"qr_size": 50}}), "qr_size"),
     ("type inconnu", lambda d: objet(d, 0).update(type="machin"), "type"),
     ("liaison vers une cle absente de modele", lambda d: objet(d, 2)["liaison"].update(cle="voies[].nom"), "liaison"),
     ("liaison vers un attribut inconnu", lambda d: objet(d, 2)["liaison"].update(attribut="zorglub"), "liaison"),
@@ -134,6 +154,10 @@ MUTANTS = [
 
 def test_reference(c):
     verifie(desc.valide(REFERENCE, c) == [], "reference valide", desc.valide(REFERENCE, c))
+    d = mutant(lambda d: d["objets"].extend(copy.deepcopy(PALIER2)))
+    verifie(desc.valide(d, c) == [], "un objet de chaque type du palier 2 valide", desc.valide(d, c))
+    d = mutant(lambda d: d["objets"].append(PALIER2[0] | {"attributs": {"src": "tasmota_logo"}}))
+    verifie(desc.valide(d, c) == [], "image : logo Tasmota embarque accepte", desc.valide(d, c))
     # une taille libre de ttf et un montserrat du catalogue sont acceptes
     d = mutant(lambda d: objet(d, 0)["attributs"].update(text_font="A:sd/polices/RobotoCondensed-Regular.ttf-27"))
     verifie(desc.valide(d, c) == [], "taille libre d'un ttf acceptee", desc.valide(d, c))

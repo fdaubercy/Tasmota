@@ -34,9 +34,11 @@ lv.CHART_AXIS_SECONDARY_Y = 1
 lv.CHART_UPDATE_MODE_SHIFT = 0
 lv.CHART_POINT_NONE = 0x7FFFFFFF
 lv.EVENT_CLICKED = 10
+lv.EVENT_VALUE_CHANGED = 35
+lv.ROLLER_MODE_NORMAL = 0
 
 class FauxObjetLv
-    var type, parent, x, y, w, h, texte, styles, mini, maxi, valeur, series, points, axe, div, nbPoints, mode, rappels, aligne
+    var type, parent, x, y, w, h, texte, styles, mini, maxi, valeur, series, points, axe, div, nbPoints, mode, rappels, aligne, coche
     def init(t, p)
         self.type = t    self.parent = p    self.styles = {}    self.series = []    self.points = []    self.rappels = []
         self.mini = 0    self.maxi = 100
@@ -49,7 +51,7 @@ class FauxObjetLv
         lv.journal.push([self, m, a])
     end
     def set_pos(x, y)    self.x = x    self.y = y    self.note("set_pos", [x, y])    end
-    def set_size(w, h)    self.w = w    self.h = h    self.note("set_size", [w, h])    end
+    def set_size(w, *r)    self.w = w    self.h = size(r) > 0 ? r[0] : nil    self.note("set_size", [w] + r)    end    # qrcode : 1 argument
     def set_text(t)    self.texte = t    self.note("set_text", [t])    end
     def set_align(a)    self.aligne = a    self.note("set_align", [a])    end
     def set_range(a, b)    self.mini = a    self.maxi = b    self.note("set_range", [a, b])    end
@@ -62,6 +64,18 @@ class FauxObjetLv
     def set_update_mode(m)    self.mode = m    self.note("set_update_mode", [m])    end
     def add_series(c, axe)    self.series.push([c, axe])    self.points.push([])    self.note("add_series", [c, axe])    return size(self.series) - 1    end
     def set_next_value(s, v)    self.points[s].push(v)    self.note("set_next_value", [s, v])    end
+    # Objets du palier 2 (image, liste deroulante, interrupteur, roue, QR code) : arguments releves tels quels
+    def add_state(s)    self.coche = true    self.note("add_state", [s])    end
+    def remove_state(s)    self.coche = false    self.note("remove_state", [s])    end
+    def has_state(s)    return self.coche == true    end
+    def get_selected()    return self.valeur    end
+    def set_selected(v, *r)    self.valeur = v    self.note("set_selected", [v] + r)    end
+    def set_options(t, *r)    self.note("set_options", [t] + r)    end
+    def set_src(t)    self.note("set_src", [t])    end
+    def set_tasmota_logo()    self.note("set_tasmota_logo", [])    end
+    def set_dark_color(c)    self.note("set_dark_color", [c])    end
+    def set_light_color(c)    self.note("set_light_color", [c])    end
+    def update(t, n)    self.note("update", [t, n])    end
     def add_event_cb(f, code, d)    self.rappels.push([f, code])    self.note("add_event_cb", [code])    end
     # Tout set_style_<propriete>(valeur, selecteur) : garde dans styles["<propriete>:<selecteur>"] ; aucun autre membre
     def member(n)
@@ -89,6 +103,11 @@ lv.bar = def (p) return FauxObjetLv("bar", p) end
 lv.chart = def (p) return FauxObjetLv("chart", p) end
 lv.arc = def (p) return FauxObjetLv("arc", p) end
 lv.slider = def (p) return FauxObjetLv("slider", p) end
+lv.image = def (p) return FauxObjetLv("image", p) end
+lv.dropdown = def (p) return FauxObjetLv("dropdown", p) end
+lv.switch = def (p) return FauxObjetLv("switch", p) end
+lv.roller = def (p) return FauxObjetLv("roller", p) end
+lv.qrcode = def (p) return FauxObjetLv("qrcode", p) end
 lv.haut = nil
 lv.bas = nil
 lv.layer_top = def () if lv.haut == nil lv.haut = FauxObjetLv("layer_top", nil) end return lv.haut end

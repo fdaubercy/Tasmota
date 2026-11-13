@@ -65,7 +65,16 @@ def test_regles():
             "objet hors catalogue : rendu tel quel")
 
 
-for t in (test_debits_identique, test_texte_special, test_ecart_detecte, test_regles):
+def test_palier2():
+    o = [{"id": 5, "page": 1, "type": "qrcode", "x": 0, "y": 0, "l": 80, "h": 80, "attributs": {"qr_text": "x"}},
+         {"id": 6, "page": 1, "type": "switch", "x": 0, "y": 90, "l": 60, "h": 30, "attributs": {"val": True}},
+         {"id": 7, "page": 1, "type": "dropdown", "x": 0, "y": 130, "l": 90, "h": 30, "attributs": {"options": "a" + chr(10) + "b"}}]
+    l = {x["id"]: x for x in map(json.loads, hp.genere(mini(o)).splitlines()) if "id" in x}
+    verifie(l[5].get("qr_size") == 80 and l[5]["w"] == 80, "QR code : qr_size = l (lvh_qrcode::set_qr_size)", l[5])
+    verifie(l[6]["val"] is True and l[7]["options"] == "a" + chr(10) + "b", "interrupteur et options recopies", (l[6], l[7]))
+
+
+for t in (test_debits_identique, test_texte_special, test_ecart_detecte, test_regles, test_palier2):
     t()
 print("ECHECS : " + ", ".join(ECHECS) if ECHECS else "BANC_ECRANS_HASPMOTA: OK")
 sys.exit(1 if ECHECS else 0)

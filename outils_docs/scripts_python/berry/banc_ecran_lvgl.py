@@ -28,7 +28,7 @@ MUTANTS = [
     ("police nil sans log", "        if (p == nil)    raise \"io_error\", \"chargement sans police\"    end", ""),
     ("cache ignore : tout reecrit chaque seconde", "    if (c.find(k) == v)    return    end\n", ""),
     ("position decalee", "    o.set_pos(d[3], d[4])\n", "    o.set_pos(d[3] + 1, d[4])\n"),
-    ("taille oubliee", "    o.set_size(d[5], d[6])\n", ""),
+    ("taille oubliee", "    else    o.set_size(d[5], d[6])    end", "    end"),
     ("texte de bouton sans label enfant", "        t = lv.label(ecranLvgl.objets[nom])\n", "        t = ecranLvgl.objets[nom]\n"),
     ("couleur_selon (sauf, si) ignoree", "var c = (v != nil && l[4] != nil) ? l[4].find(v) : nil", "var c = nil"),
     ("page courante jamais suivie", "    ecranLvgl.page = n\n", ""),

@@ -42,6 +42,8 @@ BRUT = "brut"
 COULEUR = re.compile(r"#[0-9A-Fa-f]{6}")
 POLICE_TTF = re.compile(r"A:sd/polices/(.+\.ttf)-(\d+)")
 POLICE_FIRMWARE = re.compile(r"(montserrat|seg7)-(\d+)")
+# Image d'un objet img : un PNG range par gestionFileFolder.be (le firmware ne decode que le PNG), ou le logo embarque
+IMAGE = re.compile(r"A:sd/images/PNG/[^/\:*?\"<>|]+\.png", re.I)
 DIRECTIVE = re.compile(r"%[-+ #0]*\d*(?:\.\d+)?[diouxXeEfgGsc]")
 
 
@@ -136,6 +138,16 @@ def _attributs(catalogue, type_, attrs, qui, msgs):
             msgs.append(f"{qui} : {k} doit être un entier")
         elif t == "texte" and not isinstance(v, str):
             msgs.append(f"{qui} : {k} doit être un texte")
+        elif t == "booleen" and not isinstance(v, bool):
+            msgs.append(f"{qui} : {k} doit être un booléen (true ou false)")
+        elif t == "liste" and not isinstance(v, list):
+            msgs.append(f"{qui} : {k} doit être une liste")
+        elif t == "lignes" and not (isinstance(v, str) and v.strip()):
+            msgs.append(f"{qui} : {k} : texte non vide attendu, une option par ligne")
+    if type_ == "img" and "src" in attrs and not (attrs["src"] == "tasmota_logo" or IMAGE.fullmatch(str(attrs["src"]))):
+        msgs.append(f"{qui} : src « {attrs['src']} » : image PNG rangée sous A:sd/images/PNG/ attendue (ou tasmota_logo)")
+    if type_ == "qrcode" and "qr_size" in attrs:
+        msgs.append(f"{qui} : qr_size : la taille du QR code est sa largeur l, posée par les générateurs")
 
 
 def _couleur(v, qui, quoi, msgs):
@@ -256,13 +268,15 @@ def valide(d, catalogue):
         t = o.get("type")
         if t not in catalogue["objets"]:
             msgs.append(f"{qui} : type « {t} » inconnu du catalogue")
-        elif catalogue["objets"][t]["palier"] != 1:
-            msgs.append(f"{qui} : type {t} de palier 2, hors de l'atelier")
+        elif not cat.dans_atelier(catalogue, t):
+            msgs.append(f"{qui} : type {t} de palier {catalogue['objets'][t]['palier']}, hors de l'atelier")
         else:
             _attributs(catalogue, t, o.get("attributs", {}), qui, msgs)
         x, y, l, h = (o.get(k) for k in ("x", "y", "l", "h"))
         if not all(_entier(v) for v in (x, y, l, h)) or x < 0 or y < 0 or l <= 0 or h <= 0 or x + l > L or y + h > H:
             msgs.append(f"{qui} : hors de l'écran {L} x {H} (x={x}, y={y}, l={l}, h={h})")
+        if t == "qrcode" and l != h:
+            msgs.append(f"{qui} : QR code carré attendu (l = h)")
         li = o.get("liaison")
         if li:
             if li.get("cle") not in cles:
