@@ -269,14 +269,14 @@ Produit : `etats(racine, env, *, get=None) -> {"a_reimprimer": bool, "a_regenere
   de `atelier_graphiques_televerse.url`) ; sonde `test_build_page_fichiers_chrome.py` VERT
 - [x] Lien « Étiquette QR à refaire » — preuve : commit 24f099d11, test_fichiers_berry_renommage.py VERT, sonde test_fichiers_berry_page_chrome.py VERT, test_assistant_persist_modification.py (2 contrôles étiquette OK ; seul KO « cartes_du_parc : champs », antérieur, champ lieu) ; dans le message de fin d'un renommage (Fichiers Berry) et d'une modification
   (assistant persist) ; leurs bancs VERT
-- [ ] Régénération au build (demande du 2026-11-12) : le pré-script (`build/pre_utilitaires_platformio.py`), avant
+- [x] Régénération au build — preuve : commit 135af711a, build/test_qrcode_build.py VERT, buildfs du P4 par la page Build SUCCESS (qrcode.json inchangé, déjà à jour) (demande du 2026-11-12) : le pré-script (`build/pre_utilitaires_platformio.py`), avant
   chaque `buildfs` (et upload série qui écrit le FS), recalcule le texte de `cartes/<env>.json` contre le persist et le
   `.h` du moment ; s'il diffère du `qrcode.json` du dossier de la carte, il le réécrit (même `fichier_carte`) et
   l'étiquette passe « à réimprimer » ; une ligne `QR code de <env> : régénéré` dans la sortie de pio. Rien si l'env n'a
   pas de `cartes/<env>.json` ; une erreur de lecture n'arrête jamais le build (ligne d'avertissement). Module neuf
   `build/qrcode_build.py` (+ `test_qrcode_build.py`, rouge d'abord : persist changé -> réécrit ; inchangé -> fichier
   intact, date comprise ; env sans réglage -> rien ; persist illisible -> build continue)
-- [ ] Commit
+- [x] Commit — preuve : commits 8c7d0409f, 616280eea, 5865bff17, 24f099d11, 135af711a
 
 ## A8 — QR code à l'écran des cartes (après l'atelier des écrans)
 Fichiers : modifier `outils_docs/schemas/catalogue_ecran.json` (objet `qrcode`), les générateurs
