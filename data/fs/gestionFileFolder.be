@@ -88,10 +88,13 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
             elif string.find(nameFile, ".css") > -1
                 path.mkdir("/sd/css")
                 filePath = "/sd/css/" + nameFile
-            # Images des ecrans HASPmota / LVGL (atelier des ecrans, 2026-11-12) : citees en "A:sd/images/<nom>"
+            # Images des ecrans HASPmota / LVGL : un dossier par format sous /sd/images (choix de l'utilisateur, 2026-11-13),
+            # citees en "A:sd/images/PNG/<nom>" ; le firmware ne decode que le PNG (LodePNG)
             elif string.endswith(nameFile, ".png", true) || string.endswith(nameFile, ".jpg", true) || string.endswith(nameFile, ".bmp", true)
+                var format = string.toupper(nameFile[-3 ..])
                 path.mkdir("/sd/images")
-                filePath = "/sd/images/" + nameFile
+                path.mkdir("/sd/images/" + format)
+                filePath = "/sd/images/" + format + "/" + nameFile
             end
 
             tasmota.yield()

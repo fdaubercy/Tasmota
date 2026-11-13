@@ -2062,9 +2062,11 @@ catalogue. Polices `.bin` de LVGL : pas encore importables.
 
 ### Images
 
-Une image `.png`, `.jpg` ou `.bmp` posée à la racine du FS est rangée au démarrage sous `/sd/images/`
-(`gestionFileFolder.be::listeEtRepartitLesFichiers`) ; un écran la cite en `A:sd/images/<nom>`. Le module est solidifié :
-la règle n'agit qu'après recompilation du firmware de la carte. L'objet image arrive au palier 2.
+Une image `.png`, `.jpg` ou `.bmp` posée à la racine du FS est rangée au démarrage dans un dossier par format :
+`/sd/images/PNG/`, `/sd/images/JPG/`, `/sd/images/BMP/` (`gestionFileFolder.be::listeEtRepartitLesFichiers`, casse de
+l'extension indifférente). Un écran la cite en `A:sd/images/PNG/<nom>`. Le firmware ne décode que le PNG (LodePNG) :
+`.jpg` et `.bmp` sont rangés mais pas affichables par un écran. Le module est solidifié : la règle n'agit qu'après
+recompilation du firmware de la carte. L'objet image arrive au palier 2.
 
 ### Importer un pages.jsonl écrit à la main
 

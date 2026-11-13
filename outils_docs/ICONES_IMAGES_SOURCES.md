@@ -64,8 +64,8 @@ la maquette de la cave les montre en chargeant la police MDI officielle (`@mdi/f
 | Cible | Format | Notes |
 |---|---|---|
 | HASPmota, icône simple | glyphe de police (§ 0) | rien sur le FS, couleur par `text_color`, change d'icône par le `text` |
-| HASPmota, icône hors firmware | PNG du FS, objet `img`, `"src"` | décodeur `USE_LVGL_PNG_DECODER` (+16 Ko) ; fichiers sous `/sd/images` (préférence de l'utilisateur, rangés par `gestionFileFolder.be::listeEtRepartitLesFichiers`) ; PNG blanc sur fond transparent, à la taille d'affichage, coloré par `image_recolor` + `image_recolor_opa` ; ou `raw` en base64 |
-| LVGL pur (Berry) | même PNG, `lv.image`, source `A:/sd/images/<nom>.png` | |
+| HASPmota, icône hors firmware | PNG du FS, objet `img`, `"src"` | décodeur `USE_LVGL_PNG_DECODER` (+16 Ko) ; fichiers sous `/sd/images/PNG` (préférence de l'utilisateur, rangés par `gestionFileFolder.be::listeEtRepartitLesFichiers`) ; PNG blanc sur fond transparent, à la taille d'affichage, coloré par `image_recolor` + `image_recolor_opa` ; ou `raw` en base64 |
+| LVGL pur (Berry) | même PNG, `lv.image`, source `A:/sd/images/PNG/<nom>.png` | |
 | Police d'icônes sur mesure | `lv_font_conv` comme `gen.sh` (sous-ensemble MDI) ; ou une `.ttf` du FS par `text_font` (`<fichier>.ttf-<taille>`, demande beaucoup de PSRAM) | |
 | Conversion SVG vers PNG ou tableau C | [LVGL Image Converter](https://lvgl.io/tools/imageconverter) (BMP, JPG, PNG, SVG vers tableau C ou binaire, LVGL 8 et 9), ou Inkscape en ligne de commande | |
 | Pages web des cartes (`data/sd`) | SVG en ligne dans le HTML | pas de requête de plus |

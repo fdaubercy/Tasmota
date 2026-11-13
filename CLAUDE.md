@@ -969,7 +969,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     (`display.ini` repris d'un env qui porte l'ecran, conflit de broches = refus) ; remarques epinglees et traitees par `claude -p` en
     LECTURE SEULE (outils de lecture, hooks coupes, jamais bypassPermissions ; depuis ce PC seulement) ; import d'une police `.ttf`
     (licence confirmee, Latin-1 complet, licence dans `outils_docs/atelier_ecrans/polices/`) ; images `.png/.jpg/.bmp` rangees sous
-    `/sd/images/` par `gestionFileFolder.be::listeEtRepartitLesFichiers`. Capture `lv.screenshot()` pas encore essayee sur carte.
+    `/sd/images/PNG|JPG|BMP/` par `gestionFileFolder.be::listeEtRepartitLesFichiers`. Capture `lv.screenshot()` pas encore essayee sur carte.
     Onglet « display.ini » (A15, 2026-11-13) : `_display.py` (analyse comme `uDisplay.cpp::uDisplay::uDisplay`, insertion par rang ;
     reference `outils_docs/schemas/display_ini_parametres.json`, banc de concordance rouge si une synchro ajoute une section),
     `_display_fichiers.py` (cartes et `tasmota/displaydesc` en lecture ; bibliotheque `outils_docs/atelier_ecrans/display/<nom>.ini`

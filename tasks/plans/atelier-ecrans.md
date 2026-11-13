@@ -326,7 +326,8 @@ Conception : § 7 de la même spec.
   options nettoyées, QR code carré, qr_size dans le pages.jsonl généré, rien d'écrit), relecture `relecteur-pages-web` :
   prête, sa suggestion « liste des images indisponible » appliquée ; texte refusé sur une roue (`lvh_roller::set_text`
   lève) (2026-11-13)
-- [ ] Rangement des images par format (décision de l'utilisateur du 2026-11-13, au lieu du `.png` seul) : `.png`, `.jpg`,
+- [x] Rangement des images par format — preuve : banc_repartition_fichiers.py VERT (4 mutants images rouges), relecteur-berry prêt
+  Détail : décision de l'utilisateur du 2026-11-13, au lieu du `.png` seul : `.png`, `.jpg`,
   `.bmp` vers `/sd/images/PNG|JPG|BMP/` (`gestionFileFolder.be`, accord donné) ; scripts Berry, pages.jsonl et pages
   web des cartes (`data/sd/html|css|js`, routes Berry qui servent des fichiers : `qrcodePage`, `pagesGraphiques`,
   `cuvePageFonctions`, `equilibragePage`) recherchés le 2026-11-13 : aucun ne charge d'image du FS, aucune image dans `data/` ; `banc_repartition_fichiers.py` VERT avec mutants ; README, `CLAUDE.md`,

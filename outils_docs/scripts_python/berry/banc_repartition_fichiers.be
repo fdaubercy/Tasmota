@@ -104,11 +104,13 @@ var restes = 0
 for c: FS["fichiers"].keys()    if c[-4 ..] == ".tmp"    restes += 1    end    end
 verifie(restes == 0 && erreurs() == 0, "aucun fichier temporaire ni erreur")
 
-# Images des ecrans (2026-11-12) : .png, .jpg, .bmp (casse indifferente) vers /sd/images ; un nom qui contient seulement .png reste
+# Images des ecrans : .png, .jpg, .bmp (casse indifferente) vers /sd/images/PNG, JPG, BMP (un dossier par format, choix du
+# 2026-11-13) ; un nom qui contient seulement .png reste a la racine
 remet({"/fond.png": bytes("89504e47"), "/icone.JPG": bytes("ffd8"), "/vue.bmp": bytes("424d"), "/note.png.txt": bytes("01")}, {"/sd": true, "/.extensions": true})
 lance()
-verifie(FS["fichiers"].find("/sd/images/fond.png") == bytes("89504e47") && existe("/sd/images/icone.JPG") && existe("/sd/images/vue.bmp")
-        && !existe("/fond.png") && existe("/note.png.txt") && !existe("/sd/images/note.png.txt"), "images : deplacees dans /sd/images, octets identiques")
+verifie(FS["fichiers"].find("/sd/images/PNG/fond.png") == bytes("89504e47") && existe("/sd/images/JPG/icone.JPG") && existe("/sd/images/BMP/vue.bmp")
+        && FS["dossiers"].contains("/sd/images/PNG") && !existe("/fond.png") && existe("/note.png.txt")
+        && !existe("/sd/images/PNG/note.png.txt"), "images : deplacees dans /sd/images/<FORMAT>, octets identiques")
 
 # Dossier des extensions absent : le .tapp est deplace des ce demarrage
 remet({"/x.tapp": bytes("0102")}, {"/sd": true})
