@@ -322,8 +322,9 @@ Après A14 (l'import d'un PNG aboutit dans l'objet `img`). Si A18 est faite avan
   d'affichage, blanc sur fond transparent, coloré par `image_recolor` + `image_recolor_opa` ; conversion SVG -> PNG — preuve : 7 liens `rel=noopener noreferrer` et licences dans le panneau (sonde), parcours PNG expliqué ; les glyphes Font Awesome restent non dessinés
 - [x] Import d'un PNG déposé par l'utilisateur (parcours de l'import de polices A9 : licence confirmée, taille contrôlée),
   rangé sous `/sd/images`, choisi dans l'objet `img` (A14) — preuve : `atelier_ecrans_images.py`, `test_atelier_ecrans_images.py` VERT (refus, écritures exactes), `test_atelier_ecrans_web.py::test_images_import` VERT (400, 403, 409, liste `GET /images`), sonde Chrome `sonde_import_png` VERTE (fichier refusé, import dans la copie du dépôt)
-- [x] Banc, sonde Chrome, relecture `relecteur-pages-web` — preuve : relectures des deux parties faites (panneau : aucun bloquant ; import PNG : voir le commit)
-- [ ] Commit de l'import PNG (A15 terminée une fois fait)
+- [x] Banc, sonde Chrome — preuve : `test_atelier_ecrans_images.py`, `test_atelier_ecrans_web.py`, sonde Chrome VERTS
+- [ ] Relecture `relecteur-pages-web` de l'import PNG : coupée par la limite d'usage ; faite à la main sur les noms réservés Windows et l'origine multiligne, reste l'échappement côté page, la course entre deux analyses et la borne de taille (à relancer après le 15 novembre). Relecture du panneau Icônes : faite, aucun bloquant
+- [x] Commit — preuve : `bfc7fd7b2` (panneau Icônes), `7ea9cd7dd` (import PNG)
 
 ## A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13)
 Les mêmes informations que la page web `/qrcode` (`data/fs/qrcodePage.be`) : le QR code du texte réglé dans
