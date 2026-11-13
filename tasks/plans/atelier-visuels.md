@@ -73,9 +73,9 @@ Fichiers : `outils_docs/visuels_accueil/maquettes_visuels.html` (`?m=A|B`), `mod
 `calques.png`, `README.md`, sur le modèle de `outils_docs/etiquettes_qr/`.
 - [x] Deux dispositions de la page 7990 (A : canevas à gauche, panneaux import/fond/élément à droite ; B : canevas
   pleine largeur, panneaux en bandeau repliable), clair et sombre, captures relues — preuve : outils_docs/visuels_accueil/maquettes_visuels.html (?m=A|B), modele-A.png et modele-B.png relus (la planche `calques.png` reste à faire)
-- [ ] Une planche `calques.png` : voyant (rond, carré, icône MDI), valeur (texte sur cartouche), liaison active et muette
+- [x] Une planche `calques.png` : voyant (rond, carré, icône MDI), valeur (texte sur cartouche), liaison active et muette — preuve : outils_docs/visuels_accueil/calques.png relue (voyant rond, carré, icône MDI, clignotant ; valeur en cartouche, contour, inconnue ; liaison active, alerte, muette, coupée ; puis le tout posé sur le dessin de la maison), source planche_calques.html
   (trait pointillé animé, trait gris) sur un fond d'exemple dessiné
-- [ ] Choix de l'utilisateur noté dans `README.md` et ici (liens cliquables donnés avant la question)
+- [x] Choix de l'utilisateur noté dans `README.md` et ici (liens cliquables donnés avant la question) — preuve : disposition A choisie par l'utilisateur le 2026-11-13 (trois colonnes), modele-A.png ; le SVG d'exemple de la maquette n'est pas le bon rendu (voir spec § 2.3, rendu-cible-page-reelle.png)
 
 ## A2 — Description `visuel.json` : validateur et sources
 Fichiers : créer `outils_pc/atelier_visuels_description.py`, `outils_pc/test_atelier_visuels_description.py`,
@@ -88,7 +88,7 @@ le persist : blocs métier et `configGlobal`), `esclaves` (`[{"id", "nom"}]` de 
 (`[{"mac", "nom"}]` de `discovery.json` du dossier de la carte), `periodeReleve`, `telePeriod` ;
 `defauts_seuils(sources) -> dict` (spec § 6.2 : ModBus 3 × periodeReleve ou 30, udp 2 × telePeriod).
 - [x] Test écrit : chaque cas — preuve : test_atelier_visuels_description.py + schemas/cas_visuel.json (17 cas, exemple_visuel.json) de `cas_visuel.json` rend les erreurs attendues (`version` autre que 1, type inconnu,
-  coordonnées hors du fond, `source.n` absent, `chemin` vide, liaison sans `x2`, `seuil_s` négatif, poids au-dessus du
+  coordonnées hors du fond, `source.n` absent, `chemin` vide, liaison sans `x2`, `seuil_s` négatif sur une liaison ModBus, poids au-dessus du
   seuil selon la puce) ; `sources()` sur la copie du persist de la cuve rend ses relais nommés et ses esclaves
 - [x] Test lancé : rouge (module absent) — preuve : 1er lancement rouge (FileNotFoundError cas_visuel.json), puis cas générés
 - [x] `atelier_visuels_description.py` écrit ; test vert — preuve : sortie du banc : VERT, code 0
@@ -179,6 +179,7 @@ les zones vivent dans le réglage de l'outil, pas sur la carte.
 - [ ] Tests lancés : rouges
 - [ ] `atelier_visuels_fond.py`, `atelier_visuels_web.py` (squelette de `tapp_web.py`), page et JS écrits selon la
   maquette choisie en A1 ; tests verts
+- [x] Editeur de formes (module `atelier_visuels_page_formes*.py`) : rectangle, polygone, 10 gabarits, motifs briques/tuiles/lames, couleur mediane, aimantation 8 px, annuler/retablir 100 pas, zones effacer/garder, `AV.svg()` propre — preuve : test_atelier_visuels_page_formes.py VERT (31 verifications node, SVG sans perte par nettoie_svg) ; liaison DOM non essayee (sonde Chrome a faire)
 - [ ] Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`),
   enregistrée dans le pré-script ; `test_cible_atelier_visuels.py` vert ; `garde_build.py` et son banc verts ;
   tuile de l'annuaire et tâche VS Code ajoutées, annuaire relancé, tuile vue
@@ -204,6 +205,16 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   persist en contient une ; `/etat` sur une IP qui ne répond pas rend `inconnu` en moins de 3,5 s ; `/valide` rend les
   erreurs du validateur
 - [ ] Tests lancés : rouges ; modules écrits ; tests verts
+- [ ] Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
+  Iconify et noter ses limites ; routes `GET /icones/recherche?q=` et `GET /icones/svg?jeu=&nom=` (hôte fixe, jeu et nom
+  validés par expression régulière, délai court, hors ligne = message clair) ; licence de la collection lue et affichée,
+  permissives d'office, CC BY avec confirmation, autres masquées ; SVG nettoyé par `nettoie_svg` ; cache hors dépôt ; ligne
+  ajoutée à `LICENCES.md` à la conservation ; test avec un faux serveur (SVG hostile nettoyé, jeu inconnu refusé, hôte
+  non permis refusé, licence non permissive masquée, hors ligne) ; essai réel d'une recherche « camera »
+- [ ] Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`)
+  puis les collections de `ICONES_IMAGES_SOURCES.md` ; conversion en tracé `path` (jeu des tracés MDI rangé dans
+  `outils_docs/visuels_accueil/icones/` avec sa licence) ; taille réglable ; `icone_on` / `icone_off` / `icone_inconnu` et
+  couleur par état ; import d'un `.svg` nettoyé ; test : l'icône change avec l'état simulé (caméra ON/OFF) dans l'aperçu
 - [ ] Sonde Chrome étendue : un élément de chaque type posé et déplacé, source choisie, aperçu simulé bascule ON/OFF
   (classe `on` lue dans le SVG), liaison active puis muette
 - [ ] `relecteur-pages-web` lancé, remarques traitées
@@ -253,6 +264,30 @@ Page : bouton « Écrire dans le dépôt » (diff montré, confirmation), puis l
   ajustés si besoin dans `atelier_visuels_description.py`
 - [ ] `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
 - [ ] Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
+
+## A9 — Assistant IA facultatif (spec § 2.10)
+Fichiers : créer `outils_pc/atelier_visuels_ia.py` (fournisseurs, quota), `atelier_visuels_ia_config.py` (clés hors dépôt),
+`atelier_visuels_page_ia.py` (panneau), `test_atelier_visuels_ia.py` ; modifier `atelier_visuels_web.py`.
+Interfaces produites : `fournisseurs() -> list[{"id","nom","externe": bool,"gratuit": str,"cle_requise": bool}]` ;
+`demande(env, fournisseur, consigne, empreinte_photo, confirme: bool) -> {"svg"|"erreur", "quota"}` (refuse si `confirme`
+est faux pour un fournisseur externe ; le SVG rendu passe par `atelier_visuels_fond.nettoie_svg`) ; `quota(fournisseur) ->
+{"envois_jour", "plafond", "etat": "ok"|"orange"|"rouge", "reprise": str | None}` ; routes `GET /ia/fournisseurs`,
+`POST /ia/demande`, `POST /ia/cle` (la clé n'est jamais renvoyée).
+- [ ] Lire la documentation de chaque offre gratuite visée (limites, données utilisées pour l'entraînement) et noter le
+  résultat dans le README ; choisir avec l'utilisateur les fournisseurs retenus
+- [ ] Test écrit : `demande` refuse sans confirmation pour un fournisseur externe ; clé jamais présente dans une réponse HTTP,
+  un journal ni le dépôt ; réponse 429 simulée = quota « rouge » et aucun réessai ; SVG hostile rendu par un faux
+  fournisseur = nettoyé ; plafond saisi à 80 % = « orange »
+- [ ] Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
+  contrôle des fichiers changés) et en importer les fonctions communes au lieu de les recopier ; remarques épinglées sur une
+  zone de la photo (états ouverte, proposée, appliquée, refusée) dans `outils_docs/visuels_accueil/cartes/<env>/remarques.json`
+- [ ] Fournisseur *Claude Code local* (`claude -p`, lecture seule, jamais bypassPermissions, hooks coupés) puis Ollama,
+  puis une API externe au choix de l'utilisateur ; chacun avec un faux fournisseur dans le banc
+- [ ] Panneau de la page : consigne, choix du procédé, avertissement avant envoi, compteur de quota, résultat ouvert dans
+  l'éditeur ; sonde Chrome avec faux fournisseur
+- [ ] Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
+  (`rendu-cible-page-reelle.png`) ; `relecteur-pages-web`
+- [ ] Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
 
 ## Améliorations restantes
 - [ ] [projet] Commander un relais en cliquant son voyant (spec § 3, non-objectif)
