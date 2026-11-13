@@ -4,7 +4,7 @@ titre: Atelier des écrans (page 7960) : une description d'écran, deux interfac
 objectif: Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A18 ; A17 : bancs, description, page faits)
+maj: 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A19 ; A18 catalogue d'icônes ajoutée ; A17 : bancs, description, page faits)
 ---
 # Atelier des écrans
 
@@ -158,7 +158,7 @@ refus, `GET /police?nom=` (`.ttf` du catalogue, chemin jamais pris dans la requ�
   les tailles possibles), fenêtre basse des fichiers générés avec différences colorées
 - [x] Capture : `atelier_ecrans_capture.capture(ip, get) -> bytes` (`Br lv.screenshot()`, téléchargement, effacement du
   fichier sur la carte) ; banc avec carte simulée — preuve : `atelier_ecrans_capture.py`, route POST /capture ; sonde Chrome
-  « capture affichée » (vrai BMP 4 x 2 rendu par un faux `get`) VERT. L'essai réel sur le 7B est passé dans A18
+  « capture affichée » (vrai BMP 4 x 2 rendu par un faux `get`) VERT. L'essai réel sur le 7B est passé dans A19
 - [x] Sonde Chrome hermétique — preuve : test_atelier_ecrans_page_chrome.py VERT, test_cible_atelier_ecrans.py et test_atelier_ecrans_web.py VERTS le 2026-11-12, Chrome arrêté (0 sonde_*) ; (thème clair et sombre, glisser un bouton, zoom 100 %, aucune erreur console, Chrome
   arrêté à la fin) VERT ; tuile de l'annuaire, tâche VS Code, cible détachée (`test_cible_atelier_ecrans.py` VERT,
   `test_garde_build.py` VERT)
@@ -257,7 +257,7 @@ Conception : § 6 de la même spec. Bibliothèque personnelle `outils_docs/ateli
 - [x] « Appliquer à la carte » par le chemin du changement d'écran (diff, broches du persist, lien page Build) — preuve :
   `atelier_ecrans_page_display.py::appliqueACarte` ; sonde : proposition puis display.ini de la carte = fichier de la
   bibliothèque (2026-11-13)
-- Essai sur la carte : déplacé dans A18 (demande du 2026-11-13)
+- Essai sur la carte : déplacé dans A19 (demande du 2026-11-13)
 - [x] Mode d'emploi (`outils_docs/README.md`), carte des documents du `CLAUDE.md` ; commit — preuve : commit 81450c2d9
   (2026-11-13)
 
@@ -310,7 +310,8 @@ Conception : § 7 de la même spec.
 
 ## A15 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran »)
 Sources : `outils_docs/ICONES_IMAGES_SOURCES.md` (commit 495e0776f : ordre de recherche, licences, formats selon la cible).
-Après A14 (l'import d'un PNG aboutit dans l'objet `img`).
+Après A14 (l'import d'un PNG aboutit dans l'objet `img`). Si A18 est faite avant : la grille lit son catalogue
+`outils_docs/schemas/icones.json` au lieu de relire `gen.sh`.
 - [ ] Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
   `lib/libesp32_lvgl/LVGL_assets/gen.sh`, `0xf0335=>0xE335` = icône MDI F0335 servie en U+E335 dans montserrat-10/14/20/28
   et icons-xx), recherche par nom ; clic -> label avec le glyphe en montserrat-28 (ou texte de l'objet choisi)
@@ -334,7 +335,7 @@ seulement par un PNG sous `/sd/images/PNG/` posé en `img` (le data URI de `qrco
   inscrite, nom d'hôte, accord des deux IP ; lues au démarrage, pas à chaque seconde
 - [ ] Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave :
   accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire son `pages.jsonl`
-- [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A18)
+- [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A19)
 
 ## A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude)
 Choix de Claude : construite à la GÉNÉRATION (pas sur la carte : HASPmota n'expose pas les titres des pages, et les pages
@@ -363,9 +364,26 @@ importé garde ses boutons tels quels.
   principale sous 500 lignes) ; aucun Chrome de sonde restant (2026-11-13)
 - [ ] Écran des débits passé à la barre construite (ses boutons de page remplacés), pages.jsonl regénéré identique au
   rendu ; écran de la cave : proposé à la session de `tasks/plans/ecran-cave-vues-commandes.md`, jamais sans son accord
-- [ ] Essai sur la carte (avec A18) ; commit
+- [ ] Essai sur la carte (avec A19) ; commit
 
-## A18 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur)
+## A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13)
+Une page qui liste et présente toutes les icônes, logos et images retenus par les recherches du plan (annuaire
+`outils_docs/ICONES_IMAGES_SOURCES.md`, glyphes du firmware, PNG du dépôt). Choix de Claude, à confirmer : outil à part
+« Catalogue d'icônes » (port 7990, tuile de l'annuaire, groupe Maintenance, lecture seule), comme les autres pages
+d'outils ; la police MDI du dépôt (`lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`) dessine
+les glyphes, sans CDN. A15 (panneau « Icônes » de l'atelier) reprend son catalogue au lieu d'en refaire un.
+- [ ] Catalogue généré `outils_docs/schemas/icones.json` : glyphes MDI de `gen.sh` (code `\uE…`, nom lu dans la police
+  MDI, polices et tailles qui le portent), symboles LVGL des polices Montserrat, PNG du dépôt et de `/sd/images` (taille,
+  licence), sources de l'annuaire (site, licence, usage) ; `--verifier` rouge si `gen.sh` change ; banc avec mutants
+- [ ] Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
+  firmware repérées dans les écrans (carrés vides)
+- [ ] Page : grille avec recherche par nom, filtre par source (firmware, LVGL, PNG, sites), fiche d'une icône (code à
+  copier pour `text`, taille, licence, usages, lien vers le site) ; mode sombre ; sonde Chrome ; relecture
+  `relecteur-pages-web`
+- [ ] Tuile de l'annuaire, tâche VS Code, cible Custom détachée ; mode d'emploi (`outils_docs/README.md`), carte des
+  documents du `CLAUDE.md`, renvoi dans `ICONES_IMAGES_SOURCES.md` ; commit
+
+## A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur)
 Regroupe ce qui reste à faire sur la carte d'affichage `tasmota32s3-bureau-ecran-debits-pac` (192.168.0.51) ou par
 l'utilisateur (demande du 2026-11-12). Interface de la carte : HASPmota (`custom_interface_ecran` du cenv), donc
 `pages.jsonl`. Plan d'origine : [tasks/plans/debits-deux-cartes.md](debits-deux-cartes.md), action A9.

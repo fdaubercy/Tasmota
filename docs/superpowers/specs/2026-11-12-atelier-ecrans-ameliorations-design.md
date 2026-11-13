@@ -108,7 +108,7 @@ fork qui ajoute un paramètre, le banc devient rouge.
   insère la ligne à la bonne place (règles d'ordre) avec ses valeurs par défaut.
 - Enregistrer dans la bibliothèque : diff, écriture atomique ; « Appliquer à la carte » : § 6.1.
 - Notes de terrain : ajout d'une observation datée au `.notes.md`.
-- Essai sur la carte (choix de Claude, à confirmer sur la carte, plan A18) : lire le `/display.ini` de la carte, envoyer
+- Essai sur la carte (choix de Claude, à confirmer sur la carte, plan A19) : lire le `/display.ini` de la carte, envoyer
   le nouveau (`/ufsu`), `DisplayReinit` (ou `Restart 1` si LVGL ne le supporte pas), puis « Garder » (écrit dans le dépôt)
   ou « Revenir » (renvoie l'ancien). Commandes à chaud aussi proposées : `DisplayDimmer`, `DisplayRotate`, `DisplayInvert`.
 
