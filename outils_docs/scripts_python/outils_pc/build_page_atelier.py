@@ -1,5 +1,6 @@
 """Arrivee sur la page Build par le bouton « Televerser » de l'Atelier des graphiques (A7, plan atelier-destinations,
-spec 2026-11-04-atelier-destinations-televersement-design.md §5 et §7.1, §7.7, §7.8).
+spec 2026-11-04-atelier-destinations-televersement-design.md §5 et §7.1, §7.7, §7.8), ou de la page des etiquettes QR
+(`depuis=qrcode`, plan etiquettes-qrcode A7) : meme deroule, textes de `AT_ORIGINES`.
 
 Lien : `/?env=<env>&depuis=atelier&fichiers=<chemins de l'image, separes par des virgules>&redemarrer=<0|1>`. Les
 parametres ne font que preremplir : la page choisit la carte dans l'onglet « Fichiers », affiche le bandeau, lance
@@ -24,15 +25,22 @@ Insere a la fin du JS de build_page_fichiers.py ; arriveeAtelier est appelee par
 JS = r"""
 // ---------- arrivee depuis l'Atelier des graphiques (A7, build_page_atelier.py) ----------
 var AT = null;          // {env, liste, redemarrer, etat: attend | prepa | cocher, essais, minuterie, n0}
-var AT_BANDEAU = "Fichiers sélectionnés automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez sur « Envoyer ».";
-var AT_BANDEAU_SEUL = "Image du FS reconstruite à la demande de l'Atelier des graphiques : cochez les fichiers à envoyer, puis cliquez sur « Envoyer ».";
+// Pages qui envoient ici (parametre depuis=) : meme deroule, seuls les textes changent
+var AT_ORIGINES = {
+  atelier: {nom: "l'Atelier des graphiques",
+            bandeau: "Fichiers sélectionnés automatiquement par l'Atelier des graphiques, pour téléverser un graphique nouveau ou modifié. Vérifiez puis cliquez sur « Envoyer ».",
+            seul: "Image du FS reconstruite à la demande de l'Atelier des graphiques : cochez les fichiers à envoyer, puis cliquez sur « Envoyer »."},
+  qrcode: {nom: "la page des étiquettes QR",
+           bandeau: "Réglage du QR code sélectionné automatiquement par la page des étiquettes QR, pour mettre à jour la page /qrcode de la carte. Vérifiez puis cliquez sur « Envoyer ».",
+           seul: "Image du FS reconstruite à la demande de la page des étiquettes QR : cochez les fichiers à envoyer, puis cliquez sur « Envoyer »."}
+};
 
 function atNote(t) { $("f-atelier").hidden = false; $("f-atelier-notes").appendChild(h("li", {texte: t})); }
 function atAbandon(t) { $("f-atelier-texte").textContent = ""; atNote(t); AT = null; }   // le bandeau de selection ne vaut plus
 // Outil redemarre sous la page : notre buildfs n'enverra jamais son `fin`, ni « Préparer la liste » le sien
 function atelierRedemarrage() {
   F.prepa = false;
-  if (AT) atAbandon("L'outil a redémarré : sélection automatique abandonnée, relancez depuis l'atelier.");
+  if (AT) atAbandon("L'outil a redémarré : sélection automatique abandonnée, relancez depuis " + AT.nom + ".");
   majBoutonsFichiers();
 }
 // Chemin de l'image (build_fichiers.liste) : relatif, segments non vides, ni . ni .., ni \ ni lecteur ni controle
@@ -43,11 +51,12 @@ function atCheminSur(c) {
 // Appelee par demarre() une fois /envs et /execution lus : le debut du buildfs n'est donc pas pris pour un rejeu.
 function arriveeAtelier() {
   var p = new URLSearchParams(location.search);
-  if (p.get("depuis") !== "atelier") return;
+  var o = Object.prototype.hasOwnProperty.call(AT_ORIGINES, p.get("depuis")) ? AT_ORIGINES[p.get("depuis")] : null;
+  if (!o) return;
   var env = p.get("env") || "", e = parNom[env];
   montreOnglet("fichiers");
   if (!e || e.famille !== "cartes" || !e.ota_possible)
-    return atNote("Lien de l'Atelier des graphiques ignoré : « " + env + " » n'est pas une carte envoyable par le réseau. Rien n'est lancé.");
+    return atNote("Lien de " + o.nom + " ignoré : « " + env + " » n'est pas une carte envoyable par le réseau. Rien n'est lancé.");
   var brut = p.get("fichiers") || "", liste = [], refus = [];
   if (brut.length > 1024) { atNote("Liste de fichiers trop longue (plus de 1 Ko) : ignorée."); brut = ""; }
   brut.split(",").forEach(function (c) {
@@ -60,9 +69,9 @@ function arriveeAtelier() {
     atNote("Paramètre redemarrer ignoré (" + (r === null ? "absent" : "« " + r + " »") + ", attendu 0 ou 1) : « Redémarrer » non coché.");
   choisitCarte(env);
   if (!liste.length && p.get("fichiers"))            // des chemins donnes (trop longs ou tous refuses) : rien n'est lance
-    return atNote("Lien de l'Atelier des graphiques : aucun fichier valide à sélectionner, rien n'est lancé.");
-  AT = {env: env, liste: liste, redemarrer: r === "1", etat: "attend", essais: 0, minuterie: null};
-  $("f-atelier-texte").textContent = liste.length ? AT_BANDEAU : AT_BANDEAU_SEUL;     // liste vide : construire seulement (A12)
+    return atNote("Lien de " + o.nom + " : aucun fichier valide à sélectionner, rien n'est lancé.");
+  AT = {env: env, liste: liste, redemarrer: r === "1", etat: "attend", essais: 0, minuterie: null, nom: o.nom};
+  $("f-atelier-texte").textContent = liste.length ? o.bandeau : o.seul;     // liste vide : construire seulement (A12)
   $("f-atelier").hidden = false;
   if (enCours) atNote("Un lancement est en cours : la construction du FS de " + env + " partira à sa fin.");
   else atLance();

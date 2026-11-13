@@ -234,6 +234,8 @@ BANDEAU = ("Fichiers sélectionnés automatiquement par l'Atelier des graphiques
            "modifié. Vérifiez puis cliquez sur « Envoyer ».")
 BANDEAU_SEUL = ("Image du FS reconstruite à la demande de l'Atelier des graphiques : cochez les fichiers à envoyer, "
                 "puis cliquez sur « Envoyer ».")
+BANDEAU_QR = ("Réglage du QR code sélectionné automatiquement par la page des étiquettes QR, pour mettre à jour la page "
+              "/qrcode de la carte. Vérifiez puis cliquez sur « Envoyer ».")
 ENROBE = """(() => { window.__corps = []; const cfg = CFG, vrai = window.fetch.bind(window);
   window.fetch = async (url, o) => { o = o || {};
     if (String(url) === "/lancer") {
@@ -284,8 +286,8 @@ def etat_at(cdp):
     return cdp.js(ETAT_AT)
 
 
-def lien(fichiers, redemarrer="1", env=A):
-    return f"env={quote(env, safe='')}&depuis=atelier&fichiers={quote(fichiers, safe='')}&redemarrer={quote(redemarrer, safe='')}"
+def lien(fichiers, redemarrer="1", env=A, depuis="atelier"):
+    return f"env={quote(env, safe='')}&depuis={depuis}&fichiers={quote(fichiers, safe='')}&redemarrer={quote(redemarrer, safe='')}"
 
 
 def envois(e):
@@ -336,6 +338,18 @@ def sonde_atelier(m):
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], envois(e), e["texte"]), ([], False, [], BANDEAU_SEUL),
               "liste vide : image prete -> rien coche, aucun envoi, bandeau garde")
+    # depuis=qrcode (etiquettes QR, A7) : meme deroule, bandeau propre ; une origine inconnue ne lance rien
+    e = arrive(m, lien("autoexec.be", redemarrer="0", depuis="qrcode"))
+    s.verifie(([c["corps"] for c in e["corps"]], e["carte"], e["texte"]), ([ATTENDU_LANCER], True, BANDEAU_QR),
+              "qrcode : carte choisie, un buildfs lance, bandeau des etiquettes QR")
+    s.injecte(cdp, BUILDFS)
+    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], e["restart"], envois(e)), (["autoexec.be"], False, []),
+              "qrcode : image prete -> fichier coche, Redemarrer non coche, aucun envoi")
+    for depuis in ("constructor", "inconnu"):
+        e = arrive(m, lien("autoexec.be", depuis=depuis))
+        s.verifie((e["corps"], e["texte"]), ([], ""), f"origine {depuis!r} inconnue : rien de lance, pas de bandeau")
 
     # build deja en cours : attente de sa fin (flux), puis un seul buildfs ; chemin refuse signale, Redemarrer non coche
     e = arrive(m, lien("autoexec.be,../z", redemarrer="0"), execution=[{"en_cours": True, "numero": 0, "pause": None}])

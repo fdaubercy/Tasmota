@@ -164,6 +164,12 @@ def sonde_impression(cdp, url, banc, capture):
     s.attend(cdp, "document.getElementById('impression-messages').textContent.indexOf('annulée') >= 0", 10)
     s.verifie(notes(banc), avant, "Annuler la note : impression retiree")
     s.verifie(s.attend(cdp, "!(%s)" % badge, 15), True, "suivi (A7) : note annulee, plus de badge « à réimprimer »")
+    lien = "(document.getElementById('televerser') || {}).href || null"
+    cdp.js("ETAT.etatCarte = {env: %s, carte: 'a_jour'}; majPastilles();" % json.dumps(CUVE))
+    s.verifie(cdp.js(lien), None, "Televerser (A7) : carte a jour, pas de lien")
+    cdp.js("ETAT.etatCarte = {env: %s, carte: 'a_mettre_a_jour'}; majPastilles();" % json.dumps(CUVE))
+    s.verifie(cdp.js(lien), "http://127.0.0.1:%s/?env=%s&depuis=qrcode&fichiers=qrcode.json&redemarrer=1"
+              % (7700, CUVE), "Televerser (A7) : carte a mettre a jour, lien vers la page Build (qrcode.json, redemarrage)")
 
     cdp.js("""(() => { const c = [...document.querySelectorAll('#liste-cartes input[type=checkbox]')].slice(0, 12);
       c.forEach(x => { x.checked = true; x.dispatchEvent(new Event('change')); });

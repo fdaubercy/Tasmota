@@ -64,7 +64,17 @@ function majPastilles() {
   badgesSuivi(p, c.nom);
   const ec = ETAT.etatCarte && ETAT.etatCarte.env === c.nom && CARTE[ETAT.etatCarte.carte];
   if (ec) p.appendChild(el('span', {class: 'pastille ' + ec[0]}, ec[1]));
+  if (ec && ETAT.etatCarte.carte === 'a_mettre_a_jour')
+    p.appendChild(el('a', {class: 'pastille or', id: 'televerser', href: urlBuild(c.nom), target: '_blank', rel: 'noopener',
+                           title: 'Page Build : image du FS reconstruite, qrcode.json coché, envoi par « Envoyer »'}, 'Téléverser →'));
   if (sale()) p.appendChild(el('span', {class: 'pastille or'}, 'modifications non écrites'));
+}
+
+// Page Build (onglet Fichiers, build_page_atelier.py) : qrcode.json arrive a la racine du FS de la carte, il n'est range
+// dans /json/ (lu par qrcodePage) qu'au demarrage, d'ou redemarrer=1.
+function urlBuild(env) {
+  return location.protocol + '//' + location.hostname + ':7700/?' +
+    new URLSearchParams({env: env, depuis: 'qrcode', fichiers: 'qrcode.json', redemarrer: '1'});
 }
 
 function badgesSuivi(parent, env) {
