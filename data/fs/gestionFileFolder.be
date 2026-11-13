@@ -91,10 +91,10 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
             # Images des ecrans HASPmota / LVGL : un dossier par format sous /sd/images (choix de l'utilisateur, 2026-11-13),
             # citees en "A:sd/images/PNG/<nom>" ; le firmware ne decode que le PNG (LodePNG)
             elif string.endswith(nameFile, ".png", true) || string.endswith(nameFile, ".jpg", true) || string.endswith(nameFile, ".bmp", true)
-                var format = string.toupper(nameFile[-3 ..])
+                var extension = string.toupper(nameFile[-3 ..])   # pas `format` : builtin, refuse par la solidification stricte
                 path.mkdir("/sd/images")
-                path.mkdir("/sd/images/" + format)
-                filePath = "/sd/images/" + format + "/" + nameFile
+                path.mkdir("/sd/images/" + extension)
+                filePath = "/sd/images/" + extension + "/" + nameFile
             end
 
             tasmota.yield()

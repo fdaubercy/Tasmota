@@ -24,8 +24,8 @@ MUTANTS = [
     ("deplacement retarde d'un demarrage", 'if !path.exists("/.extensions") && !path.mkdir("/.extensions")',
      'if !path.exists("/.extensions") path.mkdir("/.extensions") return elif false'),
     ("image : nom qui contient .png", 'string.endswith(nameFile, ".png", true)', 'string.find(nameFile, ".png") > -1'),
-    ("images non rangees", 'filePath = "/sd/images/" + format + "/" + nameFile', 'filePath = ""'),
-    ("images sans dossier par format", 'filePath = "/sd/images/" + format + "/" + nameFile', 'filePath = "/sd/images/" + nameFile'),
+    ("images non rangees", 'filePath = "/sd/images/" + extension + "/" + nameFile', 'filePath = ""'),
+    ("images sans dossier par format", 'filePath = "/sd/images/" + extension + "/" + nameFile', 'filePath = "/sd/images/" + nameFile'),
     ("dossier du format en minuscules", 'string.toupper(nameFile[-3 ..])', 'nameFile[-3 ..]'),
     ("homonyme remplace sans le dire", '"REPARTITION_FICHIERS: %s remplace', '"REPARTITION_FICHIERS: %s ecrit'),
 ]
