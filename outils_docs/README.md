@@ -2139,6 +2139,11 @@ recherche par nom. Un clic pose le glyphe en `montserrat-28` dans l'objet choisi
 nouveau libellé. L'aperçu dessine ces glyphes par la police locale `materialdesignicons-webfont.ttf` (aucun CDN) ; les
 symboles Font Awesome du firmware restent des carrés vides. Sous la grille : le parcours pour une icône absente du
 firmware (PNG blanc sur fond transparent, couleur par `image_recolor`) et les sites de l'annuaire avec leur licence.
+Sous la grille, « Importer un PNG » : on choisit un fichier .png (512 x 512 px et 300 Ko au plus, avertissement au-delà de
+160 px ou sans transparence), la page affiche ses dimensions, on indique l'origine (site ou URL) et on confirme la
+licence ; le PNG est écrit dans le dossier de la carte choisie (il part sur le FS, `gestionFileFolder.be` le range sous
+`/sd/images/PNG/` au démarrage et l'objet `img` le propose) et la note de licence dans `outils_docs/atelier_ecrans/images/<env>/`.
+Refusé pendant un build, sans origine, sans licence confirmée, ou si le nom existe déjà dans le dossier de la carte.
 Le catalogue `outils_docs/schemas/icones_firmware.json` vient de `lib/libesp32_lvgl/LVGL_assets/gen.sh` : après une
 synchro du fork, `python outils_docs/scripts_python/outils_pc/genere_icones_firmware.py --verifier` (Python système,
 fontTools) dit s'il est à refaire, sans `--verifier` il le réécrit.

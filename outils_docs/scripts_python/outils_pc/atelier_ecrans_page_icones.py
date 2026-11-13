@@ -85,6 +85,50 @@ function dessineIcones() {
     ul.appendChild(li);
   });
   p.appendChild(ul);
+  ajouteImportImage(p);
+}
+var IM = { seq: 0, nom: null, contenu: null, analyse: null };      // PNG choisi pour l'import (POST /images/*)
+function resultatImage(enfants) { var r = vide($('imageResultat')); enfants.forEach(function (e) { r.appendChild(e); }); }
+function majImporteImage() {
+  $('imageImporter').disabled = !(IM.analyse && $('imageLicence').checked && $('imageOrigine').value.trim() && E.env);
+}
+function analyseImage(fichier) {
+  var mien = ++IM.seq;                   // un second choix pendant l'analyse : la reponse tardive est ignoree
+  IM.analyse = null; IM.nom = fichier.name.replace(/\s+/g, '-'); majImporteImage();
+  resultatImage([el('p', { class: 'doux' }, 'Analyse de ' + IM.nom + '…')]);
+  fichier.arrayBuffer().then(function (t) {
+    if (mien !== IM.seq) return null;
+    IM.contenu = base64De(t);
+    return requete('POST', '/images/analyse', { nom: IM.nom, contenu: IM.contenu });
+  }).then(function (a) {
+    if (mien !== IM.seq || !a) return;
+    IM.analyse = a;
+    var l = [el('div', null, a.largeur + ' × ' + a.hauteur + ' px · ' + (Math.round(a.poids / 102.4) / 10) + ' Ko · ' + (a.alpha ? 'avec transparence' : 'sans transparence'))];
+    a.avertissements.forEach(function (w) { l.push(el('div', { class: 'avert' }, w)); });
+    resultatImage(l); majImporteImage();
+  }).catch(function (e) { if (mien === IM.seq) resultatImage([el('div', { class: 'avert' }, 'Image refusée : ' + e.message)]); });
+}
+function importeImage() {
+  $('imageImporter').disabled = true;
+  requete('POST', '/images/importer', { env: E.env, nom: IM.nom, contenu: IM.contenu, origine: $('imageOrigine').value, licence_confirmee: true }).then(function (r) {
+    IM.analyse = null; chargeImages();
+    resultatImage([el('div', null, 'Importée : ' + r.ecrits.join(', ') + '. Elle apparaît dans la liste de l’objet image ; à envoyer sur la carte avec ses autres fichiers (page Build).')]);
+  }, function (e) { majImporteImage(); resultatImage([el('div', { class: 'avert' }, 'Import refusé : ' + e.message)]); });
+}
+function ajouteImportImage(p) {
+  p.appendChild(el('h4', null, 'Importer un PNG'));
+  p.appendChild(el('p', { class: 'doux petit' }, 'PNG de 512 × 512 px et 300 Ko au plus, de préférence blanc sur fond transparent et à la taille d’affichage. '
+    + 'Il est rangé dans le dossier de la carte choisie (sous /sd/images/PNG/ au démarrage), la licence dans outils_docs/atelier_ecrans/images/.'));
+  var f = el('input', { type: 'file', accept: '.png,image/png', id: 'imageFichier', 'aria-label': 'Fichier PNG à importer' });
+  f.onchange = function () { if (f.files && f.files[0]) analyseImage(f.files[0]); };
+  var o = el('input', { type: 'text', id: 'imageOrigine', placeholder: 'origine : site ou URL de l’image', 'aria-label': 'Origine de l’image' });
+  o.oninput = majImporteImage;
+  var c = el('input', { type: 'checkbox', id: 'imageLicence' });
+  c.onchange = majImporteImage;
+  var ligne = el('div', { class: 'ligne' }); ligne.appendChild(c); ligne.appendChild(el('label', { for: 'imageLicence' }, ' J’ai vérifié la licence (usage libre)'));
+  var b = el('button', { type: 'button', class: 'btn prim', id: 'imageImporter' }, 'Importer pour la carte choisie');
+  b.disabled = true; b.onclick = importeImage;
+  [f, o, ligne, b, el('div', { id: 'imageResultat' })].forEach(function (x) { p.appendChild(x); });
 }
 chargeIcones();
 """

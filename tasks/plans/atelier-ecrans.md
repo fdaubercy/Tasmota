@@ -320,9 +320,10 @@ Après A14 (l'import d'un PNG aboutit dans l'objet `img`). Si A18 est faite avan
 - [x] Liens vers les sites de l'annuaire (Pictogrammers MDI, Material Symbols, Tabler, Lucide, Phosphor, Simple Icons ;
   Iconify pour chercher), licence de chacun, explications dans la page : glyphe du firmware d'abord ; sinon PNG à la taille
   d'affichage, blanc sur fond transparent, coloré par `image_recolor` + `image_recolor_opa` ; conversion SVG -> PNG — preuve : 7 liens `rel=noopener noreferrer` et licences dans le panneau (sonde), parcours PNG expliqué ; les glyphes Font Awesome restent non dessinés
-- [ ] Import d'un PNG déposé par l'utilisateur (parcours de l'import de polices A9 : licence confirmée, taille contrôlée),
-  rangé sous `/sd/images`, choisi dans l'objet `img` (A14)
-- [ ] Banc, sonde Chrome, relecture `relecteur-pages-web` ; commit
+- [x] Import d'un PNG déposé par l'utilisateur (parcours de l'import de polices A9 : licence confirmée, taille contrôlée),
+  rangé sous `/sd/images`, choisi dans l'objet `img` (A14) — preuve : `atelier_ecrans_images.py`, `test_atelier_ecrans_images.py` VERT (refus, écritures exactes), `test_atelier_ecrans_web.py::test_images_import` VERT (400, 403, 409, liste `GET /images`), sonde Chrome `sonde_import_png` VERTE (fichier refusé, import dans la copie du dépôt)
+- [x] Banc, sonde Chrome, relecture `relecteur-pages-web` — preuve : relectures des deux parties faites (panneau : aucun bloquant ; import PNG : voir le commit)
+- [ ] Commit de l'import PNG (A15 terminée une fois fait)
 
 ## A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13)
 Les mêmes informations que la page web `/qrcode` (`data/fs/qrcodePage.be`) : le QR code du texte réglé dans

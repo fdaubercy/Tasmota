@@ -37,6 +37,9 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
                        (409 : build en cours, fichiers ou ecran.json changes depuis le diff ou le chargement)
     POST /ecran/diff   {env, ecran, description} -> {description a l'echelle, avertissements, refus, fichiers, empreinte}
     POST /ecran/changer {env, ecran, description, empreinte, empreinte_description} -> {ecrits, avertissements, build}
+    POST /images/analyse   {nom, contenu (base64)} -> {nom, fichier, largeur, hauteur, poids, alpha, avertissements} (PNG)
+    POST /images/importer  {env, nom, contenu, origine, licence_confirmee} -> {ecrits, analyse} (PNG dans le dossier de la
+                           carte, note de licence hors du dossier ; atelier_ecrans_images)
     POST /polices/analyse  {nom, contenu (base64)} -> {nom, fichier, famille, licence, url_licence, libre, manque, poids, sites}
     POST /polices/importer {env, nom, contenu, licence_confirmee} -> {ecrits, analyse} (police dans le dossier de la carte,
                        licence hors de ce dossier, catalogue regenere) ; corps jusqu'a MAX_POLICE
@@ -79,6 +82,7 @@ import atelier_ecrans_systeme as aes
 import atelier_ecrans_description as aed
 import atelier_ecrans_display as adi
 import atelier_ecrans_icones as aic
+import atelier_ecrans_images as aim
 import atelier_ecrans_display_fichiers as adf
 import atelier_ecrans_ecran as aecr
 import atelier_ecrans_ecriture as aee
@@ -360,7 +364,7 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
 
             def route():
                 chemin = urlsplit(self.path).path
-                limite = MAX_POLICE if chemin.startswith("/polices/") else MAX_CORPS
+                limite = MAX_POLICE if chemin.startswith(("/polices/", "/images/")) else MAX_CORPS
                 longueur = int(self.headers.get("Content-Length", "0") or 0)
                 if not 0 <= longueur <= limite:               # negatif : read(-1) lirait jusqu'a la fermeture
                     self.close_connection = True              # corps non lu : la connexion ne doit pas resservir
@@ -373,6 +377,12 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                 elif chemin == "/polices/importer":
                     env = env_atelier(racine, demande.get("env"))
                     self._json(aep.importe(racine, env, demande.get("nom"), _octets_police(demande),
+                                           demande.get("licence_confirmee") is True, builds_en_cours))
+                elif chemin == "/images/analyse":
+                    self._json(aim.analyse(demande.get("nom"), _octets_police(demande)))
+                elif chemin == "/images/importer":
+                    env = env_atelier(racine, demande.get("env"))
+                    self._json(aim.importe(racine, env, demande.get("nom"), _octets_police(demande), demande.get("origine"),
                                            demande.get("licence_confirmee") is True, builds_en_cours))
                 elif chemin == "/display/analyse":
                     self._json(adi.analyse(adf.texte_valide(demande.get("texte")), adi.charge_reference(racine)))

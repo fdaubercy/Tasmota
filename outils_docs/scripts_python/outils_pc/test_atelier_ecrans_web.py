@@ -322,8 +322,30 @@ def test_icones(b):
     verifie(b.requete("GET", "/icones")[0], 404, "GET /icones : catalogue absent -> 404")
 
 
+def test_images_import(b):
+    import base64
+    import test_atelier_ecrans_images as tim              # ici : tim importe ce module-ci
+    octets = tim.png(8, 8)
+    corps = {"env": DEBITS, "nom": "web.png", "contenu": base64.b64encode(octets).decode(), "origine": "essai", "licence_confirmee": True}
+    s, r = b.requete("POST", "/images/analyse", corps)
+    verifie((s, r["largeur"], r["alpha"]), (200, 8, True), "POST /images/analyse : dimensions et transparence")
+    verifie(b.requete("POST", "/images/analyse", dict(corps, contenu="!!"))[0], 400, "POST /images/analyse : base64 invalide -> 400")
+    verifie(b.requete("POST", "/images/analyse", corps, entetes={})[0], 403, "POST /images/analyse sans en-tete -> 403")
+    verifie(b.requete("POST", "/images/importer", dict(corps, licence_confirmee="oui"))[0], 400, "POST /images/importer : licence non booleenne -> 400")
+    verifie(b.requete("POST", "/images/importer", dict(corps, env="inconnu"))[0], 400, "POST /images/importer : env inconnu -> 400")
+    b.builds = ["upload"]
+    verifie(b.requete("POST", "/images/importer", corps)[0], 409, "POST /images/importer : build en cours -> 409")
+    b.builds = []
+    s, r = b.requete("POST", "/images/importer", corps)
+    verifie((s, len(r["ecrits"])), (200, 2), "POST /images/importer : PNG et licence ecrits")
+    verifie("web.png" in b.requete("GET", f"/images?env={DEBITS}")[1]["images"], True, "GET /images : le PNG importe est propose a l'objet img")
+    b.requete("GET", f"/image?env={DEBITS}&nom=web.png")
+    verifie(b.brut, octets, "GET /image : octets du PNG importe")
+    verifie(b.requete("POST", "/images/importer", corps)[0], 409, "POST /images/importer : nom deja pris -> 409")
+
+
 TESTS = [test_page, test_cartes, test_catalogue, test_ecriture_routes, test_description, test_apercu, test_acces, test_valeurs, test_capture, test_police,
-         test_images, test_icones]
+         test_images, test_icones, test_images_import]
 
 
 if __name__ == "__main__":

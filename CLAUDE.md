@@ -1001,6 +1001,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Panneau « Icones » (A15, 2026-11-13) : `atelier_ecrans_icones.py` (routes `GET /icones`, `/lib/mdi.ttf`), `atelier_ecrans_page_icones.py` (grille,
     recherche, glyphes dessines par la police MDI locale), catalogue `outils_docs/schemas/icones_firmware.json` genere d'apres `gen.sh` par
     `outils_pc/genere_icones_firmware.py` (Python systeme, fontTools ; `--verifier` apres une synchro du fork), sonde `test_atelier_ecrans_page_chrome_icones.py`.
+    Import d'un PNG (A15) : `atelier_ecrans_images.py` (routes `POST /images/analyse|importer`, PNG dans le dossier de la carte, licence dans
+    `outils_docs/atelier_ecrans/images/<env>/`), banc `test_atelier_ecrans_images.py`.
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.
   - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,
