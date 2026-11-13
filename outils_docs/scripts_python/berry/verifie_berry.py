@@ -30,6 +30,10 @@ Les globales declarees sont celles du solidifieur du build : la liste `globs` de
 lib/libesp32/berry_custom/solidify_all_python.be, relue a chaque passe. Une globale
 non declaree utilisee dans une fonction est donc refusee ICI comme elle le serait au
 build ('logFonctions undeclared', 2026-10-04). Le code n'est jamais execute.
+Compilation en MODE STRICT (berry.exe -s, decide le 2026-11-13) : le build solidifie en `-s -g`
+(pio-tools/solidify-from-url.py) et le firmware compile les .be du FS en strict (xdrv_52_9_berry.ino,
+comp_set_strict). Une variable nommee comme un builtin (`var format`, 9fa2bc19e) ou qui masque une locale
+englobante est donc refusee ICI comme sur la carte.
 
 CHARTE DES LOGS (audit Berry P7.6)
 ----------------------------------
@@ -41,8 +45,9 @@ d'edition de Claude les lui renvoie pour le seul fichier edite.
 
 TEMOIN
 ------
-Chaque passe commence par un source qui DOIT etre refuse (globale non declaree).
-S'il compile, la verification ne mesure rien : message et code 2.
+Chaque passe commence par deux sources qui DOIVENT etre refuses : une globale non declaree, et un
+builtin redefini (`var format`, refuse seulement en mode strict). Si l'un compile, la verification ne
+mesure rien : message et code 2.
 
 CE QU'IL NE TOUCHE PAS
 ----------------------
@@ -62,6 +67,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import charte_logs  # noqa: E402
 
 TEMOIN = "def f() return temoin_non_declare end"
+TEMOIN_STRICT = "def f() var format = 1 end"     # refuse seulement en mode strict (berry.exe -s)
 MARQUE_DEBUT = "[verifie_berry] debut"
 MARQUE_FIN = "[verifie_berry] fin"
 
@@ -115,6 +121,11 @@ def ecrit_preambule(globs: list) -> Path:
         "except .. as e, m",
         '  print("TEMOIN_OK")',
         "end",
+        "try",
+        f'  compile("{TEMOIN_STRICT}")',
+        "except .. as e, m",
+        '  print("TEMOIN_STRICT_OK")',
+        "end",
         "for f: _argv[1..]",
         "  var fh = open(f)  var s = fh.read()  fh.close()",
         "  try",
@@ -134,11 +145,11 @@ def verifie(racine: Path, berry: Path, fichiers: list, charte: bool = True, sans
     preambule = ecrit_preambule([n for n in lit_globs(racine) if n not in sans])
     relatifs = [str(f.relative_to(racine) if f.is_relative_to(racine) else f).replace("\\", "/")
                 for f in fichiers]
-    r = subprocess.run([str(berry), str(preambule)] + relatifs, cwd=str(racine),
+    r = subprocess.run([str(berry), "-s", str(preambule)] + relatifs, cwd=str(racine),
                        capture_output=True, encoding="utf-8", errors="replace")
     sortie = (r.stdout or "").splitlines()
 
-    if "TEMOIN_OK" not in sortie:
+    if "TEMOIN_OK" not in sortie or "TEMOIN_STRICT_OK" not in sortie:
         print(f"{relatifs[0] if relatifs else 'data'}:1: erreur: verification INVALIDE - "
               f"le temoin n'a pas ete refuse (rc={r.returncode}) {(r.stderr or '').strip()}")
         return 2

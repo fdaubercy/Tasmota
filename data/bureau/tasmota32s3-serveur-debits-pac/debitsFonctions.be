@@ -489,7 +489,7 @@ def debitsFonctions_reglageDebits(cmd, idx, payload, payload_json)
     end
 
     var voies = []
-    for n: 0 .. debitsFonctions.NB_VOIES - 1    voies.push(debitsFonctions.voie(n))    end
+    for i: 0 .. debitsFonctions.NB_VOIES - 1    voies.push(debitsFonctions.voie(i))    end
     tasmota.resp_cmnd(json.dump({"ReglageDebits": {"fenetre": debitsFonctions.fenetre(), "veille": debitsFonctions.veille(), "voies": voies, "debits": debitsFonctions.debits,
                                                       "muets": debitsFonctions.muets, "ecran_ms": debitsFonctions.ecranMs}}))
 end
