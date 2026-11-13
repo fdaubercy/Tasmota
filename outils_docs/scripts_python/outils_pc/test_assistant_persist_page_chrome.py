@@ -27,14 +27,21 @@ from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
-from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # client DevTools stdlib
+from test_build_page_chrome import CHROMES, Cdp, attend as _attend, port_libre, tue_arbre   # client DevTools stdlib
 
 ECHECS = []
 ENV = "tasmota32s3-garage-piscine"
 DOSSIER = "data/garage/tasmota32s3-piscine"
 CASSE = 'id="creer"'
 CASSE_PAR = 'id="creer-casse"'
+MAITRE_P4 = "tasmota32p4-garage-serveur-modbus"
 IP_CAVE_S3 = "192.168.0.243"                  # IPAddress du persist de data/cave/tasmota32s3-serveur-rly
+
+
+def attend(cdp, expression, delai):
+    """Toutes les attentes de cette sonde attendent un VRAI : le delai donne n'est qu'un plancher, porte a 60 s. Un /parc
+    froid prend ~15 s sur le depot d'essai, puis ~8 s (mesure du 2026-11-13) : 10 ou 15 s faisaient des echecs au hasard."""
+    return _attend(cdp, expression, max(delai, 60))
 
 
 def verifie(obtenu, attendu, libelle):
@@ -66,6 +73,14 @@ class Montage:
     def demarre(self, temoin):
         import test_assistant_persist_creation as tac
         self.depot = tac.depot(self.t)
+        # Modele de la copie aligne d'abord sur le parc : des cles que le vrai parc porte avant le vrai modele (ecran de la
+        # cave, 5f80fc57a) ne doivent pas s'ajouter a la cle d'essai (bandeau « 7 cles » au lieu d'une, 2026-11-13).
+        import assistant_persist_modele as apm
+        os.environ["OUTILS_TASMOTA_DOSSIER"] = str(self.t / "outils")             # sauvegarde de la Transaction : hors du vrai dossier
+        modele, ajouts = apm.fusionne_nouvelles(self.depot, apm.charge_modele(self.depot))
+        if ajouts:
+            modele["a_completer"] = [c for c in modele["a_completer"] if c not in ajouts]
+            apm.ecrit_modele(self.depot, modele, "sonde")
         import test_assistant_persist_fidelite as taf          # une cle nouvelle du parc : le demarrage la fusionne, bandeau present
         for rel in taf.deux_puces(self.depot):
             taf.pose(self.depot, rel, "serveur.udp.essai", 7)
@@ -77,6 +92,8 @@ class Montage:
         self.serveur = subprocess.Popen(commande, env=environ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         self._attend_http(self.url + "execution", 20)
+        with urllib.request.urlopen(self.url + "parc", timeout=120) as r:   # premier /parc (~15 s, froid) hors du scenario
+            r.read()
         chrome = next((c for c in CHROMES if c.is_file()), None)
         if chrome is None:
             raise FileNotFoundError("chrome.exe introuvable (Program Files, LOCALAPPDATA)")
@@ -176,6 +193,7 @@ def sonde_page(m):
     clic(cdp, "pastille-1")
     clic(cdp, "role-esclave")
     verifie(attend(cdp, "document.getElementById('f-maitre').options.length > 0", 10), True, "esclave : liste des maitres non vide")
+    saisit(cdp, "f-maitre", MAITRE_P4, "change")                     # le diff plus bas : esclave du P4 (voir la creation reelle)
     verifie(cdp.js("document.getElementById('bloc-esclave').classList.contains('cache')"), False, "esclave : maitre et id visibles")
     verifie(cdp.js("document.getElementById('f-id').value > 0"), True, "esclave : id propose")
     saisit(cdp, "f-id", "4")
@@ -253,7 +271,7 @@ def sonde_page(m):
             [True, False, True], "creation : case default_envs visible, decochee par defaut, envoyee au serveur")
     clic(cdp, "voir-diff")
     verifie(attend(cdp, "document.getElementById('diff').textContent.indexOf('" + ENV + "') >= 0", 20), True, "diff affiche")
-    verifie(cdp.js("document.querySelectorAll('#retours .avert.rouge').length"), 0, "diff sans refus")
+    verifie(cdp.js("[...document.querySelectorAll('#retours .avert.rouge')].map(e => e.textContent)"), [], "diff sans refus")
     verifie(attend(cdp, "!document.getElementById('creer').disabled", 5), True, "apres le diff sans refus : « Creer l'env » actif")
     saisit(cdp, "f-ip", "192.168.0.77")
     verifie(cdp.js("[document.getElementById('creer').disabled, document.getElementById('panneau-diff').classList.contains('cache')]"),
@@ -269,9 +287,12 @@ def sonde_page(m):
     verifie(attend(cdp, "document.querySelectorAll('#retours .avert.rouge').length > 0", 15), True, "refus de prepare affiches")
     verifie(cdp.js("document.getElementById('retours').textContent.indexOf('RESEAU-INCONNU') >= 0"), True, "refus : nomme le reseau")
     verifie(cdp.js("document.getElementById('creer').disabled"), True, "refus : « Creer l'env » reste grise")
-    # creation reelle dans le depot d'essai (esclave du maitre P4)
+    # creation reelle dans le depot d'essai (esclave du maitre P4) ; maitre CHOISI : le premier de la liste a change
+    # avec le parc (ecran des debits du bureau depuis le 2026-11-09, dont l'AP ne suit pas <HOSTNAME>-GATEWAY)
     clic(cdp, "pastille-1")
     clic(cdp, "role-esclave")
+    saisit(cdp, "f-maitre", MAITRE_P4, "change")
+    verifie(cdp.js("document.getElementById('f-maitre').value"), MAITRE_P4, "creation : maitre P4 choisi")
     clic(cdp, "pastille-4")
     clic(cdp, "voir-diff")
     attend(cdp, "!document.getElementById('creer').disabled", 20)
@@ -316,6 +337,8 @@ def choisit_env(cdp, env):
 def sonde_modification(m):
     """A10 : mode modification (charger, libelle, diff reactif), puis suppression verifiee. Depot d'essai seulement."""
     cdp = m.cdp
+    verifie(attend(cdp, "!!document.querySelector('#f-env option[value=\"" + ENV + "\"]')", 60), True,
+            "liste Env : rechargee apres la creation, l'env cree y est")
     verifie(cdp.js("(function(){var o=document.getElementById('f-env').options;return o.length>1&&o[0].value===''})()"), True,
             "liste Env : « (nouvel env) » puis les cartes")
     # A5 (modele H) : #f-env par lieu, valeur gardee apres un nouveau dessin

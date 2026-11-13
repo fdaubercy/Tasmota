@@ -57,7 +57,8 @@ def test_charge(t):
     verifie(envs, attendu, "cartes_du_parc : les cartes du depot d'essai")
     verifie(MAITRE in envs and len(envs) > 1, True, "cartes_du_parc : le maitre y est")
     verifie([e for e in envs if fbe.est_base(e)], [], "cartes_du_parc : aucune base")
-    verifie(set(cartes[0]), {"env", "dossier", "puce"}, "cartes_du_parc : champs")
+    verifie(set(cartes[0]), {"env", "lieu", "dossier", "puce"}, "cartes_du_parc : champs (lieu depuis 8265a763f)")
+    verifie(next(c["lieu"] for c in cartes if c["env"] == MAITRE), "garage", "cartes_du_parc : lieu du maitre")
     verifie(next(c["dossier"] for c in cartes if c["env"] == MAITRE), fbe.dossier_carte(MAITRE), "cartes_du_parc : dossier")
     # charge_carte_creee
     r = reponses()

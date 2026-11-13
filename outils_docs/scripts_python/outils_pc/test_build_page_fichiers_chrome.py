@@ -73,7 +73,7 @@ def sonde_onglet(m, capture):
               "cartes : rien de choisi -> boutons grises, raison dite")
 
     clic(cdp, f"#f-carte-{A}")
-    s.attend(cdp, "document.querySelectorAll('#f-table tbody tr').length === 4", 10)
+    attend(cdp, "document.querySelectorAll('#f-table tbody tr').length === 4", 10)
     e = etat(cdp)
     s.verifie(e["lignes"], sorted(IMAGE), "liste : les 4 fichiers de l'image, tries")
     s.verifie(("Image du FS du" in e["image"], e["dossiers"]), (True, ["Tous*", "/ (racine)", "json/"]),
@@ -236,8 +236,9 @@ BANDEAU_SEUL = ("Image du FS reconstruite à la demande de l'Atelier des graphiq
                 "puis cliquez sur « Envoyer ».")
 BANDEAU_QR = ("Réglage du QR code sélectionné automatiquement par la page des étiquettes QR, pour mettre à jour la page "
               "/qrcode de la carte. Vérifiez puis cliquez sur « Envoyer ».")
-ENROBE = """(() => { window.__corps = []; const cfg = CFG, vrai = window.fetch.bind(window);
-  window.fetch = async (url, o) => { o = o || {};
+ENROBE = """(() => { window.__corps = []; window.__enVol = 0; const cfg = CFG, vrai = window.fetch.bind(window);
+  window.fetch = async (url, o) => { window.__enVol++; try { return await repond(url, o || {}); } finally { window.__enVol--; } };
+  const repond = async (url, o) => {
     if (String(url) === "/lancer") {
       window.__corps.push({corps: JSON.parse(o.body), entetes: o.headers || {}, methode: o.method});
       const r = cfg.lancer.length ? cfg.lancer.shift() : {statut: 200, texte: '{"ok": true}'};
@@ -248,11 +249,16 @@ ENROBE = """(() => { window.__corps = []; const cfg = CFG, vrai = window.fetch.b
       if (x === null) return new Response("panne", {status: 500});
       if (x.en_cours !== undefined) return new Response(JSON.stringify(x), {status: 200}); }
     return vrai(url, o); };
-  if (cfg.fluxDelai) { const VS = window.EventSource;                     // flux ouvert en retard : ordre force
-    window.EventSource = function (u) { const moi = this; this.readyState = 0;
-      setTimeout(() => { const r = new VS(u); r.onmessage = m => moi.onmessage && moi.onmessage(m); r.onerror = e => moi.onerror && moi.onerror(e);
-        r.onopen = e => moi.onopen && moi.onopen(e); }, cfg.fluxDelai); };
-    window.EventSource.CLOSED = 2; } })()"""
+  // ecoute() est le dernier pas de demarre(), suivi aussitot d'arriveeAtelier : __ecoute = page prete (arrive())
+  const VS = window.EventSource;
+  window.EventSource = function (u) { window.__ecoute = true;
+    if (!cfg.fluxDelai) return new VS(u);
+    const moi = this; this.readyState = 0;                                  // flux ouvert en retard : ordre force
+    window.__enVol++; let fait = false; const fin = () => { if (!fait) { fait = true; window.__enVol--; } };
+    setTimeout(() => { const r = new VS(u); r.onmessage = m => { moi.onmessage && moi.onmessage(m); fin(); };
+      r.onerror = e => { fin(); moi.onerror && moi.onerror(e); };
+      r.onopen = e => { setTimeout(fin, 1000); moi.onopen && moi.onopen(e); }; }, cfg.fluxDelai); };
+  Object.assign(window.EventSource, {CONNECTING: 0, OPEN: 1, CLOSED: 2}); })()"""
 ETAT_AT = f"""(() => {{ const t = id => document.getElementById(id);
   return {{fichiers: t('vue-fichiers').hidden, carte: !!(t('f-carte-{A}') || {{}}).checked, bandeau: t('f-atelier').hidden,
           texte: t('f-atelier-texte').textContent, notes: [...document.querySelectorAll('#f-atelier-notes li')].map(l => l.textContent),
@@ -263,21 +269,47 @@ BUILDFS = [{"type": "debut", "env": None, "lignes": [{"env": A, "methode": "com"
            {"type": "fin_env", "env": A, "resultat": "succes", "statuts": {"buildfs": "succes"}},
            {"type": "fin", "resultat": "succes", "succes": [A], "echecs": []}]
 FIN_AUTRE = [{"type": "fin", "resultat": "succes", "succes": [B], "echecs": []}]
+# atLance attend la relecture (retardee) de /execution : etat « prepa », numero pas encore lu, requete en vol
+PENDANT_EXECUTION = "typeof AT !== 'undefined' && !!AT && AT.etat === 'prepa' && AT.n0 === undefined && window.__enVol > 0"
 ATTENDU_LANCER = {"lignes": [{"env": A, "methode": "com", "port": "", "ip": ""}], "actions": ["buildfs"], "onglet": "fichiers"}
 
 
-def arrive(m, requete, execution=(), lancer=(), sans_enrobe=False, flux_delai=0, attente=2.5):
-    """Ouvre la page par le lien de l'atelier (`requete` = chaine de requete), fetch enrobe ; renvoie l'etat.
+def attend(cdp, expression, delai):
+    """Les attentes de cette sonde attendent toutes un VRAI : le delai n'est qu'un plancher, porte a 30 s (machine
+    chargee : /envs lit tous les envs, ~4 s a froid, 2026-11-13)."""
+    return s.attend(cdp, expression, max(delai, 30))
+
+
+def attend_calme(cdp, delai=60, calme=0.5):
+    """Page prete (ecoute() appele, donc arriveeAtelier passe), aucun fetch en vol et etat stable pendant `calme` s.
+    Remplace les 2,5 s fixes d'avant : trop courtes quand /envs est lent, d'ou des echecs differents a chaque passage."""
+    limite, vu, depuis = time.monotonic() + delai, None, None
+    while time.monotonic() < limite:
+        pret = cdp.js("document.readyState === 'complete' && !!window.__ecoute && window.__enVol === 0")
+        etat_page = cdp.js(ETAT_AT) if pret is True else None
+        if pret is True and etat_page == vu:
+            if time.monotonic() - depuis >= calme:
+                return True
+        else:
+            vu, depuis = etat_page, time.monotonic()
+        time.sleep(0.1)
+    return False
+
+
+def arrive(m, requete, execution=(), lancer=(), sans_enrobe=False, flux_delai=0, pendant=None):
+    """Ouvre la page par le lien de l'atelier (`requete` = chaine de requete), fetch enrobe ; renvoie l'etat une fois la
+    page calme, ou des que l'expression JS `pendant` est vraie (agir au milieu d'un deroule).
     `execution`, `lancer` : reponses simulees, une par appel, puis le vrai serveur (/lancer : 200 simule)."""
-    if sans_enrobe:                                     # vrai /lancer : le faux pio du montage tourne
+    if sans_enrobe:                                     # vrai /lancer : le faux pio du montage tourne ; l'appelant attend
         m.cdp.appel("Page.navigate", url=m.url + "?" + requete)
-        time.sleep(2.5)
         return etat_at(m.cdp)
     cfg = json.dumps({"execution": list(execution), "lancer": list(lancer), "fluxDelai": flux_delai})
     ident = m.cdp.appel("Page.addScriptToEvaluateOnNewDocument", source=ENROBE.replace("CFG", cfg))["identifier"]
     m.cdp.appel("Page.navigate", url=m.url + "?" + requete)
-    time.sleep(attente)
+    pret = attend(m.cdp, pendant, 30) if pendant else attend_calme(m.cdp)
     m.cdp.appel("Page.removeScriptToEvaluateOnNewDocument", identifier=ident)
+    if pret is not True:
+        print(f"     (arrivee : page jamais {'dans l etat attendu' if pendant else 'calme'} en 30 a 60 s)", flush=True)
     return etat_at(m.cdp)
 
 
@@ -305,7 +337,7 @@ def sonde_atelier(m):
     s.verifie((e["panier"], e["restart"]), ([], False), "atelier : rien de coche avant la fin de l'image (ancienne image ignoree)")
     s.verifie(e["search"], f"?env={A}", "atelier : depuis/fichiers/redemarrer retires de l'URL une fois le lancement accepte")
     s.injecte(cdp, BUILDFS)
-    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], e["berry_off"]), (["autoexec.be", "json/graphiques.json"], True, True),
               "atelier : image prete -> cochees exactement les fichiers presents de la liste, Redemarrer coche (redemarrer=1)")
@@ -315,7 +347,8 @@ def sonde_atelier(m):
     e = etat_at(cdp)
     s.verifie((len(e["corps"]), envois(e)), (1, []), "atelier : aucun envoi, et une autre fin ne relance rien")
     cdp.appel("Page.reload")
-    time.sleep(2.5)
+    attend(cdp, "document.readyState === 'complete' && typeof parNom === 'object' && Object.keys(parNom).length > 0", 30)
+    time.sleep(1.5)                                      # controle negatif : laisser a un buildfs le temps de partir
     e = etat_at(cdp)
     s.verifie((e["corps"], e["bandeau"], e["search"]), ([], True, f"?env={A}"), "atelier : rechargement -> aucun buildfs relance")
 
@@ -334,7 +367,7 @@ def sonde_atelier(m):
     s.verifie(([c["corps"] for c in e["corps"]], e["carte"], e["texte"]), ([ATTENDU_LANCER], True, BANDEAU_SEUL),
               "liste vide : carte choisie, un buildfs lance, bandeau « cochez les fichiers »")
     s.injecte(cdp, BUILDFS)
-    s.attend(cdp, "!AT", 5)
+    attend(cdp, "!AT", 5)
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], envois(e), e["texte"]), ([], False, [], BANDEAU_SEUL),
               "liste vide : image prete -> rien coche, aucun envoi, bandeau garde")
@@ -343,7 +376,7 @@ def sonde_atelier(m):
     s.verifie(([c["corps"] for c in e["corps"]], e["carte"], e["texte"]), ([ATTENDU_LANCER], True, BANDEAU_QR),
               "qrcode : carte choisie, un buildfs lance, bandeau des etiquettes QR")
     s.injecte(cdp, BUILDFS)
-    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], envois(e)), (["autoexec.be"], False, []),
               "qrcode : image prete -> fichier coche, Redemarrer non coche, aucun envoi")
@@ -359,7 +392,7 @@ def sonde_atelier(m):
     e = etat_at(cdp)
     s.verifie([c["corps"] for c in e["corps"]], [ATTENDU_LANCER], "en cours : fin du lancement -> buildfs lance, une fois")
     s.injecte(cdp, BUILDFS)
-    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], any("../z" in n for n in e["notes"]), envois(e)), (["autoexec.be"], False, True, []),
               "en cours : coche a la fin, Redemarrer non coche (0), chemin refuse signale, aucun envoi")
@@ -367,7 +400,7 @@ def sonde_atelier(m):
     # build externe (refus 409) : nouvel essai par minuterie ; buildfs en echec -> rien coche
     e = arrive(m, lien("autoexec.be"), lancer=[{"statut": 409, "texte": "un build est déjà en cours (pio run -e x (VS Code))"}])
     s.verifie((len(e["corps"]), any("VS Code" in n for n in e["notes"])), (1, True), "externe : refus affiche")
-    s.attend(cdp, "window.__corps.length >= 2", 9)
+    attend(cdp, "window.__corps.length >= 2", 9)
     e = etat_at(cdp)
     s.verifie([c["corps"] for c in e["corps"]], [ATTENDU_LANCER] * 2, "externe : nouvel essai seul, accepte")
     s.injecte(cdp, BUILDFS[:2] + [{"type": "fin_env", "env": A, "resultat": "echec", "statuts": {"buildfs": "echec"}},
@@ -380,7 +413,7 @@ def sonde_atelier(m):
     arrive(m, lien("autoexec.be"))
     s.injecte(cdp, BUILDFS[:1])                          # debut en direct : sans lui, la fin de l'historique rejoue laisse enCours a faux
     m.redemarre_serveur()
-    s.attend(cdp, "!AT", 20)
+    attend(cdp, "!AT", 20)
     e = etat_at(cdp)
     s.verifie((any("a redémarré" in n for n in e["notes"]), e["texte"], cdp.js("[AT, F.prepa, $('f-preparer').disabled, $('f-preparer').textContent]")),
               (True, "", [None, False, False, "Préparer la liste"]), "redemarrage : outil relance sans evenement -> abandon dit, bouton libre")
@@ -401,7 +434,7 @@ def sonde_historique(m):
     while time.monotonic() < limite and json.loads(urllib.request.urlopen(m.url + "execution", timeout=5).read())["en_cours"]:
         time.sleep(0.3)
     e = arrive(m, lien("autoexec.be,json/graphiques.json"), sans_enrobe=True)
-    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 20)
+    attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 20)
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], e["search"]), (["autoexec.be", "json/graphiques.json"], True, f"?env={A}"),
               "historique : vrai buildfs apres un lancement rejoue -> fichiers coches, Redemarrer coche")
@@ -411,26 +444,27 @@ def sonde_historique(m):
     s.verifie((len(e["corps"]), e["panier"], e["texte"], cdp.js("dernierN > 0 && AT.etat")), (1, [], BANDEAU, "prepa"),
               "ordre : flux avant la relecture -> ancien fin ignore, un buildfs, rien coche")
     s.injecte(cdp, BUILDFS)
-    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
     s.verifie(etat_at(cdp)["panier"], ["autoexec.be"], "ordre : flux avant la relecture -> fin de NOTRE buildfs, coche")
     # Flux APRES le POST : F.prepa est deja vrai quand l'historique arrive (tue le mutant sans `rejeuJusqua = numero`)
     e = arrive(m, lien("autoexec.be"), execution=[None], flux_delai=1200)
     s.verifie((len(e["corps"]), e["panier"], cdp.js("dernierN > 0 && AT.etat")), (1, [], "prepa"),
               "ordre : flux apres le POST -> historique pris pour un rejeu, rien coche depuis l'ancien fin")
     s.injecte(cdp, BUILDFS)
-    s.attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
     s.verifie(etat_at(cdp)["panier"], ["autoexec.be"], "ordre : flux apres le POST -> fin de NOTRE buildfs, coche")
     # A1 : autre carte choisie pendant la relecture de /execution : jamais de buildfs sur la mauvaise carte
-    arrive(m, lien("autoexec.be"), execution=[{}, {"delai": 1500}], attente=0.8)
+    arrive(m, lien("autoexec.be"), execution=[{}, {"delai": 1500}], pendant=PENDANT_EXECUTION)
     cdp.js(f"choisitCarte('{B}'); true")
     time.sleep(1.5)
     e = etat_at(cdp)
     s.verifie((e["corps"], any("Autre carte" in n for n in e["notes"]), e["texte"]), ([], True, ""),
               "carte : changee pendant /execution -> aucun buildfs, abandon dit, bandeau de selection retire")
     # S1 : le `fin` double la reponse « en cours » de /execution : la page ne reste pas bloquee, un seul buildfs ensuite
-    arrive(m, lien("autoexec.be"), execution=[{}, {"delai": 1500, "en_cours": True, "numero": 0, "pause": None}], attente=0.8)
+    arrive(m, lien("autoexec.be"), execution=[{}, {"delai": 1500, "en_cours": True, "numero": 0, "pause": None}],
+           pendant=PENDANT_EXECUTION)
     s.injecte(cdp, FIN_AUTRE)
-    s.attend(cdp, "window.__corps.length >= 1", 9)
+    attend(cdp, "window.__corps.length >= 1", 9)
     e = etat_at(cdp)
     s.verifie(([c["corps"] for c in e["corps"]], sum("en cours" in n for n in e["notes"])), ([ATTENDU_LANCER], 1),
               "fin doublee : nouvel essai seul -> un buildfs, attente dite une fois")
@@ -468,10 +502,10 @@ def sonde_lieux(m):
     clic(cdp, "#onglet-fichiers")
     titres = "[...document.querySelectorAll('#f-cartes .f-lieu')].map(x => x.textContent)"
     s.verifie(etat(cdp) and cdp.js(titres), ["sonde · 3"], "lieux : les 3 cartes du depot d'essai, lieu hors table -> code brut")
-    # lieux simules sur les envs de la page : un par groupe, un hors table (jardin) qui doit passer APRES la table
-    cdp.js(f"""(() => {{ const l = {{'{A}': 'jardin', '{B}': 'cave', '{s.C}': 'etage2'}};
+    # lieux simules sur les envs de la page : un par groupe, un hors table (atelier ; jardin y est entre) APRES la table
+    cdp.js(f"""(() => {{ const l = {{'{A}': 'atelier', '{B}': 'cave', '{s.C}': 'etage2'}};
       envs.forEach(e => {{ if (l[e.nom]) e.lieu = l[e.nom]; }}); fichiersCartes(); return true; }})()""")
-    s.verifie(cdp.js(titres), ["2e étage · 1", "Cave · 1", "jardin · 1"], "lieux : ordre de la table, code brut en dernier, effectif de chaque groupe")
+    s.verifie(cdp.js(titres), ["2e étage · 1", "Cave · 1", "atelier · 1"], "lieux : ordre de la table, code brut en dernier, effectif de chaque groupe")
     s.verifie(cdp.js("[...document.querySelector('#f-cartes').children].map(x => x.className.split(' ')[0])"),
               ["f-lieu", "f-carte", "f-lieu", "f-carte", "f-lieu", "f-carte"], "lieux : une carte sous chaque intertitre")
     s.verifie(cdp.js("getComputedStyle(document.querySelector('.f-lieu')).textTransform"), "uppercase", "lieux : intertitre en capitales par le CSS")
