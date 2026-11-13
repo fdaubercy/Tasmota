@@ -68,6 +68,9 @@ def met_a_echelle(desc, cible, catalogue):
     d["ecran"] = cible
     for o in d.get("objets", []):
         qui = f"objet {o.get('id')} ({o.get('type')}, page {o.get('page')})"
+        if o.get("type") == "brut":
+            av.append(f"{qui} : ligne brute du pages.jsonl, gardee telle quelle (non mise a l'echelle)")
+            continue
         o["x"], o["y"] = round(o["x"] * rx), round(o["y"] * ry)
         o["l"], o["h"] = max(1, round(o["l"] * rx)), max(1, round(o["h"] * ry))
         if o["x"] + o["l"] > L or o["y"] + o["h"] > H:

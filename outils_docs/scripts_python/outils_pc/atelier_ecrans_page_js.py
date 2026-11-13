@@ -64,8 +64,9 @@ function refusTaille(nom, taille) {           // meme regle que atelier_ecrans_d
 function textePolice(v) { var p = lisPolice(v); return p ? p.nom + ' ' + p.taille : (v === undefined ? '' : String(v)); }
 
 /* ---------- description : objets, historique ---------- */
-function objets(page) { return E.desc.objets.filter(function (o) { return o.page === page; }); }
-function objet(page, id) { return E.desc.objets.filter(function (o) { return o.page === page && o.id === id; })[0] || null; }
+// objets editables seulement : les lignes brutes d'un pages.jsonl importe sont dans bruts() (atelier_ecrans_page_import)
+function objets(page) { return E.desc.objets.filter(function (o) { return o.page === page && o.type !== 'brut'; }); }
+function objet(page, id) { return objets(page).filter(function (o) { return o.id === id; })[0] || null; }
 function choisi() { return E.sel ? objet(E.sel[0], E.sel[1]) : null; }
 function pageDesc(n) { return E.desc.pages.filter(function (p) { return p.n === n; })[0] || null; }
 function descriptionVide(ecran) {
@@ -144,6 +145,7 @@ function chargeCarte(env) {          // la carte d'avant reste en place tant que
                                        : "Pas encore de description d'écran pour cette carte : page vierge, rien n'est écrit.";
     E.msgEcran = ''; afficheBandeau();
     R.liste = []; R.zone = null; R.outilZone = false; R.brouillon = ''; R.message = ''; R.appliquees = {};
+    messageImport(''); dessineImport();
     remplitEcrans(); zoomAjuste(); dessineTout(); apercu(); lisCarte(); chargeRemarques();
   }).catch(function (e) {
     if (env !== E.demande) return;
@@ -181,7 +183,8 @@ function dessineListes() {
     d.onkeydown = entreeClique;
     ob.appendChild(d);
   });
-  if (!objets(E.page).length) ob.appendChild(el('div', { class: 'doux' }, 'aucun objet'));
+  listeBruts(ob);
+  if (!E.desc.objets.some(function (o) { return o.page === E.page; })) ob.appendChild(el('div', { class: 'doux' }, 'aucun objet'));
 }
 function entreeClique(ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.currentTarget.click(); } }
 function ajoutePage() {

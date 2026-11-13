@@ -971,5 +971,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     reference `outils_docs/schemas/display_ini_parametres.json`, banc de concordance rouge si une synchro ajoute une section),
     `_display_fichiers.py` (cartes et `tasmota/displaydesc` en lecture ; bibliotheque `outils_docs/atelier_ecrans/display/<nom>.ini`
     + `<nom>.notes.md`), `_page_display.py` ; « Appliquer a la carte » = changement d'ecran. Essai sur carte a faire.
+    Import d'un pages.jsonl ecrit a la main (A13) : `_import.py` (lecture comme HASPmota ; lignes non reprises = objets `brut`
+    reecrits tels quels, absents de `ecranLvgl.be`), `_page_import.py`, route `POST /importer`.
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.

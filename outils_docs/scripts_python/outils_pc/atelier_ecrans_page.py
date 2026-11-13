@@ -15,6 +15,7 @@ from atelier_ecrans_page_remarques import JS as JS_REMARQUES
 from atelier_ecrans_page_ecriture import JS as JS_ECRITURE
 from atelier_ecrans_page_polices import HTML as HTML_POLICES, JS as JS_POLICES
 from atelier_ecrans_page_display import CSS as CSS_DISPLAY, HTML as HTML_DISPLAY, JS as JS_DISPLAY
+from atelier_ecrans_page_import import CSS as CSS_IMPORT, HTML as HTML_IMPORT, JS as JS_IMPORT
 import lieux
 
 CSS = """
@@ -108,7 +109,7 @@ HTML = """
 <div class="grille3" id="vueInterface">
  <div class="carte">
   <h2>Pages</h2><div id="pages" class="arbre"></div>
-  <div class="ligne"><button id="ajoutPage" class="btn" type="button">+ page</button></div>
+  <div class="ligne"><button id="ajoutPage" class="btn" type="button">+ page</button></div>""" + HTML_IMPORT + """
   <h3 id="titreObjets">Objets</h3><div id="objets" class="arbre"></div>
   <h3>Palette (catalogue du firmware)</h3>
   <div id="palette" class="palette"></div>
@@ -162,5 +163,5 @@ THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getIt
 
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des écrans</title>"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
-        + THEME_TETE + "<style>" + CSS + CSS_DISPLAY + "</style></head><body>" + HTML
-        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_POLICES + JS_CANEVAS + JS_DISPLAY + "</script></body></html>")
+        + THEME_TETE + "<style>" + CSS + CSS_DISPLAY + CSS_IMPORT + "</style></head><body>" + HTML
+        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_POLICES + JS_CANEVAS + JS_IMPORT + JS_DISPLAY + "</script></body></html>")

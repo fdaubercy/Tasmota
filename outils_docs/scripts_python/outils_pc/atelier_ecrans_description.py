@@ -21,6 +21,9 @@ Forme : {"version": 1, "ecran": <cle du catalogue>, "orientation": 0|90|180|270,
       sinon ses `attributs`
   couleurs (racine) : {table: {nom: "#RRGGBB"}}, p. ex. "etat" = ecranDebitsFonctions.COULEURS
   toucher : un seul de {"page": n} | {"commande": "<commande Tasmota>"} | {"fonction": "<module.fonction>", "args"?: [..]}
+  objet brut (import d'un pages.jsonl ecrit a la main, atelier_ecrans_import) : {"type": "brut", "page", "id" | null,
+      "ligne": {ligne JSON d'origine}} ou {..., "texte": "<ligne non JSON>"} ; reecrit tel quel par le generateur HASPmota,
+      absent de l'interface LVGL pur, non editable ; seuls sa forme et sa page sont controlees
 `valide` ne lit que la description et le catalogue (atelier_ecrans_catalogue) ; la section `modele` est comparee a la map
 rendue par le module metier dans berry/banc_ecran_debits.py."""
 
@@ -35,6 +38,7 @@ DOSSIER = "outils_docs/atelier_ecrans/cartes"
 TYPES_MODELE = ("texte", "entier", "liste", "booleen")
 ATTRIBUTS_LIAISON_SPECIAUX = ("series",)       # liaison sans attribut LVGL : les courbes d'un chart
 TOUCHER = ("page", "commande", "fonction")
+BRUT = "brut"
 COULEUR = re.compile(r"#[0-9A-Fa-f]{6}")
 POLICE_TTF = re.compile(r"A:sd/polices/(.+\.ttf)-(\d+)")
 POLICE_FIRMWARE = re.compile(r"(montserrat|seg7)-(\d+)")
@@ -240,6 +244,12 @@ def valide(d, catalogue):
         qui = f"objet {o.get('page')}/{o.get('id')}"
         if o.get("page") not in pages:
             msgs.append(f"{qui} : page {o.get('page')} inconnue")
+        if o.get("type") == BRUT:            # ligne gardee telle quelle : sa forme seulement
+            if not ((isinstance(o.get("ligne"), dict) and "texte" not in o) or (isinstance(o.get("texte"), str) and "ligne" not in o)):
+                msgs.append(f"{qui} : objet brut : une ligne JSON (ligne) ou un texte (texte), pas les deux")
+            elif "texte" in o and (not o["texte"].strip() or "\n" in o["texte"] or "\r" in o["texte"]):
+                msgs.append(f"{qui} : objet brut : texte d'une seule ligne, non vide")
+            continue
         if (o.get("page"), o.get("id")) in vus:
             msgs.append(f"{qui} : identifiant en double sur la page")
         vus.add((o.get("page"), o.get("id")))

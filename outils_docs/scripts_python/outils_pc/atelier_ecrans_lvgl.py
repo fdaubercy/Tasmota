@@ -130,7 +130,10 @@ def genere(desc):
     pages = [[p["n"], attributs(p.get("attributs", {}), f"page {p['n']}")] for p in desc["pages"]]
     contenu = [p["n"] for p in desc["pages"] if p["n"] >= 1]
     objets, groupes, actifs, touchers, courbe = [], [], [], [], None
+    bruts = sum(1 for o in desc["objets"] if o["type"] == "brut")
     for o in desc["objets"]:
+        if o["type"] == "brut":         # ligne d'un pages.jsonl importe : HASPmota seulement
+            continue
         nom = f"p{o['page']}b{o['id']}"
         if o["type"] in SANS_CLASSE:
             raise ValueError(f"{nom} : type {o['type']} sans objet LVGL propre, non pris en charge en LVGL pur")
@@ -159,7 +162,9 @@ def genere(desc):
         if liaisons:
             groupes.append(", ".join(table(l) for l in liaisons))
     couleurs = {t: couleurs_map(m, f"couleurs[{t}]") for t, m in desc.get("couleurs", {}).items()}
-    lignes = [ENTETE.format(ecran=desc.get("ecran"), pages=len(pages), objets=len(objets)),
+    lignes = [ENTETE.format(ecran=desc.get("ecran"), pages=len(pages), objets=len(objets))] + (
+        [f"# ATTENTION : {bruts} ligne brute(s) du pages.jsonl importe, absente(s) de cette interface (HASPmota seulement)."]
+        if bruts else []) + [
               'var ecranLvgl = module("ecranLvgl")', "",
               "# ---- Touchers : une fonction nommee par objet tactile, executee par tasmota.defer ----"] + touchers + [
               "", "# ---- Tables tirees de la description ----",

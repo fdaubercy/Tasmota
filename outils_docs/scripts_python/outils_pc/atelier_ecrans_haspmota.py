@@ -12,6 +12,8 @@ attribut hors catalogue est rendu tel quel."""
 
 import json
 
+BRUT = "brut"           # atelier_ecrans_description.BRUT (import d'un pages.jsonl ecrit a la main)
+
 
 def _ligne(d):
     return json.dumps(d, ensure_ascii=False, separators=(",", ":"))
@@ -37,11 +39,17 @@ def genere(desc):
     lignes = []
     for p in desc["pages"]:
         if "commentaire" in p:
-            lignes.append({"page": p["n"], "comment": p["commentaire"]})
+            lignes.append(_ligne({"page": p["n"], "comment": p["commentaire"]}))
         if p.get("attributs"):
-            lignes.append({"page": p["n"], "id": 0, **p["attributs"]})
-        lignes += [_objet(o, depart) for o in desc["objets"] if o["page"] == p["n"]]
-    return "".join(_ligne(l) + "\n" for l in lignes)
+            lignes.append(_ligne({"page": p["n"], "id": 0, **p["attributs"]}))
+        for o in desc["objets"]:
+            if o["page"] != p["n"]:
+                continue
+            if o["type"] == BRUT:            # ligne d'un pages.jsonl importe, reecrite telle quelle
+                lignes.append(o["texte"] if "texte" in o else _ligne(o["ligne"]))
+            else:
+                lignes.append(_ligne(_objet(o, depart)))
+    return "".join(l + "\n" for l in lignes)
 
 
 def ecarts(attendu, obtenu):

@@ -1998,6 +1998,22 @@ Une image `.png`, `.jpg` ou `.bmp` posée à la racine du FS est rangée au dém
 (`gestionFileFolder.be::listeEtRepartitLesFichiers`) ; un écran la cite en `A:sd/images/<nom>`. Le module est solidifié :
 la règle n'agit qu'après recompilation du firmware de la carte. L'objet image arrive au palier 2.
 
+### Importer un pages.jsonl écrit à la main
+
+Une carte dont le dossier a un `pages.jsonl` montre, sous « + page », le bouton **Importer le pages.jsonl de la carte**.
+Le fichier est lu comme HASPmota le lit : une ligne sans clé `page` appartient à la page courante, les lignes vides sont
+ignorées. Une ligne d'un objet du palier 1, avec `x`, `y`, `w`, `h` entiers, des attributs connus du catalogue et une
+`action` `p<n>` vers une page du fichier devient un objet **éditable**. Le premier commentaire d'une page devient son
+titre, son `{"id":0,...}` placé avant tout objet devient ses réglages. Tout le reste reste **brut** : classe hors
+catalogue, attribut inconnu, `val_rule`, `text_rule`, `berry_run`, `parentid`, autre `action`, objet hors de l'écran,
+ligne non JSON (signalée). Une ligne brute est réécrite à l'identique dans le `pages.jsonl`, hachurée sur l'écran si elle
+porte une position, grisée dans la liste ; elle n'est ni éditable ni présente dans `ecranLvgl.be` (signalée en tête de
+ce fichier). Aucune liaison n'est importée : un écran écrit à la main est rempli par son Berry.
+
+L'import remplace la description de la page (« Annuler » la rend) et n'écrit rien : « Écrire dans le dépôt » montre ensuite
+le diff de `ecran.json`, `pages.jsonl` et `ecranLvgl.be`. Garantie vérifiée par `test_atelier_ecrans_import.py` sur les
+six `pages.jsonl` du dépôt : le `pages.jsonl` régénéré porte les mêmes objets que la source, dans le même ordre.
+
 ### Onglet « display.ini »
 
 Bascule « Interface | display.ini » en haut de la page. À gauche, les `display.ini` en trois groupes : **cartes**
@@ -2036,7 +2052,7 @@ Les fichiers de l'interface non choisie sont exclus du FS par `build/interface_e
 ### Bancs
 
 `outils_pc/test_atelier_ecrans_catalogue.py`, `_description.py`, `_haspmota.py`, `_lvgl.py`, `_ecriture.py`, `_ecran.py`,
-`_remarques.py`, `_polices.py`, `_display.py`, `_display_fichiers.py`, `_web.py`, puis la sonde Chrome `test_atelier_ecrans_page_chrome.py` (copie du dépôt,
+`_remarques.py`, `_polices.py`, `_import.py`, `_display.py`, `_display_fichiers.py`, `_web.py`, puis la sonde Chrome `test_atelier_ecrans_page_chrome.py` (copie du dépôt,
 carte et `claude` simulés) ; `build/test_cible_atelier_ecrans.py` ; rangement des images : `berry/banc_repartition_fichiers.py`.
 Commandes exactes : skill `bancs`.
 

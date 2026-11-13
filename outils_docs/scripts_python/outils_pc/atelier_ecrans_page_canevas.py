@@ -93,6 +93,7 @@ function dessineEcran() {
   $('zoom').textContent = Math.round(E.zoom * 100) + ' %';
   objets(E.page).forEach(function (o) { ec.appendChild(dessineObjet(o, false)); });
   if (E.page !== 0) objets(0).forEach(function (o) { ec.appendChild(dessineObjet(o, true)); });   // layer_top
+  dessineBruts(ec);
   dessineEpingles(ec);
   var o = choisi();
   if (!o || o.page !== E.page) return;
@@ -130,7 +131,8 @@ var DEFAUTS = {
   obj: [100, 100, { radius: 8, border_width: 0, bg_color: '#1F2B38' }]
 };
 function nouvelId(page) {
-  var pris = objets(page).map(function (o) { return o.id; }), max = pris.reduce(function (m, i) { return Math.max(m, i); }, 0);
+  // ids pris : objets bruts compris (meme id = meme objet pour HASPmota)
+  var pris = E.desc.objets.filter(function (o) { return o.page === page; }).map(function (o) { return o.id; }), max = pris.reduce(function (m, i) { return Math.max(m, i); }, 0);
   for (var i = max + 1; i <= 254; i++) if (pris.indexOf(i) < 0) return i;
   for (i = 1; i <= 254; i++) if (pris.indexOf(i) < 0) return i;
   return null;

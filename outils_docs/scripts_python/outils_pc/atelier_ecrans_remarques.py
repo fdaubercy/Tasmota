@@ -81,7 +81,8 @@ def enregistre(racine, env, remarques):
 
 
 def _objet(desc, page, id_):
-    return next((o for o in desc.get("objets", []) if o.get("page") == page and o.get("id") == id_), None)
+    return next((o for o in desc.get("objets", []) if o.get("page") == page and o.get("id") == id_
+                 and o.get("type") != "brut"), None)      # ligne brute d'un pages.jsonl importe : non editable
 
 
 def _texte(v):
@@ -166,7 +167,7 @@ def applique(desc, proposition, catalogue=None):
             o = op.get("objet")
             if not isinstance(o, dict) or not _entier(o.get("page")) or not _entier(o.get("id")):
                 raise ValueError(f"operation {n} : objet complet (page, id...) attendu")
-            if _objet(d, o["page"], o["id"]) is not None:
+            if any(x.get("page") == o["page"] and x.get("id") == o["id"] for x in d.get("objets", [])):    # bruts compris
                 raise ValueError(f"operation {n} : id {o['id']} deja pris sur la page {o['page']}")
             d.setdefault("objets", []).append(copy.deepcopy(o))
         elif genre in ("modifie", "retire"):

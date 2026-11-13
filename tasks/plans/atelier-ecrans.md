@@ -4,7 +4,7 @@ titre: Atelier des écrans (page 7960) : une description d'écran, deux interfac
 objectif: Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-13 (A15 : référence et analyseur du display.ini)
+maj: 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 ajouté)
 ---
 # Atelier des écrans
 
@@ -230,6 +230,9 @@ l'utilisateur (demande du 2026-11-12). Interface de la carte : HASPmota (`custom
   en police 28 (remarque 1) vus au passage
 - [ ] Capture réelle depuis l'atelier (« Capture de la carte ») : image identique à l'écran, mémoire PSRAM prise par
   `lv.screenshot()` notée (environ 1,2 Mo attendu pour 1024 x 600)
+- [ ] Essai du `display.ini` (A15, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
+  « Garder » / « Revenir » ; comportement de `DisplayReinit` avec LVGL noté ; commandes à chaud `DisplayDimmer`,
+  `DisplayRotate`
 - [ ] Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
 - [ ] [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
   quand la vue a basculé dans les deux sens
@@ -275,18 +278,24 @@ Conception : § 6 de la même spec. Bibliothèque personnelle `outils_docs/ateli
 - [x] « Appliquer à la carte » par le chemin du changement d'écran (diff, broches du persist, lien page Build) — preuve :
   `atelier_ecrans_page_display.py::appliqueACarte` ; sonde : proposition puis display.ini de la carte = fichier de la
   bibliothèque (2026-11-13)
-- [ ] Essai sur la carte (192.168.0.51 joignable) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`, « Garder » /
-  « Revenir » ; comportement de `DisplayReinit` avec LVGL noté ; commandes à chaud `DisplayDimmer`, `DisplayRotate`
-- [ ] Mode d'emploi (`outils_docs/README.md`), carte des documents du `CLAUDE.md` ; commit
+- Essai sur la carte : déplacé dans A11 (demande du 2026-11-13)
+- [x] Mode d'emploi (`outils_docs/README.md`), carte des documents du `CLAUDE.md` ; commit — preuve : commit 81450c2d9
+  (2026-11-13)
 
 ## A13 — Import d'un `pages.jsonl` écrit à la main
 Conception : § 5 de la même spec.
-- [ ] Banc d'abord (rouge) : import puis génération HASPmota = mêmes objets JSON que la source, sur les six `pages.jsonl`
-  du dépôt ; objets hors catalogue gardés en `brut` ; ligne non JSON gardée en commentaire et signalée
-- [ ] Description : objet `brut` accepté par le validateur, réécrit tel quel par le générateur HASPmota, signalé absent de
-  `ecranLvgl.be` ; import (`atelier_ecrans_import.py`) ; bancs VERT avec mutants
-- [ ] Page : bouton « Importer le pages.jsonl de la carte », diff avant écriture, objets `brut` hachurés et non éditables
-  sur le canevas ; sonde Chrome VERT ; relecture
+- [x] Banc d'abord (rouge) : import puis génération HASPmota = mêmes objets JSON que la source, sur les six `pages.jsonl`
+  du dépôt ; objets hors catalogue gardés en `brut` ; ligne non JSON gardée en commentaire et signalée — preuve :
+  `test_atelier_ecrans_import.py` rouge (module absent) puis VERT ; lecture comme HASPmota (page courante héritée, lignes
+  vides ignorées) ; débits 82 objets éditables / 0 brut, démo HASPmota 20 / 161 (2026-11-13)
+- [x] Description : objet `brut` accepté par le validateur, réécrit tel quel par le générateur HASPmota, signalé absent de
+  `ecranLvgl.be` ; import (`atelier_ecrans_import.py`) ; bancs VERT avec mutants — preuve : 12 mutants (import, générateurs,
+  validateur) lus rouges ; bancs description, haspmota, lvgl, ecran, ecriture, remarques VERT (2026-11-13)
+- [x] Page : bouton « Importer le pages.jsonl de la carte », diff avant écriture, objets `brut` hachurés et non éditables
+  sur le canevas ; sonde Chrome VERT ; relecture — preuve : `atelier_ecrans_page_import.py`, route `POST /importer` ;
+  `test_atelier_ecrans_page_chrome.py::sonde_import` VERT (confirmation sur carte décrite, diff d'écriture fermé, brut
+  hachuré, aperçu = source, Annuler, rien d'écrit) ; relecture : 1 défaut et 3 suggestions corrigés (remarque sur un brut
+  refusée, texte brut d'une ligne) (2026-11-13)
 - [ ] Commit
 
 ## A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code
@@ -300,6 +309,21 @@ Conception : § 7 de la même spec.
 - [ ] Règle de rangement des images ramenée au `.png` (`gestionFileFolder.be`, accord de l'utilisateur) ;
   `banc_repartition_fichiers.py` VERT
 - [ ] Essai sur la carte : un objet de chaque type sur l'écran des débits, vu et touché (avec A11) ; commit
+
+## A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran »)
+Sources : `outils_docs/ICONES_IMAGES_SOURCES.md` (commit 495e0776f : ordre de recherche, licences, formats selon la cible).
+Après A14 (l'import d'un PNG aboutit dans l'objet `img`).
+- [ ] Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
+  `lib/libesp32_lvgl/LVGL_assets/gen.sh`, `0xf0335=>0xE335` = icône MDI F0335 servie en U+E335 dans montserrat-10/14/20/28
+  et icons-xx), recherche par nom ; clic -> label avec le glyphe en montserrat-28 (ou texte de l'objet choisi)
+- [ ] Aperçu : glyphes dessinés par la police locale `lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`
+  (codes E0xxx -> F0xxx), sans CDN ; aujourd'hui des carrés vides (cas de l'écran de la cave : E335, E6E8, E72A, E58F)
+- [ ] Liens vers les sites de l'annuaire (Pictogrammers MDI, Material Symbols, Tabler, Lucide, Phosphor, Simple Icons ;
+  Iconify pour chercher), licence de chacun, explications dans la page : glyphe du firmware d'abord ; sinon PNG à la taille
+  d'affichage, blanc sur fond transparent, coloré par `image_recolor` + `image_recolor_opa` ; conversion SVG -> PNG
+- [ ] Import d'un PNG déposé par l'utilisateur (parcours de l'import de polices A9 : licence confirmée, taille contrôlée),
+  rangé sous `/sd/images`, choisi dans l'objet `img` (A14)
+- [ ] Banc, sonde Chrome, relecture `relecteur-pages-web` ; commit
 
 ## Améliorations restantes
 - [ ] [projet] Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)

@@ -25,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import atelier_ecrans_catalogue as cat                                              # noqa: E402
+import atelier_ecrans_import as aei                                                 # noqa: E402
 import atelier_ecrans_remarques as aer                                              # noqa: E402
 import atelier_ecrans_web as aew                                                    # noqa: E402
 import test_atelier_ecrans_remarques as tar                                         # noqa: E402
@@ -369,6 +370,42 @@ def sonde_display(cdp, banc):
     verifie(erreurs, [], "onglet display.ini : aucune erreur console")
 
 
+def sonde_import(cdp, banc):
+    """Import d'un pages.jsonl ecrit a la main : description remplacee (Annuler la rend), ligne brute hachuree, apercu
+    HASPmota = memes objets que la source, rien d'ecrit."""
+    js = cdp.js
+    rel = "data/bureau/tasmota32s3-ecran-debits-pac/pages.jsonl"
+    source = (taw.DEPOT / rel).read_text(encoding="utf-8") + \
+        '{"id":200,"obj":"label","x":10,"y":10,"w":100,"h":30,"text":"r","val_rule":"X#Y"}\n'    # herite la page 3
+    (banc.racine / rel).write_text(source, encoding="utf-8")
+    avant = instantane(banc.racine)
+    attend(cdp, f"E.env === '{ENV}' && !document.getElementById('importBoite').hidden", 15)
+    js("modifie(function(){ E.desc.objets[0].x += 8; }); document.getElementById('ecrire').click()")   # un diff a confirmer
+    attend(cdp, "!document.getElementById('confirmation').hidden", 15)
+    js("document.getElementById('importer').click()")
+    av = attend(cdp, "document.getElementById('importMessage').textContent.indexOf('déjà une description') >= 0", 10)
+    verifie((bool(av), js("document.getElementById('confirmation').hidden"), js("E.desc.objets.some(function(o){return o.type==='brut'})")),
+            (True, True, False), "import sur une carte decrite : confirmation demandee, diff d'ecriture ferme, rien d'importe")
+    js("document.getElementById('importer').click()")
+    m = attend(cdp, "document.getElementById('importMessage').textContent.indexOf('Importé') === 0 && "
+                    "document.getElementById('importMessage').textContent", 20)
+    js("E.page = 3; dessineTout()")
+    verifie(("1 ligne(s) gardée(s)" in (m or ""), js("bruts(3).length"), js("document.querySelectorAll('#ecranCarte .o.brut').length"),
+             js("document.querySelectorAll('#objets .brut').length")), (True, 1, 1, 1),
+            f"import : ligne val_rule gardee brute, hachuree et listee ({(m or '')[:70]})")
+    gen = attend(cdp, "var c = (E.fichiers.filter(function(f){return f.nom==='pages.jsonl'})[0]||{}).contenu || ''; "
+                     "c.indexOf('val_rule') >= 0 && c", 15)
+    a, b = aei.lignes_effectives(source), aei.lignes_effectives(gen or "")
+    ecart = next((f"ligne {i + 1} : {x} != {y}" for i, (x, y) in enumerate(zip(a, b)) if x != y), None) or \
+        (None if len(a) == len(b) else f"{len(a)} lignes, {len(b)} generees")
+    verifie(ecart, None, "apercu HASPmota = memes objets que la source")
+    js("document.getElementById('annuler').click()")
+    verifie(js("E.desc.objets.some(function(o){return o.type==='brut'})"), False, "Annuler : description d'avant l'import")
+    verifie(instantane(banc.racine) == avant, True, "import : rien n'est ecrit")
+    erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
+    verifie(erreurs, [], "import : aucune erreur console")
+
+
 def main():
     t = Path(tempfile.mkdtemp(prefix="sonde_atelier_ecrans_"))
     banc = chrome = None
@@ -410,6 +447,7 @@ def main():
         sonde_ecriture(cdp, banc)
         sonde_polices(cdp, banc)
         sonde_display(cdp, banc)
+        sonde_import(cdp, banc)
     finally:
         tue_arbre(chrome)
         # tue_arbre manque parfois un fils de Chrome : balayage par le profil temporaire de cette passe

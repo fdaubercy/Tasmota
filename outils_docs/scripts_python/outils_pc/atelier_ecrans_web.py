@@ -12,13 +12,15 @@ de la requete (SSRF).
 Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corps JSON) :
     GET  /             la page (atelier_ecrans_page.PAGE)
     GET  /cartes       {cartes: [{nom, lieu, ip, ecran (cle du catalogue | null), interface (custom_interface_ecran | null),
-                       description (ecran.json present)}], lieux}
+                       description (ecran.json present), pages_jsonl (pages.jsonl dans le dossier de la carte)}], lieux}
     GET  /catalogue    outils_docs/schemas/catalogue_ecran.json tel quel
     GET  /description  ?env= : {description | null, empreinte (sha256 des octets du fichier) | null, erreurs, ecran, build}
     GET  /valeurs      ?env=[&simule=1] : {simule, motif, sensor (StatusSNS de Status 10) | null, modele {cle: exemple}} ;
                        carte muette : simule true, et les lectures des SILENCE s suivantes n'attendent pas la carte
     GET  /police       ?nom= : .ttf d'une police `source: sd` du catalogue (font/ttf), cherche par son nom de fichier
                        du catalogue dans data/*/*/ ; rien d'autre (404)
+    POST /importer     {env} -> {description, avertissements, editables, bruts, source} : pages.jsonl de la carte lu comme
+                       HASPmota (atelier_ecrans_import) ; rien n'est ecrit (404 sans pages.jsonl, 400 carte sans ecran)
     POST /apercu       {env, description} -> {erreurs, fichiers: [{nom, chemin, contenu, diff, ajouts, retraits}]} ;
                        pages.jsonl, ecranLvgl.be (dossier de la carte), ecran.json ; diff avec le depot ; rien n'est ecrit
     POST /capture      {env} -> 200 image/bmp (octets de lv.screenshot()) ou 409 texte (refus : carte injoignable, sans
@@ -72,6 +74,7 @@ import atelier_ecrans_display_fichiers as adf
 import atelier_ecrans_ecran as aecr
 import atelier_ecrans_ecriture as aee
 import atelier_ecrans_haspmota as ah
+import atelier_ecrans_import as aei
 import atelier_ecrans_lvgl as al
 import atelier_ecrans_polices as aep
 import atelier_ecrans_remarques as aer
@@ -110,7 +113,8 @@ def _interface(ini, env):
 def cartes(racine):
     ini, ecrans, ips = fbi.lit_sections(racine), cat.ecrans_des_envs(racine), ags._adresses(racine)
     return [{"nom": n, "lieu": lieux.lieu(n), "ip": ips.get(n, ""), "ecran": ecrans.get(n), "interface": _interface(ini, n),
-             "description": aed.chemin(racine, n).is_file()} for n in noms_cartes(racine)]
+             "description": aed.chemin(racine, n).is_file(),
+             "pages_jsonl": (Path(racine) / fbe.dossier_carte(n) / "pages.jsonl").is_file()} for n in noms_cartes(racine)]
 
 
 def _valide(d, catalogue):
@@ -347,6 +351,8 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                 elif chemin == "/display/notes":
                     carte = demande.get("carte") and env_atelier(racine, demande.get("carte"))
                     self._json(adf.ajoute_note(racine, demande.get("nom"), carte, demande.get("texte"), builds_en_cours))
+                elif chemin == "/importer":
+                    self._json(aei.depuis_carte(racine, env_atelier(racine, demande.get("env"))))
                 elif chemin == "/apercu":
                     self._json(apercu(racine, env_atelier(racine, demande.get("env")), demande.get("description")))
                 elif chemin == "/diff":
