@@ -233,6 +233,10 @@ l'utilisateur (demande du 2026-11-12). Interface de la carte : HASPmota (`custom
 - [ ] Essai du `display.ini` (A15, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
   « Garder » / « Revenir » ; comportement de `DisplayReinit` avec LVGL noté ; commandes à chaud `DisplayDimmer`,
   `DisplayRotate`
+- [ ] Ligne non JSON d'un `pages.jsonl` importé (A13, demande du 2026-11-13) : lu dans `lv_haspmota.be::HASPmota._load`,
+  une ligne commençant par `#` est sautée sans message, toute autre ligne non JSON est sautée avec le log niveau 2
+  « HSP: invalid JSON line », le chargement continue. À voir sur la carte : ajouter `# essai` et `essai` au `pages.jsonl`,
+  l'envoyer, relire les logs (niveau 2) et l'écran
 - [ ] Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
 - [ ] [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
   quand la vue a basculé dans les deux sens

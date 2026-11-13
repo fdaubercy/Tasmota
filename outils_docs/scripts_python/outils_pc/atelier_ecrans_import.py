@@ -7,6 +7,10 @@ son `{"id":0, ...}` place avant tout objet -> reglages de la page, s'ils sont de
 palier 1 du catalogue, x, y, w, h entiers, attributs connus et valides, `action` p<n> vers une page du fichier -> objet
 EDITABLE (`toucher`). Tout le reste -> objet `brut` : la ligne d'origine gardee telle quelle (`ligne`, ou `texte` pour
 une ligne non JSON, signalee), reecrite a l'identique par le generateur HASPmota, absente de l'interface LVGL pur.
+Sur la carte (lu dans `lv_haspmota.be::HASPmota._load`, pas encore vu sur carte) : une ligne commencant par `#` est sautee
+sans message, une autre ligne non JSON est sautee avec le log niveau 2 « HSP: invalid JSON line », le chargement continue.
+Ecart connu : HASPmota part sans page courante (une premiere ligne sans `page` le fait echouer) ; l'import la range en
+page 1, et la ligne regeneree a l'identique garde ce comportement.
 Aucune liaison n'est importee (un ecran ecrit a la main est rempli par son Berry). Garantie (banc
 test_atelier_ecrans_import.py) : generation HASPmota de la description importee = memes objets JSON que la source, meme
 ordre, lus par `lignes_effectives`.
