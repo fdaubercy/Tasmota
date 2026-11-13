@@ -193,7 +193,7 @@
 		"activation": "ON",
 		"ecranCave": {
 			"name": "Ecran cave",
-			"activation": "OFF",
+			"activation": "ON",
 			"reglage": "OFF",
 			"log": "info",
 			"sources": {
