@@ -83,7 +83,9 @@ def vert(sortie, desc):
 
 
 def main():
-    desc = json.loads(ECRAN_JSON.read_text(encoding="utf-8"))
+    sys.path.insert(0, str(RACINE / "outils_docs/scripts_python/outils_pc"))
+    import atelier_ecrans_navigation as nav     # boutons de la barre construite = objets decrits (banc de nav : leurs places)
+    desc = nav.deroule(json.loads(ECRAN_JSON.read_text(encoding="utf-8")))
     ok = True
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)

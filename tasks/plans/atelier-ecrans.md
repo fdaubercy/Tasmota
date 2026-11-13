@@ -362,8 +362,13 @@ importé garde ses boutons tels quels.
   Python) ; `nouvelId` borné à 200 avec la barre. Relecture : 2 défauts mineurs corrigés (témoin de la borne, largeur
   d'un titre hors plan de base), témoins lus rouges ; sondes palier 2 et barre sorties dans un module voisin (sonde
   principale sous 500 lignes) ; aucun Chrome de sonde restant (2026-11-13)
-- [ ] Écran des débits passé à la barre construite (ses boutons de page remplacés), pages.jsonl regénéré identique au
-  rendu ; écran de la cave : proposé à la session de `tasks/plans/ecran-cave-vues-commandes.md`, jamais sans son accord
+- [x] Écran des débits passé à la barre construite — preuve : banc_ecran_debits, banc_ecran_lvgl (82 objets, 0 écart), banc_demarrage et 15 bancs de l'atelier VERT
+  Détail : boutons p0b91-93 remplacés par la clé `navigation` (mêmes style, hauteur et position ; largeurs 112, 123, 134
+  au lieu de 110, 124, 130), `pages.jsonl` et `ecranLvgl.be` (496 lignes) régénérés par `atelier_ecrans_ecriture.ecrit` ;
+  `ecranHaspmota.be` colore `"p0b" + str(200 + n)` (accord de la session « Modules ESP32-S3 avec ecran ») ; bancs
+  qui citaient 91-93 mis à jour (`banc_ecran_debits.be`, `banc_ecran_lvgl.be/.py`, `test_atelier_ecrans_description.py`,
+  `test_atelier_ecrans_ecran.py`) ; changement d'écran : barre sous 40 px signalée (`atelier_ecrans_ecran.py::met_a_echelle`).
+  Écran de la cave : proposé le 2026-11-13 à la session qui le tient, rien écrit (2026-11-13)
 - [ ] Essai sur la carte (avec A20) ; commit
 
 ## A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13)

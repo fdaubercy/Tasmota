@@ -43,14 +43,14 @@ def main():
         catalogue, desc = cat.charge(racine), aed.charge(racine, ENV)
 
         d, av = aec.met_a_echelle(desc, "ILI9488_480x320", catalogue)
-        b = objet(d, 0, 91)
-        verifie((d["ecran"], b["x"], b["y"], b["l"], b["h"]), ("ILI9488_480x320", 11, 288, 52, 25), "bouton 91 : position et taille au rapport")
-        verifie(any("objet 91" in a and "25 px" in a for a in av), True, "bouton de 46 px -> 25 px signale (cible tactile)")
+        b = d["navigation"]
+        verifie((d["ecran"], b["x"], b["y"], b["h"], b["ecart"]), ("ILI9488_480x320", 11, 288, 25, 6), "barre de navigation : position et hauteur au rapport")
+        verifie(any("barre de navigation" in a and "25 px" in a for a in av), True, "barre de 46 px -> 25 px signalee (cible tactile)")
         verifie(objet(d, 2, 12)["attributs"]["text_font"], 12, "police robotocondensed 24 -> 12 (taille compilee la plus proche)")
         verifie(objet(d, 1, 13)["attributs"]["text_font"], "A:sd/polices/RobotoCondensed-Regular.ttf-17", "police .ttf de taille libre arrondie (36 -> 17)")
         verifie(aec.police_echelle("montserrat-28", 0.469, catalogue), "montserrat-14", "montserrat 28 -> 14")
         verifie(aed.valide(d, catalogue), [], "description mise a l'echelle valide pour le nouvel ecran")
-        verifie(objet(desc, 0, 91)["h"], 46, "description d'origine intacte")
+        verifie(desc["navigation"]["h"], 46, "description d'origine intacte")
 
         c = aec.changement(racine, ENV, "ILI9488_480x320", desc)
         rels = [f["rel"] for f in c["fichiers"]]

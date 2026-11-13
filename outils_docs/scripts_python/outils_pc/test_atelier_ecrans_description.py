@@ -9,6 +9,7 @@ from pathlib import Path
 
 import atelier_ecrans_catalogue as cat
 import atelier_ecrans_description as desc
+import atelier_ecrans_navigation as nav
 
 RACINE = Path(__file__).resolve().parents[3]
 ENV = "tasmota32s3-bureau-ecran-debits-pac"
@@ -191,6 +192,7 @@ def test_fichier(c):
         # 1. l'ecran.json couvre le pages.jsonl : memes objets, memes coordonnees
         lignes = [json.loads(l) for l in (RACINE / "data/bureau/tasmota32s3-ecran-debits-pac/pages.jsonl").read_text(encoding="utf-8").splitlines()]
         pj = {(l["page"], l["id"]): l for l in lignes if "obj" in l}
+        d = nav.deroule(d)                     # barre de navigation construite : ses boutons sont dans le pages.jsonl
         ec = {(o["page"], o["id"]): o for o in d["objets"]}
         verifie(set(pj) == set(ec), "ecran.json : memes objets que pages.jsonl", sorted(set(pj) ^ set(ec)))
         ecarts = [k for k in pj if k in ec and (pj[k]["x"], pj[k]["y"], pj[k]["w"], pj[k]["h"]) != (ec[k]["x"], ec[k]["y"], ec[k]["l"], ec[k]["h"])]

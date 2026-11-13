@@ -3,9 +3,9 @@
 {"page":0,"id":2,"obj":"obj","x":240,"y":30,"w":12,"h":12,"radius":6,"border_width":0,"bg_color":"#5B6B7C"}
 {"page":0,"id":3,"obj":"label","x":260,"y":22,"w":300,"h":28,"text":"aucun relevé","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
 {"page":0,"id":4,"obj":"label","x":580,"y":14,"w":420,"h":40,"text":"Total inconnu","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-32","text_color":"#3FA7FF","align":2}
-{"page":0,"id":91,"obj":"btn","x":24,"y":540,"w":110,"h":46,"radius":23,"border_width":0,"text":"Débits","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#3FA7FF","text_color":"#06121F","action":"p1"}
-{"page":0,"id":92,"obj":"btn","x":146,"y":540,"w":124,"h":46,"radius":23,"border_width":0,"text":"Courbes","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","action":"p2"}
-{"page":0,"id":93,"obj":"btn","x":282,"y":540,"w":130,"h":46,"radius":23,"border_width":0,"text":"Réglages","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","action":"p3"}
+{"page":0,"id":201,"obj":"btn","x":24,"y":540,"w":112,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#3FA7FF","text_color":"#06121F","text":"Débits","action":"p1"}
+{"page":0,"id":202,"obj":"btn","x":148,"y":540,"w":123,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Courbes","action":"p2"}
+{"page":0,"id":203,"obj":"btn","x":283,"y":540,"w":134,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Réglages","action":"p3"}
 {"page":1,"comment":"Debits (modele A) : six lignes nom, barre, debit, unite, part du total"}
 {"page":1,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
 {"page":1,"id":11,"obj":"label","x":24,"y":84,"w":180,"h":36,"text":"Débit 1","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}

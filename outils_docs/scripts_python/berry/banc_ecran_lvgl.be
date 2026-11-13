@@ -128,8 +128,8 @@ verifie("page de demarrage = page 1 chargee", ecranLvgl.page == 1 && lv.ecran ==
 verifie("page 1 : fond #10161E opaque", E[1].style("bg_color") == 0x10161E && E[1].style("bg_opa") == 255)
 verifie("page 0 transparente", E[0].style("bg_opa") == 0)
 verifie("82 objets crees", size(O) - 4 == 82)
-verifie("bouton : texte dans un label enfant centre", ecranLvgl.textes["p0b91"].parent == O["p0b91"] &&
-        ecranLvgl.textes["p0b91"].texte == "Débits" && ecranLvgl.textes["p0b91"].aligne == lv.ALIGN_CENTER)
+verifie("bouton : texte dans un label enfant centre", ecranLvgl.textes["p0b201"].parent == O["p0b201"] &&
+        ecranLvgl.textes["p0b201"].texte == "Débits" && ecranLvgl.textes["p0b201"].aligne == lv.ALIGN_CENTER)
 verifie("label : texte sur l'objet lui-meme", ecranLvgl.textes["p1b11"] == O["p1b11"])
 verifie("police TTF : A: retire, sans / de tete", O["p0b1"].style("text_font") == "ttf:sd/polices/RobotoCondensed-Regular.ttf-32")
 verifie("police entiere : robotocondensed embarquee", O["p2b12"].style("text_font") == "embarquee:robotocondensed-24")
@@ -179,8 +179,8 @@ verifie("voie a l'arret : nom clair (sauf), debit gris", O["p1b41"].style("text_
 verifie("barre liee", O["p1b12"].valeur == 62 && O["p1b62"].valeur == 100)
 verifie("page Courbes : nom de la voie 2", O["p2b22"].texte == "Retour")
 verifie("reglages lies", O["p3b23"].texte == "10 s" && O["p3b33"].texte == "5 min" && O["p3b43"].texte == "80 %")
-verifie("bouton de la page courante en bleu", O["p0b91"].style("bg_color") == 0x3FA7FF && O["p0b91"].style("text_color") == 0x06121F &&
-        O["p0b92"].style("bg_color") == 0x1F2B38 && O["p0b92"].style("text_color") == 0xE8EDF2)
+verifie("bouton de la page courante en bleu", O["p0b201"].style("bg_color") == 0x3FA7FF && O["p0b201"].style("text_color") == 0x06121F &&
+        O["p0b202"].style("bg_color") == 0x1F2B38 && O["p0b202"].style("text_color") == 0xE8EDF2)
 verifie("courbe : point inconnu pousse en CHART_POINT_NONE", O["p2b70"].points[4][-1] == lv.CHART_POINT_NONE)
 verifie("courbe : 3 points connus x 6 series pousses", size(O["p2b70"].points[0]) == 3 && O["p2b70"].points[5] == [557, 558, 559])
 verifie("courbe : axe 0-1000, haut de l'axe en L/min", O["p2b70"].axe == [lv.CHART_AXIS_PRIMARY_Y, 0, 1000] && O["p2b71"].texte == "10 L/min")
@@ -206,8 +206,8 @@ ecranLvgl.affiche(m)
 verifie("voie redevenue normale : barre bleue", O["p1b12"].style("bg_color", lv.PART_INDICATOR) == 0x3FA7FF)
 
 # ---- Touchers ---------------------------------------------------------------------------------------------------
-verifie("bouton Courbes : page 2 chargee", clic("p0b92") == "PAGE 2" && lv.ecran == E[2])
-verifie("bouton Courbes en bleu, Debits eteint", O["p0b92"].style("bg_color") == 0x3FA7FF && O["p0b91"].style("bg_color") == 0x1F2B38)
+verifie("bouton Courbes : page 2 chargee", clic("p0b202") == "PAGE 2" && lv.ecran == E[2])
+verifie("bouton Courbes en bleu, Debits eteint", O["p0b202"].style("bg_color") == 0x3FA7FF && O["p0b201"].style("bg_color") == 0x1F2B38)
 verifie("bouton + fenetre : ajuste(fenetre, 1)", clic("p3b24") == "AJUSTE fenetre 1")
 verifie("bouton - luminosite : ajuste(luminosite, -10)", clic("p3b42") == "AJUSTE luminosite -10")
 avant = lv.appels

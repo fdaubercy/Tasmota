@@ -2,7 +2,7 @@
 # (API en tete de ecranDebitsFonctions.be) sur les objets de pages.jsonl, lu en /json/pages.jsonl (rangement de l'image plate
 # du FS par gestionFileFolder). Choisie a la compilation : seule sur le FS (option custom_interface_ecran du cenv), sinon
 # ecranLvgl.be. Compile en .bec par demarrage.compile, importe par controleEcranDebits.be. Non solidifie.
-# Objets : page 0 (sur toutes les pages) p0b1 titre, p0b2 pastille, p0b3 releve, p0b4 total, p0b91-93 pied de page ;
+# Objets : page 0 (sur toutes les pages) p0b1 titre, p0b2 pastille, p0b3 releve, p0b4 total, p0b201-203 barre de navigation (construite par l'atelier, id 200 + page) ;
 # page 1 voie n : p1b<10n+1> nom, +2 barre, +3 debit, +4 unite, +5 part ; page 2 voie n : +1 puce, +2 nom, +3 debit, +4 unite,
 # p2b70 courbe, p2b71 haut de l'axe ; page 3 : p3b<k>3 valeur, p3b<k>2 bouton -, p3b<k>4 bouton + (k = 2 fenetre, 3 veille,
 # 4 luminosite). Le chart HASPmota n'a que 2 series natives (_ser1 sur l'axe primaire, seule _ser2 sur le secondaire ; lv_haspmota.be::lvh_chart::post_init, laissees vides) : les 6 courbes
@@ -136,8 +136,8 @@ def ecranHaspmota_affiche(m)
     e("p0b4", "text", m["total"])
     for n: 1 .. 3
         var actif = haspmota.lvh_page_cur_idx == n
-        e("p0b9" + str(n), "bg_color", actif ? c["bleu"] : "#1F2B38")
-        e("p0b9" + str(n), "text_color", actif ? "#06121F" : c["normal"])
+        e("p0b" + str(200 + n), "bg_color", actif ? c["bleu"] : "#1F2B38")
+        e("p0b" + str(200 + n), "text_color", actif ? "#06121F" : c["normal"])
     end
     for i: 0 .. ecranDebitsFonctions.NB_VOIES - 1
         var v = m["voies"][i]

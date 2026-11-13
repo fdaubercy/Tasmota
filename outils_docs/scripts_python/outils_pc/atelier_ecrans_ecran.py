@@ -101,6 +101,8 @@ def met_a_echelle(desc, cible, catalogue):
                 attrs[k] = round(v * rf)
             elif k == "text_font":
                 attrs[k] = police_echelle(v, rf, catalogue)
+        if b["h"] < CIBLE_TACTILE:
+            av.append(f"barre de navigation : cible tactile de {b['h']} px (moins de {CIBLE_TACTILE})")
     return d, av
 
 

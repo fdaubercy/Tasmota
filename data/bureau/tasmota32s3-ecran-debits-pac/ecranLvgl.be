@@ -8,15 +8,15 @@
 var ecranLvgl = module("ecranLvgl")
 
 # ---- Touchers : une fonction nommee par objet tactile, executee par tasmota.defer ----
-def ecranLvgl_p0b91()    import ecranLvgl    ecranLvgl.montre(1)    end
-def ecranLvgl_p0b92()    import ecranLvgl    ecranLvgl.montre(2)    end
-def ecranLvgl_p0b93()    import ecranLvgl    ecranLvgl.montre(3)    end
 def ecranLvgl_p3b22()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("fenetre", -1)    end
 def ecranLvgl_p3b24()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("fenetre", 1)    end
 def ecranLvgl_p3b32()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("veille", -1)    end
 def ecranLvgl_p3b34()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("veille", 1)    end
 def ecranLvgl_p3b42()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("luminosite", -10)    end
 def ecranLvgl_p3b44()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("luminosite", 10)    end
+def ecranLvgl_p0b201()    import ecranLvgl    ecranLvgl.montre(1)    end
+def ecranLvgl_p0b202()    import ecranLvgl    ecranLvgl.montre(2)    end
+def ecranLvgl_p0b203()    import ecranLvgl    ecranLvgl.montre(3)    end
 
 # ---- Tables tirees de la description ----
 ecranLvgl.DEPART = 1
@@ -31,9 +31,6 @@ ecranLvgl.OBJETS = [
     [0, 2, "obj", 240, 30, 12, 12, [["radius", 6], ["border_width", 0], ["bg_color", 0x5B6B7C]], nil],
     [0, 3, "label", 260, 22, 300, 28, [["text", "aucun relevé"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["text_color", 0x9FB3C8]], nil],
     [0, 4, "label", 580, 14, 420, 40, [["text", "Total inconnu"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-32"], ["text_color", 0x3FA7FF], ["align", 2]], nil],
-    [0, 91, "btn", 24, 540, 110, 46, [["radius", 23], ["border_width", 0], ["text", "Débits"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p0b91],
-    [0, 92, "btn", 146, 540, 124, 46, [["radius", 23], ["border_width", 0], ["text", "Courbes"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p0b92],
-    [0, 93, "btn", 282, 540, 130, 46, [["radius", 23], ["border_width", 0], ["text", "Réglages"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p0b93],
     [1, 11, "label", 24, 84, 180, 36, [["text", "Débit 1"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-28"], ["text_color", 0xE8EDF2]], nil],
     [1, 12, "bar", 212, 89, 532, 26, [["min", 0], ["max", 100], ["radius", 13], ["bg_color", 0x1F2B38], ["radius10", 13], ["bg_color10", 0x3FA7FF], ["val", 0]], nil],
     [1, 13, "label", 748, 80, 112, 44, [["text", "-,--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["text_color", 0x5B6B7C], ["align", 2]], nil],
@@ -108,7 +105,10 @@ ecranLvgl.OBJETS = [
     [3, 45, "label", 60, 416, 420, 26, [["text", "en service, réveil au toucher"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["text_color", 0x9FB3C8]], nil],
     [3, 42, "btn", 520, 372, 96, 72, [["radius", 36], ["border_width", 0], ["text", "-"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p3b42],
     [3, 43, "label", 626, 386, 200, 44, [["text", "80 %"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["text_color", 0xE8EDF2], ["align", 1]], nil],
-    [3, 44, "btn", 836, 372, 96, 72, [["radius", 36], ["border_width", 0], ["text", "+"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p3b44]]
+    [3, 44, "btn", 836, 372, 96, 72, [["radius", 36], ["border_width", 0], ["text", "+"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p3b44],
+    [0, 201, "btn", 24, 540, 112, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Débits"]], ecranLvgl_p0b201],
+    [0, 202, "btn", 148, 540, 123, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Courbes"]], ecranLvgl_p0b202],
+    [0, 203, "btn", 283, 540, 134, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Réglages"]], ecranLvgl_p0b203]]
 # [objet, chemin dans le modele, attribut, table de couleurs, couleurs si / sauf, sinon, format, echelle] ; une ligne par objet
 ecranLvgl.LIAISONS = [
     ["p0b2", ["liaison"], "bg_color", "etat", nil, nil, nil, nil],
@@ -168,7 +168,7 @@ ecranLvgl.LIAISONS = [
     ["p3b33", ["reglages", "veille"], "text", nil, nil, nil, nil, nil],
     ["p3b43", ["reglages", "luminosite"], "text", nil, nil, nil, nil, nil]]
 # [bouton, page menee, {attribut: [couleur page courante, couleur sinon]}]
-ecranLvgl.ACTIFS = [["p0b91", 1, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b92", 2, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b93", 3, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}]]
+ecranLvgl.ACTIFS = [["p0b201", 1, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b202", 2, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b203", 3, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}]]
 # [chart, chemin des series, chemin du compteur de points, couleurs des series]
 ecranLvgl.COURBE = ["p2b70", ["historique"], ["points"], [0x3FA7FF, 0x3FD08A, 0xFFA53F, 0xC084FC, 0xFF5A5A, 0xF5D04A]]
 

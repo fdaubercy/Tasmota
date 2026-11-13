@@ -429,7 +429,7 @@ verifie("voie 3 imprecise : orange #FFA53F (debit, barre, nom)", global.p1b33.te
 verifie("voie 4 a l'arret : « 0,00 », « arrêt », nom normal", texte("p1b43") == "0,00" && texte("p1b45") == "arrêt" && global.p1b41.text_color == C["normal"])
 verifie("page Courbes : memes valeurs et couleurs", texte("p2b13") == "123,45" && texte("p2b23") == "muet" && global.p2b33.text_color == "#FFA53F" && texte("p2b12") == "Débit 1")
 verifie("en-tete : total, releve, pastille verte", texte("p0b4") == "Total 324,0 L/min" && texte("p0b3") == "relevé il y a 0 s" && global.p0b2.bg_color == "#3FD08A")
-verifie("pied de page : « Débits » (page 1) en bleu, les autres en gris", global.p0b91.bg_color == "#3FA7FF" && global.p0b92.bg_color == "#1F2B38" && global.p0b93.bg_color == "#1F2B38")
+verifie("pied de page : « Débits » (page 1) en bleu, les autres en gris", global.p0b201.bg_color == "#3FA7FF" && global.p0b202.bg_color == "#1F2B38" && global.p0b203.bg_color == "#1F2B38")
 verifie("page Reglages : 10 s, 5 min, 80 %", texte("p3b23") == "10 s" && texte("p3b33") == "5 min" && texte("p3b43") == "80 %")
 verifie("courbe : les 60 points de l'historique pousses par serie au 1er affichage, axe 0 a 14 L/min", size(ch.points[0]) == 60 && ch.points[0][59] == 1234 && ch.points[0][0] == 1234
         && size(ch.points[5]) == 60 && ch.axe == [1, 0, 1400] && texte("p2b71") == "14 L/min")
@@ -448,7 +448,7 @@ verifie("une seconde de plus : seul le texte du releve est reecrit", global.ECRI
 import haspmota
 haspmota.lvh_page_cur_idx = 3
 edf.ecran()
-verifie("page Reglages affichee : son bouton passe en bleu, « Débits » en gris", global.p0b93.bg_color == "#3FA7FF" && global.p0b91.bg_color == "#1F2B38")
+verifie("page Reglages affichee : son bouton passe en bleu, « Débits » en gris", global.p0b203.bg_color == "#3FA7FF" && global.p0b201.bg_color == "#1F2B38")
 haspmota.lvh_page_cur_idx = 1
 global.T += 30
 edf.ecran()
