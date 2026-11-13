@@ -22,6 +22,9 @@ Routes (les POST exigent l'en-tete X-Etiquettes-QR: 1 et la meme origine ; JSON)
     POST /gabarit/diff     {gabarit} -> {fichiers, empreinte} ;  POST /gabarit/ecrire {gabarit, empreinte} -> {ecrits}
     POST /impression       {impressions: [{env, reglage}], taille_mm} -> {notees} (texte resolu ici, seule son empreinte est gardee)
     POST /impression/annule {env} -> {ok}
+    POST /publication/diff {} -> {fichiers (avec diffs), refus: [{env, raison}], publies, url, empreinte} : fiches des
+                           cartes reglees en mode lien, d'apres les reglages ECRITS (A10 ; lit origin, ne pousse rien)
+    POST /publier          {empreinte} -> {sha (None si rien ne change), publies, url} ; pousse la branche etiquettes
 Refus : 400 (saisie), 403 (anti-CSRF), 404 (env inconnu), 409 (build, empreinte), 500 (inattendu, avec le message).
 """
 
@@ -39,6 +42,7 @@ import acces_web
 import build_envs
 import etiquettes_qr_ecriture as eqe
 import etiquettes_qr_modele as modele
+import etiquettes_qr_publication as publication
 import etiquettes_qr_suivi as suivi_qr
 import etiquettes_qr_verdict as verdict
 import lieux
@@ -70,14 +74,19 @@ def apercu(racine, env, reglage, envs):
     erreurs = modele.valide_reglage(reglage, racine)
     if erreurs:
         return {"erreurs": erreurs}
-    resolu = modele.resout_avec(reglage, modele.champs_standards(racine, env, envs), modele.persist_de(racine, env))
+    persist = modele.persist_de(racine, env)
+    resolu = modele.resout_avec(reglage, modele.champs_standards(racine, env, envs), persist)
     f = modele.fichier_carte(racine, reglage, resolu)
+    if reglage.get("contenu") == "lien":             # A10 : ce qui serait refuse a la publication, dit des l'apercu
+        resolu["avertissements"] += publication.refus_de(resolu, persist) + [
+            "Mode lien : la fiche n'est en ligne qu'après « Publier les fiches… » ; d'ici là, le QR code mène à une page introuvable."]
     return {**resolu, "image": f["image"], "correction": f["correction"], "erreurs": [],
             "verdict": verdict.verdict(resolu["texte"], reglage.get("taille_mm", 25), f["correction"])}
 
 
 def fabrique_gestionnaire(acces, racine, builds_en_cours):
     verrou = threading.Lock()
+    verrou_pub = threading.Lock()        # a part : un fetch ou un push lent ne bloque pas les ecritures du depot
     cache = {"t": 0.0, "envs": []}
     precedentes = {}       # shortcut: notes remplacees gardees en memoire ; perdues si l'outil redemarre avant l'annulation
 
@@ -186,6 +195,17 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             with verrou:                                 # remet la note d'une impression anterieure, s'il y en avait une
                 eqe.annule_impression(racine, env, precedentes.pop(env, None))
             return {"ok": True}
+        if chemin == "/publication/diff":
+            with verrou_pub:
+                p = publication.prevoit_publication(racine, [e.nom for e in cartes()], envs())
+            p.pop("contenu")
+            return avec_diffs(p)
+        if chemin == "/publier":
+            if not isinstance(demande.get("empreinte"), str):
+                raise ValueError("empreinte : chaîne attendue")
+            with verrou_pub:
+                sha = publication.publie(racine, [e.nom for e in cartes()], demande["empreinte"], builds_en_cours, envs())
+            return {"sha": sha, "url": modele.url_depot(racine)}
         raise LookupError(chemin)
 
     class Gestionnaire(BaseHTTPRequestHandler):

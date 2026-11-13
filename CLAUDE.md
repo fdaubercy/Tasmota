@@ -987,9 +987,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.
   - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,
-    `_suivi.py`, `build/cible_etiquettes_qr.py`) — page « Etiquettes QR code » http://127.0.0.1:7970 (2026-11-12 ; tuile de l'annuaire,
+    `_suivi.py`, `_filtre_public.py`, `_publication.py`, `_page_publication.py`, `build/cible_etiquettes_qr.py`) — page « Etiquettes QR
+    code » http://127.0.0.1:7970 (2026-11-12 ; tuile de l'annuaire,
     groupe Maintenance, arret libre ; tache VS Code ; cible Custom detachee, `NOM_CIBLE` etiquettes_qr). QR code d'identite de
-    chaque carte (du TEXTE, aucun lien) : lignes standard (`etiquettes_qr_modele.CHAMPS`), cle du persist (jamais un secret, ni une
+    chaque carte (du TEXTE par defaut ; mode lien, A10 : adresse d'une fiche PUBLIQUE sur GitHub Pages, branche orpheline
+    `etiquettes` poussee par la plomberie git sans toucher l'arbre de travail, `etiquettes_qr_publication.py::publie` ; chaque
+    ligne passe le filtre des secrets du persist puis `etiquettes_qr_filtre_public.py::controle_public`) : lignes standard (`etiquettes_qr_modele.CHAMPS`), cle du persist (jamais un secret, ni une
     valeur qui en contient un) ou texte libre, texte avant/apres ; style ; verdict de lisibilite (`etiquettes_qr_verdict.py`, seuils
     cales sur l'essai du 2026-11-12) ; impression a 100 %, planche A4, planche d'essai, export PNG/SVG ; notes d'impression
     (`outils_docs/etiquettes_qr/impressions.json`, empreinte seule). Reglages hors flash : `outils_docs/etiquettes_qr/gabarit.json` et

@@ -15,9 +15,11 @@ Le texte du QR code est encode en UTF-8 par la page et la carte (outils_docs/eti
 
 import base64
 import copy
+import functools
 import hashlib
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import build_envs
@@ -122,6 +124,8 @@ def valide_reglage(reglage, racine=None):
     taille = reglage.get("taille_mm", 25)
     if isinstance(taille, bool) or not isinstance(taille, (int, float)) or not 10 <= taille <= 100:
         err.append("taille de 10 à 100 mm")
+    if reglage.get("contenu", "texte") not in ("texte", "lien"):
+        err.append("contenu du QR code : « texte » ou « lien »")
     if style.get("image") is not None:
         try:
             _nom_image(style["image"])
@@ -193,6 +197,32 @@ def serveur_de_config(chemin):
     return {"hostname": d.get("hostname"), "mqtt": {"topic": d.get("mqtt_topic")}} if isinstance(d, dict) else {}
 
 
+# shortcut: lu une fois par lancement de l'outil ; un origin change pendant qu'il tourne demande de le relancer
+@functools.lru_cache(maxsize=None)
+def _url_depot(racine):
+    try:
+        url = subprocess.run(["git", "-C", racine, "config", "--get", "remote.origin.url"], capture_output=True,
+                             text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    # proprietaire et depot seulement : l'URL brute peut porter un jeton (https://jeton@github.com/...)
+    m = re.match(r"^(?:https://(?:[^@/]*@)?github\.com/|git@github\.com:|ssh://git@github\.com/)([\w.-]+)/([\w.-]+?)(?:\.git)?/?$", url)
+    return f"https://{m.group(1).lower()}.github.io/{m.group(2)}/" if m else None
+
+
+def url_depot(racine):
+    """Racine GitHub Pages du depot (`https://<proprietaire>.github.io/<depot>/`), None si origin n'est pas sur GitHub."""
+    return _url_depot(str(Path(racine).resolve()))
+
+
+def url_fiche(racine, env):
+    """Adresse publique de la fiche d'une carte (plan A10) ; ValueError si le depot n'est pas sur GitHub."""
+    base = url_depot(racine)
+    if not base:
+        raise ValueError("adresse de la fiche introuvable : le remote origin du dépôt n'est pas sur GitHub")
+    return f"{base}{_env_valide(env)}.html"
+
+
 def champs_standards(racine, env, envs=None):
     """Champs lus dans le depot : persist (ou `config_decodee.json` d'une carte sans persist), `user_config_override.h`,
     maitre du range extender ; ValueError si l'env n'est pas une carte du cenv. `envs` : liste de `build_envs.liste_envs`
@@ -206,7 +236,8 @@ def champs_standards(racine, env, envs=None):
     else:
         dossier = fichiers_berry_etat.dossier_carte(env)
         serveur = serveur_de_config(Path(racine) / dossier / "config_decodee.json") if dossier else {}
-    return champs_de(env, serveur, e.ip)
+    # base GitHub Pages, hors CHAMPS (jamais proposee comme ligne) : lue par resout_avec en mode lien
+    return {**champs_de(env, serveur, e.ip), "url_depot": url_depot(racine)}
 
 
 def _valeurs_secretes(obj, acc, sous_secret=False):
@@ -304,7 +335,14 @@ def resout_avec(reglage, champs, persist):
                 valeur = f"{l.get('avant', '')}{valeur}{l.get('apres', '')}"
             textes.append(f"{lib}{sep}{valeur}" if lib else valeur)
         lignes.append({"source": src, "cle": cle, "libelle": lib, "valeur": valeur, "etat": etat})
-    return {"texte": reglage.get("entre_lignes", "\n").join(textes), "lignes": lignes, "avertissements": avert}
+    texte = reglage.get("entre_lignes", "\n").join(textes)
+    if reglage.get("contenu") == "lien":
+        # mode lien (A10) : le QR code porte l'adresse de la fiche, pour TOUS les appelants (ecriture, suivi, build,
+        # impression) ; sans adresse, une erreur, jamais un retour discret au texte
+        if not champs.get("url_depot"):
+            raise ValueError("mode lien : adresse de la fiche introuvable (remote origin du dépôt hors GitHub)")
+        texte = f"{champs['url_depot']}{_env_valide(champs['env'])}.html"
+    return {"texte": texte, "lignes": lignes, "avertissements": avert}
 
 
 def resout(racine, env, reglage):

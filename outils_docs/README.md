@@ -2149,8 +2149,9 @@ Commandes exactes : skill `bancs`.
 ## Étiquettes QR code (page web)
 
 Page http://127.0.0.1:7970 pour composer, carte par carte, un QR code qui affiche l'identité de la carte au téléphone,
-l'imprimer en étiquette ou en planche A4, et le montrer sur une page de la carte. Le QR code contient du texte et aucun
-lien : le téléphone l'affiche sans réseau, ce qui sert quand une carte ne répond plus. Lancement : tuile « Étiquettes QR
+l'imprimer en étiquette ou en planche A4, et le montrer sur une page de la carte. Par défaut, le QR code contient du
+texte et aucun lien : le téléphone l'affiche sans réseau, ce qui sert quand une carte ne répond plus (mode lien : voir
+« Fiche en ligne » plus bas). Lancement : tuile « Étiquettes QR
 code » de l'annuaire (groupe Maintenance), tâche VS Code « Outil : étiquettes QR code », ou cible Custom « Étiquettes QR
 code (page web) » (`build/cible_etiquettes_qr.py`, page démarrée détachée ; `pio run` : jamais pendant un build). Arrêt
 libre : rien n'est écrit sans « Écrire dans le dépôt », après le diff. Spec :
@@ -2209,9 +2210,33 @@ Ailleurs :
 - après un renommage, ou une modification par l'assistant persist qui change le texte, un lien « Étiquette QR à
   refaire » ouvre cette page.
 
+**Fiche en ligne (mode lien).** Le menu « le QR code contient » propose, carte par carte, le texte (par défaut, lu
+sans réseau) ou un lien vers une fiche HTML PUBLIQUE, `https://<propriétaire>.github.io/<dépôt>/<env>.html` (adresse
+tirée de `remote.origin.url`, sans le jeton qu'elle porterait). Le lien se lit partout (4G, carte éteinte, ESP8266) et
+la fiche se met à jour sans réimprimer l'étiquette. Les lignes du réglage deviennent le contenu de la fiche ; le titre
+est le nom de l'env.
+
+Avant de paraître, chaque ligne entière (libellé, texte avant et après, valeur, ligne libre) passe deux filtres :
+- celui des secrets du persist : aucune valeur d'une clé de mot de passe ou de jeton, même recopiée dans un texte libre ;
+- celui des valeurs publiques (`etiquettes_qr_filtre_public.py`) : pas d'identifiants dans une URL, de paramètre
+  `token=` ou `key=`, d'IPv4 publique, d'IPv6 globale, de nom de domaine joignable (`.local`, `.lan`, `.home.arpa` et
+  noms sans point acceptés), de chaîne à allure de clé, ni de mot qui annonce un secret (mot de passe, mdp, WPA…).
+
+L'aperçu signale chaque ligne refusée par son numéro, sans la recopier ; une seule ligne refusée bloque toute la
+publication. Faux positifs connus : un numéro de version à quatre nombres (15.1.0.1), un nom de fichier (autoexec.be).
+
+« Publier les fiches… » montre le diff des fiches, puis pousse la branche orpheline `etiquettes` du dépôt, sans
+forcer. Seuls les réglages ÉCRITS comptent. Toutes les cartes en mode lien sont publiées ; une carte repassée en texte voit
+sa fiche retirée. L'arbre de travail, l'index et `development` ne sont jamais touchés (plomberie git). Refus pendant un
+build, si la branche a bougé ailleurs depuis le diff, ou sans réponse de GitHub en 120 s. Une fiche dont seul le jour
+change n'est pas renvoyée. Mise en service, une fois : sur GitHub, Settings > Pages, source « Deploy from a branch »,
+branche `etiquettes`, dossier `/ (root)`. Jusqu'à la première publication, le QR code d'une carte en mode lien mène à
+une page introuvable.
+
 ### Bancs
 
-`outils_pc/test_etiquettes_qr_modele.py`, `_verdict.py`, `_ecriture.py`, `_suivi.py`, `_web.py`, puis les sondes Chrome
+`outils_pc/test_etiquettes_qr_modele.py`, `_verdict.py`, `_ecriture.py`, `_suivi.py`, `_web.py`, `_filtre_public.py`,
+`_publication.py` (dépôt temporaire dont l'origin est un dépôt nu local : rien ne part sur le réseau), puis les sondes Chrome
 `test_etiquettes_qr_page_chrome.py` (page de l'outil) et `test_qrcode_carte_chrome.py` (page de la carte, servie par un
 serveur local qui imite la carte) ; `berry/banc_qrcode_page.py` (module de la carte) ; `build/test_qrcode_build.py`
 (régénération au build) et `build/test_cible_etiquettes_qr.py`. Commandes exactes : skill `bancs`.

@@ -312,20 +312,20 @@ Fichiers : créer `outils_pc/etiquettes_qr_publication.py`, `outils_pc/etiquette
 Produit : `controle_public(valeur: str) -> str | None` (raison du refus) ; `fiche_html(racine, env, reglage) -> str` ;
 `url_fiche(racine, env) -> str` ; `prevoit_publication(racine, envs) -> {"fichiers", "refus", "empreinte"}` ;
 `publie(racine, envs, empreinte, builds_en_cours) -> sha`.
-- [ ] Banc du filtre d'abord (rouge), avec mutants : refus d'une valeur portant des identifiants d'URL (`://x:y@`), un
+- [x] Banc du filtre d'abord (rouge), avec mutants — preuve : `test_etiquettes_qr_filtre_public.py` VERT, 6 mutants rouges (un par règle) ; rouge d'abord sur `2a01:cb00::1:` et `sk-proj-…` ; refus d'une valeur portant des identifiants d'URL (`://x:y@`), un
   paramètre `token=`, `key=`, `apikey=`, `password=`, `pass=`, `pwd=`, `secret=`, `auth=`, `sig=` (casse indifférente) ;
   une IPv4 non privée (hors 10/8, 172.16/12, 192.168/16, 127/8, 169.254/16) ; une IPv6 globale ; un nom de domaine
   joignable (hors `.local`, `.lan`, `.home.arpa`, nom sans point) ; une chaîne de 20 caractères ou plus sans espace à
   allure de clé (base64 ou hexadécimal) ; acceptés : hostname, IP privée avec ou sans port, topic, valeurs ordinaires
-- [ ] Filtre ; banc VERT ; appliqué en plus du filtre de l'A2 (clé ET valeur), avertissement dans l'aperçu,
-  refus à la publication avec la raison
-- [ ] Fiche HTML autonome (aucune ressource externe, CSS en ligne, clair/sombre par `prefers-color-scheme`,
-  `<meta name="robots" content="noindex">`, textes échappés, date de publication) ; `.nojekyll` ; banc : `<script>` dans
-  une valeur libre rendu en texte
-- [ ] Réglage « Contenu du QR code » : en mode lien, QR code = `url_fiche` (verdict sur l'URL), proposé pour toute carte
-- [ ] Publication : diff des fiches avant envoi, bouton « Publier » distinct d'« Écrire », refus pendant un build ;
+- [x] Filtre ; banc VERT ; appliqué en plus du filtre de l'A2 (clé ET valeur), avertissement dans l'aperçu, refus à la publication avec la raison — preuve : `etiquettes_qr_publication.py::refus_de` (ligne nommée par son numéro, valeur jamais recopiée : défaut trouvé par le banc), avertissement de `etiquettes_qr_web.py::apercu` ; `test_etiquettes_qr_publication.py` et `test_etiquettes_qr_web.py` VERTS (ligne `token=` : refus, branche inchangée)
+- [x] Fiche HTML autonome — preuve : (aucune ressource externe, CSS en ligne, clair/sombre par `prefers-color-scheme`,
+  `<meta name="robots" content="noindex">`, textes échappés, date de publication ; `.nojekyll` ; banc : `<script>` dans
+  une valeur libre rendu en texte) `etiquettes_qr_publication.py::fiche_html`, banc VERT (`&lt;script&gt;`, ni src ni href) ; même fiche un autre jour : gardée telle quelle (pas de nouvel envoi quotidien)
+- [x] Réglage « Contenu du QR code » : en mode lien, QR code = `url_fiche` (verdict sur l'URL), proposé pour toute carte — preuve : `etiquettes_qr_modele.py::resout_avec` (adresse pour tous les appelants : écriture, suivi, build, impression ; origin hors GitHub = erreur, jamais un retour discret au texte), sélecteur « le QR code contient » (`etiquettes_qr_page_publication.py`) ; sonde Chrome VERTE deux fois (le téléphone lirait l'adresse)
+- [x] Publication : diff des fiches avant envoi, bouton « Publier » distinct d'« Écrire », refus pendant un build — preuve : routes `POST /publication/diff` et `/publier`, bouton « Publier les fiches… » ; `test_etiquettes_qr_publication.py` VERT sur un origin nu local (URL lue github.com réécrite par `insteadOf`) : arbre de travail, index et `development` identiques, branche orpheline, fiche retirée au prochain envoi par-dessus la pointe ; entrée de git passée en octets (Windows changeait `\n` en `\r\n` dans l'arbre, défaut trouvé par le banc) ; sonde Chrome : écriture en lien puis publication complète ;
   banc sur un dépôt temporaire avec un `origin` nu : seule `refs/heads/etiquettes` change, `development` et l'arbre
   de travail identiques avant/après, carte retirée -> fiche retirée au prochain envoi
+- [x] Relecture (agent relecteur-pages-web, opus) puis corrections — preuve : bloquant B1 corrigé (le filtre des secrets du persist voyait seulement les lignes `persist` : une ligne libre ou un texte « avant » portant un mot de passe partait sur la fiche ; désormais toute la ligne, `etiquettes_qr_publication.py::lignes_publiees`, témoins et mutants dans `test_etiquettes_qr_publication.py`) ; filtre élargi (access_token=, api_key=, JWT, jeton Telegram, AWS, Slack, mots annonciateurs : banc à 7 règles, 7 mutants rouges) ; raisons sans valeur ; titre de la fiche = env ; git sans invite d'identifiants, délai de 120 s, verrou de publication à part, jeton d'URL retiré des messages ; `update-ref` après push sans effet sur le résultat ; tests « branche bougée ailleurs » et « origin injoignable » ; mode d'emploi `outils_docs/README.md` § « Fiche en ligne (mode lien) »
 - [ ] Mise en service par l'utilisateur, une fois : Settings > Pages > Source « Deploy from a branch », branche
   `etiquettes`, dossier `/ (root)`
 - [ ] Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G

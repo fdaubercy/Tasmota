@@ -302,6 +302,7 @@ function dessineTout() {
   $('taille').value = r.taille_mm || 25;
   $('mm').textContent = (r.taille_mm || 25) + ' mm';
   ETAT.apercu = null;
+  dessineContenu();
   dessineLignes();
   dessinePersist();
   dessineStyle();
@@ -348,7 +349,7 @@ async function apercu() {
 }
 
 // ---------------------------------------------------------------- ecriture
-function montreDiff(prevu, titre, surConfirme) {
+function montreDiff(prevu, titre, surConfirme, libelle) {
   const z = $('ecriture');
   z.replaceChildren();
   z.appendChild(el('h3', {}, titre));
@@ -363,7 +364,7 @@ function montreDiff(prevu, titre, surConfirme) {
     });
     z.appendChild(pre);
   });
-  const ok = el('button', {type: 'button', class: 'btn prim'}, 'Confirmer l\'écriture');
+  const ok = el('button', {type: 'button', class: 'btn prim'}, libelle || 'Confirmer l\'écriture');
   const non = el('button', {type: 'button', class: 'btn'}, 'Annuler');
   ok.onclick = async () => {
     ok.disabled = non.disabled = true;

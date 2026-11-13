@@ -91,12 +91,14 @@ def sonde(cdp, url, banc, capture):
               "ligne libre en HTML : affichee en texte, rien d'execute")
     # Diff puis modification : le diff affiche est retire (l'ancien reglage ne peut plus etre ecrit)
     cdp.js("document.getElementById('btn-ecrire').click()")
-    s.attend(cdp, "document.querySelectorAll('#ecriture pre.diff').length > 0", 10)
+    # 60 s et verifie : un premier /diff a froid depasse parfois 10 s ; en retard, il serait confirme a la place du second
+    s.verifie(s.attend(cdp, "document.querySelectorAll('#ecriture pre.diff').length > 0", 60), True, "premier diff affiche")
     cdp.js("(() => { const t = document.getElementById('separateur'); t.value = ' = '; t.dispatchEvent(new Event('input')); })()")
     s.verifie(cdp.js("document.querySelectorAll('#ecriture pre.diff').length"), 0, "modification apres le diff : diff retire")
     # Ecriture complete : diff, confirmation, fichier ecrit dans la copie, page relue sans modification en attente
     cdp.js("document.getElementById('btn-ecrire').click()")
-    s.attend(cdp, "[...document.querySelectorAll('#ecriture button')].some(b => b.textContent.indexOf('Confirmer') === 0)", 10)
+    s.verifie(s.attend(cdp, "[...document.querySelectorAll('#ecriture button')].some(b => b.textContent.indexOf('Confirmer') === 0)", 60),
+              True, "second diff affiche, bouton Confirmer")
     cdp.js("[...document.querySelectorAll('#ecriture button')].find(b => b.textContent.indexOf('Confirmer') === 0).click()")
     s.attend(cdp, "document.querySelectorAll('#ecriture .avert.vert, #ecriture .avert.rouge').length > 0", 60)   # ~4 s mesurees
     fichier = banc.racine / tw.eqw.modele.DOSSIER / "cartes" / (CUVE + ".json")
@@ -222,6 +224,31 @@ def sonde_impression(cdp, url, banc, capture):
     s.verifie(cdp.erreurs(), [], "impression : aucune erreur JS")
 
 
+def sonde_publication(cdp, url, banc, nu_dossier):
+    """A10 : contenu « lien », ecriture, puis « Publier les fiches… » vers un origin nu local (rien ne part sur le reseau)."""
+    import test_etiquettes_qr_publication as tpub
+    nu = tpub.en_depot(banc.racine, nu_dossier)
+    cdp.appel("Page.navigate", url=url + "?env=" + CUVE)
+    s.attend(cdp, "document.getElementById('qr').querySelector('svg') !== null", 60)
+    cdp.js("(() => { const c = document.getElementById('contenu'); c.value = 'lien'; c.dispatchEvent(new Event('change')); })()")
+    s.verifie(s.attend(cdp, "document.getElementById('lu').textContent === %s" % json.dumps(tpub.URL), 15), True,
+              "contenu « lien » : le telephone lirait l'adresse de la fiche")
+    cdp.js("document.getElementById('btn-ecrire').click()")
+    s.verifie(s.attend(cdp, "[...document.querySelectorAll('#ecriture button')].some(b => b.textContent.indexOf('Confirmer') === 0)", 60),
+              True, "contenu « lien » : diff affiche")
+    cdp.js("[...document.querySelectorAll('#ecriture button')].find(b => b.textContent.indexOf('Confirmer') === 0).click()")
+    s.attend(cdp, "document.querySelectorAll('#ecriture .avert.vert, #ecriture .avert.rouge').length > 0", 60)
+    cdp.js("document.getElementById('btn-publier').click()")
+    pret = s.attend(cdp, "[...document.querySelectorAll('#ecriture button')].some(b => b.textContent === 'Publier')", 60)
+    texte = cdp.js("document.getElementById('ecriture').textContent")
+    s.verifie((pret, "PUBLIQUES" in texte, CUVE + ".html" in texte), (True, True, True), "Publier… : diff des fiches, avertissement public")
+    cdp.js("[...document.querySelectorAll('#ecriture button')].find(b => b.textContent === 'Publier').click()")
+    s.attend(cdp, "document.querySelectorAll('#ecriture .avert.vert, #ecriture .avert.rouge').length > 0", 60)
+    s.verifie((cdp.js("document.getElementById('ecriture').textContent").startswith("Fiches publiées"), tpub.arbre(nu)),
+              (True, [".nojekyll", CUVE + ".html"]), "Publier : fiche poussee sur la branche etiquettes de l'origin nu")
+    s.verifie(cdp.erreurs(), [], "publication : aucune erreur JS")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome de la page Etiquettes QR code.")
     options.add_argument("--capture", help="dossier ou ecrire les captures PNG")
@@ -250,6 +277,8 @@ def principal():
             cdp.appel(domaine)
         sonde(cdp, f"http://127.0.0.1:{banc.port}/", banc, args.capture)
         sonde_impression(cdp, f"http://127.0.0.1:{banc.port}/", banc, args.capture)
+        (t / "nu").mkdir()
+        sonde_publication(cdp, f"http://127.0.0.1:{banc.port}/", banc, t / "nu")   # en dernier : la copie devient un depot git
     except Exception as erreur:                              # noqa: BLE001
         s.verifie(repr(erreur), "pas d'exception de la sonde", "sonde : deroulement")
     finally:

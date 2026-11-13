@@ -204,12 +204,38 @@ def test_suivi(b):
     verifie(b.requete("GET", "/etat?env=Mauvais%20nom")[0], 404, "GET /etat : carte inconnue, 404 (comme /reglage)")
 
 
+def test_publication(b, dossier):
+    import test_etiquettes_qr_publication as tpub
+    nu = tpub.en_depot(b.racine, tempfile.mkdtemp(dir=dossier, prefix="nu_"))   # hors de la copie (dossier = racine)
+    g = dict(gabarit(b), contenu="lien", lignes=gabarit(b)["lignes"] + [{"source": "libre", "texte": "http://x/?token=abc"}])
+    a = b.requete("POST", "/apercu", {"env": CUVE, "reglage": g})[1]
+    verifie((a["texte"], any("fiche publique" in m and "abc" not in m for m in a["avertissements"])), (tpub.URL, True),
+            "POST /apercu en mode lien : adresse de la fiche, ligne secrete signalee sans sa valeur")
+    statut, p = b.requete("POST", "/publication/diff", {})
+    verifie((statut, [f["chemin"] for f in p["fichiers"]], p["publies"], "contenu" in p), (200, [".nojekyll"], [], False),
+            "POST /publication/diff : aucune carte en lien, .nojekyll seul, contenu non renvoye")
+    g["lignes"].pop()
+    e = b.requete("POST", "/diff", {"env": CUVE, "reglage": g, "page_carte": False})[1]
+    b.requete("POST", "/ecrire", {"env": CUVE, "reglage": g, "page_carte": False, "empreinte": e["empreinte"]})
+    statut, p = b.requete("POST", "/publication/diff", {})
+    verifie((statut, p["publies"], p["refus"], p["url"]), (200, [CUVE], [], "https://proprio.github.io/Depot/"),
+            "POST /publication/diff : cuve ecrite en lien, sa fiche prevue")
+    verifie(b.requete("POST", "/publier", {})[0], 400, "POST /publier sans empreinte : 400")
+    b.builds = ["pio"]
+    verifie(b.requete("POST", "/publier", {"empreinte": p["empreinte"]})[0], 409, "POST /publier pendant un build : 409")
+    b.builds = []
+    statut, r = b.requete("POST", "/publier", {"empreinte": p["empreinte"]})
+    verifie((statut, r["sha"], tpub.arbre(nu)), (200, tpub.git(nu, "rev-parse", "refs/heads/etiquettes"), [".nojekyll", f"{CUVE}.html"]),
+            "POST /publier : fiche poussee sur la branche etiquettes")
+
+
 def main():
     dossier = tempfile.mkdtemp(prefix="banc_etiquettes_qr_web_")
     b = Banc(dossier)
     try:
         for test in (test_page, test_cartes, test_reglage_persist, test_csrf, test_apercu, test_ecriture, test_gabarit_impression, test_suivi):
             test(b)
+        test_publication(b, dossier)                  # en dernier : fait de la copie un depot git
     finally:
         b.ferme()
         shutil.rmtree(dossier, ignore_errors=True)

@@ -7,6 +7,7 @@ sombre par l'interrupteur, comme l'atelier des graphiques. Le QR code est dessin
 
 from etiquettes_qr_page_impression import CSS_IMPRESSION, JS_IMPRESSION
 from etiquettes_qr_page_js import JS
+from etiquettes_qr_page_publication import JS_PUBLICATION
 import lieux
 
 CSS = """
@@ -109,6 +110,7 @@ HTML = """<main>
       <button type="button" data-onglet="gabarit">Gabarit commun</button>
     </div>
     <div class="panneau" id="onglet-contenu">
+      <div class="ligne petit">le QR code contient <select id="contenu" aria-label="Contenu du QR code"></select></div>
       <h3>Lignes lues par le téléphone</h3>
       <div id="lignes"></div>
       <div class="ligne">
@@ -149,7 +151,8 @@ HTML = """<main>
     <div id="avertissements"></div>
     <div class="ligne" style="margin-top:10px"><button class="btn prim" type="button" id="btn-ecrire">Écrire dans le dépôt…</button>
       <button class="btn" type="button" id="btn-imprimer" disabled>Imprimer</button><button class="btn" type="button" id="btn-png" disabled>PNG</button>
-      <button class="btn" type="button" id="btn-svg" disabled>SVG</button></div>
+      <button class="btn" type="button" id="btn-svg" disabled>SVG</button>
+      <button class="btn" type="button" id="btn-publier" title="Fiches des cartes en mode lien, branche etiquettes (GitHub Pages)">Publier les fiches…</button></div>
     <div class="ligne petit"><label><input type="checkbox" id="petit-nom"> petit nom sous le code</label>
       <button class="btn mini" type="button" id="btn-essai" disabled title="Carte affichée à 15, 20, 25 et 30 mm, texte court et long">Planche d'essai</button></div>
     <p class="doux petit">Dans la fenêtre d'impression : échelle 100 % (« Taille réelle »), marges par défaut ; la règle de
@@ -173,4 +176,4 @@ THEME_INTERRUPTEUR = ("<script>(function () { var c = document.getElementById('t
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         "<title>Étiquettes QR code</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE + "<style>" + CSS + CSS_IMPRESSION + "</style>"
         "<script src=\"/lib.js\"></script></head><body>" + HTML + THEME_INTERRUPTEUR
-        + "<script>" + lieux.JS + JS + JS_IMPRESSION + "</script></body></html>")
+        + "<script>" + lieux.JS + JS + JS_IMPRESSION + JS_PUBLICATION + "</script></body></html>")
