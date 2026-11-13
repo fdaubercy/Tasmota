@@ -658,6 +658,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     interfaces ajoutes en memoire a `custom_files_exclude`, valeur inconnue = arret ; `retire_exclus` : post-action de
     `littlefs.bin`, retire de l'image du buildfs les fichiers exclus a la racine, dossier de la carte compris, comme
     post_esp32 ; banc `test_interface_ecran.py`),
+    `qrcode_build.py` (`regenere` : avant chaque `pio run` d'une carte qui a un reglage d'etiquette QR, recalcule son
+    `qrcode.json` et le reecrit s'il a change ; persist illisible = avertissement, fichier garde, build continue ;
+    banc `test_qrcode_build.py`),
     `verifie_lib_ignore.py` (garde du pre-script, AVANT le scan des dependances : arrete le build si le `lib_ignore`
     qu'un env personnel ajoute a son parent ignore une bibliotheque incluse sous une garde vraie ou incertaine ;
     ~11 s ; ligne « lib_ignore de <env> : » lue par la page build ; `--propose <env>` = liste ignorable de l'env ;
@@ -978,3 +981,20 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     reecrits tels quels, absents de `ecranLvgl.be`), `_page_import.py`, route `POST /importer`.
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.
+  - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,
+    `_suivi.py`, `build/cible_etiquettes_qr.py`) — page « Etiquettes QR code » http://127.0.0.1:7970 (2026-11-12 ; tuile de l'annuaire,
+    groupe Maintenance, arret libre ; tache VS Code ; cible Custom detachee, `NOM_CIBLE` etiquettes_qr). QR code d'identite de
+    chaque carte (du TEXTE, aucun lien) : lignes standard (`etiquettes_qr_modele.CHAMPS`), cle du persist (jamais un secret, ni une
+    valeur qui en contient un) ou texte libre, texte avant/apres ; style ; verdict de lisibilite (`etiquettes_qr_verdict.py`, seuils
+    cales sur l'essai du 2026-11-12) ; impression a 100 %, planche A4, planche d'essai, export PNG/SVG ; notes d'impression
+    (`outils_docs/etiquettes_qr/impressions.json`, empreinte seule). Reglages hors flash : `outils_docs/etiquettes_qr/gabarit.json` et
+    `cartes/<env>.json`. Page de la carte (ESP32) : `data/fs/qrcodePage.be` (SOLIDIFIE, bouton dans le menu Outils, route
+    `/qrcode`), `data/sd/{html,css,js}/qrcode.*`, `qrcode_options.js` (options communes a l'outil et a la carte),
+    `qr-code-styling.min.js.gz` ; liste `etiquette_qr` de `[berry_commun]`, exclue des envs sans page ; fichier GENERE
+    `data/<lieu>/<carte>/qrcode.json`, range dans `/json/` au demarrage. Suivi (`etiquettes_qr_suivi.py::etats`) : badges
+    « a reimprimer », « a regenerer », etat de la carte, lien « Televerser » vers la page Build (`build_page_atelier.py`,
+    `depuis=qrcode`) ; lien « Etiquette QR a refaire » apres un renommage (`fichiers_berry_renommage.py`, le reglage suit le
+    nouveau nom) ou une modification de l'assistant persist. Bancs `test_etiquettes_qr_*.py`, sondes `test_etiquettes_qr_page_chrome.py`
+    et `test_qrcode_carte_chrome.py`, `berry/banc_qrcode_page.py`, `build/test_qrcode_build.py`, `build/test_cible_etiquettes_qr.py`.
+    Mode d'emploi : `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-12-etiquettes-qrcode-design.md` ; plan
+    `tasks/plans/etiquettes-qrcode.md`.
