@@ -69,6 +69,7 @@ la maquette de la cave les montre en chargeant la police MDI officielle (`@mdi/f
 | Police d'icônes sur mesure | `lv_font_conv` comme `gen.sh` (sous-ensemble MDI) ; ou une `.ttf` du FS par `text_font` (`<fichier>.ttf-<taille>`, demande beaucoup de PSRAM) | |
 | Conversion SVG vers PNG ou tableau C | [LVGL Image Converter](https://lvgl.io/tools/imageconverter) (BMP, JPG, PNG, SVG vers tableau C ou binaire, LVGL 8 et 9), ou Inkscape en ligne de commande | |
 | Pages web des cartes (`data/sd`) | SVG en ligne dans le HTML | pas de requête de plus |
+| Photo vers dessin SVG (atelier des visuels, page 7990) | ImageTracer.js 1.2.6, Unlicense, `outils_docs/visuels_accueil/lib/` (fiche `LISEZMOI.md`, empreinte) | tourne dans le navigateur de l'outil ; seul le SVG produit et nettoyé part sur la carte (`visuel.svg`) |
 
 Garder la licence de la collection à côté de tout fichier copié dans le dépôt (même règle que les polices de
 `outils_docs/atelier_ecrans/polices/`).
