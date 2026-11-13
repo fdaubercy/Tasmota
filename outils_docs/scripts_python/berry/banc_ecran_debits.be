@@ -227,8 +227,8 @@ verifie("maitre : id 0, RS485 du Waveshare 7B (RX 16, TX 15), 19200 8N1, periode
 var esc = mb["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus1"]
 verifie("esclave 1 : actif, id 1, lectureGroupee ON", esc["activation"] == "ON" && esc["id"] == 1 && esc["lectureGroupee"] == "ON")
 var re = persist["serveur"]["rangeExtender"]
-verifie("Range Extender maitre id 0, point d'acces SERVEUR-DEBITS-PAC-GATEWAY, NAPT", re["activation"] == "ON" && re["id"] == 0
-        && re["AP"]["SSID"] == "SERVEUR-DEBITS-PAC-GATEWAY" && re["AP"]["routeNAPT"] == "ON")
+verifie("Range Extender maitre id 0, point d'acces ECRAN-DEBITS-PAC-GATEWAY, NAPT", re["activation"] == "ON" && re["id"] == 0
+        && re["AP"]["SSID"] == "ECRAN-DEBITS-PAC-GATEWAY" && re["AP"]["routeNAPT"] == "ON")
 # Waveshare ESP32-S3-Touch-LCD-7B : la dalle RGB prend presque tout (broches dans display.ini, pas dans le template) ;
 # restent a la carte GPIO6, l'I2C 8/9 (tactile GT911, expandeur 0x24) et le RS485 16/15
 var i2c = persist["drivers"]["I2C"]

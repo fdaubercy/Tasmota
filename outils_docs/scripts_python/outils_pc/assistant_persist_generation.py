@@ -59,7 +59,7 @@ class Reponses:
     role: str = "autonome"    # "autonome" | "maitre" | "esclave"
     maitre: str = ""          # env du maitre (esclave)
     id: int = 0               # force a 0 hors esclave
-    reseau1: str = ""         # autonome/maitre ; esclave -> <HOSTNAME maitre>-GATEWAY
+    reseau1: str = ""         # autonome/maitre ; esclave -> AP reel du maitre (parc.maitres()["ap"])
     reseau2: str = ""         # vide -> reseau1
     topic: str = ""           # vide -> "<lieu>/<nom>"
     blocs: list = field(default_factory=list)    # ids de modele["blocs"] coches
@@ -133,7 +133,7 @@ def variables(racine, r):
         maitre = next((m for m in parc.maitres(racine) if m["env"] and m["env"] == r.maitre), None)
         if maitre is None:
             raise ValueError(f"esclave sans maitre du parc : {r.maitre!r}")
-        reseau1 = maitre["hostname"] + parc.SUFFIXE_AP
+        reseau1 = maitre["ap"]
         v.update(id=r.id, passerelle=PASSERELLE_ESCLAVE, ip_maitre=maitre["ip"], reseau1=reseau1,
                  reseau2=r.reseau2 or reseau1)
     else:
@@ -155,7 +155,7 @@ def _sous(obj, cles):
 
 def reponses_depuis_persist(modele, donnees, env, racine=None):
     """Reponses qui regenerent `donnees` (rejeu du parc, §7). env = <prefixe>-<lieu>-<nom>. racine (facultatif) :
-    retrouve l'env du maitre d'un esclave, celui dont <HOSTNAME>-GATEWAY est son reseau1. Un bloc est coche si sa
+    retrouve l'env du maitre d'un esclave, celui dont l'AP reel est son reseau1. Un bloc est coche si sa
     premiere valeur `actif` est celle du persist ; le bloc rangeExtender, seulement pour un maitre (un esclave a le
     Range Extender ON sans charger controleRangeExtender, rapport A1 n. 6). base reste vide."""
     s, d = donnees["serveur"], donnees["diverses"]
@@ -166,7 +166,7 @@ def reponses_depuis_persist(modele, donnees, env, racine=None):
     maitre = ""
     if role == "esclave" and racine is not None:
         maitre = next((m["env"] for m in parc.maitres(racine)
-                       if m["hostname"] + parc.SUFFIXE_AP == wifi["reseau1"]["nomReseauWifi"]), "") or ""
+                       if m["ap"] == wifi["reseau1"]["nomReseauWifi"]), "") or ""
     blocs = []
     for b in modele["blocs"]:
         if puce not in b["puces"] or not b["actif"]:

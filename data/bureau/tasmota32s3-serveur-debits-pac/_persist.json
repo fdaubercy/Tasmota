@@ -89,7 +89,7 @@
 			"reScanBy44": "ON",
 			"timerRebootSansWifi": 0,
 			"reseau1": {
-				"nomReseauWifi": "SERVEUR-DEBITS-PAC-GATEWAY",
+				"nomReseauWifi": "ECRAN-DEBITS-PAC-GATEWAY",
 				"mdpWifi": "Lune5676"
 			},
 			"reseau2": {

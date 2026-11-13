@@ -2454,7 +2454,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #define WIFI_DNS               "192.168.0.254"      // [IpAddress4] If not using DHCP set DNS1 IP address (might be equal to WIFI_GATEWAY)
 
             #undef STA_SSID1
-                #define STA_SSID1              "SERVEUR-DEBITS-PAC-GATEWAY"                // [Ssid1] point d'acces de la carte d'affichage (maitre id 0)
+                #define STA_SSID1              "ECRAN-DEBITS-PAC-GATEWAY"                // [Ssid1] point d'acces de la carte d'affichage (maitre id 0)
             #undef STA_PASS1
                 #define STA_PASS1              "Lune5676"                // [Password1] Wi-Fi password
             #undef STA_SSID2
@@ -2610,7 +2610,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // RgxPort tcp, 8080, 192.168.4.1, 80
             #define USE_WIFI_RANGE_EXTENDER
             #ifdef USE_WIFI_RANGE_EXTENDER
-                #define WIFI_RGX_SSID           "SERVEUR-DEBITS-PAC-GATEWAY"
+                #define WIFI_RGX_SSID           "ECRAN-DEBITS-PAC-GATEWAY"
                 #define WIFI_RGX_PASSWORD       "Lune5676"
             #endif
 

@@ -41,9 +41,6 @@ RIDEAU = "data/garage/tasmota32s3-rideau-garage-modbus"
 EXCLUES = {
     "data/garage/tasmota32s3-serveur-modbus": "ancien maitre S3 du garage : id 0, Range Extender ON, ipMaitre renseigne et "
                                              "NAPT OFF, aucun role ne le decrit (Ruling 9)",
-    "data/bureau/tasmota32s3-serveur-debits-pac": "acquisition des debits, esclave id 1 de la carte d'affichage (plan "
-                                                  "debits-deux-cartes, A3) : son reseau1 SERVEUR-DEBITS-PAC-GATEWAY (choix de "
-                                                  "l'utilisateur) n'est pas <HOSTNAME d'un maitre du parc>-GATEWAY, regle du role esclave",
 }
 
 # (motif fnmatch du chemin reduit, cartes (noms de dossier) ou None = toutes, raison). Ruling 8 : familles 2 a 5.

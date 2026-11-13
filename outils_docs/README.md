@@ -366,7 +366,7 @@ analyse `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`. **Pas encore 
 **Deux cartes depuis le 2026-11-09** : l'acquisition compte et calcule, la carte d'affichage montre les débits sur son écran.
 
 - **Acquisition** `tasmota32s3-bureau-serveur-debits-pac` : esclave ModBus id 1, Range Extender id 1, derrière le point
-  d'accès de l'affichage (`SERVEUR-DEBITS-PAC-GATEWAY`), sans écran (`drivers.ecran` OFF). Elle sert les 6 débits et un
+  d'accès de l'affichage (`ECRAN-DEBITS-PAC-GATEWAY`), sans écran (`drivers.ecran` OFF). Elle sert les 6 débits et un
   mot d'états aux registres 4704 à 4710 (`modules.debits.modbus` ON) et les pousse en UDP à chaque fin de fenêtre. Sa
   page et sa page d'équilibrage se joignent depuis le Wi-Fi maison par le relais de l'affichage :
   `http://192.168.0.51:8080/` et `http://192.168.0.51:8080/equilibrage`.

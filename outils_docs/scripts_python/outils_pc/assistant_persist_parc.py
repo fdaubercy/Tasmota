@@ -5,8 +5,11 @@ Un persist illisible est IGNORE (la page continue) et signale par `illisibles()`
 
 REGLE DES SECRETS (§5.1) : les mots de passe ne sont PAS dans le modele, ils sont repris du parc.
   - un reseau Wi-Fi ordinaire : le mot de passe associe a ce NOM dans les `reseau1`/`reseau2` du parc ;
-  - un reseau `<HOSTNAME>-GATEWAY` : le `rangeExtender.AP.mdp` de la carte dont le SSID est ce nom (jamais lu dans
+  - un reseau en `-GATEWAY` : le `rangeExtender.AP.mdp` de la carte dont le SSID est ce nom (jamais lu dans
     les reseau1/2 : un esclave y recopie le mot de passe de l'AP de son maitre, c'est l'AP qui fait foi) ;
+LE RESEAU D'UN MAITRE est le SSID reel de son AP (`maitres()[...]["ap"]`), pas `<HOSTNAME>-GATEWAY` deduit : un maitre
+du parc ne suit pas cette forme (cave : hostname SERVEUR-RLY-CAVE-V2, AP SERVEUR-RLY-CAVE-GATEWAY ; decision du
+2026-11-13). `<HOSTNAME>-GATEWAY` reste le nom PROPOSE pour l'AP d'une carte neuve (Ruling 8).
   - `mqtt`, `ap`, `ftp` : la valeur commune a tout le parc.
 Un nom absent du parc, ou associe a deux valeurs differentes, leve ValueError : le message NOMME le reseau ou la cle,
 jamais une valeur.
@@ -57,14 +60,17 @@ def _envs_par_dossier(racine):
 
 
 def maitres(racine):
-    """[{env, dossier, hostname, ip, id}] des cartes a rangeExtender.id == 0 et activation ON."""
+    """[{env, dossier, hostname, ip, id, ap}] des cartes a rangeExtender.id == 0 et activation ON. ap = SSID reel de
+    l'AP (rangeExtender.AP.SSID), <hostname>-GATEWAY s'il manque : le reseau que ses esclaves rejoignent."""
     envs, res = _envs_par_dossier(racine), []
     for dossier, d in _cartes(racine):
         re_ = _sous(_serveur(d), "rangeExtender")
         if not isinstance(re_, dict) or re_.get("activation") != "ON" or re_.get("id") != 0:
             continue
-        res.append({"env": envs.get(dossier), "dossier": dossier, "hostname": _serveur(d).get("hostname", ""),
-                    "ip": _sous(_serveur(d), "IP", "IPAddress") or "", "id": 0})
+        hostname, ssid = _serveur(d).get("hostname", ""), _sous(re_, "AP", "SSID")
+        res.append({"env": envs.get(dossier), "dossier": dossier, "hostname": hostname,
+                    "ip": _sous(_serveur(d), "IP", "IPAddress") or "", "id": 0,
+                    "ap": ssid if isinstance(ssid, str) and ssid else (hostname + SUFFIXE_AP if hostname else "")})
     return res
 
 
@@ -98,9 +104,9 @@ def _reseaux_wifi(racine):
 
 
 def reseaux(racine):
-    """Noms de reseau connus (reseau1/2 du parc), plus <hostname>-GATEWAY de chaque maitre ; sans doublon."""
+    """Noms de reseau connus (reseau1/2 du parc), plus l'AP de chaque maitre ; sans doublon."""
     res = []
-    for nom in [n for n, _ in _reseaux_wifi(racine)] + [m["hostname"] + SUFFIXE_AP for m in maitres(racine) if m["hostname"]]:
+    for nom in [n for n, _ in _reseaux_wifi(racine)] + [m["ap"] for m in maitres(racine) if m["ap"]]:
         if nom not in res:
             res.append(nom)
     return res

@@ -16,8 +16,12 @@ import assistant_persist_parc as parc
 from test_fichiers_berry_creation import RACINE, depot_essai
 
 ECHECS = []
-MAITRES = {"data/cave/tasmota32s3-serveur-rly", "data/etage2/tasmota32s3-grenier",
-           "data/garage/tasmota32p4-serveur-modbus", "data/garage/tasmota32s3-serveur-modbus"}
+# Releve du parc (mis a jour le 2026-11-13 : grenier du RDC, projecteur du jardin et ecran des debits devenus maitres,
+# l'acquisition des debits a pris l'id 1). A revoir a chaque carte maitre ou esclave ajoutee au depot.
+MAITRES = {"data/bureau/tasmota32s3-ecran-debits-pac", "data/cave/tasmota32s3-serveur-rly", "data/etage2/tasmota32s3-grenier",
+           "data/garage/tasmota32p4-serveur-modbus", "data/garage/tasmota32s3-serveur-modbus",
+           "data/jardin/tasmota32-projecteur-led", "data/rdc/tasmota32s3-grenier"}
+IDS_PRIS = [0, 1, 2, 3]
 P4 = "data/garage/tasmota32p4-serveur-modbus/_persist.json"
 BUREAU = "data/bureau/tasmota32-interrupteur-energie/_persist.json"
 
@@ -45,18 +49,23 @@ def refus(fonction, *args):
 
 def test_maitres_du_parc():
     ms = parc.maitres(RACINE)
-    verifie({m["dossier"] for m in ms}, MAITRES, "maitres_du_parc : les 4 dossiers")
+    verifie({m["dossier"] for m in ms}, MAITRES, "maitres_du_parc : les 7 dossiers")
     p4 = next(m for m in ms if m["dossier"].endswith("p4-serveur-modbus"))
-    verifie(sorted(p4), ["dossier", "env", "hostname", "id", "ip"], "maitre : cles")
+    verifie(sorted(p4), ["ap", "dossier", "env", "hostname", "id", "ip"], "maitre : cles")
+    verifie(p4["ap"], "SERVEUR-GARAGE-GATEWAY", "maitre P4 : AP reel (rangeExtender.AP.SSID)")
+    cave = next((m for m in ms if m["dossier"] == "data/cave/tasmota32s3-serveur-rly"), None)
+    verifie((cave or {}).get("hostname"), "SERVEUR-RLY-CAVE-V2", "maitre de la cave : hostname")
+    verifie((cave or {}).get("ap"), "SERVEUR-RLY-CAVE-GATEWAY", "maitre de la cave : AP reel, pas <HOSTNAME>-GATEWAY (2026-11-13)")
+    verifie("SERVEUR-RLY-CAVE-GATEWAY" in parc.reseaux(RACINE), True, "reseaux : l'AP reel de la cave est propose")
     verifie((p4["env"], p4["hostname"], p4["ip"], p4["id"]),
             ("tasmota32p4-garage-serveur-modbus", "SERVEUR-GARAGE", "192.168.0.43", 0), "maitre P4 : env, hostname, ip, id")
     verifie(all(m["env"] for m in ms), True, "maitres : tous ont un env")
 
 
 def test_ids_et_reseaux():
-    verifie(sorted(parc.ids_pris(RACINE)), [0, 2, 3], "ids_pris : 0, 2, 3")
+    verifie(sorted(parc.ids_pris(RACINE)), IDS_PRIS, "ids_pris : 0 a 3")
     verifie(len(parc.ids_pris(RACINE)[0]) >= 4 and len(parc.ids_pris(RACINE)[2]) == 1, True, "ids_pris : cartes par id")
-    verifie(parc.id_libre(RACINE), 1, "id_libre_parc : 1")
+    verifie(parc.id_libre(RACINE), 4, "id_libre_parc : 4")
     rs = parc.reseaux(RACINE)
     verifie(all(n in rs for n in ("MAISON", "Relai Wifi Cave", "SERVEUR-GARAGE-GATEWAY", "SERVEUR-GRENIER-2EME-GATEWAY")),
             True, "reseaux : noms connus et GATEWAY des maitres")
@@ -110,7 +119,7 @@ def test_persist_illisible(racine):
     f.write_bytes(f.read_bytes()[:200])                       # persist tronque
     ms = parc.maitres(racine)
     verifie({m["dossier"] for m in ms}, MAITRES - {"data/garage/tasmota32p4-serveur-modbus"}, "persist_illisible : carte ignoree")
-    verifie(sorted(parc.ids_pris(racine)), [0, 2, 3], "persist_illisible : ids_pris repond")
+    verifie(sorted(parc.ids_pris(racine)), IDS_PRIS, "persist_illisible : ids_pris repond")
     verifie(parc.illisibles(racine), [P4], "persist_illisible : signale")
     verifie(parc.secrets(racine, "MAISON", "MAISON")["wifi1"] != "", True, "persist_illisible : secrets repond")
 

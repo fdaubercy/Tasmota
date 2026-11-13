@@ -118,7 +118,7 @@
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
 				"routeNAPT": "ON",
-				"SSID": "SERVEUR-DEBITS-PAC-GATEWAY",
+				"SSID": "ECRAN-DEBITS-PAC-GATEWAY",
 				"mdp": "Lune5676"
 			}
 		},

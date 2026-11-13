@@ -17,7 +17,7 @@ Architecture : l'acquisition (`data/bureau/tasmota32s3-serveur-debits-pac`) sert
 4710 (6 débits en centièmes de L/min, puis un mot d'états) et les pousse en UDP à chaque fin de fenêtre ; l'affichage
 (nouvel env `tasmota32s3-bureau-ecran-debits-pac`) les relit en une requête 0x04 toutes les 10 s par RS485 (XY-017,
 GPIO 17/18, 19 200 bauds 8N1) et les répartit sur 7 entrées analogiques virtuelles, lues par son code d'écran.
-Affichage = maître ModBus et Range Extender id 0 (point d'accès `SERVEUR-DEBITS-PAC-GATEWAY`, IP 192.168.0.51, topic
+Affichage = maître ModBus et Range Extender id 0 (point d'accès `ECRAN-DEBITS-PAC-GATEWAY`, IP 192.168.0.51, topic
 `chauffage/pac/ecran`) ; acquisition = esclave id 1, Range Extender ON id 1, DHCP, `timerRebootSansWifi` 0.
 
 Contraintes globales (de la conception) :
@@ -86,7 +86,7 @@ Contraintes globales (de la conception) :
 - [ ] Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
 - [ ] RS485 seul (Wi-Fi de l'acquisition coupé) : les 6 débits sur l'écran au rythme du relevé ; push seul (câble débranché) : écran à jour ≤ 2 s après la fin d'une fenêtre ; les deux coupés : « inconnu » après 2 fenêtres
 - [ ] Affichage redémarré : l'acquisition revient seule sur le point d'accès, aucun redémarrage de sa part, compteurs continus ; tas des deux cartes mesuré avant et après une heure
-- [ ] Téléphone sur `SERVEUR-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
+- [ ] Téléphone sur `ECRAN-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
 - [ ] Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
 - [ ] Commit par `/commite`
 
