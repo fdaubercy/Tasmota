@@ -323,7 +323,7 @@ Après A14 (l'import d'un PNG aboutit dans l'objet `img`). Si A18 est faite avan
 - [x] Import d'un PNG déposé par l'utilisateur (parcours de l'import de polices A9 : licence confirmée, taille contrôlée),
   rangé sous `/sd/images`, choisi dans l'objet `img` (A14) — preuve : `atelier_ecrans_images.py`, `test_atelier_ecrans_images.py` VERT (refus, écritures exactes), `test_atelier_ecrans_web.py::test_images_import` VERT (400, 403, 409, liste `GET /images`), sonde Chrome `sonde_import_png` VERTE (fichier refusé, import dans la copie du dépôt)
 - [x] Banc, sonde Chrome — preuve : `test_atelier_ecrans_images.py`, `test_atelier_ecrans_web.py`, sonde Chrome VERTS
-- [ ] Relecture `relecteur-pages-web` de l'import PNG : coupée par la limite d'usage ; faite à la main sur les noms réservés Windows et l'origine multiligne, reste l'échappement côté page, la course entre deux analyses et la borne de taille (à relancer après le 15 novembre). Relecture du panneau Icônes : faite, aucun bloquant
+- [x] Relecture de l'import PNG : l'agent `relecteur-pages-web` a été coupé par la limite d'usage ; relecture faite à la main — preuve : noms réservés Windows et origine multiligne refusés (`test_atelier_ecrans_images.py`), aucun `innerHTML` dans `atelier_ecrans_page_icones.py` et `el()` passe par `textContent`, réponses tardives ignorées par `IM.seq`, corps borné par `MAX_POLICE` puis 300 Ko décodés avant écriture. Relecture du panneau Icônes par l'agent : faite, aucun bloquant
 - [x] Commit — preuve : `bfc7fd7b2` (panneau Icônes), `7ea9cd7dd` (import PNG)
 
 ## A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13)
