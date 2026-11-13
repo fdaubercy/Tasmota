@@ -1,5 +1,7 @@
 /* Page /qrcode (data/fs/qrcodePage.be) : couleurs du theme Tasmota, QR code toujours sur fond blanc (lisible au scan) */
 #q_zone{text-align:center}
+/* bloc centre, contenu a gauche : le texte part du bord gauche du cadre du QR code (demande du 2026-11-12) */
+#q_bloc{display:inline-block;text-align:left;max-width:100%}
 #q_code{display:inline-block;background:#fff;padding:8px;border-radius:6px;line-height:0}
 #q_code:empty{display:none}
 #q_texte{text-align:left;white-space:pre-wrap;word-break:break-word;font-size:.9em;margin:12px 0}

@@ -41,7 +41,8 @@ ETAT = """(() => { const t = id => document.getElementById(id), a = t('q_avert')
           avert: a.hidden ? null : a.textContent, img: document.querySelectorAll('#q_zone img').length,
           pirate: window.pirate === 1, svg_html: t('q_code').innerHTML,
           fond: st(document.body).backgroundColor, encre: st(t('q_texte')).color, fond_qr: st(t('q_code')).backgroundColor,
-          avert_couleurs: [st(a).color, st(a).backgroundColor]}; })()"""
+          avert_couleurs: [st(a).color, st(a).backgroundColor],
+          bords: [t('q_code').getBoundingClientRect().left, t('q_texte').getBoundingClientRect().left]}; })()"""
 MODULES = "new QRCodeStyling(optionsQR(%s, {}, %s, null, 100, 0))._qr.getModuleCount()"
 
 
@@ -110,6 +111,8 @@ def sonde(cdp, carte, capture):
     s.verifie((e["svg"], e["largeur"], e["texte"], e["msg_cache"]), (True, "260", TEXTE.replace(" · ", "\n"), True),
               "QR code dessine (260 px), texte affiche une ligne par champ (« · » -> retour a la ligne), plus de message")
     s.verifie("#123456" in e["svg_html"], True, "couleur du style (#123456) dans le SVG")
+    s.verifie(abs(e["bords"][0] - e["bords"][1]) < 1, True,
+              f"texte aligne sur le bord gauche du cadre du QR code (demande du 2026-11-12) : {e['bords']}")
     s.verifie(e["avert"], None, "meme IP que la carte : aucun avertissement")
     attendu = verdict.verdict(TEXTE, 25, "M")["modules"]
     s.verifie(cdp.js(MODULES % (json.dumps(TEXTE), "'M'")), attendu,
