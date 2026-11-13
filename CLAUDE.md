@@ -461,7 +461,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - `.claude/hooks/reprise_limite.py` — hook `StopFailure` (`rate_limit`), demande du 2026-11-01 : a la limite
   d'utilisation, demarre une veille detachee qui retente `claude -p --resume <session>` toutes les 15 min (8 jours au
   plus, abandon apres 3 echecs qui ne sont pas des limites), dans le mode de la conversation (jamais bypassPermissions).
-  Ne change jamais de compte. Journal `%LOCALAPPDATA%\outils_tasmota\reprise_limite\journal.log` ; banc
+  Ne change jamais de compte. Jamais de session en double (2026-11-13) : rien n'est lance tant qu'un processus Claude
+  vivant tient la conversation (registre `~/.claude/sessions/<pid>.json`, onglet VS Code compris) ; arret si le
+  transcript a recu une vraie reponse depuis la limite. Journal `%LOCALAPPDATA%\outils_tasmota\reprise_limite\journal.log` ; banc
   `.claude/hooks/test_reprise_limite.py` (ne prouve pas le declenchement reel).
 - `.claude/hooks/rappel_apres_compactage.sh` — hook `SessionStart` (`compact`) : rappelle de mettre
   a jour la reprise.
@@ -506,7 +508,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - `outils_docs/vscode/suivi-plan/` — extension VS Code `fdaubercy.suivi-plan` : vue du plan a droite (%
   par action, ameliorations restantes), barre d'etat. Installation : `maintenance/installe_suivi_plan.py`.
   Suit l'onglet de conversation Claude actif (`conversations.js` : libelle d'onglet = titre du transcript
-  tronque comme l'extension Claude 2.1.301 ; banc `test_conversations.js`) ; journal « Suivi du plan »
+  tronque comme l'extension Claude 2.1.301 ; banc `test_conversations.js`) ; plans et conversations gardes en memoire
+  entre deux bascules (0.4.3, 2026-11-13 : ~400 ms de blocage de l'hote par bascule ; banc `test_cache.js`) ; journal « Suivi du plan »
   (panneau Sortie) : une ligne par bascule. Libelles en collision : les conversations NON rattachees des
   30 derniers jours comptent (ambiguite affichee, pas de plan devine) ; un message envoye depuis un onglet
   lui apprend sa conversation ; un signal d'une autre conversation que l'onglet actif est ignore.
