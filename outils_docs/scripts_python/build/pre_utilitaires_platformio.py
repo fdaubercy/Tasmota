@@ -767,6 +767,16 @@ if not is_safeboot and not hors_build:
     import interface_ecran
     interface_ecran.applique(env)
 
+    # Etiquette QR : qrcode.json de la carte recalcule contre le persist et le .h du moment, avant l'image du FS
+    # (qrcode_build.py ; jamais d'arret du build, une ligne seulement s'il y a quelque chose a dire)
+    try:
+        import qrcode_build
+        ligne = qrcode_build.regenere(env.subst("$PROJECT_DIR"), env["PIOENV"])
+    except Exception as e:                           # noqa: BLE001
+        ligne = f"⚠ QR code : contrôle indisponible ({e})"
+    if ligne:
+        print((Fore.YELLOW if ligne.startswith("⚠") else Fore.GREEN) + ligne + Style.RESET_ALL)
+
     if ("32p4" in Global.environnement) and (any("UPDATE_IDF55_PLATFORM" in f for f in env.get("BUILD_FLAGS", []))):
         print(Fore.CYAN + "⚠ Synchronisation IDF55 en cours... (ESP32-P4 détecté et flag 'UPDATE_IDF55_PLATFORM' présent)")
         update_idf55_platform_packages()

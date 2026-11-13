@@ -340,8 +340,14 @@ def sonde_modification(m):
     saisit(cdp, "f-ip", "192.168.0.78")
     clic(cdp, "voir-diff")
     attend(cdp, "!document.getElementById('creer').disabled", 20)
+    qr = m.depot / "outils_docs/etiquettes_qr"                      # reglage d'etiquette QR qui affiche l'IP : lien a refaire
+    (qr / "cartes").mkdir(parents=True, exist_ok=True)
+    (qr / "gabarit.json").write_bytes((Path(__file__).resolve().parents[3] / "outils_docs/etiquettes_qr/gabarit.json").read_bytes())
+    (qr / "cartes" / f"{ENV}.json").write_text('{"lignes": [{"source": "standard", "cle": "ip", "libelle": "IP"}]}', encoding="utf-8")
     clic(cdp, "creer")
     verifie(attend(cdp, "!!document.getElementById('modification-ok')", 20), True, "modification : message de reussite")
+    verifie(cdp.js("(document.querySelector('#modification-etiquette a') || {}).href || null"), "http://127.0.0.1:7970/?env=" + ENV,
+            "modification : IP de l'etiquette QR changee, lien « Étiquette QR à refaire »")
     verifie("192.168.0.78" in (m.depot / DOSSIER / "_persist.json").read_text(encoding="utf-8"), True, "modification : IP ecrite dans le persist d'essai")
     verifie(attend(cdp, "document.getElementById('f-ip').value === '192.168.0.78' && document.getElementById('f-lieu').disabled", 10), True,
             "modification : on reste en mode modification, reponses rechargees")
