@@ -304,20 +304,23 @@ Conception : § 5 de la même spec.
 
 ## A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code
 Conception : § 7 de la même spec.
-- [x] Bancs d'abord (rouge) : `img` (PNG seul), `dropdown`, `switch`, `roller`, `qrcode` dans le validateur et les deux
-  générateurs ; type « liste » pour `options` et `points` ; `textarea` absent du catalogue — preuve : bancs `_catalogue`,
+- [x] Bancs d'abord (rouge), validateur et deux générateurs — preuve : commit 2590f4fe5, bancs lus ROUGES avant le code
+  Détail : `img` (PNG seul), `dropdown`, `switch`, `roller`, `qrcode` dans le validateur et les deux générateurs ; type
+  « liste » pour `options` et `points` ; `textarea` absent du catalogue ; bancs `_catalogue`,
   `_description` (mutants palier 3, image hors `PNG/`, interrupteur à `val` entier, QR code non carré, `qr_size` saisi),
   `_haspmota::test_palier2`, `_lvgl::test_palier2`, `_import::test_palier2` lus ROUGES avant le code (2026-11-13)
-- [x] Catalogue, validateur, générateur HASPmota, moteur LVGL pur (`lv.image`, `lv.dropdown`, `lv.switch`, `lv.roller`,
-  `lv.qrcode` ; `add_state`, `set_options`, `update`) ; `banc_ecran_lvgl.py` VERT avec mutants — preuve : 13 bancs
+- [x] Catalogue, validateur, générateur HASPmota, moteur LVGL pur — preuve : commit 2590f4fe5, 13 bancs VERT
+  Détail : `lv.image`, `lv.dropdown`, `lv.switch`, `lv.roller`, `lv.qrcode` ; `add_state`, `set_options`, `update` ;
+  `banc_ecran_lvgl.py` VERT avec mutants ; 13 bancs
   `test_atelier_ecrans_*` VERT, `banc_ecran_lvgl.py` VERT (16 témoins rouges), `banc_demarrage.py` VERT (2026-11-13) ;
   paliers 1, 2, 3 (`atelier_ecrans_catalogue.py::dans_atelier`), types `liste`, `lignes`, `booleen` ; QR code carré,
   `qr_size` = l posé par les générateurs ; action d'un interrupteur, d'une liste ou d'une roue au changement de valeur,
   valeur choisie passée à l'action (dernier argument d'une fonction, `%val%` d'une commande, interrupteur en 1 / 0) ;
   police `.ttf` présente sur deux cartes : une seule entrée ; `ecranLvgl.be` des débits régénéré (interface `haspmota`
   de la carte : fichier hors de son FS)
-- [x] Page : palette, propriétés (éditeur de liste d'options, choix d'un PNG du dossier de la carte), dessin approché,
-  QR code par la bibliothèque de la page des étiquettes ; sonde Chrome VERT ; relecture — preuve : module
+- [x] Page : palette, propriétés, dessin approché, QR code — preuve : sonde_palier2 VERT, relecteur-pages-web prête
+  Détail : éditeur de liste d'options, choix d'un PNG du dossier de la carte, QR code par la bibliothèque de la page des
+  étiquettes ; module
   `atelier_ecrans_page_palier2.py`, routes `GET /images`, `/image`, `/lib/qr.js` (`test_atelier_ecrans_web.py::test_images`
   VERT), `test_atelier_ecrans_page_chrome.py::sonde_palier2` VERT (12 types en palette, QR code dessiné, PNG affiché,
   options nettoyées, QR code carré, qr_size dans le pages.jsonl généré, rien d'écrit), relecture `relecteur-pages-web` :
