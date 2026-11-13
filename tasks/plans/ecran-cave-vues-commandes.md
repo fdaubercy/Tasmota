@@ -155,8 +155,8 @@ allumée `\uE6E8` par la clé `lumieresIcone`, lave-linge `\uE72A`, pompes `\uE5
 `outils_docs/ICONES_IMAGES_SOURCES.md` (à consulter avant de dessiner une icône).
 Ressources sous `/sd` (préférence de l'utilisateur).
 - [x] Maquette du rendu (capture de l'aperçu de l'atelier) validée par l'utilisateur avant l'écriture des pages — preuve : validation du 2026-11-13 (« OK pour le reste », icônes d'appareil ajoutées à sa demande : ampoule, lave-linge, pompe, couleur selon l'état), 10 captures de l'aperçu réel, console sans erreur
-- [ ] `ecran.json` validé par `atelier_ecrans_description.valide` ; `pages.jsonl` généré
-- [ ] `banc_ecran_cave` étendu : chaque objet référencé par `affiche` existe dans `pages.jsonl` ; `confirmation_avant_redemarrage` ; `menu_ouvre_et_ferme`
+- [x] `ecran.json` validé par `atelier_ecrans_description.valide` ; `pages.jsonl` généré — preuve : `valide` = aucune erreur (106 objets) ; `atelier_ecrans_haspmota.genere(ecran.json)` identique octet pour octet à `data/cave/tasmota32s3-ecran/pages.jsonl` (2026-11-13) ; tables `flotteurDoux` et `appareilDoux` ajoutées (flotteurs et pompe de la page 3 jamais colorés avec `doux`)
+- [x] `banc_ecran_cave` étendu : chaque objet référencé par `affiche` existe dans `pages.jsonl` ; `confirmation_avant_redemarrage` ; `menu_ouvre_et_ferme` — preuve : `banc_ecran_cave.py` OK (118 contrôles, dont liens conformes à ecran.json, valeur périmée grisée, ventilation, `lumieresIcone`, courbes et réglages) ; mutants rouges : ampoule figée, redémarrage poussé dès « Redémarrer » ; `banc_demarrage` VERT (référence de l'écran réenregistrée seule : +`/ecranCaveHaspmota.be`) ; `verifie_berry` 0 erreur
 - [ ] Commit `feat(ecran-cave): pages HASPmota (accueil, graphiques, cuve, reglages, menu)`
 
 ## A8 — Intégration, non-régression, compilation

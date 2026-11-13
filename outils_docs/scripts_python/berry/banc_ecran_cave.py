@@ -18,7 +18,7 @@ def main() -> int:
     if berry is None:
         sys.exit("ERREUR : berry.exe introuvable sous lib/libesp32/berry/.")
     banc = Path(__file__).with_suffix(".be")
-    r = subprocess.run([str(berry), str(banc)], cwd=str(p), capture_output=True, text=True)
+    r = subprocess.run([str(berry), str(banc), *sys.argv[1:]], cwd=str(p), capture_output=True, text=True)
     sortie = (r.stdout or "") + (r.stderr or "")
     print(sortie, end="" if sortie.endswith("\n") else "\n")
     return 0 if r.returncode == 0 and "BANC_ECRAN_CAVE: OK" in sortie else 1
