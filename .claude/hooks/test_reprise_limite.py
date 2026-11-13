@@ -63,6 +63,49 @@ def main():
     verifie(r.hook(json.dumps({**entree, "cwd": "Z:/absent"}), demarre) is None, "dossier absent : refuse")
     verifie(len(vus) == avant, "aucune veille demarree pour une entree refusee")
 
+    # Sessions en double (2026-11-13) : une conversation ouverte dans un onglet n'est jamais reprise par -p
+    t, vus, tenue = [0.0], [], [3]                                   # tenue par un onglet pendant 3 controles
+
+    def occupee():
+        tenue[0] -= 1
+        return 4242 if tenue[0] >= 0 else None
+
+    def dort(s):
+        t[0] += s
+    res = r.veille(SESSION, ".", "auto", lance=lambda *a: vus.append(a) or (0, "fait"), dort=dort,
+                   horloge=lambda: t[0], journal=lambda m: None, occupee=occupee)
+    verifie(res == "repris" and len(vus) == 1 and t[0] == 4 * r.ATTENTE_S,
+            "conversation ouverte dans un onglet : aucune reprise tant qu'il la tient, reprise apres sa fermeture")
+    vus.clear()
+    res = r.veille(SESSION, ".", "auto", lance=lambda *a: vus.append(a) or (0, "fait"), dort=lambda s: None,
+                   horloge=lambda: 0.0, journal=lambda m: None, reprise=lambda: True)
+    verifie(res == "deja_repris" and not vus, "conversation reprise ailleurs (vraie reponse) : veille arretee, rien lance")
+
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        f = d / "t.jsonl"
+        erreur = {"type": "assistant", "isApiErrorMessage": True, "error": "rate_limit"}
+        f.write_text(json.dumps({"type": "assistant", "message": {}}) + "\n", encoding="utf-8")
+        repris = r.surveille_transcript(f)
+        verifie(not repris(), "transcript inchange : pas repris")
+        with open(f, "a", encoding="utf-8") as fl:
+            fl.write(json.dumps({"type": "user"}) + "\n" + json.dumps(erreur) + "\n")
+        verifie(not repris(), "message retape pendant la limite (erreur de limite seule) : pas repris")
+        with open(f, "a", encoding="utf-8") as fl:
+            fl.write(json.dumps({"type": "assistant", "message": {"content": []}}) + "\n")
+        verifie(repris(), "vraie reponse apres la limite : reprise detectee")
+        verifie(not r.surveille_transcript(None)(), "transcript introuvable : pas de garde (temoin)")
+
+        reg = d / "sessions"
+        reg.mkdir()
+        (reg / "10.json").write_text(json.dumps({"pid": 10, "sessionId": SESSION, "kind": "interactive"}), encoding="utf-8")
+        (reg / "11.json").write_text(json.dumps({"pid": 11, "sessionId": "autre-session-000"}), encoding="utf-8")
+        (reg / "12.json").write_text("{illisible", encoding="utf-8")
+        verifie(r.session_ouverte(SESSION, reg, lambda p: p == 10) == 10, "registre : processus vivant qui tient la conversation trouve")
+        verifie(r.session_ouverte(SESSION, reg, lambda p: False) is None, "registre : processus mort ignore")
+        verifie(r.session_ouverte("autre-session-111", reg, lambda p: True) is None, "registre : autre conversation ignoree")
+        verifie(r.session_ouverte(SESSION, d / "absent", lambda p: True) is None, "registre absent : rien")
+
     with tempfile.TemporaryDirectory() as d:
         d = Path(d)
         verifie(r.prend_verrou(SESSION, d, lambda p: True), "verrou libre : pris")

@@ -40,7 +40,7 @@ EN DEVELOPPEMENT
 ----------------
     code --extensionDevelopmentPath=<depot>\outils_docs\vscode\suivi-plan <depot>
 L'extension lit alors le parseur directement dans .claude/mods/suivi-plan/hooks/.
-Bancs : node outils_docs/vscode/suivi-plan/test_rendu.js et test_conversations.js
+Bancs : node outils_docs/vscode/suivi-plan/test_rendu.js, test_conversations.js et test_cache.js
 =============================================================================
 """
 import argparse
@@ -60,7 +60,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
 RACINE = Path(__file__).resolve().parents[3]
 DOSSIER_EXT = RACINE / "outils_docs" / "vscode" / "suivi-plan"
 PARSEUR = RACINE / ".claude" / "mods" / "suivi-plan" / "hooks" / "parseur-plan.mjs"
-EXCLUS = {"test_rendu.js", "test_conversations.js"}
+EXCLUS = {"test_rendu.js", "test_conversations.js", "test_cache.js"}
 IDENT = "fdaubercy.suivi-plan"
 TYPES = {".json": "application/json", ".js": "application/javascript",
          ".mjs": "application/javascript", ".css": "text/css", ".md": "text/markdown",

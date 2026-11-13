@@ -23,10 +23,14 @@ const AGE_MAX_SIGNAL = 5 * 60 * 1000   // un signal plus vieux au demarrage n'ou
 const ECHANGE = path.join(os.homedir(), '.claude', 'suivi-plan')   // signal.json, conversations/
 const PROJETS = path.join(os.homedir(), '.claude', 'projects')     // transcripts <session>.jsonl
 const RECENTES = 30 * 24 * 3600 * 1000   // conversations non rattachees prises en compte (collisions)
+// Caches (2026-11-13) : ici chaque acces a un fichier coute ~1 ms ; une bascule d'onglet relisait 45 plans
+// (~140 ms) et 117 fichiers de conversations (110 a 375 ms), et figeait l'hote d'extensions.
+const DUREE_PLANS = 60 * 1000       // relecture de secours si un evenement du veilleur des plans s'est perdu
+const DUREE_CANDIDATS = 30 * 1000   // titres et nouvelles conversations
 
 const E = {
   ctx: null, racine: null, parseur: null, panel: null, barre: null, journal: null,
-  plans: [], affiche: null, ouvertureAutoFaite: false,
+  plans: [], plansLus: 0, candidats: null, candidatsT: 0, affiche: null, ouvertureAutoFaite: false,
   veilleurs: [], minuterie: null, minuterieSignal: null, minuterieOnglet: null,
   // Conversation active : null = pas de conversation reconnue (choix memorise / automatique),
   // sinon { session, fichier (null = aucun plan), message } ; dernierOnglet evite de refaire le travail
@@ -137,9 +141,14 @@ function majVue() {
   E.panel.webview.postMessage({ type: 'maj', html })
 }
 
-function rafraichit() {
+// @relire : un plan a change (veilleur, choix, commande) ; sinon la liste en memoire sert, sauf si elle est
+// vieille ou ne contient pas le plan de la conversation (cree juste avant son signal)
+function rafraichit(relire) {
   if (!E.racine || !E.parseur) return
-  E.plans = listePlans()
+  if (relire || Date.now() - E.plansLus > DUREE_PLANS || (E.conv?.fichier && !E.plans.some(p => p.fichier === E.conv.fichier))) {
+    E.plans = listePlans()
+    E.plansLus = Date.now()
+  }
   majBarre()
   majVue()
 }
@@ -161,7 +170,7 @@ function ouvreVue(fichier, conv) {
   if (conv) { E.conv = conv; rafraichit() } else if (fichier) {
     E.conv = null
     E.ctx.workspaceState.update(CLE_CHOIX, fichier)
-    rafraichit()
+    rafraichit(true)
   }
   if (E.panel) { E.panel.reveal(vscode.ViewColumn.Beside, true); majVue(); return }
   brancheVue(vscode.window.createWebviewPanel('suiviPlan.vue', 'Plan',
@@ -194,7 +203,7 @@ async function recoitMessage(m) {
 }
 
 async function choisirPlan() {
-  rafraichit()
+  rafraichit(true)
   if (!E.plans.length) return vscode.window.showInformationMessage(`Suivi du plan : aucun plan dans ${dossierRel()}.`)
   const auto = { label: '$(sync) Automatique', description: 'le plus récemment modifié des plans actifs', fichier: null }
   const items = [auto, ...E.plans.map(p => ({
@@ -224,7 +233,7 @@ function surModification() {
   clearTimeout(E.minuterie)
   E.minuterie = setTimeout(() => {
     regenereIndex()
-    rafraichit()
+    rafraichit(true)
     if (!E.panel && reglages().get('ouvrirAuto') && !E.ouvertureAutoFaite && E.plans.length) {
       E.ouvertureAutoFaite = true
       ouvreVue()
@@ -387,23 +396,31 @@ function nonRattachees(connues) {
   return r
 }
 
-function candidates() {
-  const r = rattachements()
-  return r.concat(nonRattachees(new Set(r.map(c => c.session))))
+// shortcut: liste gardee DUREE_CANDIDATS ; une conversation neuve dont le libelle egale celui d'une rattachee
+// peut y manquer jusque-la (son plan serait pris pour elle). Relue tout de suite si l'onglet n'y est pas
+// reconnu (resoutOnglet) ou si un rattachement change (veilleOnglets).
+function candidates(relire) {
+  if (relire || !E.candidats || Date.now() - E.candidatsT > DUREE_CANDIDATS) {
+    const r = rattachements()
+    E.candidats = r.concat(nonRattachees(new Set(r.map(c => c.session))))
+    E.candidatsT = Date.now()
+  }
+  return E.candidats
 }
 
 // Conversation de l'onglet actif, ou null s'il n'est pas une conversation Claude :
 // { tab, libelle, etat, session, fichier }, etat = 'apprise' (un message envoye depuis CET onglet l'a
 // designee), 'trouvee' (seule conversation a ce libelle, ou toutes au meme plan), 'ambigue', 'inconnue'.
-function resoutOnglet() {
+function resoutOnglet(relire) {
   const libelle = ongletClaudeActif()
   if (libelle === null) return null
   const tab = vscode.window.tabGroups.activeTabGroup?.activeTab
-  const toutes = candidates()
+  const toutes = candidates(relire)
   const apprise = tab && E.appris.get(tab)
   const c = apprise && toutes.find(x => x.session === apprise && C.libelleOnglet(x.titre) === libelle)
   if (c) return { tab, libelle, etat: 'apprise', session: c.session, fichier: c.fichier }
   const r = C.apparie(libelle, toutes)
+  if (r.etat !== 'trouvee' && !relire) return resoutOnglet(true)   // liste en memoire peut-etre perimee
   return r.etat === 'trouvee'
     ? { tab, libelle, etat: r.etat, session: r.conversation.session, fichier: r.conversation.fichier }
     : { tab, libelle, etat: r.etat, session: null, fichier: null }
@@ -445,7 +462,7 @@ function veilleOnglets() {
   const dossier = path.join(ECHANGE, 'conversations')
   if (fs.existsSync(dossier)) {
     const v = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(dossier), '*.json'))
-    const relit = () => { E.dernierOnglet = null; planifieOnglet(true) }
+    const relit = () => { E.dernierOnglet = null; E.candidats = null; planifieOnglet(true) }
     v.onDidChange(relit); v.onDidCreate(relit)
     E.ctx.subscriptions.push(v)
   }
@@ -501,7 +518,7 @@ async function activate(ctx) {
   E.barre = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100)
   E.barre.command = 'suiviPlan.ouvrir'
   ctx.subscriptions.push(E.barre,
-    vscode.commands.registerCommand('suiviPlan.ouvrir', () => pret.then(() => { rafraichit(); ouvreVue() })),
+    vscode.commands.registerCommand('suiviPlan.ouvrir', () => pret.then(() => { rafraichit(true); ouvreVue() })),
     vscode.commands.registerCommand('suiviPlan.choisir', () => pret.then(choisirPlan)),
     { dispose: () => {
       for (const v of E.veilleurs) v.dispose()
@@ -520,7 +537,7 @@ async function activate(ctx) {
   veilleSignal()
   veilleOnglets()
   ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration(ev => {
-    if (ev.affectsConfiguration('suiviPlan.dossier')) { veillePlans(); rafraichit() }
+    if (ev.affectsConfiguration('suiviPlan.dossier')) { veillePlans(); rafraichit(true) }
   }))
   rafraichit()
   lisSignal(true)

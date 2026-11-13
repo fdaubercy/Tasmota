@@ -9,6 +9,11 @@ La veille essaie `claude -p --resume <session>` toutes les 15 minutes :
   - code 0 : reprise faite, fin ;
   - texte de limite (MOTS_LIMITE) : on attend et on recommence, 8 jours au plus (limite hebdomadaire comprise) ;
   - autre echec : 3 de suite et on abandonne (compte ou connexion : attendre n'y changerait rien).
+Jamais de session en double (2026-11-13 : 4 conversations ouvertes dans VS Code reprises en meme temps par -p, travaux
+faits deux fois et commits croises) : avant chaque tentative, rien n'est lance tant qu'un processus Claude vivant tient la
+conversation (registre ~/.claude/sessions/<pid>.json : onglet VS Code, terminal) ; la veille attend sa fermeture. Et
+elle s'arrete si le transcript a recu une vraie reponse depuis la limite (reprise a la main ; un message retape pendant
+la limite ne laisse qu'une erreur rate_limit et ne compte pas).
 Une seule veille par conversation (verrou PID). Ne change jamais de compte et ne contourne aucune limite. Mode de
 permission : celui de la conversation, jamais bypassPermissions (remplace par auto). Journal et verrous dans
 %LOCALAPPDATA%\\outils_tasmota\\reprise_limite\\.
@@ -27,6 +32,8 @@ import time
 from pathlib import Path
 
 DOSSIER = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "outils_tasmota" / "reprise_limite"
+SESSIONS = Path.home() / ".claude" / "sessions"     # registre de Claude Code : un <pid>.json par processus vivant
+PROJETS = Path.home() / ".claude" / "projects"      # transcripts <session>.jsonl
 ATTENTE_S = 15 * 60
 DUREE_MAX_S = 8 * 24 * 3600
 ECHECS_MAX = 3
@@ -68,6 +75,53 @@ def prend_verrou(session, dossier=DOSSIER, vivant=pid_vivant):
     return True
 
 
+def session_ouverte(session, dossier=SESSIONS, vivant=pid_vivant):
+    """PID d'un processus Claude vivant qui tient deja cette conversation (onglet, terminal), sinon None."""
+    try:
+        fiches = list(dossier.glob("*.json"))
+    except OSError:
+        return None
+    for fiche in fiches:
+        try:
+            d = json.loads(fiche.read_text(encoding="utf-8"))
+            if d.get("sessionId") == session and vivant(int(d["pid"])):
+                return int(d["pid"])
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return None
+
+
+def surveille_transcript(chemin):
+    """Fonction qui dit si le transcript a recu une vraie reponse (assistant, pas une erreur d'API) depuis maintenant."""
+    if chemin is None:
+        return lambda: False
+    try:
+        depart = chemin.stat().st_size
+    except OSError:
+        return lambda: False
+
+    def repris():
+        try:
+            with open(chemin, "rb") as f:
+                f.seek(depart)
+                ajout = f.read().decode("utf-8", "replace")
+        except OSError:
+            return False
+        for ligne in ajout.splitlines():
+            try:
+                d = json.loads(ligne)
+            except ValueError:
+                continue
+            if isinstance(d, dict) and d.get("type") == "assistant" and not d.get("isApiErrorMessage"):
+                return True
+        return False
+    return repris
+
+
+def transcript(session, projets=PROJETS):
+    return next(iter(projets.glob(f"*/{session}.jsonl")), None)
+
+
 def lance_claude(session, cwd, mode):
     """(code, texte) d'une tentative de reprise."""
     claude = shutil.which("claude.cmd") or shutil.which("claude")
@@ -79,12 +133,23 @@ def lance_claude(session, cwd, mode):
     return r.returncode, (r.stdout or "") + (r.stderr or "")
 
 
-def veille(session, cwd, mode, lance=lance_claude, dort=time.sleep, horloge=time.time, journal=note):
-    """Attend puis retente ; rend "repris", "abandon" ou "delai"."""
-    debut, echecs = horloge(), 0
+def veille(session, cwd, mode, lance=lance_claude, dort=time.sleep, horloge=time.time, journal=note,
+           occupee=lambda: None, reprise=lambda: False):
+    """Attend puis retente ; rend "repris", "deja_repris", "abandon" ou "delai".
+    @occupee : PID du processus qui tient deja la conversation, ou None ; @reprise : vrai si elle a ete reprise ailleurs."""
+    debut, echecs, tenue = horloge(), 0, None
     journal(f"{session} : limite atteinte, veille demarree (mode {mode})")
     while horloge() - debut < DUREE_MAX_S:
         dort(ATTENTE_S)
+        if reprise():
+            journal(f"{session} : conversation reprise ailleurs depuis la limite, veille arretee")
+            return "deja_repris"
+        pid = occupee()
+        if pid:
+            if pid != tenue:
+                journal(f"{session} : ouverte dans le processus {pid} (onglet ou terminal), pas de reprise en double : attente")
+            tenue = pid
+            continue
         code, texte = lance(session, cwd, mode)
         if code == 0:
             journal(f"{session} : reprise faite")
@@ -129,7 +194,8 @@ def main():
         _, _, session, cwd, mode = sys.argv
         if prend_verrou(session):
             try:
-                veille(session, cwd, mode)
+                veille(session, cwd, mode, occupee=lambda: session_ouverte(session),
+                       reprise=surveille_transcript(transcript(session)))
             finally:
                 (DOSSIER / f"{session}.pid").unlink(missing_ok=True)
         return 0
