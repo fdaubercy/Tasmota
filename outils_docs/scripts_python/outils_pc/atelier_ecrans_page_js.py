@@ -145,7 +145,7 @@ function chargeCarte(env) {          // la carte d'avant reste en place tant que
                                        : "Pas encore de description d'écran pour cette carte : page vierge, rien n'est écrit.";
     E.msgEcran = ''; afficheBandeau();
     R.liste = []; R.zone = null; R.outilZone = false; R.brouillon = ''; R.message = ''; R.appliquees = {};
-    messageImport(''); dessineImport();
+    messageImport(''); dessineImport(); chargeImages();
     remplitEcrans(); zoomAjuste(); dessineTout(); apercu(); lisCarte(); chargeRemarques();
   }).catch(function (e) {
     if (env !== E.demande) return;
@@ -217,6 +217,8 @@ function champAttribut(parent, o, k) {
   var t = typeAttr(o.type, k), v = o.attributs[k];
   var poser = function (nv) { modifie(function () { choisi().attributs[k] = nv; }); };
   if (t === 'couleur') champCouleur(parent, k, v, poser);
+  else if (t === 'lignes') champOptions(parent, k, v, poser);
+  else if (o.type === 'img' && k === 'src') champImage(parent, v, poser);
   else if (t === 'booleen') { var b = el('input', { type: 'checkbox' }); b.checked = !!v; b.onchange = function () { poser(b.checked); }; champ(parent, k, b); }
   else champ(parent, k, saisie(v, t === 'entier' ? 'number' : 'text', function (nv, i) {
     if (t === 'entier') { var n = entier(nv); if (n === null) { i.value = v; return; } poser(n); } else poser(nv);
@@ -262,15 +264,15 @@ function dessineProprietes() {
     });
     pn.appendChild(l);
   });
-  if (typeAttr(o.type, 'text')) champ(pn, 'Texte', saisie(o.attributs.text || '', 'text', function (v) { modifie(function () { choisi().attributs.text = v; }); }));
+  if (typeAttr(o.type, 'text') && o.type !== 'roller') champ(pn, 'Texte', saisie(o.attributs.text || '', 'text', function (v) { modifie(function () { choisi().attributs.text = v; }); }));
   if (typeAttr(o.type, 'text_font')) champPolice(pn, o);
   pn.appendChild(el('h3', null, 'Autres attributs'));
   Object.keys(o.attributs).forEach(function (k) { if (k !== 'text' && k !== 'text_font') champAttribut(pn, o, k); });
   var l = el('div', { class: 'ligne' }), s = el('select', { 'aria-label': 'Attribut à ajouter' }), b = el('button', { class: 'btn', type: 'button' }, 'Ajouter');
-  Object.keys(E.catalogue.objets[o.type].attributs).sort().forEach(function (k) { if (!(k in o.attributs)) s.appendChild(el('option', { value: k }, k)); });
+  Object.keys(E.catalogue.objets[o.type].attributs).sort().forEach(function (k) { if (!(k in o.attributs) && k !== 'qr_size' && !(o.type === 'roller' && k === 'text')) s.appendChild(el('option', { value: k }, k)); });
   b.onclick = function () {
     var k = s.value, ty = typeAttr(o.type, k);
-    modifie(function () { choisi().attributs[k] = ty === 'couleur' ? '#FFFFFF' : ty === 'entier' ? 0 : ty === 'booleen' ? false : ''; });
+    modifie(function () { choisi().attributs[k] = ty === 'couleur' ? '#FFFFFF' : ty === 'entier' ? 0 : ty === 'booleen' ? false : ty === 'lignes' ? 'Option 1' : ''; });
   };
   l.appendChild(s); l.appendChild(b); pn.appendChild(l);
   var sup = el('button', { class: 'btn danger', type: 'button' }, "Supprimer l'objet");
@@ -318,6 +320,10 @@ function dessineLiaison() {
     var nv = genre === 'page' ? entier(v) : v; if (nv === null) { i.value = to[genre]; return; }
     modifie(function () { choisi().toucher[genre] = nv; });
   }));
+  if (genre && genre !== 'page' && ['switch', 'dropdown', 'roller'].indexOf(o.type) >= 0)
+    pn.appendChild(el('p', { class: 'doux petit' }, 'Action au changement de valeur, qui la reçoit (interrupteur 1 ou 0, sinon '
+      + 'index de l’option) : dernier argument d’une fonction, %val% dans une commande. Interface LVGL pur seulement ; '
+      + 'avec HASPmota, une règle hasp#p<page>b<id>#event de la carte.'));
   if (genre === 'fonction') champ(pn, 'Arguments', saisie(JSON.stringify(to.args || []), 'text', function (v, i) {
     var a; try { a = JSON.parse(v); } catch (e) { a = null; }
     if (!Array.isArray(a)) { i.value = JSON.stringify(to.args || []); alert('Liste JSON attendue, par exemple ["fenetre", 1]'); return; }

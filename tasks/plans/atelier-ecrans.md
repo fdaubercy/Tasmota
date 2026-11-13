@@ -316,8 +316,13 @@ Conception : § 7 de la même spec.
   valeur choisie passée à l'action (dernier argument d'une fonction, `%val%` d'une commande, interrupteur en 1 / 0) ;
   police `.ttf` présente sur deux cartes : une seule entrée ; `ecranLvgl.be` des débits régénéré (interface `haspmota`
   de la carte : fichier hors de son FS)
-- [ ] Page : palette, propriétés (éditeur de liste d'options, choix d'un PNG du dossier de la carte), dessin approché,
-  QR code par la bibliothèque de la page des étiquettes ; sonde Chrome VERT ; relecture
+- [x] Page : palette, propriétés (éditeur de liste d'options, choix d'un PNG du dossier de la carte), dessin approché,
+  QR code par la bibliothèque de la page des étiquettes ; sonde Chrome VERT ; relecture — preuve : module
+  `atelier_ecrans_page_palier2.py`, routes `GET /images`, `/image`, `/lib/qr.js` (`test_atelier_ecrans_web.py::test_images`
+  VERT), `test_atelier_ecrans_page_chrome.py::sonde_palier2` VERT (12 types en palette, QR code dessiné, PNG affiché,
+  options nettoyées, QR code carré, qr_size dans le pages.jsonl généré, rien d'écrit), relecture `relecteur-pages-web` :
+  prête, sa suggestion « liste des images indisponible » appliquée ; texte refusé sur une roue (`lvh_roller::set_text`
+  lève) (2026-11-13)
 - [ ] Rangement des images par format (décision de l'utilisateur du 2026-11-13, au lieu du `.png` seul) : `.png`, `.jpg`,
   `.bmp` vers `/sd/images/PNG|JPG|BMP/` (`gestionFileFolder.be`, accord donné) ; scripts Berry, pages.jsonl et pages
   web des cartes (`data/sd/html|css|js`, routes Berry qui servent des fichiers : `qrcodePage`, `pagesGraphiques`,
@@ -353,9 +358,25 @@ seulement par un PNG sous `/sd/images/PNG/` posé en `img` (le data URI de `qrco
   accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire son `pages.jsonl`
 - [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A11)
 
+## A18 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude)
+Choix de Claude : construite à la GÉNÉRATION (pas sur la carte : HASPmota n'expose pas les titres des pages, et les pages
+ne changent qu'à la génération). Une clé `navigation` à la racine de la description : `{"x", "y", "h", "ecart",
+"attributs": {style des boutons}, "actif": {couleurs de la page courante}}` ; une page porte `"menu": false` pour en sortir
+(page de confirmation). Les deux générateurs déroulent un bouton par page n >= 1 du menu, sur la page 0, ids réservés
+(201 à 254, refus d'un objet de l'utilisateur sur ces ids), texte = titre de la page, toucher `{"page": n}`, couleurs `actif`
+(mécanisme existant). Largeur des boutons d'après la longueur du titre et la taille de police ; refus avec message si la
+barre dépasse l'écran. Hors champ : la fenêtre « Menu » de la cave (actions non déductibles des pages) ; un `pages.jsonl`
+importé garde ses boutons tels quels.
+- [ ] Bancs d'abord (rouge) : validateur (forme de `navigation`, ids réservés, débordement, `menu` booléen), deux
+  générateurs (un bouton par page du menu, ordre des pages, `actif`), `banc_ecran_lvgl` (touchers et ACTIFS de la barre)
+- [ ] Description, validateur, déroulement commun aux deux générateurs (`atelier_ecrans_description.py::deroule_navigation`)
+- [ ] Page : panneau « Barre de navigation » (activer, position, hauteur, écart, couleurs), case « dans le menu » par page,
+  boutons de la barre dessinés grisés et non sélectionnables ; sonde Chrome VERT ; relecture `relecteur-pages-web`
+- [ ] Écran des débits passé à la barre construite (ses boutons de page remplacés), pages.jsonl regénéré identique au
+  rendu ; écran de la cave : proposé à la session de `tasks/plans/ecran-cave-vues-commandes.md`, jamais sans son accord
+- [ ] Essai sur la carte (avec A11) ; commit
+
 ## Améliorations restantes
-- [ ] [projet] Menu construit d'après les pages de la description (évalué le 2026-11-13, faisable à la génération ; décision
-  de l'utilisateur en attente)
 - [ ] [projet] Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)
 
 ## Vérification

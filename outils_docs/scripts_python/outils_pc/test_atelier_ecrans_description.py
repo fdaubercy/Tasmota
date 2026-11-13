@@ -98,6 +98,7 @@ MUTANTS = [
     ("interrupteur : val entier", lambda d: d["objets"].append(PALIER2[2] | {"attributs": {"val": 1}}), "booléen"),
     ("liste deroulante : options non texte", lambda d: d["objets"].append(PALIER2[1] | {"attributs": {"options": ["a", "b"]}}), "options"),
     ("roue : options vides", lambda d: d["objets"].append(PALIER2[3] | {"attributs": {"options": ""}}), "options"),
+    ("roue : texte (lvh_roller::set_text leve)", lambda d: d["objets"].append(PALIER2[3] | {"attributs": {"text": "x"}}), "roue"),
     ("QR code pas carre", lambda d: d["objets"].append(PALIER2[4] | {"h": 90}), "carré"),
     ("QR code : qr_size ecrit a la main", lambda d: d["objets"].append(PALIER2[4] | {"attributs": {"qr_size": 50}}), "qr_size"),
     ("type inconnu", lambda d: objet(d, 0).update(type="machin"), "type"),

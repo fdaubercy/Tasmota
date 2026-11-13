@@ -81,6 +81,7 @@ function dessineObjet(o, commun) {
     });
     d.appendChild(svg);
   }
+  if (TYPES_P2.indexOf(o.type) >= 0) dessinePalier2(o, a, d);
   return d;
 }
 function dessineEcran() {
@@ -109,6 +110,7 @@ function dessineEcran() {
 function borne(o) {
   var D = dims();
   o.l = Math.max(4, Math.min(o.l, D.l)); o.h = Math.max(4, Math.min(o.h, D.h));
+  if (o.type === 'qrcode') { o.l = Math.min(o.l, D.h); o.h = o.l; }      // carre : la largeur commande (qr_size = l)
   o.x = Math.max(0, Math.min(o.x, D.l - o.l)); o.y = Math.max(0, Math.min(o.y, D.h - o.h));
 }
 
@@ -120,7 +122,8 @@ function zoomAjuste() {
 function zoome(f) { E.zoom = Math.max(0.2, Math.min(3, Math.round(E.zoom * f * 20) / 20)); dessineEcran(); }
 
 /* ---------- palette et ajout ---------- */
-var NOMS_TYPES = { label: 'Libellé', btn: 'Bouton', bar: 'Barre', arc: 'Arc', chart: 'Courbe', slider: 'Curseur', obj: 'Cadre' };
+var NOMS_TYPES = { label: 'Libellé', btn: 'Bouton', bar: 'Barre', arc: 'Arc', chart: 'Courbe', slider: 'Curseur', obj: 'Cadre',
+  img: 'Image', dropdown: 'Liste déroulante', switch: 'Interrupteur', roller: 'Roue', qrcode: 'QR code' };
 var DEFAUTS = {
   label: [160, 32, { text: 'Texte', text_font: 24, text_color: '#E8EDF2' }],
   btn: [120, 46, { text: 'Bouton', text_font: 24, radius: 23, border_width: 0, bg_color: '#1F2B38', text_color: '#E8EDF2' }],
@@ -128,7 +131,12 @@ var DEFAUTS = {
   slider: [300, 20, { min: 0, max: 100, val: 50 }],
   arc: [120, 120, { min: 0, max: 100, val: 50 }],
   chart: [400, 240, { point_count: 60, y_min: 0, y_max: 100, h_div_line_count: 4 }],
-  obj: [100, 100, { radius: 8, border_width: 0, bg_color: '#1F2B38' }]
+  obj: [100, 100, { radius: 8, border_width: 0, bg_color: '#1F2B38' }],
+  img: [64, 64, { src: 'tasmota_logo' }],
+  dropdown: [220, 46, { options: 'Option 1\nOption 2', val: 0, text_font: 24 }],
+  switch: [70, 36, { val: false }],
+  roller: [160, 120, { options: '1\n2\n3', val: 0, text_font: 24 }],
+  qrcode: [120, 120, { qr_text: 'http://192.168.0.1', qr_dark_color: '#000000', qr_light_color: '#FFFFFF' }]
 };
 function nouvelId(page) {
   // ids pris : objets bruts compris (meme id = meme objet pour HASPmota)
@@ -150,7 +158,7 @@ function ajouteObjet(type, x, y) {
 }
 function dessinePalette() {
   var pa = vide($('palette'));
-  Object.keys(E.catalogue.objets).filter(function (t) { return E.catalogue.objets[t].palier === 1; }).forEach(function (t) {
+  Object.keys(E.catalogue.objets).filter(dansAtelier).forEach(function (t) {
     var d = el('div', { draggable: 'true', tabindex: '0', role: 'button', title: 'Glisser sur l’écran, ou cliquer pour ajouter' });
     d.appendChild(el('span', null, NOMS_TYPES[t] || t)); d.appendChild(el('span', { class: 'doux' }, t));
     d.ondragstart = function (ev) { ev.dataTransfer.setData('text/plain', t); ev.dataTransfer.effectAllowed = 'copy'; };
@@ -201,7 +209,7 @@ function brancheEcran() {
     ev.preventDefault();
     var t = ev.dataTransfer.getData('text/plain');
     var c = Object.prototype.hasOwnProperty.call(E.catalogue.objets, t) && E.catalogue.objets[t];   // texte glisse : externe
-    if (!c || c.palier !== 1) return;
+    if (!c || !dansAtelier(t)) return;
     var p = pointEcran(ev); ajouteObjet(t, aimante(p.x), aimante(p.y));
   });
 }

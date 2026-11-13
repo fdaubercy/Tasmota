@@ -54,7 +54,7 @@ def copie(racine):
         (racine / f).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(DEPOT / f, racine / f)
     shutil.copytree(DEPOT / aed.DOSSIER, racine / aed.DOSSIER)
-    for d in (cat.AMONT, cat.PERSO):                 # display.ini cites par le catalogue (amont, bibliotheque)
+    for d in (cat.AMONT, cat.PERSO, "outils_docs/etiquettes_qr/lib"):    # display.ini cites par le catalogue ; lib du QR code
         if (DEPOT / d).is_dir():
             shutil.copytree(DEPOT / d, racine / d, dirs_exist_ok=True)
     for d in (DEPOT / "data").glob("*/*"):
@@ -282,7 +282,29 @@ def test_police(b):
         verifie(b.requete("GET", f"/police?nom={nom}")[0], 404, f"GET /police?nom={nom} : hors catalogue -> 404")
 
 
-TESTS = [test_page, test_cartes, test_catalogue, test_ecriture_routes, test_description, test_apercu, test_acces, test_valeurs, test_capture, test_police]
+def test_images(b):
+    """PNG du dossier de la carte (objet img, A14) : liste, octets, rien hors de ce dossier ; bibliotheque QR des etiquettes."""
+    dossier = b.racine / "data/bureau/tasmota32s3-ecran-debits-pac"
+    png = b"\x89PNG\r\n\x1a\n" + bytes(range(40))
+    (dossier / "pompe.png").write_bytes(png)
+    (dossier / "Fond.PNG").write_bytes(png)
+    (dossier / "photo.jpg").write_bytes(b"\xff\xd8")
+    (b.racine / "data/bureau/autre.png").write_bytes(png)
+    statut, r = b.requete("GET", f"/images?env={DEBITS}")
+    verifie((statut, r), (200, {"images": ["Fond.PNG", "pompe.png"]}), "GET /images : PNG du dossier de la carte, tries, sans JPG")
+    statut, _ = b.requete("GET", f"/image?env={DEBITS}&nom=pompe.png")
+    verifie((statut, b.entetes.get("Content-Type"), b.brut == png), (200, "image/png", True), "GET /image : octets du PNG")
+    for nom in ("photo.jpg", "../autre.png", "..%2Fautre.png", "absent.png", "", "_persist.json"):
+        verifie(b.requete("GET", f"/image?env={DEBITS}&nom={nom}")[0], 404, f"GET /image?nom={nom} : hors de la liste -> 404")
+    verifie(b.requete("GET", "/images?env=inconnu")[0], 400, "GET /images : env inconnu -> 400")
+    lib = DEPOT / aew.QR_LIB
+    statut, _ = b.requete("GET", "/lib/qr.js")
+    verifie((statut, "javascript" in b.entetes.get("Content-Type", ""), b.brut == lib.read_bytes()), (200, True, True),
+            "GET /lib/qr.js : bibliotheque des etiquettes, octets du depot")
+
+
+TESTS = [test_page, test_cartes, test_catalogue, test_ecriture_routes, test_description, test_apercu, test_acces, test_valeurs, test_capture, test_police,
+         test_images]
 
 
 if __name__ == "__main__":

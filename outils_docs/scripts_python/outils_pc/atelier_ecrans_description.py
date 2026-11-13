@@ -146,6 +146,8 @@ def _attributs(catalogue, type_, attrs, qui, msgs):
             msgs.append(f"{qui} : {k} : texte non vide attendu, une option par ligne")
     if type_ == "img" and "src" in attrs and not (attrs["src"] == "tasmota_logo" or IMAGE.fullmatch(str(attrs["src"]))):
         msgs.append(f"{qui} : src « {attrs['src']} » : image PNG rangée sous A:sd/images/PNG/ attendue (ou tasmota_logo)")
+    if type_ == "roller" and "text" in attrs:
+        msgs.append(f"{qui} : text : refusé sur une roue (lvh_roller::set_text lève une erreur sur la carte)")
     if type_ == "qrcode" and "qr_size" in attrs:
         msgs.append(f"{qui} : qr_size : la taille du QR code est sa largeur l, posée par les générateurs")
 

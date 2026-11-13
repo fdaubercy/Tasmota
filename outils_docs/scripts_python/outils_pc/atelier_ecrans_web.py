@@ -19,6 +19,9 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
                        carte muette : simule true, et les lectures des SILENCE s suivantes n'attendent pas la carte
     GET  /police       ?nom= : .ttf d'une police `source: sd` du catalogue (font/ttf), cherche par son nom de fichier
                        du catalogue dans data/*/*/ ; rien d'autre (404)
+    GET  /images       ?env= : {images: [noms des .png du dossier de la carte]} (objet img, A14)
+    GET  /image        ?env=&nom= : octets d'un PNG de cette liste (image/png), 404 pour tout autre nom
+    GET  /lib/qr.js    qr-code-styling de la page des etiquettes (QR_LIB), apercu de l'objet qrcode
     POST /importer     {env} -> {description, avertissements, editables, bruts, source} : pages.jsonl de la carte lu comme
                        HASPmota (atelier_ecrans_import) ; rien n'est ecrit (404 sans pages.jsonl, 400 carte sans ecran)
     POST /apercu       {env, description} -> {erreurs, fichiers: [{nom, chemin, contenu, diff, ajouts, retraits}]} ;
@@ -87,6 +90,7 @@ import lieux
 PORT_DEFAUT = 7960
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 256 * 1024                  # ecran.json des debits : 24 Ko
+QR_LIB = "outils_docs/etiquettes_qr/lib/qr-code-styling.min.js"   # celle de la page des etiquettes (apercu du QR code)
 MAX_POLICE = aep.TAILLE_MAX * 4 // 3 + 64 * 1024    # police .ttf en base64 dans le JSON (routes /polices/*)
 ENTETE = "X-Atelier-Ecrans"
 DELAI = 4
@@ -208,6 +212,19 @@ def police(racine, nom):
     raise LookupError(f"police inconnue du catalogue : {nom!r}")
 
 
+def images(racine, env):
+    """Noms des PNG du dossier de la carte (objet img : A:sd/images/PNG/<nom>, rangement de gestionFileFolder.be)."""
+    d = Path(racine) / fbe.dossier_carte(env)
+    return sorted((f.name for f in d.glob("*") if f.is_file() and f.suffix.lower() == ".png"), key=str.lower)
+
+
+def image(racine, env, nom):
+    """Octets d'un PNG de la carte ; le nom doit figurer dans images() (jamais un chemin venu de la requete)."""
+    if nom not in images(racine, env):
+        raise LookupError(f"image inconnue : {nom!r}")
+    return (Path(racine) / fbe.dossier_carte(env) / nom).read_bytes()
+
+
 def depuis_ce_pc(handler):
     return acces_web.est_local(handler.client_address)
 
@@ -307,6 +324,15 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                     self._json(adf.lire(racine, un("source"), un("nom"), adi.charge_reference(racine)))
                 elif url.path == "/police":
                     self._envoie(200, police(racine, un("nom")), "font/ttf")
+                elif url.path == "/images":
+                    self._json({"images": images(racine, env_atelier(racine, un("env")))})
+                elif url.path == "/image":
+                    self._envoie(200, image(racine, env_atelier(racine, un("env")), un("nom")), "image/png")
+                elif url.path == "/lib/qr.js":
+                    lib = Path(racine) / QR_LIB
+                    if not lib.is_file():
+                        raise LookupError("bibliotheque qr-code-styling absente du depot")
+                    self._envoie(200, lib.read_bytes(), "application/javascript; charset=utf-8")
                 else:
                     raise LookupError("introuvable")
             self._traite(route)

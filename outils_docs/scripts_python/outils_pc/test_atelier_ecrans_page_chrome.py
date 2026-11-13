@@ -406,6 +406,52 @@ def sonde_import(cdp, banc):
     verifie(erreurs, [], "import : aucune erreur console")
 
 
+def png_1x1():
+    """Un vrai PNG 1 x 1 (le navigateur le decode : naturalWidth = 1)."""
+    import zlib
+
+    def bloc(t, d):
+        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + bloc(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+            + bloc(b"IDAT", zlib.compress(b"\x00\xff\x00\x00")) + bloc(b"IEND", b""))
+
+
+def sonde_palier2(cdp, banc):
+    """Objets du palier 2 (A14) : palette, dessin approche (PNG de la carte, QR code par qr-code-styling), editeur
+    d'options, image choisie dans la liste, QR code carre, description valide, rien d'ecrit."""
+    js = cdp.js
+    (banc.racine / "data/bureau/tasmota32s3-ecran-debits-pac/pompe.png").write_bytes(png_1x1())
+    avant = instantane(banc.racine)
+    js("chargeImages(); E.page = 1; E.sel = null; dessineTout()")
+    attend(cdp, "P2.images.length === 1", 10)
+    verifie(js("document.querySelectorAll('#palette > div').length"), 12, "palette : 7 types du palier 1 + 5 du palier 2")
+    js("['img','dropdown','switch','roller','qrcode'].forEach(function(t, i){ ajouteObjet(t, 16 + 150 * i, 300); })")
+    verifie(js("['img','dropdown','switch','roller','qrcode'].map(function(t){ return document.querySelectorAll('#ecranCarte .t-' + t).length; }).join()"),
+            "1,1,1,1,1", "palier 2 : un objet de chaque type dessine")
+    verifie((js("!!document.querySelector('#ecranCarte .t-qrcode svg')"), js("!!document.querySelector('#ecranCarte .t-switch .bouton')"),
+             js("document.querySelector('#ecranCarte .t-roller').children.length"),
+             js("document.querySelector('#ecranCarte .t-dropdown').textContent")), (True, True, 3, "Option 1▾"),
+            "dessin : QR code par qr-code-styling, bouton d'interrupteur, 3 lignes de roue, option choisie de la liste")
+    js("var o = E.desc.objets.filter(function(x){ return x.type === 'img'; })[0]; E.sel = [o.page, o.id]; dessineTout()")
+    opts = js("Array.from(document.querySelectorAll('#proprietes select[aria-label=Image] option')).map(function(x){ return x.value; }).join()")
+    verifie(opts, "tasmota_logo,A:sd/images/PNG/pompe.png", "image : logo Tasmota ou PNG du dossier de la carte")
+    js("var s = document.querySelector('#proprietes select[aria-label=Image]'); s.value = 'A:sd/images/PNG/pompe.png'; s.onchange()")
+    verifie(attend(cdp, "var i = document.querySelector('#ecranCarte .t-img img'); i && i.complete && i.naturalWidth", 10), 1,
+            "image : PNG de la carte affiche (GET /image)")
+    js("var o = E.desc.objets.filter(function(x){ return x.type === 'dropdown'; })[0]; E.sel = [o.page, o.id]; dessineTout()")
+    js("var t = document.querySelector('#proprietes textarea.lignes'); t.value = ' Auto\\n\\nMarche \\r\\nArret'; t.onchange()")
+    verifie(js("E.desc.objets.filter(function(x){ return x.type === 'dropdown'; })[0].attributs.options"), "Auto\nMarche\nArret",
+            "options : une par ligne, lignes vides et blancs retires")
+    js("var o = E.desc.objets.filter(function(x){ return x.type === 'qrcode'; })[0]; modifie(function(){ var c = E.desc.objets.filter(function(x){ return x.type === 'qrcode'; })[0]; c.l = 200; borne(c); })")
+    verifie(js("var o = E.desc.objets.filter(function(x){ return x.type === 'qrcode'; })[0]; [o.l, o.h].join()"), "200,200", "QR code : reste carre")
+    gen = attend(cdp, "var c = (E.fichiers.filter(function(f){return f.nom==='pages.jsonl'})[0]||{}).contenu || ''; "
+                      "c.indexOf('\"qr_size\":200') >= 0 && c", 15)
+    verifie((bool(gen), js("E.erreurs.join(' | ')")), (True, ""), "apercu : description valide, qr_size = l dans le pages.jsonl genere")
+    verifie(instantane(banc.racine) == avant, True, "palier 2 : rien n'est ecrit")
+    erreurs = [e for e in cdp.erreurs() if "carte-inconnue" not in e and "temoin_sonde" not in e]
+    verifie(erreurs, [], "palier 2 : aucune erreur console")
+
+
 def main():
     t = Path(tempfile.mkdtemp(prefix="sonde_atelier_ecrans_"))
     banc = chrome = None
@@ -448,6 +494,7 @@ def main():
         sonde_polices(cdp, banc)
         sonde_display(cdp, banc)
         sonde_import(cdp, banc)
+        sonde_palier2(cdp, banc)
     finally:
         tue_arbre(chrome)
         # tue_arbre manque parfois un fils de Chrome : balayage par le profil temporaire de cette passe
