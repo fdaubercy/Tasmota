@@ -73,6 +73,8 @@ def met_a_echelle(desc, cible, catalogue):
             continue
         o["x"], o["y"] = round(o["x"] * rx), round(o["y"] * ry)
         o["l"], o["h"] = max(1, round(o["l"] * rx)), max(1, round(o["h"] * ry))
+        if o.get("type") == "qrcode":                 # reste carre (qr_size = l)
+            o["l"] = o["h"] = min(o["l"], o["h"])
         if o["x"] + o["l"] > L or o["y"] + o["h"] > H:
             av.append(f"{qui} : hors de l'ecran apres mise a l'echelle, ramene dedans")
             o["l"], o["h"] = min(o["l"], L), min(o["h"], H)
@@ -89,6 +91,16 @@ def met_a_echelle(desc, cible, catalogue):
         texte = a.get("text")
         if isinstance(texte, str) and texte and len(texte) * _taille(a.get("text_font")) * 0.5 > o["l"]:
             av.append(f"{qui} : le texte « {texte[:30]} » deborde probablement ({o['l']} px de large)")
+    b = d.get("navigation")
+    if isinstance(b, dict):                           # barre de navigation (A17) : position, hauteur, ecart, police
+        b["x"], b["ecart"] = round(b.get("x", 0) * rx), round(b.get("ecart", 0) * rx)
+        b["y"], b["h"] = round(b.get("y", 0) * ry), max(1, round(b.get("h", 0) * ry))
+        attrs = b.get("attributs") or {}
+        for k, v in list(attrs.items()):
+            if ECHELLE_ATTRS.fullmatch(k) and isinstance(v, int) and not isinstance(v, bool):
+                attrs[k] = round(v * rf)
+            elif k == "text_font":
+                attrs[k] = police_echelle(v, rf, catalogue)
     return d, av
 
 

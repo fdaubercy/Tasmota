@@ -17,6 +17,7 @@ ne peut s'ecrire en Berry : couleur hors #RRGGBB, fonction de toucher hors `modu
 
 import re
 
+import atelier_ecrans_navigation as nav
 from atelier_ecrans_lvgl_moteur import MOTEUR
 
 COULEUR = re.compile(r"#[0-9A-Fa-f]{6}")
@@ -132,8 +133,9 @@ def _toucher(nom, t, type_=None):
 
 
 def genere(desc):
-    """Texte du module Berry ecranLvgl (UTF-8, fins de ligne \\n)."""
-    pages = [[p["n"], attributs(p.get("attributs", {}), f"page {p['n']}")] for p in desc["pages"]]
+    """Texte du module Berry ecranLvgl (UTF-8, fins de ligne \\n) ; barre de navigation deroulee (atelier_ecrans_navigation)."""
+    desc = nav.deroule(desc)
+    pages =[[p["n"], attributs(p.get("attributs", {}), f"page {p['n']}")] for p in desc["pages"]]
     contenu = [p["n"] for p in desc["pages"] if p["n"] >= 1]
     objets, groupes, actifs, touchers, courbe = [], [], [], [], None
     bruts = sum(1 for o in desc["objets"] if o["type"] == "brut")

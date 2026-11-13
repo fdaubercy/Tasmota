@@ -26,7 +26,7 @@ LV_CONF = "tasmota/lvgl_berry/tasmota_lv_conf.h"
 XDRV_LVGL = "tasmota/tasmota_xdrv_driver/xdrv_52_3_berry_lvgl.ino"
 # Fichiers lus (hors data/*/*/{display.ini,pages.jsonl,*.ttf,_persist.json}) : le banc en copie ce qu'il faut.
 SOURCES = [HASPMOTA, LV_FUNCS, LV_CONF, XDRV_LVGL]
-PERSO = "outils_docs/atelier_ecrans/display"     # display.ini personnels (hors flash), plan atelier-ecrans A12/A15
+PERSO = "outils_docs/atelier_ecrans/display"     # display.ini personnels (hors flash), plan atelier-ecrans A11/A12
 AMONT = "tasmota/displaydesc"                    # descriptions fournies par Tasmota : jamais modifiees (synchro du fork)
 TACTILES = (":UTI", ":TI", ":TS", ":TR")         # pilote universel, anciens GT911/FT5206/CST816S, XPT2046, resistif
 PALIER1 = ("label", "btn", "bar", "obj", "chart", "arc", "slider")

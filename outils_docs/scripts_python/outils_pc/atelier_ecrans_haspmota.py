@@ -12,6 +12,8 @@ l'interface Berry, absents du fichier. QR code : `qr_size` = l (objet carre, ate
 
 import json
 
+import atelier_ecrans_navigation as nav
+
 BRUT = "brut"           # atelier_ecrans_description.BRUT (import d'un pages.jsonl ecrit a la main)
 
 
@@ -35,7 +37,9 @@ def _objet(o, depart):
 
 
 def genere(desc):
-    """Texte du pages.jsonl : une ligne JSON par commentaire de page, reglage de page et objet (UTF-8)."""
+    """Texte du pages.jsonl : une ligne JSON par commentaire de page, reglage de page et objet (UTF-8) ; barre de
+    navigation deroulee en boutons de la page 0 (atelier_ecrans_navigation)."""
+    desc = nav.deroule(desc)
     contenu = [p["n"] for p in desc["pages"] if p["n"] >= 1]
     depart = min(contenu) if contenu else None
     lignes = []

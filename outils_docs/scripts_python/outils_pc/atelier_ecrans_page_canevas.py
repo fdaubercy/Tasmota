@@ -94,6 +94,7 @@ function dessineEcran() {
   $('zoom').textContent = Math.round(E.zoom * 100) + ' %';
   objets(E.page).forEach(function (o) { ec.appendChild(dessineObjet(o, false)); });
   if (E.page !== 0) objets(0).forEach(function (o) { ec.appendChild(dessineObjet(o, true)); });   // layer_top
+  dessineNav(ec);
   dessineBruts(ec);
   dessineEpingles(ec);
   var o = choisi();
@@ -141,8 +142,9 @@ var DEFAUTS = {
 function nouvelId(page) {
   // ids pris : objets bruts compris (meme id = meme objet pour HASPmota)
   var pris = E.desc.objets.filter(function (o) { return o.page === page; }).map(function (o) { return o.id; }), max = pris.reduce(function (m, i) { return Math.max(m, i); }, 0);
-  for (var i = max + 1; i <= 254; i++) if (pris.indexOf(i) < 0) return i;
-  for (i = 1; i <= 254; i++) if (pris.indexOf(i) < 0) return i;
+  var fin = page === 0 && E.desc.navigation ? 200 : 254;     // 201 a 254 : barre de navigation (A17)
+  for (var i = max + 1; i <= fin; i++) if (pris.indexOf(i) < 0) return i;
+  for (i = 1; i <= fin; i++) if (pris.indexOf(i) < 0) return i;
   return null;
 }
 function ajouteObjet(type, x, y) {

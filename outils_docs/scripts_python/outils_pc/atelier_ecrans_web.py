@@ -41,7 +41,7 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
     POST /remarques    {env, action: epingle|repond|refuse, ...} -> {remarques} (ecrit remarques.json, atelier_ecrans_remarques)
     POST /remarques/appliquer {env, id, description} -> {description modifiee | null, erreurs, remarques} (rien n'est ecrit)
     POST /remarques/traiter   {env} -> etat ; claude -p en lecture seule, depuis ce PC seulement (403 sinon), 409 si en cours
-  Onglet « display.ini » (A15, atelier_ecrans_display_fichiers ; source = carte | perso | amont, nom = env, nom de la
+  Onglet « display.ini » (A12, atelier_ecrans_display_fichiers ; source = carte | perso | amont, nom = env, nom de la
   bibliotheque sans .ini, ou nom du fichier amont) :
     GET  /display/liste      {fichiers: [{source, nom, rel, envs, pilote, largeur, hauteur, bpp, bus, tactile}]}
     GET  /display/reference  outils_docs/schemas/display_ini_parametres.json tel quel

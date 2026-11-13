@@ -1,4 +1,4 @@
-"""Analyse d'un display.ini (pilote universel uDisplay) pour l'onglet « display.ini » de l'atelier des ecrans (plan A15).
+"""Analyse d'un display.ini (pilote universel uDisplay) pour l'onglet « display.ini » de l'atelier des ecrans (plan A12).
 
 `analyse(texte, ref)` lit le fichier comme le firmware (lib/lib_display/UDisplay/src/uDisplay.cpp::uDisplay::uDisplay,
 tasmota/tasmota_xdsp_display/xdsp_17_universal.ino::Init_uDisplay) et rend, ligne par ligne, la section, les arguments

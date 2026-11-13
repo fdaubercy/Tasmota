@@ -4,7 +4,7 @@ titre: Atelier des écrans (page 7960) : une description d'écran, deux interfac
 objectif: Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 et A17 ajoutés ; A14 : bancs, catalogue, générateurs faits)
+maj: 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A18 ; A17 : bancs, description, page faits)
 ---
 # Atelier des écrans
 
@@ -158,7 +158,7 @@ refus, `GET /police?nom=` (`.ttf` du catalogue, chemin jamais pris dans la requ�
   les tailles possibles), fenêtre basse des fichiers générés avec différences colorées
 - [x] Capture : `atelier_ecrans_capture.capture(ip, get) -> bytes` (`Br lv.screenshot()`, téléchargement, effacement du
   fichier sur la carte) ; banc avec carte simulée — preuve : `atelier_ecrans_capture.py`, route POST /capture ; sonde Chrome
-  « capture affichée » (vrai BMP 4 x 2 rendu par un faux `get`) VERT. L'essai réel sur le 7B est passé dans A11
+  « capture affichée » (vrai BMP 4 x 2 rendu par un faux `get`) VERT. L'essai réel sur le 7B est passé dans A18
 - [x] Sonde Chrome hermétique — preuve : test_atelier_ecrans_page_chrome.py VERT, test_cible_atelier_ecrans.py et test_atelier_ecrans_web.py VERTS le 2026-11-12, Chrome arrêté (0 sonde_*) ; (thème clair et sombre, glisser un bouton, zoom 100 %, aucune erreur console, Chrome
   arrêté à la fin) VERT ; tuile de l'annuaire, tâche VS Code, cible détachée (`test_cible_atelier_ecrans.py` VERT,
   `test_garde_build.py` VERT)
@@ -217,37 +217,9 @@ de broches avec le persist -> refus motivé, avertissement si écran intégré �
 - [x] `outils_docs/README.md` (mode d'emploi), carte des documents du `CLAUDE.md`, `verifie_references_docs.py` 0 défaut — preuve : section « Atelier des écrans (page web) » du README, entrée `atelier_ecrans_web.py` de CLAUDE.md, « 20 document(s), 0 defaut(s) »
 - [x] `relecteur-pages-web` et `relecteur-berry` sur le chantier ; corrections confirmées faites — preuve : pages web relues à chaque action (A6b, A7, A8, A9, défauts corrigés) ; relecteur-berry sur `ecranLvgl.be` : toucher mort écarté (`lvgl_glob.be::lvgl_event_dispatch` rappelle l'instance enregistrée), police nil journalisée, courbe qui repart, cache par objet corrigés dans `atelier_ecrans_lvgl_moteur.py` ; `banc_ecran_lvgl.py` VERT avec 2 mutants de plus, `test_atelier_ecrans_lvgl.py` OK, `banc_demarrage.py` VERT. Laissés : `demarre()` rappelé (latent, un seul appel), cache des attributs statiques, un seul toucher en attente
 
-## A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur)
-Regroupe ce qui reste à faire sur la carte d'affichage `tasmota32s3-bureau-ecran-debits-pac` (192.168.0.51) ou par
-l'utilisateur (demande du 2026-11-12). Interface de la carte : HASPmota (`custom_interface_ecran` du cenv), donc
-`pages.jsonl`. Plan d'origine : [tasks/plans/debits-deux-cartes.md](debits-deux-cartes.md), action A9.
-- [ ] [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
-  trois points d'accès, comparer les BSSID et redémarrer celui qui bloque)
-- [ ] Firmware de la carte postérieur à 5c3291884 (`ecranFonctions.be` déplacé dans `data/fs`) : `Status 2` comparé à la
-  date du commit ; sinon compilation et envoi par la page Build
-- [ ] [utilisateur] Essai : un bouton ajouté à l'écran des débits dans l'atelier, généré dans les deux interfaces, écrit
-  dans le dépôt, `pages.jsonl` envoyé par la page Build (onglet « Fichiers »), vu et touché sur la carte ; noms des voies
-  en police 28 (remarque 1) vus au passage
-- [ ] Capture réelle depuis l'atelier (« Capture de la carte ») : image identique à l'écran, mémoire PSRAM prise par
-  `lv.screenshot()` notée (environ 1,2 Mo attendu pour 1024 x 600)
-- [ ] Essai du `display.ini` (A15, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
-  « Garder » / « Revenir » ; comportement de `DisplayReinit` avec LVGL noté ; commandes à chaud `DisplayDimmer`,
-  `DisplayRotate`
-- [ ] Ligne non JSON d'un `pages.jsonl` importé (A13, demande du 2026-11-13) : lu dans `lv_haspmota.be::HASPmota._load`,
-  une ligne commençant par `#` est sautée sans message, toute autre ligne non JSON est sautée avec le log niveau 2
-  « HSP: invalid JSON line », le chargement continue. À voir sur la carte : ajouter `# essai` et `essai` au `pages.jsonl`,
-  l'envoyer, relire les logs (niveau 2) et l'écran
-- [ ] Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
-  (image PNG sous `/sd/images/PNG/`, liste déroulante, interrupteur, roue, QR code), vu et touché ; action au changement
-  de valeur reçue avec la valeur choisie (LVGL pur) ; QR code lisible par un téléphone
-- [ ] Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
-- [ ] [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
-  quand la vue a basculé dans les deux sens
-- [ ] Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
-
-## A12 — Écrans des autres cartes au catalogue
+## A11 — Écrans des autres cartes au catalogue
 Conception : `docs/superpowers/specs/2026-11-12-atelier-ecrans-ameliorations-design.md` § 4. Ordre de réalisation :
-A12, A15, A13, A14 (§ 8).
+A11, A12, A13, A14 (§ 8).
 - [x] Banc d'abord (rouge) : trois sources (cartes, `outils_docs/atelier_ecrans/display/`, `tasmota/displaydesc/`) ;
   clés existantes inchangées (`ST7262_1024x600`) ; collision -> `<pilote>_<l>x<h>@<fichier>` ; tactile par `:UTI`, `:TI`,
   `:TS`, `:TR` ; `display.ini` exclu du FS ou env sans LVGL -> écran non rattaché ; bpp 1 -> `couleur: false`
@@ -264,7 +236,7 @@ A12, A15, A13, A14 (§ 8).
   VERT le 2026-11-13
 - [x] Commit — preuve : `413e30a6d`
 
-## A15 — Onglet « display.ini » : lire, expliquer, valider, créer
+## A12 — Onglet « display.ini » : lire, expliquer, valider, créer
 Conception : § 6 de la même spec. Bibliothèque personnelle `outils_docs/atelier_ecrans/display/` (+ `<nom>.notes.md`).
 - [x] Référence `outils_docs/schemas/display_ini_parametres.json` (sections, arguments, bases, ordre, pièges, sources) ;
   banc de concordance avec `uDisplay.cpp::uDisplay::uDisplay` (section absente de la référence ou référence sans lecture
@@ -285,7 +257,7 @@ Conception : § 6 de la même spec. Bibliothèque personnelle `outils_docs/ateli
 - [x] « Appliquer à la carte » par le chemin du changement d'écran (diff, broches du persist, lien page Build) — preuve :
   `atelier_ecrans_page_display.py::appliqueACarte` ; sonde : proposition puis display.ini de la carte = fichier de la
   bibliothèque (2026-11-13)
-- Essai sur la carte : déplacé dans A11 (demande du 2026-11-13)
+- Essai sur la carte : déplacé dans A18 (demande du 2026-11-13)
 - [x] Mode d'emploi (`outils_docs/README.md`), carte des documents du `CLAUDE.md` ; commit — preuve : commit 81450c2d9
   (2026-11-13)
 
@@ -336,7 +308,7 @@ Conception : § 7 de la même spec.
   `cuvePageFonctions`, `equilibragePage`) recherchés le 2026-11-13 : aucun ne charge d'image du FS, aucune image dans `data/` ; `banc_repartition_fichiers.py` VERT avec mutants ; README, `CLAUDE.md`,
   `ICONES_IMAGES_SOURCES.md` à jour ; l'objet `img` de l'atelier ne propose que `PNG/`
 
-## A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran »)
+## A15 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran »)
 Sources : `outils_docs/ICONES_IMAGES_SOURCES.md` (commit 495e0776f : ordre de recherche, licences, formats selon la cible).
 Après A14 (l'import d'un PNG aboutit dans l'objet `img`).
 - [ ] Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
@@ -351,7 +323,7 @@ Après A14 (l'import d'un PNG aboutit dans l'objet `img`).
   rangé sous `/sd/images`, choisi dans l'objet `img` (A14)
 - [ ] Banc, sonde Chrome, relecture `relecteur-pages-web` ; commit
 
-## A17 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13)
+## A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13)
 Les mêmes informations que la page web `/qrcode` (`data/fs/qrcodePage.be`) : le QR code du texte réglé dans
 `/json/qrcode.json` par l'outil des étiquettes (7970), l'IP réelle de la carte comparée à l'IP inscrite, le nom d'hôte.
 Cartes visées : toutes celles qui ont un écran (aujourd'hui `tasmota32s3-bureau-ecran-debits-pac`, `tasmota32s3-cave-ecran`).
@@ -362,9 +334,9 @@ seulement par un PNG sous `/sd/images/PNG/` posé en `img` (le data URI de `qrco
   inscrite, nom d'hôte, accord des deux IP ; lues au démarrage, pas à chaque seconde
 - [ ] Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave :
   accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire son `pages.jsonl`
-- [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A11)
+- [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A18)
 
-## A18 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude)
+## A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude)
 Choix de Claude : construite à la GÉNÉRATION (pas sur la carte : HASPmota n'expose pas les titres des pages, et les pages
 ne changent qu'à la génération). Une clé `navigation` à la racine de la description : `{"x", "y", "h", "ecart",
 "attributs": {style des boutons}, "actif": {couleurs de la page courante}}` ; une page porte `"menu": false` pour en sortir
@@ -373,14 +345,53 @@ ne changent qu'à la génération). Une clé `navigation` à la racine de la des
 (mécanisme existant). Largeur des boutons d'après la longueur du titre et la taille de police ; refus avec message si la
 barre dépasse l'écran. Hors champ : la fenêtre « Menu » de la cave (actions non déductibles des pages) ; un `pages.jsonl`
 importé garde ses boutons tels quels.
-- [ ] Bancs d'abord (rouge) : validateur (forme de `navigation`, ids réservés, débordement, `menu` booléen), deux
-  générateurs (un bouton par page du menu, ordre des pages, `actif`), `banc_ecran_lvgl` (touchers et ACTIFS de la barre)
-- [ ] Description, validateur, déroulement commun aux deux générateurs (`atelier_ecrans_description.py::deroule_navigation`)
-- [ ] Page : panneau « Barre de navigation » (activer, position, hauteur, écart, couleurs), case « dans le menu » par page,
-  boutons de la barre dessinés grisés et non sélectionnables ; sonde Chrome VERT ; relecture `relecteur-pages-web`
+- [x] Bancs d'abord (rouge) — preuve : `test_atelier_ecrans_navigation.py` rouge (module absent) puis VERT, 10 mutants du validateur refusés
+  Détail : validateur (forme de `navigation`, ids réservés, débordement, `menu` booléen), deux générateurs (un bouton par
+  page du menu, ordre des pages, `actif`) ; touchers et ACTIFS de la barre contrôlés dans le texte de `ecranLvgl.be`
+  généré (`::test_generateurs`), `banc_ecran_lvgl` non étendu : les boutons déroulés sont des `btn` ordinaires, déjà
+  couverts ; changement d'écran : barre mise à l'échelle, QR code resté carré (`::test_echelle`) (2026-11-13)
+- [x] Description, validateur, déroulement commun — preuve : `atelier_ecrans_navigation.py::deroule`, 15 bancs de l'atelier VERT
+  Détail : appelé par `atelier_ecrans_description.py::valide` (`::_navigation`), `atelier_ecrans_haspmota.py::genere`,
+  `atelier_ecrans_lvgl.py::genere` ; `atelier_ecrans_ecran.py::met_a_echelle` met la barre à l'échelle ; les 14
+  `test_atelier_ecrans_*.py` et `banc_ecran_lvgl.py` VERT le 2026-11-13
+- [x] Page : panneau de la barre, case par page — preuve : `test_atelier_ecrans_page_chrome_palier2.py::sonde_navigation` VERT, 2 témoins rouges, relecteur-pages-web prêt
+  Détail : panneau « Barre de navigation » (activer, position, hauteur, écart, couleurs) de la page 0, case « Dans la barre
+  de navigation » des autres pages, boutons en pointillés non sélectionnables (`atelier_ecrans_page_navigation.py`) ;
+  positions du DOM = `atelier_ecrans_navigation.boutons`, titre avec emoji compris (`Array.from` : points de code comme
+  Python) ; `nouvelId` borné à 200 avec la barre. Relecture : 2 défauts mineurs corrigés (témoin de la borne, largeur
+  d'un titre hors plan de base), témoins lus rouges ; sondes palier 2 et barre sorties dans un module voisin (sonde
+  principale sous 500 lignes) ; aucun Chrome de sonde restant (2026-11-13)
 - [ ] Écran des débits passé à la barre construite (ses boutons de page remplacés), pages.jsonl regénéré identique au
   rendu ; écran de la cave : proposé à la session de `tasks/plans/ecran-cave-vues-commandes.md`, jamais sans son accord
-- [ ] Essai sur la carte (avec A11) ; commit
+- [ ] Essai sur la carte (avec A18) ; commit
+
+## A18 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur)
+Regroupe ce qui reste à faire sur la carte d'affichage `tasmota32s3-bureau-ecran-debits-pac` (192.168.0.51) ou par
+l'utilisateur (demande du 2026-11-12). Interface de la carte : HASPmota (`custom_interface_ecran` du cenv), donc
+`pages.jsonl`. Plan d'origine : [tasks/plans/debits-deux-cartes.md](debits-deux-cartes.md), action A9.
+- [ ] [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
+  trois points d'accès, comparer les BSSID et redémarrer celui qui bloque)
+- [ ] Firmware de la carte postérieur à 5c3291884 (`ecranFonctions.be` déplacé dans `data/fs`) : `Status 2` comparé à la
+  date du commit ; sinon compilation et envoi par la page Build
+- [ ] [utilisateur] Essai : un bouton ajouté à l'écran des débits dans l'atelier, généré dans les deux interfaces, écrit
+  dans le dépôt, `pages.jsonl` envoyé par la page Build (onglet « Fichiers »), vu et touché sur la carte ; noms des voies
+  en police 28 (remarque 1) vus au passage
+- [ ] Capture réelle depuis l'atelier (« Capture de la carte ») : image identique à l'écran, mémoire PSRAM prise par
+  `lv.screenshot()` notée (environ 1,2 Mo attendu pour 1024 x 600)
+- [ ] Essai du `display.ini` (A12, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
+  « Garder » / « Revenir » ; comportement de `DisplayReinit` avec LVGL noté ; commandes à chaud `DisplayDimmer`,
+  `DisplayRotate`
+- [ ] Ligne non JSON d'un `pages.jsonl` importé (A13, demande du 2026-11-13) : lu dans `lv_haspmota.be::HASPmota._load`,
+  une ligne commençant par `#` est sautée sans message, toute autre ligne non JSON est sautée avec le log niveau 2
+  « HSP: invalid JSON line », le chargement continue. À voir sur la carte : ajouter `# essai` et `essai` au `pages.jsonl`,
+  l'envoyer, relire les logs (niveau 2) et l'écran
+- [ ] Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
+  (image PNG sous `/sd/images/PNG/`, liste déroulante, interrupteur, roue, QR code), vu et touché ; action au changement
+  de valeur reçue avec la valeur choisie (LVGL pur) ; QR code lisible par un téléphone
+- [ ] Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
+- [ ] [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
+  quand la vue a basculé dans les deux sens
+- [ ] Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
 
 ## Améliorations restantes
 - [ ] [projet] Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)

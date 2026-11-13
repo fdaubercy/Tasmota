@@ -1,4 +1,4 @@
-"""Banc des routes de l'onglet « display.ini » de l'atelier des ecrans (atelier_ecrans_display_fichiers, plan A15).
+"""Banc des routes de l'onglet « display.ini » de l'atelier des ecrans (atelier_ecrans_display_fichiers, plan A12).
 
 UTILISATION (Python de PlatformIO ; quelques secondes)
     "$USERPROFILE/.platformio/penv/Scripts/python.exe" outils_docs/scripts_python/outils_pc/test_atelier_ecrans_display_fichiers.py

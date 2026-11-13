@@ -2066,7 +2066,26 @@ Une image `.png`, `.jpg` ou `.bmp` posée à la racine du FS est rangée au dém
 `/sd/images/PNG/`, `/sd/images/JPG/`, `/sd/images/BMP/` (`gestionFileFolder.be::listeEtRepartitLesFichiers`, casse de
 l'extension indifférente). Un écran la cite en `A:sd/images/PNG/<nom>`. Le firmware ne décode que le PNG (LodePNG) :
 `.jpg` et `.bmp` sont rangés mais pas affichables par un écran. Le module est solidifié : la règle n'agit qu'après
-recompilation du firmware de la carte. L'objet image arrive au palier 2.
+recompilation du firmware de la carte.
+
+### Objets du palier 2
+
+La palette propose aussi **image** (un PNG du dossier de la carte, cité en `A:sd/images/PNG/<nom>`), **liste
+déroulante** et **roue** (une option par ligne), **interrupteur** et **QR code** (toujours carré, sa taille est sa
+largeur). L'aperçu dessine le PNG réel et le QR code du texte saisi. L'action d'une liste, d'une roue ou d'un
+interrupteur part au changement de valeur et reçoit la valeur choisie : dernier argument d'une fonction Berry, `%val%`
+dans une commande, 1 ou 0 pour un interrupteur. Ceci vaut pour l'interface LVGL pur : dans un `pages.jsonl`, une
+fonction ou une commande n'a pas de clé `action`, c'est le Berry de la carte qui réagit à l'événement HASPmota.
+Une roue ne prend pas de texte.
+
+### Barre de navigation construite
+
+Sur la page 0, le panneau « Barre de navigation construite » remplace les boutons de page posés à la main : position,
+hauteur, écart, couleurs des boutons et de la page courante. Un bouton par page, dans l'ordre des pages, avec le titre
+de la page ; sa largeur suit la longueur du titre. Une page sort de la barre par sa case « Dans la barre de navigation »
+(page de confirmation). Les boutons sont générés dans les deux interfaces (ids 201 à 254, réservés : un objet de la
+page 0 ne peut pas les prendre) ; ils sont dessinés en pointillés sur l'écran et ne se sélectionnent pas. Une barre plus
+large ou plus haute que l'écran est refusée avec sa taille. Au changement d'écran, la barre est mise à l'échelle.
 
 ### Importer un pages.jsonl écrit à la main
 

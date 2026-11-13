@@ -1,4 +1,4 @@
-"""Onglet « display.ini » de l'atelier des ecrans (plan atelier-ecrans A15, spec 2026-11-12 § 6.3) : HTML, CSS et JS.
+"""Onglet « display.ini » de l'atelier des ecrans (plan atelier-ecrans A12, spec 2026-11-12 § 6.3) : HTML, CSS et JS.
 
 Bascule « Interface | display.ini » de l'en-tete. Colonne gauche : fichiers (cartes, ma bibliotheque, Tasmota). Centre :
 texte du fichier, analyse ligne par ligne (POST /display/analyse, 300 ms apres la frappe) avec arguments expliques au

@@ -1,4 +1,4 @@
-"""Fichiers display.ini de l'onglet « display.ini » de l'atelier des ecrans (plan atelier-ecrans A15, spec § 6.1 et 6.3).
+"""Fichiers display.ini de l'onglet « display.ini » de l'atelier des ecrans (plan atelier-ecrans A12, spec § 6.1 et 6.3).
 
 Trois sources (atelier_ecrans_catalogue._fichiers) : cartes `data/<lieu>/<carte>/display.ini` (lecture ici ; on les change
 par « Appliquer a la carte », chemin du changement d'ecran), bibliotheque personnelle `outils_docs/atelier_ecrans/display/`

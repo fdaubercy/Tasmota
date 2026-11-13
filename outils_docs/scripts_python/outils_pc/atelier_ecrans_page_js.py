@@ -251,6 +251,7 @@ function dessineProprietes() {
     if (E.page !== 0) champCouleur(pn, 'Fond', (p.attributs || {}).bg_color, function (v) {
       modifie(function () { var q = pageDesc(E.page); q.attributs = q.attributs || {}; q.attributs.bg_color = v; });
     });
+    if (E.page === 0) panneauNav(pn); else casePageNav(pn, p);
     return;
   }
   var t = el('div', { class: 'ligne' }); t.appendChild(el('span', { class: 'etiq' }, 'Objet')); t.appendChild(el('b', null, o.type + ' · page ' + o.page + ' · id ' + o.id)); pn.appendChild(t);

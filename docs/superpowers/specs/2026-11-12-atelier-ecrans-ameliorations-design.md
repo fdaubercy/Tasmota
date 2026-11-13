@@ -3,7 +3,7 @@
 Date : 2026-11-12. Demande de l'utilisateur du même jour : « 1. écrans des autres cartes ajoutés au catalogue, 2. reprise
 d'un pages.jsonl écrit à la main, 3. objets du palier 2 : OK on fait ; 4. sur la même interface, paramétrer de nouveaux
 display.ini ». L'utilisateur a laissé à Claude les choix de conception (« allons y ») ; ceux-ci sont marqués « choix de
-Claude ». Plan : `tasks/plans/atelier-ecrans.md`, actions A12 à A15. Conception d'origine :
+Claude ». Plan : `tasks/plans/atelier-ecrans.md`, actions A11 à A14 (renumérotées le 2026-11-13). Conception d'origine :
 `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md`.
 
 Sources de l'état des lieux (lues dans le code le 2026-11-12) : pilote uDisplay
@@ -52,7 +52,7 @@ Anti-buts (échec même si « ça marche ») :
   `gestionFileFolder.be::listeEtRepartitLesFichiers`, firmware à recompiler une fois).
 - `lv.textarea` n'existe pas dans le firmware (`BE_LV_WIDGET_TEXTAREA` commenté) : à retirer du catalogue.
 
-## 4. A12 — Écrans des autres cartes au catalogue
+## 4. A11 — Écrans des autres cartes au catalogue
 
 Sources, par priorité (choix de Claude) : 1) cartes du dépôt (`data/<lieu>/<carte>/display.ini`), 2) bibliothèque
 personnelle `outils_docs/atelier_ecrans/display/*.ini` (§ 6.1), 3) amont `tasmota/displaydesc/*.ini` (lecture seule).
@@ -81,7 +81,7 @@ personnelle `outils_docs/atelier_ecrans/display/*.ini` (§ 6.1), 3) amont `tasmo
 - Garantie vérifiée par banc : import puis génération HASPmota = mêmes objets JSON que la source (même ordre, mêmes
   clés et valeurs), sur les six `pages.jsonl` du dépôt (débits, ancien ILI9488, trois démos HASPmota amont, démo pixel).
 
-## 6. A15 — Onglet « display.ini »
+## 6. A12 — Onglet « display.ini »
 
 ### 6.1 Où vivent les fichiers (choix de Claude)
 - Bibliothèque personnelle : `outils_docs/atelier_ecrans/display/<nom>.ini` (suivi par git, hors flash), un fichier
@@ -108,7 +108,7 @@ fork qui ajoute un paramètre, le banc devient rouge.
   insère la ligne à la bonne place (règles d'ordre) avec ses valeurs par défaut.
 - Enregistrer dans la bibliothèque : diff, écriture atomique ; « Appliquer à la carte » : § 6.1.
 - Notes de terrain : ajout d'une observation datée au `.notes.md`.
-- Essai sur la carte (choix de Claude, à confirmer sur la carte en A15) : lire le `/display.ini` de la carte, envoyer
+- Essai sur la carte (choix de Claude, à confirmer sur la carte, plan A18) : lire le `/display.ini` de la carte, envoyer
   le nouveau (`/ufsu`), `DisplayReinit` (ou `Restart 1` si LVGL ne le supporte pas), puis « Garder » (écrit dans le dépôt)
   ou « Revenir » (renvoie l'ancien). Commandes à chaud aussi proposées : `DisplayDimmer`, `DisplayRotate`, `DisplayInvert`.
 
@@ -138,7 +138,7 @@ Objets ajoutés au palier 1 de l'atelier : `img`, `dropdown`, `switch`, `roller`
 
 ## 8. Ordre de réalisation (choix de Claude)
 
-A12 (catalogue, prépare la bibliothèque) -> A15 (onglet display.ini, s'appuie sur A12) -> A13 (import) -> A14 (palier 2).
+A11 (catalogue, prépare la bibliothèque) -> A12 (onglet display.ini, s'appuie sur A11) -> A13 (import) -> A14 (palier 2).
 Chaque action : banc rouge d'abord, code, banc vert avec mutants, sonde Chrome si la page change, relecture
 `relecteur-pages-web` (et `relecteur-berry` pour le Berry généré), commit.
 

@@ -21,6 +21,7 @@ Forme : {"version": 1, "ecran": <cle du catalogue>, "orientation": 0|90|180|270,
       sinon ses `attributs`
   couleurs (racine) : {table: {nom: "#RRGGBB"}}, p. ex. "etat" = ecranDebitsFonctions.COULEURS
   toucher : un seul de {"page": n} | {"commande": "<commande Tasmota>"} | {"fonction": "<module.fonction>", "args"?: [..]}
+  navigation (racine) et menu (page) : barre de boutons de page deroulee par atelier_ecrans_navigation, validee deroulee
   objet brut (import d'un pages.jsonl ecrit a la main, atelier_ecrans_import) : {"type": "brut", "page", "id" | null,
       "ligne": {ligne JSON d'origine}} ou {..., "texte": "<ligne non JSON>"} ; reecrit tel quel par le generateur HASPmota,
       absent de l'interface LVGL pur, non editable ; seuls sa forme et sa page sont controlees
@@ -33,6 +34,7 @@ import re
 from pathlib import Path
 
 import atelier_ecrans_catalogue as cat
+import atelier_ecrans_navigation as nav
 
 DOSSIER = "outils_docs/atelier_ecrans/cartes"
 TYPES_MODELE = ("texte", "entier", "liste", "booleen")
@@ -219,6 +221,33 @@ def _format(li, qui, msgs):
             msgs.append(f"{qui} : liaison : echelle « {e} » : nombre non nul attendu")
 
 
+def _navigation(d, catalogue, L, H, msgs):
+    """Barre de navigation (atelier_ecrans_navigation) : forme, style, ids reserves, place a l'ecran ; vrai si deroulable."""
+    n_av = len(msgs)
+    b = d["navigation"]
+    if not isinstance(b, dict) or not all(_entier(b.get(k)) and b[k] >= 0 for k in nav.CHAMPS) or not b["h"] > 0:
+        msgs.append("navigation : x, y, h, ecart entiers positifs attendus (h > 0)")
+        return False
+    _attributs(catalogue, "btn", b.get("attributs", {}), "navigation", msgs)
+    for k, v in (b.get("actif") or {}).items():
+        if _type_attribut(catalogue, "btn", k) != "couleur":
+            msgs.append(f"navigation : actif : « {k} » n'est pas un attribut de couleur d'un bouton")
+        _couleur(v, "navigation", f"actif[{k}]", msgs)
+    menu = [p.get("n") for p in d.get("pages", []) if _entier(p.get("n")) and p["n"] >= 1 and p.get("menu") is not False]
+    if not menu:
+        msgs.append("navigation : aucune page dans le menu")
+    for n in menu:
+        if n > nav.ID_MAX - nav.ID_BASE:
+            msgs.append(f"navigation : page {n} hors des ids réservés (pages 1 à {nav.ID_MAX - nav.ID_BASE})")
+    for o in d.get("objets", []):
+        if o.get("page") == 0 and _entier(o.get("id")) and nav.ID_BASE < o["id"] <= nav.ID_MAX:
+            msgs.append(f"objet 0/{o['id']} : id réservé à la barre de navigation ({nav.ID_BASE + 1} à {nav.ID_MAX})")
+    boutons = nav.boutons(d)
+    if boutons and (boutons[-1]["x"] + boutons[-1]["l"] > L or b["y"] + b["h"] > H):
+        msgs.append(f"barre de navigation : {boutons[-1]['x'] + boutons[-1]['l']} x {b['y'] + b['h']} px pour un écran de {L} x {H}")
+    return len(msgs) == n_av
+
+
 def valide(d, catalogue):
     """Messages d'erreur en francais ; liste vide = description valide."""
     msgs = []
@@ -253,6 +282,10 @@ def valide(d, catalogue):
             msgs.append(f"page {p.get('n')} en double")
         pages.append(p.get("n"))
         _attributs(catalogue, "obj", p.get("attributs", {}), f"page {p.get('n')}", msgs)
+        if "menu" in p and not isinstance(p["menu"], bool):
+            msgs.append(f"page {p.get('n')} : menu doit être un booléen (true ou false)")
+    if "navigation" in d and _navigation(d, catalogue, L, H, msgs):
+        d = nav.deroule(d)
     vus = set()
     for o in d.get("objets", []):
         qui = f"objet {o.get('page')}/{o.get('id')}"

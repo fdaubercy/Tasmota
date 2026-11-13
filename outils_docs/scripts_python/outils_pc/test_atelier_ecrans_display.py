@@ -1,4 +1,4 @@
-"""Banc de l'analyseur de display.ini (atelier_ecrans_display.py) et de sa reference (plan atelier-ecrans A15).
+"""Banc de l'analyseur de display.ini (atelier_ecrans_display.py) et de sa reference (plan atelier-ecrans A12).
 
 UTILISATION (Python de PlatformIO ; quelques secondes)
     "$USERPROFILE/.platformio/penv/Scripts/python.exe" outils_docs/scripts_python/outils_pc/test_atelier_ecrans_display.py

@@ -973,12 +973,17 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     LECTURE SEULE (outils de lecture, hooks coupes, jamais bypassPermissions ; depuis ce PC seulement) ; import d'une police `.ttf`
     (licence confirmee, Latin-1 complet, licence dans `outils_docs/atelier_ecrans/polices/`) ; images `.png/.jpg/.bmp` rangees sous
     `/sd/images/PNG|JPG|BMP/` par `gestionFileFolder.be::listeEtRepartitLesFichiers`. Capture `lv.screenshot()` pas encore essayee sur carte.
-    Onglet « display.ini » (A15, 2026-11-13) : `_display.py` (analyse comme `uDisplay.cpp::uDisplay::uDisplay`, insertion par rang ;
+    Onglet « display.ini » (A12, 2026-11-13) : `_display.py` (analyse comme `uDisplay.cpp::uDisplay::uDisplay`, insertion par rang ;
     reference `outils_docs/schemas/display_ini_parametres.json`, banc de concordance rouge si une synchro ajoute une section),
     `_display_fichiers.py` (cartes et `tasmota/displaydesc` en lecture ; bibliotheque `outils_docs/atelier_ecrans/display/<nom>.ini`
     + `<nom>.notes.md`), `_page_display.py` ; « Appliquer a la carte » = changement d'ecran. Essai sur carte a faire.
     Import d'un pages.jsonl ecrit a la main (A13) : `_import.py` (lecture comme HASPmota ; lignes non reprises = objets `brut`
     reecrits tels quels, absents de `ecranLvgl.be`), `_page_import.py`, route `POST /importer`.
+    Objets du palier 2 (A14 : img PNG sous `/sd/images/PNG/`, dropdown, switch, roller, qrcode) : `_page_palier2.py`, routes
+    `GET /images`, `/image`, `/lib/qr.js`. Barre de navigation construite d'apres les pages (A17) : cle `navigation` de la
+    description, page `"menu": false` hors barre, boutons ids 201 a 254 deroules par `_navigation.py::deroule` pour le
+    validateur et les deux generateurs ; panneau de la page 0 : `_page_navigation.py`. Sondes Chrome du palier 2 et de la
+    barre : `test_atelier_ecrans_page_chrome_palier2.py`, appelees par la sonde principale.
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.
   - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,
