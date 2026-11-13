@@ -176,7 +176,7 @@ Ressources sous `/sd` (préférence de l'utilisateur).
 - [ ] Veille, réveil sans action, luminosité
 
 ## Améliorations restantes
-- [ ] [projet] Solidifier `ecranFonctions` dans les envs à écran (plan `debits-deux-cartes` A8)
+- [x] [projet] Solidifier `ecranFonctions` dans les envs à écran (plan `debits-deux-cartes` A8) — preuve : `${berry_commun.ecran}` dans `custom_berry_solidify` des deux envs à écran, directive `#@ solidify:ecranFonctions`, `.bec` retiré des deux autoexec ; `solidifie_et_compile_berry.py` : 18 fermetures, 0 anonyme, le `.h` compile ; `banc_demarrage` VERT (2 références réenregistrées : `.bec` et 19 globales de moins), `banc_ecran_cave` 118, `banc_ecran_debits` VERT, `test_interface_ecran` VERT ; compilation avec celle des 3 envs (A8)
 
 ## Vérification
 Bancs Berry VERTS (`banc_pompe_cave`, `banc_ecran_cave`, `banc_test_modbus`, `banc_ecran_debits`, `banc_demarrage`),

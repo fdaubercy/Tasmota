@@ -8,7 +8,7 @@ if demarrage.prologue()
     demarrage.compileSocle()
     demarrage.compile(["udpFonctions"], "serveur.udp")
     demarrage.compile(["rangeExtenderFonctions"], "serveur.rangeExtender")
-    demarrage.compile(["ecranFonctions", "ecranDebitsFonctions"], "modules.ecranDebits")
+    demarrage.compile(["ecranDebitsFonctions"], "modules.ecranDebits")   # ecranFonctions est solidifie
     demarrage.compile(["ecranHaspmota", "ecranLvgl"], "modules.ecranDebits")   # interface : une seule sur le FS, l'absente est ignoree
 
     demarrage.charge(["controleGeneral", "controleLedTemoin", "i2c_ads1115", "i2c_mcp23017", "modBus_Conn16channels", "modBus_TasmotaSlaveModBus", "controleWeb", "fsMqtt"])

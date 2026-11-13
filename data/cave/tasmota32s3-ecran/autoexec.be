@@ -10,7 +10,7 @@ if demarrage.prologue()
     demarrage.compileSocle()
     demarrage.compile(["udpFonctions"], "serveur.udp")
     demarrage.compile(["rangeExtenderFonctions"], "serveur.rangeExtender")
-    demarrage.compile(["ecranFonctions", "ecranCaveFonctions"], "modules.ecranCave")   # veille de l'ecran, modele MQTT (A6) : AVANT le controle
+    demarrage.compile(["ecranCaveFonctions"], "modules.ecranCave")   # modele MQTT (A6), AVANT le controle ; ecranFonctions est solidifie
     demarrage.compile(["ecranCaveHaspmota"], "modules.ecranCave")         # interface HASPmota (A7), choisie par custom_interface_ecran du cenv
 
     demarrage.charge(["controleGeneral", "controleLedTemoin", "i2c_ads1115", "i2c_mcp23017", "modBus_Conn16channels", "modBus_TasmotaSlaveModBus", "controleWeb", "fsMqtt"])

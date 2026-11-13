@@ -2,12 +2,13 @@
 # de l'interface presente sur le FS, veille par inactivite (gradation puis extinction, reveil au toucher sans actionner le
 # bouton touche), luminosite par l'expandeur d'E/S I2C 0x24 du Waveshare ESP32-S3-Touch-LCD-7B (sens du PWM reglable), reglages
 # bornes dans le persist, historique circulaire de N series pour une courbe. Le module metier (ecranDebitsFonctions) s'appuie dessus.
-# SOLIDIFIABLE (consigne du 2026-11-11, solidification a faire plus tard, apres validation sur carte) : fonctions nommees affectees
+# SOLIDIFIE dans les envs a ecran (liste berry_commun.ecran du cenv, decision du 2026-11-13) : fonctions nommees affectees
 # au module, appels par ecranFonctions.<nom>, aucun appel tasmota au niveau fichier, et l'ETAT ne vit pas dans la table du module
 # (en lecture seule une fois solidifie, piege 12 de outils_docs/SOLIDIFICATION_BERRY.md) mais dans la globale cachee
-# ".ecranFonctions", lue et ecrite par member/setmember. Pour l'instant dans le dossier de la carte, compile en .bec par l'autoexec.
+# ".ecranFonctions", lue et ecrite par member/setmember. Les modules qui s'en servent font `import ecranFonctions` dans chaque fonction.
 # Reglages : bloc du persist modules.<bloc> (bloc pose par le driver, ex. "ecranDebits") : veille, extinction, luminosite, pwmInverse.
 # Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+#@ solidify:ecranFonctions
 var ecranFonctions = module("ecranFonctions")
 
 # Reglages generiques du persist : [minimum, maximum, defaut, unite]
