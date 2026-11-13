@@ -237,6 +237,9 @@ l'utilisateur (demande du 2026-11-12). Interface de la carte : HASPmota (`custom
   une ligne commençant par `#` est sautée sans message, toute autre ligne non JSON est sautée avec le log niveau 2
   « HSP: invalid JSON line », le chargement continue. À voir sur la carte : ajouter `# essai` et `essai` au `pages.jsonl`,
   l'envoyer, relire les logs (niveau 2) et l'écran
+- [ ] Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
+  (image PNG sous `/sd/images/PNG/`, liste déroulante, interrupteur, roue, QR code), vu et touché ; action au changement
+  de valeur reçue avec la valeur choisie (LVGL pur) ; QR code lisible par un téléphone
 - [ ] Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
 - [ ] [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
   quand la vue a basculé dans les deux sens
@@ -332,7 +335,6 @@ Conception : § 7 de la même spec.
   web des cartes (`data/sd/html|css|js`, routes Berry qui servent des fichiers : `qrcodePage`, `pagesGraphiques`,
   `cuvePageFonctions`, `equilibragePage`) recherchés le 2026-11-13 : aucun ne charge d'image du FS, aucune image dans `data/` ; `banc_repartition_fichiers.py` VERT avec mutants ; README, `CLAUDE.md`,
   `ICONES_IMAGES_SOURCES.md` à jour ; l'objet `img` de l'atelier ne propose que `PNG/`
-- [ ] Essai sur la carte : un objet de chaque type sur l'écran des débits, vu et touché (avec A11) ; commit
 
 ## A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran »)
 Sources : `outils_docs/ICONES_IMAGES_SOURCES.md` (commit 495e0776f : ordre de recherche, licences, formats selon la cible).
