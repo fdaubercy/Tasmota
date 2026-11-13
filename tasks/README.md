@@ -17,9 +17,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 77 % (57/82) | 25 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A19 ; A18 catalogue d'icônes ajoutée ; A17 : bancs, description, page faits) |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ███████░░░ 73 % (57/86) | 29 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
 | [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 87 % (34/41) | 7 étapes | 2026-11-12 | 2026-11-13 |
-| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ████████░░ 82 % (39/50) | 11 étapes | 2026-11-12 | 2026-11-13 |
+| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ████████░░ 83 % (40/50) | 10 étapes | 2026-11-12 | 2026-11-13 |
 | [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 43 % (44/95) | 51 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
 | [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 79 % (38/46) | 8 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
@@ -65,7 +65,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 77 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 73 %
 
 - A15 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
 - A15 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Aperçu : glyphes dessinés par la police locale `lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`
@@ -75,23 +75,27 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un)
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Valeurs du modèle de chaque module métier d'écran : texte du QR code, IP réelle (`diversFonctions.ipLAN`), IP
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave :
-- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A19)
+- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20)
 - A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Écran des débits passé à la barre construite (ses boutons de page remplacés), pages.jsonl regénéré identique au
-- A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A19) ; commit
+- A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A20) ; commit
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Catalogue généré `outils_docs/schemas/icones.json` : glyphes MDI de `gen.sh` (code `\uE…`, nom lu dans la police
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Page : grille avec recherche par nom, filtre par source (firmware, LVGL, PNG, sites), fiche d'une icône (code à
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Tuile de l'annuaire, tâche VS Code, cible Custom détachée ; mode d'emploi (`outils_docs/README.md`), carte des
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Firmware de la carte postérieur à 5c3291884 (`ecranFonctions.be` déplacé dans `data/fs`) : `Status 2` comparé à la
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Essai : un bouton ajouté à l'écran des débits dans l'atelier, généré dans les deux interfaces, écrit
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Capture réelle depuis l'atelier (« Capture de la carte ») : image identique à l'écran, mémoire PSRAM prise par
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai du `display.ini` (A12, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Ligne non JSON d'un `pages.jsonl` importé (A13, demande du 2026-11-13) : lu dans `lv_haspmota.be::HASPmota._load`,
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
-- A19 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
+- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : [utilisateur] Données en plus de la mémoire, proposées le 2026-11-13, à retenir ou non (champs de `Status` à lire
+- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Module commun (`data/fs`, accord de l'utilisateur avant écriture ; solidifié ou non selon la RAM, ajouté à
+- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Page dans chaque `ecran.json` : barres et arcs (palier 1) avec libellés, icônes du firmware (`clock-outline`, `wifi`,
+- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Bancs (description valide, deux générateurs), sonde Chrome de l'aperçu ; compilation par la page Build ; essai sur
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Firmware de la carte postérieur à 5c3291884 (`ecranFonctions.be` déplacé dans `data/fs`) : `Status 2` comparé à la
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Essai : un bouton ajouté à l'écran des débits dans l'atelier, généré dans les deux interfaces, écrit
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Capture réelle depuis l'atelier (« Capture de la carte ») : image identique à l'écran, mémoire PSRAM prise par
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai du `display.ini` (A12, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Ligne non JSON d'un `pages.jsonl` importé (A13, demande du 2026-11-13) : lu dans `lv_haspmota.be::HASPmota._load`,
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
+- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
 - Amélioration [projet] : Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)
 
 #### [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — 87 %
@@ -104,12 +108,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A9 — Essai sur carte (écran branché) : Veille, réveil sans action, luminosité
 - A9 — Essai sur carte (écran branché) : RAM de l'écran (relecture finale du 2026-11-13) : `BRY: GC` sur 10 min, écran allumé ; `affiche` recrée chaque seconde le modèle, la table des valeurs (plus de 60 entrées) et parcourt l'historique. Si le tas Berry grimpe ou si le GC passe plus d'une fois toutes les quelques secondes : ne recalculer `valeurs` que si le modèle a changé, l'horloge à part, les hauts d'axe seulement à l'ajout d'un point
 
-#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 82 %
+#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 83 %
 
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Commit
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Banc du filtre d'abord (rouge), avec mutants : refus d'une valeur portant des identifiants d'URL (`://x:y@`), un
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Filtre ; banc VERT ; appliqué en plus du filtre de l'A2 (clé ET valeur), avertissement dans l'aperçu,
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Fiche HTML autonome (aucune ressource externe, CSS en ligne, clair/sombre par `prefers-color-scheme`,
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Réglage « Contenu du QR code » : en mode lien, QR code = `url_fiche` (verdict sur l'URL), proposé pour toute carte
