@@ -52,7 +52,7 @@ logFonctions.SORTIES = {"serie": "SerialLog", "web": "WebLog", "mqtt": "MqttLog"
 # Cibles connues (une par bloc du persist qui porte une cle "log")
 logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "discovery", "modbus",
                        "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve", "rideau", "leds", "historique",
-                       "ecranCave", "ecranDebits"]
+                       "ecranCave", "ecranDebits", "ecranSysteme"]
 # Ce que couvre chaque cible (aide de ReglageLog)
 logFonctions.DESCRIPTIONS = {
     "general": "modules communs (globalFonctions, configGlobal, controleGeneral, gestionFileFolder...)",
@@ -67,14 +67,18 @@ logFonctions.DESCRIPTIONS = {
     "cuve": "module cuve (cuveFonctions)", "rideau": "module rideau de garage (controleRideau)", "leds": "LED RGB du dev-kit et ruban WS2812 (ledsFonctions, controleLeds)",
     "historique": "historique des mesures et page /histo (historiqueFonctions, historiqueSeries)",
     "ecranCave": "ecran de la cave et ses touches (ecranCaveFonctions, ecranFonctions ; serveur : controleCommandesEcran)",
-    "ecranDebits": "ecran des debits (ecranDebitsFonctions, ecranFonctions)"}
+    "ecranDebits": "ecran des debits (ecranDebitsFonctions, ecranFonctions)",
+    "ecranSysteme": "page Systeme des ecrans tactiles (ecranSysteme, controleEcranSysteme)"}
+# Erreurs gardees en RAM (dernieresErreurs), lues par la page Systeme des ecrans (ecranSysteme)
+logFonctions.ERREURS_GARDEES = 5
 
 # ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module (un module solidifie est
 # constant, en flash). Les seuils sont lus une fois depuis le persist, puis mis en cache.
 def logFonctions_etat()
     import global
     if (global._etatLogFonctions == nil)
-        global._etatLogFonctions = {"seuils": {}, "inconnues": {}}      # cible -> seuil (1 a 4) ; cibles inconnues deja signalees
+        # cible -> seuil (1 a 4) ; cibles inconnues deja signalees ; erreurs : [heure locale, message] des dernieres erreurs
+        global._etatLogFonctions = {"seuils": {}, "inconnues": {}, "erreurs": []}
     end
     return global._etatLogFonctions
 end
@@ -108,6 +112,7 @@ def logFonctions_lieu(cible)
     elif c == "leds"                bloc = d.find("leds")
     elif c == "ecrancave"           bloc = (modules != nil ? modules.find("ecranCave") : nil)
     elif c == "ecrandebits"         bloc = (modules != nil ? modules.find("ecranDebits") : nil)
+    elif c == "ecransysteme"        bloc = (modules != nil ? modules.find("ecranSysteme") : nil)
     elif c == "historique"
         # Bloc de l'historique local (S3/P4). Un bloc reduit a {"grafana": ...} (carte sans historique) ne compte pas.
         var h = (diverses != nil ? diverses.find("historique") : nil)
@@ -174,10 +179,31 @@ def logFonctions_log(msg, niveau, cible)
     if (niveau > 1)
         if (niveau > logFonctions.seuil(cible == nil ? "general" : cible))    return    end
         if (niveau > 3)    niveau = 3    end
+    else
+        logFonctions.noteErreur(msg)
     end
     log(msg, niveau)
 end
 logFonctions.log = logFonctions_log
+
+# Garde les ERREURS_GARDEES dernieres erreurs [heure locale (s, entier ; nil si illisible), message], la plus vieille retiree.
+# Heure lue sans map (tasmota.rtc("local") : xdrv_52_3_berry_tasmota.ino::l_rtc) ; le log d'une erreur ne doit jamais echouer.
+def logFonctions_noteErreur(msg)
+    var e = logFonctions.etat()
+    var l = e.find("erreurs")
+    if (l == nil)    l = []    e["erreurs"] = l    end
+    var h = nil
+    try    h = tasmota.rtc("local")    except .. end
+    if (size(l) >= logFonctions.ERREURS_GARDEES)    l.remove(0)    end
+    l.push([type(h) == "int" ? h : nil, msg])
+end
+logFonctions.noteErreur = logFonctions_noteErreur
+
+# Dernieres erreurs gardees en RAM, de la plus vieille a la plus recente : [[heure locale ou nil, message], ...]
+def logFonctions_dernieresErreurs()
+    return logFonctions.etat().find("erreurs", [])
+end
+logFonctions.dernieresErreurs = logFonctions_dernieresErreurs
 
 # true si un message de ce niveau serait reellement ecrit (seuil du module ET une sortie au moins).
 # A utiliser AVANT de construire un message couteux.

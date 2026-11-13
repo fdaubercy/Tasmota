@@ -984,6 +984,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     description, page `"menu": false` hors barre, boutons ids 201 a 254 deroules par `_navigation.py::deroule` pour le
     validateur et les deux generateurs ; panneau de la page 0 : `_page_navigation.py`. Sondes Chrome du palier 2 et de la
     barre : `test_atelier_ecrans_page_chrome_palier2.py`, appelees par la sonde principale.
+    Page « Systeme » des cartes a ecran (A19, en cours) : `data/fs/ecranSysteme.be` (table `CHAMPS` = seule reference des
+    donnees et des ids d'objets) + `controleEcranSysteme.be` (garde `modules.ecranSysteme`), 5 dernieres erreurs gardees par
+    `logFonctions.be::dernieresErreurs` ; liste `berry_commun.ecran_systeme` du cenv, exclue de tous les envs tant qu'aucun
+    autoexec ne la charge ; banc `berry/banc_ecran_systeme.py`.
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.
   - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,

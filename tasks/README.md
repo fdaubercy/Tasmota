@@ -13,13 +13,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-45 plans : 19 actif, 1 en-pause, 25 clos.
+46 plans : 20 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 75 % (59/86) | 27 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 77 % (60/86) | 26 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
 | [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 87 % (34/41) | 7 étapes | 2026-11-12 | 2026-11-13 |
-| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ████████░░ 83 % (40/50) | 10 étapes | 2026-11-12 | 2026-11-13 |
+| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 88 % (45/51) | 6 étapes | 2026-11-12 | 2026-11-13 |
+| [Façade du garage (P4 et carte du rideau) : fins de course animées, porte, chèvrefeuille, pergola et jasmin](plans/facade-garage-capteurs.md) | Voir sur la façade de l'accueil du P4 et de la carte du rideau l'état réel des deux fins de course, dans un dessin fidèle au garage | actif | ░░░░░░░░░░ 0 % (0/13) | 13 étapes, 1 amélioration | 2026-11-13 | 2026-11-13 |
 | [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 43 % (44/95) | 51 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
 | [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 79 % (38/46) | 8 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
@@ -65,7 +66,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 75 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 77 %
 
 - A15 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
 - A15 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Aperçu : glyphes dessinés par la police locale `lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`
@@ -81,7 +82,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Page : grille avec recherche par nom, filtre par source (firmware, LVGL, PNG, sites), fiche d'une icône (code à
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Tuile de l'annuaire, tâche VS Code, cible Custom détachée ; mode d'emploi (`outils_docs/README.md`), carte des
-- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Module commun (`data/fs`, accord de l'utilisateur du 2026-11-13 ; chargé depuis le FS, non solidifié : avis de
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Page dans chaque `ecran.json` : barres et arcs (palier 1) avec libellés, icônes du firmware (`clock-outline`, `wifi`,
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Bancs (description valide, deux générateurs), sonde Chrome de l'aperçu ; compilation par la page Build ; essai sur
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
@@ -106,18 +106,31 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A9 — Essai sur carte (écran branché) : Veille, réveil sans action, luminosité
 - A9 — Essai sur carte (écran branché) : RAM de l'écran (relecture finale du 2026-11-13) : `BRY: GC` sur 10 min, écran allumé ; `affiche` recrée chaque seconde le modèle, la table des valeurs (plus de 60 entrées) et parcourt l'historique. Si le tas Berry grimpe ou si le GC passe plus d'une fois toutes les quelques secondes : ne recalculer `valeurs` que si le modèle a changé, l'horloge à part, les hauts d'axe seulement à l'ajout d'un point
 
-#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 83 %
+#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 88 %
 
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Commit
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Filtre ; banc VERT ; appliqué en plus du filtre de l'A2 (clé ET valeur), avertissement dans l'aperçu,
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Fiche HTML autonome (aucune ressource externe, CSS en ligne, clair/sombre par `prefers-color-scheme`,
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Réglage « Contenu du QR code » : en mode lien, QR code = `url_fiche` (verdict sur l'URL), proposé pour toute carte
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Publication : diff des fiches avant envoi, bouton « Publier » distinct d'« Écrire », refus pendant un build ;
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Mise en service par l'utilisateur, une fois : Settings > Pages > Source « Deploy from a branch », branche
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
+
+#### [Façade du garage (P4 et carte du rideau) : fins de course animées, porte, chèvrefeuille, pergola et jasmin](plans/facade-garage-capteurs.md) — 0 %
+
+- A1 — Code dans une copie de travail, bancs d'abord : Bancs rouges d'abord sur la copie : `test_volets.mjs` (décor dessiné seulement s'il est déclaré, pastilles et couleurs,
+- A1 — Code dans une copie de travail, bancs d'abord : `volets.js` : décor (chèvrefeuille sur treillis, porte, pergola et jasmin), pastilles à levier, fondu, lecture
+- A1 — Code dans une copie de travail, bancs d'abord : `vrPages.be` : facade() transmet decor et finsDeCourse ; route `?f=capteurs` ; module solidifiable (aucun état)
+- A1 — Code dans une copie de travail, bancs d'abord : `controleRideau.be` : window.VOLETS transmet decor et finsDeCourse ; `/rideau?f=position` ajoute les capteurs ;
+- A1 — Code dans une copie de travail, bancs d'abord : Bancs VERTS sur la copie, témoins rouges ; sonde Chrome `test_volets_chrome.py` verte ; rendu vu en navigateur
+- A2 — Dans le dépôt, après la série de compilation : Recopie dans `data/` ; persists du P4, de la carte du rideau et du RDC : `decor` (et `finsDeCourse` pour le garage)
+- A2 — Dans le dépôt, après la série de compilation : `banc_demarrage`, bancs des volets, relecteurs (Berry, pages web) ; README (façade du garage)
+- A2 — Dans le dépôt, après la série de compilation : README § « Visuel des volets » : comment chaque façade est paramétrée (clés du persist) et comment changer le relais
+- A2 — Dans le dépôt, après la série de compilation : Commit
+- A3 — Sur la carte : Compilation par la page Build : P4 (vrPages solidifié), carte du rideau, RDC, et les trois envs du plan
+- A3 — Sur la carte : Rideau fermé : capteur de fermeture vert ; ouvert : capteur d'ouverture vert ; sinon correspondance ON/OFF inversée à corriger
+- A3 — Sur la carte : Pastilles qui changent pendant une manœuvre ; clignotement si un capteur ne suit pas
+- A4 — Retour au plan initial : Reprendre le plan `ecran-cave-vues-commandes` (A8 compilation, A9 essai sur carte) : `/suivi suivre ecran-cave-vues-commandes`
+- Amélioration [projet] : Horodatage du dernier contact par esclave ModBus, pour griser les pastilles quand la carte du rideau est muette
 
 #### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 43 %
 

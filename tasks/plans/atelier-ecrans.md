@@ -407,7 +407,12 @@ quand la page est affichée.
   Wi-Fi et durée hors ligne, reconnexions MQTT, heure synchronisée ou non. Métier : ModBus (esclaves joignables,
   délais dépassés, âge du dernier push), clients du range extender. Écran : luminosité, délai de veille. Journal : les
   dernières erreurs Berry. Version et date du firmware, température de la puce. Boutons : redémarrer, GC
-- [ ] Module commun (`data/fs`, accord de l'utilisateur du 2026-11-13 ; chargé depuis le FS, non solidifié : avis de
+- [x] Module commun — preuve : banc_ecran_systeme.py VERT (41 témoins rouges), banc_demarrage, banc_test_modbus, banc_ecran_debits, banc_ecran_lvgl VERT, relecteur-berry prêt
+  Résultat : `data/fs/ecranSysteme.be` (499 lignes), `controleEcranSysteme.be`, `logFonctions.be` (cible `ecranSysteme`,
+  5 dernières erreurs) ; liste `berry_commun.ecran_systeme` du cenv exclue de TOUS les envs tant qu'aucun autoexec ne la
+  charge ; relecture : persist absent gardé et message coupé hors d'un accent (2 témoins de plus). Délais ModBus dépassés :
+  aucun compteur exposé, « -- ». Reste avant activation : bloc `modules.ecranSysteme` des persist (accord), autoexec,
+  schéma du persist et README (2026-11-13). Énoncé d'origine : (`data/fs`, accord de l'utilisateur du 2026-11-13 ; chargé depuis le FS, non solidifié : avis de
   Claude retenu, ajouté à `custom_files_upload` des envs à écran et exclu des autres) ; dernières erreurs Berry gardées
   en mémoire par `data/fs/logFonctions.be` (accord du 2026-11-13, après le commit de la session « Modules ESP32-S3 avec
   ecran » qui y ajoute les cibles `ecranCave` et `ecranDebits`) ; banc Berry sur bouchons (`tasmota.memory`, `Ufs`),
