@@ -174,6 +174,7 @@ Ressources sous `/sd` (préférence de l'utilisateur).
 - [ ] Broker coupé : valeurs grisées, touches refusées ; RS485 seul, puis Wi-Fi seul
 - [ ] Marche manuelle de la pompe : flotteurs ignorés, réactivés à l'arrêt et après la minuterie
 - [ ] Veille, réveil sans action, luminosité
+- [ ] RAM de l'écran (relecture finale du 2026-11-13) : `BRY: GC` sur 10 min, écran allumé ; `affiche` recrée chaque seconde le modèle, la table des valeurs (plus de 60 entrées) et parcourt l'historique. Si le tas Berry grimpe ou si le GC passe plus d'une fois toutes les quelques secondes : ne recalculer `valeurs` que si le modèle a changé, l'horloge à part, les hauts d'axe seulement à l'ajout d'un point
 
 ## Améliorations restantes
 - [x] [projet] Solidifier `ecranFonctions` dans les envs à écran (plan `debits-deux-cartes` A8) — preuve : `${berry_commun.ecran}` dans `custom_berry_solidify` des deux envs à écran, directive `#@ solidify:ecranFonctions`, `.bec` retiré des deux autoexec ; `solidifie_et_compile_berry.py` : 18 fermetures, 0 anonyme, le `.h` compile ; `banc_demarrage` VERT (2 références réenregistrées : `.bec` et 19 globales de moins), `banc_ecran_cave` 118, `banc_ecran_debits` VERT, `test_interface_ecran` VERT ; compilation avec celle des 3 envs (A8)

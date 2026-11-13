@@ -170,7 +170,7 @@ def ecranCaveFonctions_touche(numero)
     if (cle != "redemarre")
         e = ecranCaveFonctions.valeurs.find(cle)
         if (e == nil || ecranCaveFonctions_vieux(e["source"], e["t"]))
-            ecranCaveFonctions_log("ECRAN_CAVE: touche " + str(numero) + " refusee, etat de " + cle + " inconnu ou perime !", LOG_LEVEL_INFO)
+            ecranCaveFonctions_log("ECRAN_CAVE: touche " + str(numero) + " refusee, etat de " + cle + " inconnu ou perime !", LOG_LEVEL_DEBUG)   # refus normal (broker coupe) : l'ecran le montre deja
             return "refuse"
         end
         voulu = (e["v"] == "ON") ? "OFF" : "ON"
