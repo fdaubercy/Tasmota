@@ -49,8 +49,8 @@ def generes(desc, catalogue):
     erreurs_ = erreurs(desc, catalogue)
     if erreurs_:
         raise ValueError("description refusee : " + " ; ".join(erreurs_[:5]))
-    return {"ecran.json": aed.texte(desc).encode("utf-8"), "pages.jsonl": ah.genere(desc).encode("utf-8"),
-            "ecranLvgl.be": al.genere(desc).encode("utf-8")}
+    return {"ecran.json": aed.texte(desc).encode("utf-8"), "pages.jsonl": ah.genere(desc, catalogue).encode("utf-8"),
+            "ecranLvgl.be": al.genere(desc, catalogue).encode("utf-8")}
 
 
 def empreinte(lus):

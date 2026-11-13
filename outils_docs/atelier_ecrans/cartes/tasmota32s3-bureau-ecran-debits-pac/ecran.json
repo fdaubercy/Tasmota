@@ -25,7 +25,8 @@
  {"n":0,"titre":"Commun","commentaire":"Commun a toutes les pages (layer_top) : en-tete et pied de page ; textes et couleurs ecrits par ecranHaspmota.affiche()"},
  {"n":1,"titre":"Débits","commentaire":"Debits (modele A) : six lignes nom, barre, debit, unite, part du total","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}},
  {"n":2,"titre":"Courbes","commentaire":"Courbes (modele D) : valeurs a gauche, courbe des 30 dernieres minutes a droite (6 series ajoutees par ecranHaspmota)","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}},
- {"n":3,"titre":"Réglages","commentaire":"Reglages : fenetre de mesure, veille, luminosite ; boutons - / + -> ecranDebitsFonctions.ajuste (regles hasp#p3bNN#event)","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}}
+ {"n":3,"titre":"Réglages","commentaire":"Reglages : fenetre de mesure, veille, luminosite ; boutons - / + -> ecranDebitsFonctions.ajuste (regles hasp#p3bNN#event)","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}},
+ {"n":4,"titre":"Système","modele":"systeme","commentaire":"Systeme : page CONSTRUITE par l'atelier (atelier_ecrans_systeme) d'apres ecranSysteme.CHAMPS ; valeurs ecrites par data/fs/ecranSysteme.be","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}}
 ],
 "objets":[
  {"id":1,"page":0,"type":"label","x":24,"y":14,"l":210,"h":40,"attributs":{"text":"Débits nourrice","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-32","text_color":"#E8EDF2"}},

@@ -194,6 +194,7 @@
 		"ecranSysteme": {
 			"name": "EcranSysteme",
 			"activation": "ON",
+			"reglage": "OFF",
 			"page": 4,
 			"log": "info",
 			"environnement": {}

@@ -24,8 +24,9 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
     GET  /lib/qr.js    qr-code-styling de la page des etiquettes (QR_LIB), apercu de l'objet qrcode
     POST /importer     {env} -> {description, avertissements, editables, bruts, source} : pages.jsonl de la carte lu comme
                        HASPmota (atelier_ecrans_import) ; rien n'est ecrit (404 sans pages.jsonl, 400 carte sans ecran)
-    POST /apercu       {env, description} -> {erreurs, fichiers: [{nom, chemin, contenu, diff, ajouts, retraits}]} ;
-                       pages.jsonl, ecranLvgl.be (dossier de la carte), ecran.json ; diff avec le depot ; rien n'est ecrit
+    POST /apercu       {env, description} -> {erreurs, fichiers: [{nom, chemin, contenu, diff, ajouts, retraits}], systeme} ;
+                       pages.jsonl, ecranLvgl.be (dossier de la carte), ecran.json ; diff avec le depot ; rien n'est ecrit ;
+                       systeme : objets deroules des pages a modele (page Systeme, atelier_ecrans_systeme), pour l'apercu
     POST /capture      {env} -> 200 image/bmp (octets de lv.screenshot()) ou 409 texte (refus : carte injoignable, sans
                        LVGL, fichier tronque, capture deja en cours)
     POST /diff         {env, description} -> {fichiers (comme /apercu, seulement ceux qui changent), empreinte}
@@ -71,6 +72,8 @@ from urllib.parse import parse_qs, urlsplit
 import acces_web
 import atelier_ecrans_capture as aec
 import atelier_ecrans_catalogue as cat
+import atelier_ecrans_navigation as nav
+import atelier_ecrans_systeme as aes
 import atelier_ecrans_description as aed
 import atelier_ecrans_display as adi
 import atelier_ecrans_display_fichiers as adf
@@ -157,16 +160,17 @@ def _fichiers_prevus(prevus):
 def apercu(racine, env, desc):
     if not isinstance(desc, dict):
         raise ValueError("description : objet attendu")
-    erreurs = _valide(desc, cat.charge(racine))
+    catalogue = cat.charge(racine)
+    erreurs = _valide(desc, catalogue)
     if erreurs:
-        return {"erreurs": erreurs, "fichiers": []}
+        return {"erreurs": erreurs, "fichiers": [], "systeme": []}
     dossier = fbe.dossier_carte(env)
     try:
-        generes = [("pages.jsonl", f"{dossier}/pages.jsonl", ah.genere(desc)),
-                   ("ecranLvgl.be", f"{dossier}/ecranLvgl.be", al.genere(desc)),
+        generes = [("pages.jsonl", f"{dossier}/pages.jsonl", ah.genere(desc, catalogue)),
+                   ("ecranLvgl.be", f"{dossier}/ecranLvgl.be", al.genere(desc, catalogue)),
                    ("ecran.json", f"{aed.DOSSIER}/{env}/ecran.json", aed.texte(desc))]
     except ValueError as e:                     # ce que le generateur LVGL ne sait pas ecrire en Berry
-        return {"erreurs": [str(e)], "fichiers": []}
+        return {"erreurs": [str(e)], "fichiers": [], "systeme": []}
     fichiers = []
     for nom, rel, contenu in generes:
         try:
@@ -174,7 +178,9 @@ def apercu(racine, env, desc):
         except FileNotFoundError:
             avant = ""
         fichiers.append(diff_fichier(nom, rel, avant, contenu))
-    return {"erreurs": [], "fichiers": fichiers}
+    modeles = {p["n"] for p in aes.pages_modele(desc)}     # objets construits, dessines par la page (sans recalcul en JS)
+    systeme = [o for o in nav.deroule(desc, catalogue)["objets"] if o.get("page") in modeles] if modeles else []
+    return {"erreurs": [], "fichiers": fichiers, "systeme": systeme}
 
 
 def valeurs(racine, env, simule, get, muettes):

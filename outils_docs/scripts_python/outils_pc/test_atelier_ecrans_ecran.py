@@ -40,7 +40,12 @@ def main():
         racine = Path(t) / "depot"
         racine.mkdir()
         taw.copie(racine)
-        catalogue, desc = cat.charge(racine), aed.charge(racine, ENV)
+        catalogue, complete = cat.charge(racine), aed.charge(racine, ENV)
+        # la page Systeme (modele) ne tient pas sur 480 x 320 : refus a part ; le reste du banc part de la description sans elle
+        desc = dict(complete, pages=[x for x in complete["pages"] if "modele" not in x])
+        c = aec.changement(racine, ENV, "ILI9488_480x320", complete)
+        verifie((any("place insuffisante" in x and "systeme" in x for x in c["refus"]), c["fichiers"], c["empreinte"]), (True, [], None),
+                "page Systeme trop grande pour 480 x 320 : changement refuse, rien a ecrire")
 
         d, av = aec.met_a_echelle(desc, "ILI9488_480x320", catalogue)
         b = d["navigation"]

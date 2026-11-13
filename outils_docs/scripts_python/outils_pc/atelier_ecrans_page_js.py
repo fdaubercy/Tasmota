@@ -367,6 +367,7 @@ function envoieApercu() {
   var n = ++E.seq;
   requete('POST', '/apercu', { env: E.env, description: E.desc }).then(function (r) {
     if (n !== E.seq) return; E.erreurs = r.erreurs; E.fichiers = r.fichiers; dessineFichiers();
+    var s = JSON.stringify(r.systeme || []); if (s !== JSON.stringify(E.systeme || [])) { E.systeme = r.systeme || []; dessineEcran(); }   // page construite (A19)
   }).catch(function (e) { if (n !== E.seq) return; E.erreurs = [e.message]; E.fichiers = []; dessineFichiers(); });
 }
 function dessineFichiers() {

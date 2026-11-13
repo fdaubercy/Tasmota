@@ -1,6 +1,6 @@
 # Interface LVGL pur de l'ecran (module ecranLvgl), GENEREE par outils_docs/scripts_python/outils_pc/atelier_ecrans_lvgl.py
 # depuis la description ecran.json de l'atelier des ecrans (outils_docs/atelier_ecrans/cartes/<env>/) : NE PAS EDITER, modifier
-# la description puis regenerer. Ecran ST7262_1024x600, 4 pages, 82 objets. Interchangeable avec ecranHaspmota.be +
+# la description puis regenerer. Ecran ST7262_1024x600, 5 pages, 182 objets. Interchangeable avec ecranHaspmota.be +
 # pages.jsonl (custom_interface_ecran du cenv). API (en tete du module metier) : demarre() -> true si l'ecran est
 # pret ; affiche(modele) chaque seconde, n'ecrit que ce qui a change (cache par objet et attribut). Objets nommes p<page>b<id>
 # comme HASPmota ; page 0 sur lv.layer_top() (toutes les pages), une page n >= 1 = un ecran lv.obj(0) charge par lv.screen_load.
@@ -14,9 +14,12 @@ def ecranLvgl_p3b32()    import ecranDebitsFonctions    ecranDebitsFonctions.aju
 def ecranLvgl_p3b34()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("veille", 1)    end
 def ecranLvgl_p3b42()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("luminosite", -10)    end
 def ecranLvgl_p3b44()    import ecranDebitsFonctions    ecranDebitsFonctions.ajuste("luminosite", 10)    end
+def ecranLvgl_p4b120()    import ecranSysteme    ecranSysteme.appui(120)    end
+def ecranLvgl_p4b121()    import ecranSysteme    ecranSysteme.appui(121)    end
 def ecranLvgl_p0b201()    import ecranLvgl    ecranLvgl.montre(1)    end
 def ecranLvgl_p0b202()    import ecranLvgl    ecranLvgl.montre(2)    end
 def ecranLvgl_p0b203()    import ecranLvgl    ecranLvgl.montre(3)    end
+def ecranLvgl_p0b204()    import ecranLvgl    ecranLvgl.montre(4)    end
 
 # ---- Tables tirees de la description ----
 ecranLvgl.DEPART = 1
@@ -24,7 +27,8 @@ ecranLvgl.COULEURS = {"etat": {"normal": 0xE8EDF2, "imprecis": 0xFFA53F, "muet":
 ecranLvgl.PAGES = [[0, []],
     [1, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]],
     [2, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]],
-    [3, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]]]
+    [3, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]],
+    [4, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]]]
 # [page, id, type, x, y, l, h, [[attribut, valeur]], fonction du toucher]
 ecranLvgl.OBJETS = [
     [0, 1, "label", 24, 14, 210, 40, [["text", "Débits nourrice"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-32"], ["text_color", 0xE8EDF2]], nil],
@@ -106,9 +110,109 @@ ecranLvgl.OBJETS = [
     [3, 42, "btn", 520, 372, 96, 72, [["radius", 36], ["border_width", 0], ["text", "-"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p3b42],
     [3, 43, "label", 626, 386, 200, 44, [["text", "80 %"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["text_color", 0xE8EDF2], ["align", 1]], nil],
     [3, 44, "btn", 836, 372, 96, 72, [["radius", 36], ["border_width", 0], ["text", "+"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p3b44],
+    [4, 180, "label", 24, 64, 314, 19, [["text", "Mémoire"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 130, "label", 24, 83, 157, 19, [["text", "RAM interne libre"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 1, "label", 181, 83, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 131, "label", 24, 102, 157, 19, [["text", "RAM libre minimale"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 2, "label", 181, 102, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 132, "label", 24, 121, 157, 19, [["text", "Fragmentation de la RAM"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 4, "bar", 181, 125, 54, 9, [["min", 0], ["max", 100], ["radius", 4], ["bg_color", 0x1F2B38], ["radius10", 4], ["bg_color10", 0x3FA7FF], ["val", 0]], nil],
+    [4, 3, "label", 243, 121, 95, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 133, "label", 24, 140, 157, 19, [["text", "PSRAM totale"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 5, "label", 181, 140, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 134, "label", 24, 159, 157, 19, [["text", "PSRAM libre"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 7, "bar", 181, 163, 54, 9, [["min", 0], ["max", 100], ["radius", 4], ["bg_color", 0x1F2B38], ["radius10", 4], ["bg_color10", 0x3FA7FF], ["val", 0]], nil],
+    [4, 6, "label", 243, 159, 95, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 135, "label", 24, 178, 157, 19, [["text", "RAM libre au dernier GC"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 8, "label", 181, 178, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 136, "label", 24, 197, 157, 19, [["text", "Durée du dernier GC"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 9, "label", 181, 197, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 137, "label", 24, 216, 157, 19, [["text", "Pile minimale"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 10, "label", 181, 216, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 138, "label", 24, 235, 157, 19, [["text", "IRAM libre"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 11, "label", 181, 235, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 181, "label", 24, 260, 314, 19, [["text", "Flash"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 139, "label", 24, 279, 157, 19, [["text", "Programme"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 20, "label", 181, 279, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 140, "label", 24, 298, 157, 19, [["text", "Place libre OTA"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 22, "bar", 181, 302, 54, 9, [["min", 0], ["max", 100], ["radius", 4], ["bg_color", 0x1F2B38], ["radius10", 4], ["bg_color10", 0x3FA7FF], ["val", 0]], nil],
+    [4, 21, "label", 243, 298, 95, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 141, "label", 24, 317, 157, 19, [["text", "Mise à jour OTA"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 23, "label", 181, 317, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 142, "label", 24, 336, 157, 19, [["text", "Système de fichiers"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 24, "label", 181, 336, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 143, "label", 24, 355, 157, 19, [["text", "Système de fichiers libre"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 26, "bar", 181, 359, 54, 9, [["min", 0], ["max", 100], ["radius", 4], ["bg_color", 0x1F2B38], ["radius10", 4], ["bg_color10", 0x3FA7FF], ["val", 0]], nil],
+    [4, 25, "label", 243, 355, 95, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 182, "label", 354, 64, 314, 19, [["text", "Charge"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 144, "label", 354, 83, 157, 19, [["text", "Charge (LoadAvg)"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 31, "bar", 511, 87, 54, 9, [["min", 0], ["max", 100], ["radius", 4], ["bg_color", 0x1F2B38], ["radius10", 4], ["bg_color10", 0x3FA7FF], ["val", 0]], nil],
+    [4, 30, "label", 573, 83, 95, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 145, "label", 354, 102, 157, 19, [["text", "Sleep"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 32, "label", 511, 102, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 146, "label", 354, 121, 157, 19, [["text", "Température de la puce"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 33, "label", 511, 121, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 183, "label", 354, 146, 314, 19, [["text", "Redémarrages"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 147, "label", 354, 165, 157, 19, [["text", "En service depuis"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 40, "label", 511, 165, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 148, "label", 354, 184, 157, 19, [["text", "Cause du redémarrage"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 41, "label", 511, 184, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 149, "label", 354, 203, 157, 19, [["text", "Démarrages"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 42, "label", 511, 203, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 184, "label", 354, 228, 314, 19, [["text", "Réseau"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 150, "label", 354, 247, 157, 19, [["text", "Signal Wi-Fi"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 51, "bar", 511, 251, 54, 9, [["min", 0], ["max", 100], ["radius", 4], ["bg_color", 0x1F2B38], ["radius10", 4], ["bg_color10", 0x3FA7FF], ["val", 0]], nil],
+    [4, 50, "label", 573, 247, 95, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 151, "label", 354, 266, 157, 19, [["text", "Point d'accès (BSSID)"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 52, "label", 511, 266, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 152, "label", 354, 285, 157, 19, [["text", "Adresse IP"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 53, "label", 511, 285, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 153, "label", 354, 304, 157, 19, [["text", "Pertes du Wi-Fi"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 54, "label", 511, 304, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 154, "label", 354, 323, 157, 19, [["text", "Durée hors ligne"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 55, "label", 511, 323, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 155, "label", 354, 342, 157, 19, [["text", "MQTT"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 56, "label", 511, 342, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 156, "label", 354, 361, 157, 19, [["text", "Reconnexions MQTT"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 57, "label", 511, 361, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 157, "label", 354, 380, 157, 19, [["text", "Heure"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 58, "label", 511, 380, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 185, "label", 684, 64, 314, 19, [["text", "ModBus"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 158, "label", 684, 83, 157, 19, [["text", "Esclaves ModBus joignables"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 70, "label", 841, 83, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 159, "label", 684, 102, 157, 19, [["text", "Délais ModBus dépassés"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 71, "label", 841, 102, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 160, "label", 684, 121, 157, 19, [["text", "Dernier contact ModBus"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 72, "label", 841, 121, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 161, "label", 684, 140, 157, 19, [["text", "Clients du point d'accès"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 73, "label", 841, 140, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 186, "label", 684, 165, 314, 19, [["text", "Écran"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 162, "label", 684, 184, 157, 19, [["text", "Luminosité de l'écran"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 80, "label", 841, 184, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 163, "label", 684, 203, 157, 19, [["text", "Veille de l'écran"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 81, "label", 841, 203, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 187, "label", 684, 228, 314, 19, [["text", "Firmware"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 164, "label", 684, 247, 157, 19, [["text", "Version du firmware"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 90, "label", 841, 247, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 165, "label", 684, 266, 157, 19, [["text", "Compilé le"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 91, "label", 841, 266, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
+    [4, 188, "label", 24, 405, 976, 19, [["text", "Journal"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
+    [4, 166, "label", 24, 424, 157, 19, [["text", "Dernière erreur"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 101, "label", 181, 424, 819, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2]], nil],
+    [4, 167, "label", 24, 443, 157, 19, [["text", "Erreur précédente"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 102, "label", 181, 443, 819, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2]], nil],
+    [4, 168, "label", 24, 462, 157, 19, [["text", "Erreur précédente"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 103, "label", 181, 462, 819, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2]], nil],
+    [4, 169, "label", 24, 481, 157, 19, [["text", "Erreur précédente"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 104, "label", 181, 481, 819, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2]], nil],
+    [4, 170, "label", 24, 500, 157, 19, [["text", "Erreur précédente"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
+    [4, 105, "label", 181, 500, 819, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2]], nil],
+    [4, 120, "btn", 684, 355, 149, 44, [["radius", 22], ["border_width", 0], ["text", "Lancer le GC"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p4b120],
+    [4, 121, "btn", 849, 355, 149, 44, [["radius", 22], ["border_width", 0], ["text", "Redémarrer"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p4b121],
     [0, 201, "btn", 24, 540, 112, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Débits"]], ecranLvgl_p0b201],
     [0, 202, "btn", 148, 540, 123, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Courbes"]], ecranLvgl_p0b202],
-    [0, 203, "btn", 283, 540, 134, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Réglages"]], ecranLvgl_p0b203]]
+    [0, 203, "btn", 283, 540, 134, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Réglages"]], ecranLvgl_p0b203],
+    [0, 204, "btn", 429, 540, 123, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Système"]], ecranLvgl_p0b204]]
 # [objet, chemin dans le modele, attribut, table de couleurs, couleurs si / sauf, sinon, format, echelle] ; une ligne par objet
 ecranLvgl.LIAISONS = [
     ["p0b2", ["liaison"], "bg_color", "etat", nil, nil, nil, nil],
@@ -168,7 +272,7 @@ ecranLvgl.LIAISONS = [
     ["p3b33", ["reglages", "veille"], "text", nil, nil, nil, nil, nil],
     ["p3b43", ["reglages", "luminosite"], "text", nil, nil, nil, nil, nil]]
 # [bouton, page menee, {attribut: [couleur page courante, couleur sinon]}]
-ecranLvgl.ACTIFS = [["p0b201", 1, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b202", 2, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b203", 3, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}]]
+ecranLvgl.ACTIFS = [["p0b201", 1, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b202", 2, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b203", 3, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b204", 4, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}]]
 # [chart, chemin des series, chemin du compteur de points, couleurs des series]
 ecranLvgl.COURBE = ["p2b70", ["historique"], ["points"], [0x3FA7FF, 0x3FD08A, 0xFFA53F, 0xC084FC, 0xFF5A5A, 0xF5D04A]]
 

@@ -2121,6 +2121,17 @@ de la page ; sa largeur suit la longueur du titre. Une page sort de la barre par
 page 0 ne peut pas les prendre) ; ils sont dessinés en pointillés sur l'écran et ne se sélectionnent pas. Une barre plus
 large ou plus haute que l'écran est refusée avec sa taille. Au changement d'écran, la barre est mise à l'échelle.
 
+### Page « Système » construite
+
+Une page de la description peut porter `"modele": "systeme"` (une seule, numéro 1 ou plus, aucun objet saisi à la main
+dessus) : l'atelier la dessine lui-même d'après la table `CHAMPS` de `data/fs/ecranSysteme.be` (mémoire, flash, charge,
+redémarrages, réseau, ModBus, écran, firmware, cinq dernières erreurs) et ajoute les boutons « Lancer le GC » et
+« Redémarrer ». La mise en page occupe la zone libre entre l'en-tête de la page 0 et la barre de navigation, en colonnes
+de groupes. Il suffit d'ajouter `{"n": 4, "titre": "Système", "modele": "systeme"}` aux pages de la description d'une
+carte à écran, puis « Écrire » ; le module Berry ne pose que les valeurs sur les ids de la table. Un champ ajouté à
+`CHAMPS` hors des groupes connus, un écran trop petit pour la page (changement d'écran refusé avec le motif) ou un objet
+posé à la main sur la page sont refusés par le validateur. Pas d'icônes pour l'instant (A15 et A18 du plan).
+
 ### Importer un pages.jsonl écrit à la main
 
 Une carte dont le dossier a un `pages.jsonl` montre, sous « + page », le bouton **Importer le pages.jsonl de la carte**.

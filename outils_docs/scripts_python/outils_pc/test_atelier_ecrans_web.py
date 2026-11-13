@@ -175,6 +175,9 @@ def test_ecriture_routes(b):
                 409, f"POST /ecrire : {libelle} -> 409")
     b.builds = []
     s, r = b.requete("POST", "/ecran/diff", {"env": DEBITS, "ecran": "ILI9488_480x320", "description": desc})
+    verifie((s, any("systeme" in x for x in r["refus"]), r["fichiers"]), (200, True, []), "POST /ecran/diff : page Systeme trop grande -> refus")
+    sans = dict(desc, pages=[x for x in desc["pages"] if "modele" not in x])
+    s, r = b.requete("POST", "/ecran/diff", {"env": DEBITS, "ecran": "ILI9488_480x320", "description": sans})
     verifie((s, r["refus"], any(f["chemin"].endswith("display.ini") for f in r["fichiers"])), (200, [], True), "POST /ecran/diff")
     verifie(b.requete("POST", "/ecran/diff", {"env": DEBITS, "ecran": "INCONNU", "description": desc})[0], 400, "POST /ecran/diff : ecran inconnu -> 400")
 

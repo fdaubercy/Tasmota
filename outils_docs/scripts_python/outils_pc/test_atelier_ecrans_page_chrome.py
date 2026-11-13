@@ -8,7 +8,7 @@ Hermetique : serveur dans ce processus sur une COPIE du depot (test_atelier_ecra
 `get` (aucun acces reseau ; la capture rend un vrai BMP 4 x 2, 16 bits BI_BITFIELDS, comme lv.screenshot()).
 Verifie : en-tete (carte, ecran de l'env, etat en ligne), apercu identique au depot, zoom 100 %, ajout par la palette
 (DragEvent drop), deplacement a la souris (Input.dispatchMouseEvent) aimante a 8 px, annuler, refus d'une taille de
-police absente, tableau, theme memorise, capture affichee, onglet display.ini (A12), palier 2 et barre de navigation (A14, A17 :
+police absente, tableau, theme memorise, capture affichee, onglet display.ini (A12), palier 2, barre de navigation et page Systeme construite (A14, A17, A19 :
 test_atelier_ecrans_page_chrome_palier2.py), aucune erreur console (temoin `throw` detecte), copie du
 depot inchangee. Chrome est arrete a la fin (profil temporaire `sonde_atelier_ecrans_*`).
 Code de sortie 0 = vert.
@@ -251,9 +251,16 @@ def sonde_ecriture(cdp, banc):
     js("var s=document.getElementById('ecran'); s.value='ILI9488_480x320'; s.dispatchEvent(new Event('change'))")
     verifie(js("!document.getElementById('changement').hidden && !!document.getElementById('proposeChangement')"), True, "autre ecran : bouton Proposer le changement")
     js("document.getElementById('proposeChangement').click()")
+    refus0 = attend(cdp, "!document.getElementById('confirmation').hidden && document.getElementById('confirmation').textContent.indexOf('refusé') >= 0", 20)
+    verifie((bool(refus0), js("!!document.getElementById('confirmer')"), js("document.getElementById('confirmation').textContent.indexOf('systeme') >= 0")),
+            (True, False, True), "page Systeme trop grande pour 480 x 320 : refus affiche, pas de bouton de confirmation")
+    js("var s=document.getElementById('ecran'); s.value=E.ecranEnv; s.dispatchEvent(new Event('change'))")     # retour a l'ecran de la carte : edition possible
+    js("modifie(function(){ E.desc.pages = E.desc.pages.filter(function(p){ return !p.modele; }); })")     # le reste de la sonde part sans elle
+    js("var s=document.getElementById('ecran'); s.value='ILI9488_480x320'; s.dispatchEvent(new Event('change'))")
+    js("document.getElementById('proposeChangement').click()")
     ok = attend(cdp, "!!document.getElementById('confirmer') && E.desc.ecran === 'ILI9488_480x320'", 20)
     verifie((bool(ok), js("E.fichiers.some(function(f){return f.chemin.slice(-11)==='display.ini'})"),
-             js("objet(0, 91).h")), (True, True, 25), "proposition : description a l'echelle dessinee, display.ini au diff")
+             js("E.desc.navigation.h")), (True, True, 25), "proposition : description a l'echelle dessinee, display.ini au diff")
     verifie(js("document.getElementById('confirmation').textContent.indexOf('cible tactile') >= 0"), True, "proposition : boutons trop petits signales")
     js("document.getElementById('confirmer').click()")
     fin = attend(cdp, "E.ecranEnv === 'ILI9488_480x320' && document.getElementById('ecritureMessage').textContent.indexOf('Écran changé') === 0", 30)
@@ -377,8 +384,10 @@ def sonde_import(cdp, banc):
     HASPmota = memes objets que la source, rien d'ecrit."""
     js = cdp.js
     rel = "data/bureau/tasmota32s3-ecran-debits-pac/pages.jsonl"
-    source = (taw.DEPOT / rel).read_text(encoding="utf-8") + \
-        '{"id":200,"obj":"label","x":10,"y":10,"w":100,"h":30,"text":"r","val_rule":"X#Y"}\n'    # herite la page 3
+    brute = '{"id":200,"obj":"label","x":10,"y":10,"w":100,"h":30,"text":"r","val_rule":"X#Y"}\n'    # herite la page 3
+    lignes = (taw.DEPOT / rel).read_text(encoding="utf-8").splitlines(keepends=True)
+    i4 = next(i for i, l in enumerate(lignes) if l.startswith('{"page":4,'))        # avant la page Systeme : la ligne reste a la page 3
+    source = "".join(lignes[:i4]) + brute + "".join(lignes[i4:])
     (banc.racine / rel).write_text(source, encoding="utf-8")
     avant = instantane(banc.racine)
     attend(cdp, f"E.env === '{ENV}' && !document.getElementById('importBoite').hidden", 15)
@@ -444,6 +453,7 @@ def main():
             cdp.appel(d)
         cdp.appel("Page.navigate", url=f"http://127.0.0.1:{banc.port}/?env={ENV}")
         sonde(cdp, banc)
+        tp2.sonde_systeme(cdp, banc, verifie, ENV)
         sonde_remarques(cdp, banc)
         verifie(instantane(banc.racine) == avant, True, "copie du depot inchangee hors remarques.json (ecran.json non ecrit)")
         sonde_ecriture(cdp, banc)

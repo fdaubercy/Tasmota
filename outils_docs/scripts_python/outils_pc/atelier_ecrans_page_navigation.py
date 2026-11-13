@@ -3,10 +3,13 @@
 `boutonsNav` refait le calcul de atelier_ecrans_navigation.py::boutons (meme largeur, memes ids 200 + n), compare par la sonde
 Chrome ; les boutons sont dessines sur toutes les pages, en pointilles et non selectionnables (ils se reglent dans le panneau
 « Barre de navigation » de la page 0 ; une page n >= 1 en sort par sa case « Dans la barre de navigation »).
+`dessineSysteme` dessine les objets d'une page construite (modele "systeme", A19) tels que le serveur les a deroules
+(cle `systeme` de /apercu, atelier_ecrans_systeme.py) : aucun recalcul en JS, non selectionnables.
 """
 
 CSS = """
 .ecran .o.nav{pointer-events:none;outline:1px dashed #ffffff80;outline-offset:2px}
+.ecran .o.systeme{pointer-events:none;outline:1px dotted #ffffff40}
 """
 
 JS = r"""
@@ -28,6 +31,10 @@ function boutonsNav() {
 }
 function dessineNav(ec) {
   boutonsNav().forEach(function (o) { var d = dessineObjet(o, E.page !== 0); d.classList.add('nav'); ec.appendChild(d); });
+}
+// Page construite (modele "systeme", A19) : objets deroules par le serveur (reponse de /apercu), dessines sans recalcul
+function dessineSysteme(ec) {
+  (E.systeme || []).forEach(function (o) { if (o.page !== E.page) return; var d = dessineObjet(o, false); d.classList.add('systeme'); ec.appendChild(d); });
 }
 function panneauNav(pn) {
   var n = E.desc.navigation;

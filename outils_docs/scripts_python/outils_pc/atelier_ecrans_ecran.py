@@ -191,6 +191,10 @@ def changement(racine, env, cible, desc):
         av.append(f"base de l'env : {b_env} ; celle de {porteurs[0]}, qui porte cet ecran : {b_autre} "
                   "(pilote, LVGL, tactile) ; a verifier, non modifiee")
     extra = {f"{dossier}/display.ini": ini}
+    trop_petit = aee.erreurs(nouvelle, catalogue)       # ex. page Systeme (modele) qui ne tient pas sur le nouvel ecran
+    if trop_petit:
+        refus.append(f"la description ne convient pas a l'ecran {cible} : " + " ; ".join(trop_petit[:3]))
+        return {"description": nouvelle, "avertissements": av, "refus": refus, "fichiers": [], "empreinte": None, "extra": extra}
     p = aee.prevu(racine, env, nouvelle, extra)
     return {"description": nouvelle, "avertissements": av, "refus": refus, "fichiers": p["fichiers"],
             "empreinte": p["empreinte"], "extra": extra}

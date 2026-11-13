@@ -149,6 +149,11 @@ chaque groupe lisible seul. Meme decision le 2026-11-13 (plan `tasks/plans/facad
 `data/sd/js/volets.js` (**564 lignes** : decors garage et maison, fins de course, rapporteur de la trappe, camera ; le couper
 ajouterait un fichier a `volets_pages` du cenv) et sa sonde `outils_pc/test_volets_chrome.py` (**581 lignes**).
 
+`data/bureau/tasmota32s3-ecran-debits-pac/ecranLvgl.be` depasse **500 lignes**, et c'est **voulu** (decide le 2026-11-13 :
+exception plutot qu'un generateur tasse ; 496 lignes avant la page « Systeme » de l'A19, 600 apres). Fichier GENERE par l'atelier des
+ecrans (`atelier_ecrans_lvgl.py`) d'apres `ecran.json` : ne pas le decouper ni l'editer a la main, le regenerer. Meme regle pour
+l'`ecranLvgl.be` genere de toute autre carte a ecran.
+
 `outils_docs/scripts_python/outils_pc/build_page.py` fait **1226 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
@@ -987,10 +992,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     description, page `"menu": false` hors barre, boutons ids 201 a 254 deroules par `_navigation.py::deroule` pour le
     validateur et les deux generateurs ; panneau de la page 0 : `_page_navigation.py`. Sondes Chrome du palier 2 et de la
     barre : `test_atelier_ecrans_page_chrome_palier2.py`, appelees par la sonde principale.
-    Page « Systeme » des cartes a ecran (A19, en cours) : `data/fs/ecranSysteme.be` (table `CHAMPS` = seule reference des
+    Page « Systeme » des cartes a ecran (A19, en cours) : `atelier_ecrans_systeme.py` (page `"modele": "systeme"` deroulee comme la
+    barre de navigation, d'apres `CHAMPS` ; refus si l'ecran est trop petit) ; `data/fs/ecranSysteme.be` (table `CHAMPS` = seule reference des
     donnees et des ids d'objets) + `controleEcranSysteme.be` (garde `modules.ecranSysteme`), 5 dernieres erreurs gardees par
     `logFonctions.be::dernieresErreurs` ; liste `berry_commun.ecran_systeme` du cenv, exclue de tous les envs tant qu'aucun
-    autoexec ne la charge ; banc `berry/banc_ecran_systeme.py`.
+    autoexec ne la charge (chargee par celui de l'ecran des debits) ; bancs `berry/banc_ecran_systeme.py`, `berry/banc_page_systeme.py` (vrai
+    `ecranLvgl.be` genere : chaque ecriture trouve son objet, un appui = un appel), `outils_pc/test_atelier_ecrans_systeme.py`.
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.
   - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,

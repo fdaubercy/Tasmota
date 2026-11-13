@@ -90,7 +90,8 @@ def test_fichier_a_jour():
 
 def test_taille():
     n = lvgl.genere(desc.charge(RACINE, ENV)).count("\n")
-    verifie(n < 500, "debits : fichier genere sous 500 lignes", n)
+    # au-dela de 500 lignes depuis la page Systeme (A19) : exception du CLAUDE.md (fichier genere, 2026-11-13) ; garde-fou large
+    verifie(n < 1000, "debits : fichier genere sous 1000 lignes (exception aux 500 du CLAUDE.md)", n)
 
 
 def test_generique():

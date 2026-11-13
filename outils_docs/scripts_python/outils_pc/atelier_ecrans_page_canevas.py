@@ -95,6 +95,7 @@ function dessineEcran() {
   objets(E.page).forEach(function (o) { ec.appendChild(dessineObjet(o, false)); });
   if (E.page !== 0) objets(0).forEach(function (o) { ec.appendChild(dessineObjet(o, true)); });   // layer_top
   dessineNav(ec);
+  dessineSysteme(ec);
   dessineBruts(ec);
   dessineEpingles(ec);
   var o = choisi();

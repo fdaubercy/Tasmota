@@ -1,6 +1,6 @@
 r"""Banc de la page « Systeme » des ecrans tactiles (data/fs/ecranSysteme.be, controleEcranSysteme.be, dernieres erreurs de
-logFonctions.be ; plan tasks/plans/atelier-ecrans.md A19) : banc_ecran_systeme.be, relecture de la table CHAMPS par l'expression
-reguliere que la page de l'atelier utilisera, puis temoins (copies modifiees du module, du driver et de logFonctions).
+logFonctions.be ; plan tasks/plans/atelier-ecrans.md A19) : banc_ecran_systeme.be, relecture de la table CHAMPS par le lecteur de
+l'atelier (outils_pc/atelier_ecrans_systeme.py::champs), puis temoins (copies modifiees du module, du driver et de logFonctions).
 
     python outils_docs/scripts_python/berry/banc_ecran_systeme.py
 
@@ -20,8 +20,8 @@ MODULE = RACINE / "data/fs/ecranSysteme.be"
 DRIVER = RACINE / "data/fs/controleEcranSysteme.be"
 LOGS = RACINE / "data/fs/logFonctions.be"
 VERT = "BANC_ECRAN_SYSTEME: OK"
-# Une entree de CHAMPS par ligne : ["cle", "libelle", "unite", id du texte, id de la barre ou nil]
-ENTREE = re.compile(r'^\s*\["(\w+)", "([^"]*)", "([^"]*)", (\d+), (\d+|nil)\],?\]?\s*$')
+sys.path.insert(0, str(RACINE / "outils_docs/scripts_python/outils_pc"))
+from atelier_ecrans_systeme import champs   # noqa: E402 - SEUL lecteur de CHAMPS, celui de la page de l'atelier
 
 MUTANTS = [
     ("accent coupe en deux", "while (n > 0 && (string.byte(msg[n]) & 0xC0) == 0x80)    n -= 1    end", ""),
@@ -82,18 +82,6 @@ def lance_berry(dossier, module="-", driver="-", logs="-"):
     except subprocess.TimeoutExpired:
         return "BLOQUE : berry.exe arrete apres 120 s"    # jamais le mot du vert : un mutant qui boucle compte rouge
     return r.stdout + r.stderr
-
-
-def champs(texte):
-    """Entrees de ecranSysteme.CHAMPS relues comme le fera la page de l'atelier : [(cle, libelle, unite, texte, barre)]."""
-    m = re.search(r"^ecranSysteme\.CHAMPS = \[\n(.*?)\]\]\s*$", texte, re.M | re.S)
-    if not m:
-        return []
-    lignes = (m.group(1) + "]]").splitlines()
-    lues = [ENTREE.match(l) for l in lignes]
-    if not all(lues):
-        return []
-    return [(x[1], x[2], x[3], int(x[4]), None if x[5] == "nil" else int(x[5])) for x in lues]
 
 
 def fautes_champs(entrees, boutons):

@@ -4,7 +4,7 @@ titre: Atelier des écrans (page 7960) : une description d'écran, deux interfac
 objectif: Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry
 statut: actif
 cree: 2026-11-11
-maj: 2026-11-13 (actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits)
+maj: 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits)
 ---
 # Atelier des écrans
 
@@ -424,11 +424,23 @@ quand la page est affichée.
   HASPmota et au LVGL généré ; page = `modules.ecranSysteme.page` du persist. Mesures toutes les 5 s seulement si la page
   est affichée ; RAM libre minimale et courbe 1 h (120 points à 30 s) suivies en continu, par `tasmota.memory("heap_free")`
   (sans map). Boutons : « Lancer le GC », « Redémarrer » (confirmation par second appui dans les 5 s).
-- [ ] Page dans chaque `ecran.json` : barres et arcs (palier 1) avec libellés, icônes du firmware (`clock-outline`, `wifi`,
-  `thermometer`…) et PNG pour celles qui manquent (`memory`, `chip`, `harddisk`, `micro-sd` : catalogue A18, import A15) ;
-  écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire
-- [ ] Bancs (description valide, deux générateurs), sonde Chrome de l'aperçu ; compilation par la page Build ; essai sur
-  chaque carte (avec A20) ; commit
+- [x] Page « Système » construite par l'atelier et ajoutée à l'écran des débits (page 4, sans icônes). Conception (choix de
+  Claude, 2026-11-13) : une page de la description porte `"modele": "systeme"` ; `atelier_ecrans_systeme.py` relit
+  `ecranSysteme.CHAMPS` dans le `.be` et déroule les objets (valeurs aux ids de la table, libellés 130+, titres de groupe
+  180+, boutons 120 et 121) pour le validateur, les deux générateurs et l'aperçu, par le point d'entrée unique
+  `atelier_ecrans_navigation.deroule` ; un écran trop petit est refusé au changement d'écran (`atelier_ecrans_ecran.py::changement`)
+  — preuve : `data/bureau/tasmota32s3-ecran-debits-pac/{ecran.json,pages.jsonl,ecranLvgl.be}` régénérés par l'atelier ;
+  `outils_pc/test_atelier_ecrans_systeme.py` VERT ; `berry/banc_page_systeme.py` VERT (vrai `ecranLvgl.be` : chaque écriture de
+  `ecranSysteme` trouve son objet du bon type ; un clic sur 120 = un GC, sur 121 = pas de redémarrage, second clic = `Restart 1`
+  une seule fois) ; `verifie_berry.py` strict : 0 erreur ; `ecranLvgl.be` = 600 lignes (exception actée dans CLAUDE.md)
+- [ ] Icônes de la page Système : glyphes du firmware (`clock-outline`, `wifi`, `thermometer`…) et PNG pour celles qui manquent
+  (`memory`, `chip`, `harddisk`, `micro-sd` : catalogue A18, import A15) ; ids 190 à 198 réservés, rien d'émis avant A15
+- [ ] Écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire (page à ajouter
+  à son `ecran.json`, `ecranSysteme` à charger par son autoexec, retirer `ecran_systeme` de ses exclusions du cenv)
+- [x] Bancs (description valide, deux générateurs), sonde Chrome de l'aperçu — preuve : `test_atelier_ecrans_*.py` (description,
+  navigation, lvgl, haspmota, ecran, ecriture, web, import, catalogue, systeme) VERTS ; `banc_ecran_lvgl.py`, `banc_ecran_debits.py`,
+  `banc_ecran_systeme.py`, `banc_demarrage.py` VERTS ; sonde `test_atelier_ecrans_page_chrome.py` VERTE (refus de la page sur 480 x 320 contrôlé)
+- [ ] Compilation par la page Build ; essai sur chaque carte (avec A20)
 
 ## A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur)
 Regroupe ce qui reste à faire sur la carte d'affichage `tasmota32s3-bureau-ecran-debits-pac` (192.168.0.51) ou par

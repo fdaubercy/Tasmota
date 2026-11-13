@@ -2,7 +2,8 @@
 
 Regles : x, y, l, h -> x, y, w, h ; `attributs` recopies ; `commentaire` -> `comment` ; une ligne `{"page": n, "comment"}`
 puis une ligne `{"page": n, "id": 0, <attributs de la page>}` precedent les objets de la page n.
-toucher {"page": n} -> `"action": "p<n>"`. toucher `fonction` ou `commande` -> AUCUNE cle `action` : HASPmota ne sait que
+toucher {"page": n} -> `"action": "p<n>"`. toucher `fonction` ou `commande` -> AUCUNE cle `action` (boutons 120 et 121
+de la page Systeme compris : un seul appel par appui, celui de la regle de controleEcranSysteme) : HASPmota ne sait que
 changer de page (`lv_haspmota.be::page_show` : prev, next, back, p<n>) ; ces boutons sont cables par une regle Tasmota
 `hasp#p<page>b<id>#event` (ecranHaspmota.BOUTONS pour les debits), pas par le pages.jsonl.
 actif : le pages.jsonl porte l'etat de DEMARRAGE (page de demarrage = premiere page de contenu, n >= 1) : le bouton qui
@@ -36,10 +37,10 @@ def _objet(o, depart):
     return l
 
 
-def genere(desc):
+def genere(desc, catalogue=None):
     """Texte du pages.jsonl : une ligne JSON par commentaire de page, reglage de page et objet (UTF-8) ; barre de
-    navigation deroulee en boutons de la page 0 (atelier_ecrans_navigation)."""
-    desc = nav.deroule(desc)
+    navigation et page Systeme deroulees (atelier_ecrans_navigation.deroule ; `catalogue` : taille de l'ecran)."""
+    desc = nav.deroule(desc, catalogue)
     contenu = [p["n"] for p in desc["pages"] if p["n"] >= 1]
     depart = min(contenu) if contenu else None
     lignes = []

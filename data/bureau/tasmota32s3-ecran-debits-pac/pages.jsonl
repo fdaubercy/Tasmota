@@ -6,6 +6,7 @@
 {"page":0,"id":201,"obj":"btn","x":24,"y":540,"w":112,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#3FA7FF","text_color":"#06121F","text":"Débits","action":"p1"}
 {"page":0,"id":202,"obj":"btn","x":148,"y":540,"w":123,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Courbes","action":"p2"}
 {"page":0,"id":203,"obj":"btn","x":283,"y":540,"w":134,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Réglages","action":"p3"}
+{"page":0,"id":204,"obj":"btn","x":429,"y":540,"w":123,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Système","action":"p4"}
 {"page":1,"comment":"Debits (modele A) : six lignes nom, barre, debit, unite, part du total"}
 {"page":1,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
 {"page":1,"id":11,"obj":"label","x":24,"y":84,"w":180,"h":36,"text":"Débit 1","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
@@ -87,3 +88,104 @@
 {"page":3,"id":42,"obj":"btn","x":520,"y":372,"w":96,"h":72,"radius":36,"border_width":0,"text":"-","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","bg_color":"#1F2B38","text_color":"#E8EDF2"}
 {"page":3,"id":43,"obj":"label","x":626,"y":386,"w":200,"h":44,"text":"80 %","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2","align":1}
 {"page":3,"id":44,"obj":"btn","x":836,"y":372,"w":96,"h":72,"radius":36,"border_width":0,"text":"+","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","bg_color":"#1F2B38","text_color":"#E8EDF2"}
+{"page":4,"comment":"Systeme : page CONSTRUITE par l'atelier (atelier_ecrans_systeme) d'apres ecranSysteme.CHAMPS ; valeurs ecrites par data/fs/ecranSysteme.be"}
+{"page":4,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
+{"page":4,"id":180,"obj":"label","x":24,"y":64,"w":314,"h":19,"text":"Mémoire","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":130,"obj":"label","x":24,"y":83,"w":157,"h":19,"text":"RAM interne libre","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":1,"obj":"label","x":181,"y":83,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":131,"obj":"label","x":24,"y":102,"w":157,"h":19,"text":"RAM libre minimale","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":2,"obj":"label","x":181,"y":102,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":132,"obj":"label","x":24,"y":121,"w":157,"h":19,"text":"Fragmentation de la RAM","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":4,"obj":"bar","x":181,"y":125,"w":54,"h":9,"min":0,"max":100,"val":0,"radius":4,"bg_color":"#1F2B38","radius10":4,"bg_color10":"#3FA7FF"}
+{"page":4,"id":3,"obj":"label","x":243,"y":121,"w":95,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":133,"obj":"label","x":24,"y":140,"w":157,"h":19,"text":"PSRAM totale","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":5,"obj":"label","x":181,"y":140,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":134,"obj":"label","x":24,"y":159,"w":157,"h":19,"text":"PSRAM libre","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":7,"obj":"bar","x":181,"y":163,"w":54,"h":9,"min":0,"max":100,"val":0,"radius":4,"bg_color":"#1F2B38","radius10":4,"bg_color10":"#3FA7FF"}
+{"page":4,"id":6,"obj":"label","x":243,"y":159,"w":95,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":135,"obj":"label","x":24,"y":178,"w":157,"h":19,"text":"RAM libre au dernier GC","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":8,"obj":"label","x":181,"y":178,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":136,"obj":"label","x":24,"y":197,"w":157,"h":19,"text":"Durée du dernier GC","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":9,"obj":"label","x":181,"y":197,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":137,"obj":"label","x":24,"y":216,"w":157,"h":19,"text":"Pile minimale","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":10,"obj":"label","x":181,"y":216,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":138,"obj":"label","x":24,"y":235,"w":157,"h":19,"text":"IRAM libre","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":11,"obj":"label","x":181,"y":235,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":181,"obj":"label","x":24,"y":260,"w":314,"h":19,"text":"Flash","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":139,"obj":"label","x":24,"y":279,"w":157,"h":19,"text":"Programme","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":20,"obj":"label","x":181,"y":279,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":140,"obj":"label","x":24,"y":298,"w":157,"h":19,"text":"Place libre OTA","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":22,"obj":"bar","x":181,"y":302,"w":54,"h":9,"min":0,"max":100,"val":0,"radius":4,"bg_color":"#1F2B38","radius10":4,"bg_color10":"#3FA7FF"}
+{"page":4,"id":21,"obj":"label","x":243,"y":298,"w":95,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":141,"obj":"label","x":24,"y":317,"w":157,"h":19,"text":"Mise à jour OTA","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":23,"obj":"label","x":181,"y":317,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":142,"obj":"label","x":24,"y":336,"w":157,"h":19,"text":"Système de fichiers","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":24,"obj":"label","x":181,"y":336,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":143,"obj":"label","x":24,"y":355,"w":157,"h":19,"text":"Système de fichiers libre","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":26,"obj":"bar","x":181,"y":359,"w":54,"h":9,"min":0,"max":100,"val":0,"radius":4,"bg_color":"#1F2B38","radius10":4,"bg_color10":"#3FA7FF"}
+{"page":4,"id":25,"obj":"label","x":243,"y":355,"w":95,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":182,"obj":"label","x":354,"y":64,"w":314,"h":19,"text":"Charge","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":144,"obj":"label","x":354,"y":83,"w":157,"h":19,"text":"Charge (LoadAvg)","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":31,"obj":"bar","x":511,"y":87,"w":54,"h":9,"min":0,"max":100,"val":0,"radius":4,"bg_color":"#1F2B38","radius10":4,"bg_color10":"#3FA7FF"}
+{"page":4,"id":30,"obj":"label","x":573,"y":83,"w":95,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":145,"obj":"label","x":354,"y":102,"w":157,"h":19,"text":"Sleep","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":32,"obj":"label","x":511,"y":102,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":146,"obj":"label","x":354,"y":121,"w":157,"h":19,"text":"Température de la puce","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":33,"obj":"label","x":511,"y":121,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":183,"obj":"label","x":354,"y":146,"w":314,"h":19,"text":"Redémarrages","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":147,"obj":"label","x":354,"y":165,"w":157,"h":19,"text":"En service depuis","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":40,"obj":"label","x":511,"y":165,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":148,"obj":"label","x":354,"y":184,"w":157,"h":19,"text":"Cause du redémarrage","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":41,"obj":"label","x":511,"y":184,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":149,"obj":"label","x":354,"y":203,"w":157,"h":19,"text":"Démarrages","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":42,"obj":"label","x":511,"y":203,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":184,"obj":"label","x":354,"y":228,"w":314,"h":19,"text":"Réseau","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":150,"obj":"label","x":354,"y":247,"w":157,"h":19,"text":"Signal Wi-Fi","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":51,"obj":"bar","x":511,"y":251,"w":54,"h":9,"min":0,"max":100,"val":0,"radius":4,"bg_color":"#1F2B38","radius10":4,"bg_color10":"#3FA7FF"}
+{"page":4,"id":50,"obj":"label","x":573,"y":247,"w":95,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":151,"obj":"label","x":354,"y":266,"w":157,"h":19,"text":"Point d'accès (BSSID)","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":52,"obj":"label","x":511,"y":266,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":152,"obj":"label","x":354,"y":285,"w":157,"h":19,"text":"Adresse IP","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":53,"obj":"label","x":511,"y":285,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":153,"obj":"label","x":354,"y":304,"w":157,"h":19,"text":"Pertes du Wi-Fi","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":54,"obj":"label","x":511,"y":304,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":154,"obj":"label","x":354,"y":323,"w":157,"h":19,"text":"Durée hors ligne","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":55,"obj":"label","x":511,"y":323,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":155,"obj":"label","x":354,"y":342,"w":157,"h":19,"text":"MQTT","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":56,"obj":"label","x":511,"y":342,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":156,"obj":"label","x":354,"y":361,"w":157,"h":19,"text":"Reconnexions MQTT","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":57,"obj":"label","x":511,"y":361,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":157,"obj":"label","x":354,"y":380,"w":157,"h":19,"text":"Heure","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":58,"obj":"label","x":511,"y":380,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":185,"obj":"label","x":684,"y":64,"w":314,"h":19,"text":"ModBus","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":158,"obj":"label","x":684,"y":83,"w":157,"h":19,"text":"Esclaves ModBus joignables","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":70,"obj":"label","x":841,"y":83,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":159,"obj":"label","x":684,"y":102,"w":157,"h":19,"text":"Délais ModBus dépassés","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":71,"obj":"label","x":841,"y":102,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":160,"obj":"label","x":684,"y":121,"w":157,"h":19,"text":"Dernier contact ModBus","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":72,"obj":"label","x":841,"y":121,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":161,"obj":"label","x":684,"y":140,"w":157,"h":19,"text":"Clients du point d'accès","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":73,"obj":"label","x":841,"y":140,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":186,"obj":"label","x":684,"y":165,"w":314,"h":19,"text":"Écran","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":162,"obj":"label","x":684,"y":184,"w":157,"h":19,"text":"Luminosité de l'écran","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":80,"obj":"label","x":841,"y":184,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":163,"obj":"label","x":684,"y":203,"w":157,"h":19,"text":"Veille de l'écran","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":81,"obj":"label","x":841,"y":203,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":187,"obj":"label","x":684,"y":228,"w":314,"h":19,"text":"Firmware","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":164,"obj":"label","x":684,"y":247,"w":157,"h":19,"text":"Version du firmware","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":90,"obj":"label","x":841,"y":247,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":165,"obj":"label","x":684,"y":266,"w":157,"h":19,"text":"Compilé le","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":91,"obj":"label","x":841,"y":266,"w":157,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2","align":2}
+{"page":4,"id":188,"obj":"label","x":24,"y":405,"w":976,"h":19,"text":"Journal","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#3FA7FF"}
+{"page":4,"id":166,"obj":"label","x":24,"y":424,"w":157,"h":19,"text":"Dernière erreur","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":101,"obj":"label","x":181,"y":424,"w":819,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2"}
+{"page":4,"id":167,"obj":"label","x":24,"y":443,"w":157,"h":19,"text":"Erreur précédente","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":102,"obj":"label","x":181,"y":443,"w":819,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2"}
+{"page":4,"id":168,"obj":"label","x":24,"y":462,"w":157,"h":19,"text":"Erreur précédente","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":103,"obj":"label","x":181,"y":462,"w":819,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2"}
+{"page":4,"id":169,"obj":"label","x":24,"y":481,"w":157,"h":19,"text":"Erreur précédente","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":104,"obj":"label","x":181,"y":481,"w":819,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2"}
+{"page":4,"id":170,"obj":"label","x":24,"y":500,"w":157,"h":19,"text":"Erreur précédente","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#9FB3C8"}
+{"page":4,"id":105,"obj":"label","x":181,"y":500,"w":819,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2"}
+{"page":4,"id":120,"obj":"btn","x":684,"y":355,"w":149,"h":44,"radius":22,"border_width":0,"text":"Lancer le GC","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","bg_color":"#1F2B38","text_color":"#E8EDF2"}
+{"page":4,"id":121,"obj":"btn","x":849,"y":355,"w":149,"h":44,"radius":22,"border_width":0,"text":"Redémarrer","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","bg_color":"#1F2B38","text_color":"#E8EDF2"}

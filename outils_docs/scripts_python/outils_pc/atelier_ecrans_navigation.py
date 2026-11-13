@@ -4,11 +4,14 @@ Cle `navigation` a la racine de la description : {"x", "y", "h", "ecart", "attri
 {couleurs du bouton de la page courante}}. Une page n >= 1 y figure, sauf `"menu": false`. Bouton de la page n : objet `btn`
 de la page 0, id 200 + n (201 a 254, reserves), texte = titre de la page (sinon « Page n »), toucher {"page": n}, largeur =
 arrondi(longueur du titre x taille de police x 0,55) + h, places de gauche a droite separes de `ecart`.
-`deroule` est appele par le validateur et par les deux generateurs ; la page de l'atelier fait le meme calcul
-(atelier_ecrans_page_navigation.py::boutonsNav), compare par la sonde Chrome.
+`deroule` est le POINT D'ENTREE UNIQUE du deroule (barre de navigation ET page Systeme, atelier_ecrans_systeme.deroule),
+appele par le validateur, les deux generateurs et l'apercu de la page web ; la page de l'atelier refait le calcul de la barre
+(atelier_ecrans_page_navigation.py::boutonsNav), compare par la sonde Chrome, et recoit du serveur les objets de la page Systeme.
 """
 import copy
 import re
+
+import atelier_ecrans_systeme as aes
 
 ID_BASE = 200
 ID_MAX = 254
@@ -49,11 +52,14 @@ def boutons(desc):
     return res
 
 
-def deroule(desc):
-    """Copie de la description, boutons de la barre ajoutes aux objets (apres ceux de l'utilisateur) ; sans barre : elle-meme."""
-    if "navigation" not in desc:
-        return desc
-    d = copy.deepcopy(desc)
+def deroule(desc, catalogue=None):
+    """Copie de la description, objets de la page Systeme puis boutons de la barre ajoutes aux objets (apres ceux de
+    l'utilisateur), cles `modele` et `navigation` retirees ; rien a derouler : elle-meme. `catalogue` : taille de l'ecran pour
+    la page Systeme (None : catalogue du depot)."""
+    d = aes.deroule(desc, catalogue)             # avant la barre : sa zone s'arrete au haut de la barre
+    if "navigation" not in d:
+        return d
+    d = copy.deepcopy(d) if d is desc else d
     d.pop("navigation")
     d["objets"] = d.get("objets", []) + boutons(desc)
     return d

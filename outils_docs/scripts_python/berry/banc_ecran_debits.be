@@ -270,7 +270,7 @@ for j: lignes
 end
 verifie("chaque ligne lisible et chaque objet dans la dalle 1024 x 600 : " + str(dehors), size(dehors) == 0)
 verifie("aucun objet en double : " + str(doublons), size(doublons) == 0)
-verifie("pied de page : actions p1, p2, p3 (Debits, Courbes, Reglages)", actions == ["p1", "p2", "p3"])
+verifie("pied de page : actions p1 a p4 (Debits, Courbes, Reglages, Systeme)", actions == ["p1", "p2", "p3", "p4"])
 verifie("page 0 sans dimming_time ni antiburn ni fond (HASPmota ne gere pas la veille, layer_top transparent)", size(reglagesP0) == 0)
 
 import ecranFonctions

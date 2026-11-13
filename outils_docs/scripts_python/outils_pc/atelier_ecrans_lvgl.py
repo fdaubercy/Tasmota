@@ -132,9 +132,10 @@ def _toucher(nom, t, type_=None):
     return f, f"def {f}({'v' if change else ''})    {corps}    end"
 
 
-def genere(desc):
-    """Texte du module Berry ecranLvgl (UTF-8, fins de ligne \\n) ; barre de navigation deroulee (atelier_ecrans_navigation)."""
-    desc = nav.deroule(desc)
+def genere(desc, catalogue=None):
+    """Texte du module Berry ecranLvgl (UTF-8, fins de ligne \\n) ; barre de navigation et page Systeme deroulees
+    (atelier_ecrans_navigation.deroule ; `catalogue` : taille de l'ecran)."""
+    desc = nav.deroule(desc, catalogue)
     pages =[[p["n"], attributs(p.get("attributs", {}), f"page {p['n']}")] for p in desc["pages"]]
     contenu = [p["n"] for p in desc["pages"] if p["n"] >= 1]
     objets, groupes, actifs, touchers, courbe = [], [], [], [], None

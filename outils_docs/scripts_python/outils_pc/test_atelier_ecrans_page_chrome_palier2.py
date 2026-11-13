@@ -1,4 +1,4 @@
-"""Sondes Chrome des objets du palier 2 (A14) et de la barre de navigation (A17) de l'atelier des ecrans.
+"""Sondes Chrome des objets du palier 2 (A14), de la barre de navigation (A17) et de la page Systeme (A19) de l'atelier des ecrans.
 
 Pas un banc a lancer seul : appelees par test_atelier_ecrans_page_chrome.py::main (meme Chrome, meme copie du depot),
 qui leur passe son `verifie` et son `instantane`. Module separe pour garder la sonde sous 500 lignes.
@@ -85,3 +85,26 @@ def sonde_navigation(cdp, banc, verifie, instantane):
     verifie((bool(gen), js("E.erreurs.join(' | ')")), (True, ""), "apercu : barre dans le pages.jsonl genere, description valide")
     verifie(instantane(banc.racine) == avant, True, "barre : rien n'est ecrit")
     verifie(erreurs_console(cdp), [], "barre : aucune erreur console")
+
+
+def sonde_systeme(cdp, banc, verifie, env):
+    """Page Systeme construite (A19) : la page 4 de l'apercu montre les objets deroules par le serveur, aux places calculees
+    par Python (atelier_ecrans_navigation.deroule), non selectionnables ; aucun sur les autres pages."""
+    import atelier_ecrans_catalogue as cat
+    import atelier_ecrans_description as aed
+    import atelier_ecrans_navigation as nav
+    js = cdp.js
+    d = aed.charge(banc.racine, env)
+    n = next(p["n"] for p in d["pages"] if p.get("modele") == "systeme")
+    attendu = sorted([o["id"], o["x"], o["y"], o["l"], o["h"]] for o in nav.deroule(d, cat.charge(banc.racine))["objets"] if o["page"] == n)
+    js(f"E.page = {n}; E.sel = null; dessineTout()")
+    pret = attend(cdp, f"document.querySelectorAll('#ecranCarte .o.systeme').length === {len(attendu)}", 20)
+    vu = sorted(json.loads(js("JSON.stringify(Array.from(document.querySelectorAll('#ecranCarte .o.systeme')).map(function(d){ return ["
+                              "+d.dataset.id, parseInt(d.style.left), parseInt(d.style.top), parseInt(d.style.width), parseInt(d.style.height)]; }))")))
+    verifie((bool(pret), len(attendu) > 50, vu == attendu), (True, True, True),
+            f"page Systeme (page {n}) : {len(vu)} objets deroules par le serveur dessines a leurs places")
+    verifie(js("getComputedStyle(document.querySelector('#ecranCarte .o.systeme')).pointerEvents"), "none",
+            "page Systeme : objets construits non selectionnables")
+    js("E.page = 1; E.sel = null; dessineTout()")
+    verifie(js("document.querySelectorAll('#ecranCarte .o.systeme').length"), 0, "page 1 : aucun objet de la page Systeme")
+    verifie(erreurs_console(cdp), [], "page Systeme : aucune erreur console")

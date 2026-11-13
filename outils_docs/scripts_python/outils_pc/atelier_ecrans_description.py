@@ -22,6 +22,8 @@ Forme : {"version": 1, "ecran": <cle du catalogue>, "orientation": 0|90|180|270,
   couleurs (racine) : {table: {nom: "#RRGGBB"}}, p. ex. "etat" = ecranDebitsFonctions.COULEURS
   toucher : un seul de {"page": n} | {"commande": "<commande Tasmota>"} | {"fonction": "<module.fonction>", "args"?: [..]}
   navigation (racine) et menu (page) : barre de boutons de page deroulee par atelier_ecrans_navigation, validee deroulee
+  modele (page) : "systeme" = page construite par atelier_ecrans_systeme (aucun objet a la main sur cette page), validee
+      deroulee ; un seul point d'entree du deroule : atelier_ecrans_navigation.deroule
   objet brut (import d'un pages.jsonl ecrit a la main, atelier_ecrans_import) : {"type": "brut", "page", "id" | null,
       "ligne": {ligne JSON d'origine}} ou {..., "texte": "<ligne non JSON>"} ; reecrit tel quel par le generateur HASPmota,
       absent de l'interface LVGL pur, non editable ; seuls sa forme et sa page sont controlees
@@ -35,6 +37,7 @@ from pathlib import Path
 
 import atelier_ecrans_catalogue as cat
 import atelier_ecrans_navigation as nav
+import atelier_ecrans_systeme as aes
 
 DOSSIER = "outils_docs/atelier_ecrans/cartes"
 TYPES_MODELE = ("texte", "entier", "liste", "booleen")
@@ -284,8 +287,10 @@ def valide(d, catalogue):
         _attributs(catalogue, "obj", p.get("attributs", {}), f"page {p.get('n')}", msgs)
         if "menu" in p and not isinstance(p["menu"], bool):
             msgs.append(f"page {p.get('n')} : menu doit être un booléen (true ou false)")
-    if "navigation" in d and _navigation(d, catalogue, L, H, msgs):
-        d = nav.deroule(d)
+    n_av = len(msgs)
+    msgs += aes.erreurs(d, catalogue)                 # page Systeme : modele, objets a la main, CHAMPS, place
+    if ("navigation" not in d or _navigation(d, catalogue, L, H, msgs)) and len(msgs) == n_av:
+        d = nav.deroule(d, catalogue)                 # objets construits : controles par la boucle ci-dessous
     vus = set()
     for o in d.get("objets", []):
         qui = f"objet {o.get('page')}/{o.get('id')}"
