@@ -7,7 +7,7 @@
 # (en lecture seule une fois solidifie, piege 12 de outils_docs/SOLIDIFICATION_BERRY.md) mais dans la globale cachee
 # ".ecranFonctions", lue et ecrite par member/setmember. Les modules qui s'en servent font `import ecranFonctions` dans chaque fonction.
 # Reglages : bloc du persist modules.<bloc> (bloc pose par le driver, ex. "ecranDebits") : veille, extinction, luminosite, pwmInverse.
-# Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+# Logs : charte du CLAUDE.md (logFonctions.log, cible = bloc : ReglageLog ecranCave|ecranDebits <niveau>).
 #@ solidify:ecranFonctions
 var ecranFonctions = module("ecranFonctions")
 
@@ -62,9 +62,10 @@ def ecranFonctions_setmember(nom, valeur)
 end
 ecranFonctions.setmember = ecranFonctions_setmember
 
-# Log du module sous le seuil `general` ; niveau = constante LOG_LEVEL_*
+# Log du module sous le seuil de la cible du bloc (ecranCave, ecranDebits ; `general` sans bloc) ; niveau = constante LOG_LEVEL_*
 def ecranFonctions_log(msg, niveau)
-    logFonctions.log(msg, niveau)
+    import ecranFonctions
+    logFonctions.log(msg, niveau, ecranFonctions.bloc)
 end
 ecranFonctions.log = ecranFonctions_log
 

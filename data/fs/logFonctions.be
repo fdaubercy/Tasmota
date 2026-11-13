@@ -51,7 +51,8 @@ logFonctions.MOTS = ["aucun", "erreur", "info", "debug", "detail"]
 logFonctions.SORTIES = {"serie": "SerialLog", "web": "WebLog", "mqtt": "MqttLog", "syslog": "SysLog"}
 # Cibles connues (une par bloc du persist qui porte une cle "log")
 logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "discovery", "modbus",
-                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve", "rideau", "leds", "historique"]
+                       "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve", "rideau", "leds", "historique",
+                       "ecranCave", "ecranDebits"]
 # Ce que couvre chaque cible (aide de ReglageLog)
 logFonctions.DESCRIPTIONS = {
     "general": "modules communs (globalFonctions, configGlobal, controleGeneral, gestionFileFolder...)",
@@ -64,7 +65,9 @@ logFonctions.DESCRIPTIONS = {
     "lorawan": "LoRaWan (loRaWanFonctions)", "volets": "volets roulants et LED temoin (vrFonctions, controleLedTemoin)",
     "es8311": "codec audio ES8311 (controleES8311)", "garage": "module garage (garageFonctions)",
     "cuve": "module cuve (cuveFonctions)", "rideau": "module rideau de garage (controleRideau)", "leds": "LED RGB du dev-kit et ruban WS2812 (ledsFonctions, controleLeds)",
-    "historique": "historique des mesures et page /histo (historiqueFonctions, historiqueSeries)"}
+    "historique": "historique des mesures et page /histo (historiqueFonctions, historiqueSeries)",
+    "ecranCave": "ecran de la cave et ses touches (ecranCaveFonctions, ecranFonctions ; serveur : controleCommandesEcran)",
+    "ecranDebits": "ecran des debits (ecranDebitsFonctions, ecranFonctions)"}
 
 # ETAT MUTABLE DU MODULE : dans une GLOBALE, pas dans le module (un module solidifie est
 # constant, en flash). Les seuils sont lus une fois depuis le persist, puis mis en cache.
@@ -103,6 +106,8 @@ def logFonctions_lieu(cible)
     elif c == "cuve"                bloc = (modules != nil ? modules.find("cuve") : nil)
     elif c == "rideau"              bloc = (modules != nil ? modules.find("rideau") : nil)
     elif c == "leds"                bloc = d.find("leds")
+    elif c == "ecrancave"           bloc = (modules != nil ? modules.find("ecranCave") : nil)
+    elif c == "ecrandebits"         bloc = (modules != nil ? modules.find("ecranDebits") : nil)
     elif c == "historique"
         # Bloc de l'historique local (S3/P4). Un bloc reduit a {"grafana": ...} (carte sans historique) ne compte pas.
         var h = (diverses != nil ? diverses.find("historique") : nil)

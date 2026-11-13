@@ -10,7 +10,7 @@
 # Une voie est « inconnue » si sa valeur n'est pas fraiche : etatConstate different de « valide », sentinelle, ou
 # constateA plus vieux que 2 fenetres (modules.ecranDebits.fenetre, a recopier a la main si on change celle de l'acquisition).
 # Compile en .bec par demarrage.compile(["ecranDebitsFonctions"], "modules.ecranDebits"), importe par controleEcranDebits.be.
-# Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+# Logs : charte du CLAUDE.md (logFonctions.log, cible ecranDebits : ReglageLog ecranDebits <niveau>).
 #
 # ===== API d'une INTERFACE d'ecran (ecranHaspmota.be + pages.jsonl, ou ecranLvgl.be ; une seule sur le FS) =====
 # Waveshare ESP32-S3-Touch-LCD-7B, 1024 x 600, tactile GT911 ; maquettes outils_docs/ecran_debits_7B/ (modele-A, modele-D).
@@ -54,9 +54,9 @@ ecranDebitsFonctions.SERIES = ["#3FA7FF", "#3FD08A", "#FFA53F", "#C084FC", "#FF5
 ecranDebitsFonctions.toutesInconnues = true   # vrai au demarrage : le premier « tout inconnu » n'est pas un message
 ecranDebitsFonctions.courbeMax = 1000      # haut de l'axe de la courbe, en centiemes
 
-# Log du module sous le seuil `general` (ReglageLog general <niveau>) ; niveau = constante LOG_LEVEL_*
+# Log du module sous le seuil de la cible ecranDebits (ReglageLog ecranDebits <niveau>) ; niveau = constante LOG_LEVEL_*
 def ecranDebitsFonctions_log(msg, niveau)
-    logFonctions.log(msg, niveau)
+    logFonctions.log(msg, niveau, "ecranDebits")   # ReglageLog ecranDebits <niveau>
 end
 ecranDebitsFonctions.log = ecranDebitsFonctions_log
 

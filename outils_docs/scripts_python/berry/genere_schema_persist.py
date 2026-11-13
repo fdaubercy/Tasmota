@@ -72,7 +72,14 @@ L'inference decrit l'existant, pas le contrat du code. Pour les blocs listes dan
 le sous-schema infere est REMPLACE par le contrat du code qui les lit :
   - `relaisLie` (data/fs/globalFonctions.be) : `ids` requis ; `type` et `delai` requis des
     que `ids` n'est pas vide (`if`/`then`) ; `modules` decrit mais facultatif (non lu) ; les
-    cles sans lecteur (delaiSiON, delaiSiOFF, etatSiON, etatSiOFF) ne sont plus decrites.
+    cles sans lecteur (delaiSiON, delaiSiOFF, etatSiON, etatSiOFF) ne sont plus decrites ;
+    `desactiveCapteurs` (ON : marche manuelle sans les capteurs du module) decrit, facultatif.
+
+CLES POSEES PAR LE CODE (CLES_DU_CODE, 2026-11-13)
+--------------------------------------------------
+Cles qu'aucun persist du depot ne porte, parce que le code les ecrit en marche (et que
+persist.save les recopie sur la carte) : ajoutees a chaque element du dictionnaire nomme.
+  - `suspendu` dans chaque capteur de `capteurs` (data/fs/globalFonctions.be, marche manuelle).
 
 PREREQUIS
 ---------
@@ -95,7 +102,8 @@ SEUIL_FORME = 0.7      # ressemblance moyenne pour un dictionnaire de blocs de m
 BLOCS_MATERIEL = ("drivers", "modules", "environnement")   # enfants nommes par le materiel : jamais requis
 # Blocs optionnels (chemins pointes depuis la racine) : jamais requis, quelle que soit leur frequence (voir l'en-tete)
 OPTIONNELS = ("diverses.historique", "drivers.leds.environnement.leds.ledRGB", "serveur.coprocesseur", "drivers.I2S",
-              "drivers.Ethernet", "drivers.voletRoulants", "drivers.HostedESPC6")
+              "drivers.Ethernet", "drivers.voletRoulants", "drivers.HostedESPC6",
+              "diverses.historique.grafana")   # bouton Grafana seulement si la cle existe (controleWeb.boutonGrafana)
 
 NIVEAUX_MODULE = ["erreur", "info", "debug", "detail"]
 NIVEAUX_SORTIE = ["aucun", "erreur", "info", "debug", "detail"]
@@ -306,6 +314,9 @@ CONTRATS = {
             "ids": {"type": "array", "items": {"type": "integer"}},
             "type": {"type": "string"},
             "delai": {"type": "integer"},
+            "desactiveCapteurs": {"type": "string", "enum": ON_OFF,
+                                  "description": ("ON : marche manuelle, les capteurs actifs du module sont coupes tant que "
+                                                  "le relais est ON (globalFonctions.be, pompe vide-cave). Defaut OFF.")},
         },
         "required": ["ids"],
         "if": {"properties": {"ids": {"minItems": 1}}, "required": ["ids"]},
@@ -328,6 +339,33 @@ def applique_contrats(noeud):
             applique_contrats(v)
 
 
+# Cles ecrites par le code en marche, absentes des persists du depot (voir l'en-tete) : nom du dictionnaire -> cles
+# ajoutees a chacun de ses elements
+CLES_DU_CODE = {
+    "capteurs": {"suspendu": {"type": "string", "enum": ON_OFF,
+                              "description": ("ON : capteur coupe par une marche manuelle (globalFonctions.be), remis a ON "
+                                              "et cle retiree a l'arret du relais ou au demarrage (controleGeneral.be).")}},
+}
+
+
+def applique_cles_du_code(noeud):
+    """Ajoute les cles de CLES_DU_CODE a chaque element des dictionnaires qu'elles visent, partout dans le schema."""
+    if isinstance(noeud, dict):
+        for cle in ("properties", "patternProperties"):
+            for nom, sous in noeud.get(cle, {}).items():
+                if nom in CLES_DU_CODE and isinstance(sous, dict):
+                    elements = list(sous.get("properties", {}).values()) + list(sous.get("patternProperties", {}).values())
+                    if isinstance(sous.get("additionalProperties"), dict):
+                        elements.append(sous["additionalProperties"])
+                    for e in elements:
+                        e.setdefault("properties", {}).update(json.loads(json.dumps(CLES_DU_CODE[nom])))
+        for v in noeud.values():
+            applique_cles_du_code(v)
+    elif isinstance(noeud, list):
+        for v in noeud:
+            applique_cles_du_code(v)
+
+
 def genere(persists):
     inf = Inference()
     instances = [(nom_carte(p), charge(p)) for p in persists]
@@ -340,6 +378,7 @@ def genere(persists):
                               "Ne pas editer a la main : regenerer.")}
     schema.update(corps)
     applique_contrats(schema)
+    applique_cles_du_code(schema)
     return schema, inf.rapport
 
 

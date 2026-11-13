@@ -29,19 +29,19 @@ class COMMANDES_ECRAN
         var seq = (int(mot) >> 1) & 0x7F
         var voulu = ((int(mot) & 1) == 1) ? "ON" : "OFF"
         if (seq == 0)
-            logFonctions.log(string.format("COMMANDES_ECRAN: touche %s ignoree (seq 0) !", str(numero)), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("COMMANDES_ECRAN: touche %s ignoree (seq 0) !", str(numero)), LOG_LEVEL_DEBUG, "ecranCave")
             return
         end
         var action = cfg.find("actions", {}).find(str(numero))
         if (type(action) != "instance")
-            logFonctions.log(string.format("COMMANDES_ECRAN_ERREUR: touche %s inconnue (aucune action dans modules.ecranCave.actions) !", str(numero)), LOG_LEVEL_ERREUR)
+            logFonctions.log(string.format("COMMANDES_ECRAN_ERREUR: touche %s inconnue (aucune action dans modules.ecranCave.actions) !", str(numero)), LOG_LEVEL_ERREUR, "ecranCave")
             return
         end
         var cle = esclave + "/" + str(numero)
         var vu = self.derniere.find(cle)
         var maintenant = tasmota.millis()
         if (vu != nil && vu[0] == seq && maintenant - vu[1] < self.FENETRE_MS)
-            logFonctions.log(string.format("COMMANDES_ECRAN: touche %s, seq %i deja executee, ignoree !", str(numero), seq), LOG_LEVEL_DEBUG)
+            logFonctions.log(string.format("COMMANDES_ECRAN: touche %s, seq %i deja executee, ignoree !", str(numero), seq), LOG_LEVEL_DEBUG, "ecranCave")
             return
         end
         self.derniere[cle] = [seq, maintenant]
@@ -49,15 +49,15 @@ class COMMANDES_ECRAN
         try
             if (action.find("redemarre", "OFF") == "ON")
                 if (voulu == "ON")
-                    logFonctions.log("COMMANDES_ECRAN: redemarrage du serveur demande par l'ecran !", LOG_LEVEL_DEBUG)
+                    logFonctions.log("COMMANDES_ECRAN: redemarrage du serveur demande par l'ecran !", LOG_LEVEL_DEBUG, "ecranCave")
                     tasmota.cmd("Restart 1")
                 end
             else
-                logFonctions.log(string.format("COMMANDES_ECRAN: touche %s -> %s relai %s = %s !", str(numero), action["module"], str(action["relai"]), voulu), LOG_LEVEL_DEBUG)
+                logFonctions.log(string.format("COMMANDES_ECRAN: touche %s -> %s relai %s = %s !", str(numero), action["module"], str(action["relai"]), voulu), LOG_LEVEL_DEBUG, "ecranCave")
                 globalFonctions.modifEtatRelai(action["module"], action["relai"], voulu, voulu, action.find("manuel", "OFF") == "ON", true, 0)
             end
         except .. as e, m
-            logFonctions.log(string.format("COMMANDES_ECRAN_ERREUR: touche %s : %s - %s !", str(numero), str(e), str(m)), LOG_LEVEL_ERREUR)
+            logFonctions.log(string.format("COMMANDES_ECRAN_ERREUR: touche %s : %s - %s !", str(numero), str(e), str(m)), LOG_LEVEL_ERREUR, "ecranCave")
         end
     end
 end

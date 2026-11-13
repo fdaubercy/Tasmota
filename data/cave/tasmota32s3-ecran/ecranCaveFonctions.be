@@ -8,7 +8,7 @@
 # power1..power5, taux (0 a 1), volume (L). Sources : "cave", "cuve".
 # Touches (A5) : touche(numero) -> "envoye" / "refuse" / "inconnu" (voir plus bas) ; reinitialise() remet seq et relances a zero.
 # Compile en .bec par demarrage.compile(["ecranCaveFonctions"], "modules.ecranCave"), importe par controleEcranCave.be.
-# Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+# Logs : charte du CLAUDE.md (logFonctions.log, cible ecranCave : ReglageLog ecranCave <niveau>).
 var ecranCaveFonctions = module("ecranCaveFonctions")
 
 ecranCaveFonctions.valeurs = {}      # cle -> {"v": valeur, "t": millis, "source": source}
@@ -16,7 +16,7 @@ ecranCaveFonctions.derniere = {}     # source -> millis du dernier message JSON 
 
 def ecranCaveFonctions_log(msg, niveau)
     import logFonctions
-    logFonctions.log(msg, niveau)
+    logFonctions.log(msg, niveau, "ecranCave")
 end
 ecranCaveFonctions.log = ecranCaveFonctions_log
 
