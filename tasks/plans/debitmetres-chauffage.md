@@ -3,7 +3,7 @@ chantier: debitmetres-chauffage
 titre: Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web
 statut: actif
 cree: 2026-11-08
-maj: 2026-11-09
+maj: 2026-11-13
 source: graceful-orbiting-pudding.md
 objectif: Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran
 ---
@@ -128,6 +128,9 @@ sans impulsions.
 - [x] Étude de faisabilité écrite : obstacles chiffrés (broches, temps processeur), avantages et inconvénients, liaisons comparées (ModBus RTU RS485, ModBus UDP, Range Extender, série TTL, MQTT, I2C, ESP-NOW) — preuve : § 7 quinquies de `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md` (2026-11-09)
 - [x] Décisions de l'utilisateur : deux cartes ; écran près de la nourrice ; relevé RS485 (XY-017) + push UDP ; affichage = S3 DevKitC-1 + ILI9488, maître ModBus et Range Extender id 0 ; acquisition = esclave id 1 — preuve : § 2 de `docs/superpowers/specs/2026-11-09-debits-deux-cartes-design.md`, conception approuvée par l'utilisateur le 2026-11-09
 - [ ] Réalisation par le plan `tasks/plans/debits-deux-cartes.md` (lecture groupée, push UDP, carte d'affichage, mise en service) ; à sa clôture, revenir ici : A2 (niveaux, K à réception), A5 (page web de l'acquisition), A6 (essai de charge), A7 (pose et étalonnage)
+
+## A9 — Retour au plan « equilibrage-par-la-carte »
+- [ ] Reprendre `tasks/plans/equilibrage-par-la-carte.md` : son A5 (FS envoyé par la page Build, bouton « Équilibrage » depuis le téléphone, favori vers `/equilibrage`, puissances retrouvées depuis un autre appareil, tas mesuré avant et après)
 
 ## Améliorations restantes
 - [ ] [projet] Carte porteuse PCB pour la nourrice (skill `pcb-tasmota`)
