@@ -412,6 +412,13 @@ quand la page est affichée.
   en mémoire par `data/fs/logFonctions.be` (accord du 2026-11-13, après le commit de la session « Modules ESP32-S3 avec
   ecran » qui y ajoute les cibles `ecranCave` et `ecranDebits`) ; banc Berry sur bouchons (`tasmota.memory`, `Ufs`),
   avec mutants ; `banc_demarrage.py`
+  Conception (choix de Claude, 2026-11-13) : `data/fs/ecranSysteme.be` (module) + `data/fs/controleEcranSysteme.be`
+  (driver, garde `modules.ecranSysteme.activation`, cible de log `ecranSysteme`). Table `ecranSysteme.CHAMPS` = SEULE
+  référence des données (clé, libellé, unité, id du texte, id de la barre ou nil) : la page de l'atelier (étape suivante)
+  la relit dans le `.be`. Écriture par `ecranFonctions.interface.ecris("p<page>b<id>", attribut, valeur)`, commune à
+  HASPmota et au LVGL généré ; page = `modules.ecranSysteme.page` du persist. Mesures toutes les 5 s seulement si la page
+  est affichée ; RAM libre minimale et courbe 1 h (120 points à 30 s) suivies en continu, par `tasmota.memory("heap_free")`
+  (sans map). Boutons : « Lancer le GC », « Redémarrer » (confirmation par second appui dans les 5 s).
 - [ ] Page dans chaque `ecran.json` : barres et arcs (palier 1) avec libellés, icônes du firmware (`clock-outline`, `wifi`,
   `thermometer`…) et PNG pour celles qui manquent (`memory`, `chip`, `harddisk`, `micro-sd` : catalogue A18, import A15) ;
   écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire
