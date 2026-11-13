@@ -688,6 +688,39 @@ Dans le bloc `drivers.voletRoulants` :
 
 Les fichiers de la page ne partent que sur les cartes à volets : liste `volets_pages` de `[berry_commun]` dans `platformio_tasmota_cenv.ini` (`vrReglage.be`, `vrPages.be`, `volets.js`, `reglageVolets.html`, `.js`, `.css`), exclue des autres envs. `vrFonctions`, `vrReglage` et `vrPages` sont solidifiés sur les envs à façade : firmware à recompiler par la page Build.
 
+### Décor, fins de course et caméra : les clés du persist (2026-11-13)
+
+Plan `tasks/plans/facade-garage-capteurs.md`. Toutes ces clés sont facultatives : sans elles, le dessin reste celui d'avant.
+
+| Clé | Où | Rôle |
+|---|---|---|
+| `facade.decor` | bloc du driver | Liste. Garage (toit `unPan`) : `chevrefeuille`, `porte`, `pergola`. Rez-de-chaussée : `maison` (toit, briques, porte d'entrée, boîte aux lettres... ; `toit` est alors ignoré). |
+| `facade.camera` | bloc du driver | `{"module": "<module>", "id": <id du relais>}` : caméra dessinée sur la maison, avec son voyant. Le relais doit être actif dans son module. |
+| `facade.finsDeCourse` | bloc `facade` d'un VR de type `garage` | `{"module": "<module>", "ouverture": <id>, "fermeture": <id>}` : ids des deux interrupteurs dans `modules.<module>.environnement.interrupteurs`. |
+| `facade.place` | bloc `facade` de chaque VR | Avec `maison`, l'abscisse vient du type (fenêtre, trappe, porte) ; `place` ne fixe plus que l'ordre. |
+
+Le rythme de lecture n'est pas une clé du persist : c'est le `WebRefresh` de Tasmota.
+
+Réglages actuels : P4 du garage et carte du rideau, `decor: ["chevrefeuille", "porte", "pergola"]` et `finsDeCourse` (ouverture = interrupteur 2, fermeture = interrupteur 1) ; grenier du RDC, `decor: ["maison"]` et `camera: {"module": "autres", "id": 7}` (relais CH7 « Caméra de façade »).
+
+**Fins de course** (P4 et carte du rideau). Deux pastilles sur le rail droit du rideau : ouverture en haut, fermeture en bas. Vert : contact fermé (état `ON`) ; rouge : contact ouvert ; gris : état inconnu ou lecture en échec. Un petit levier bascule avec l'état (fondu de 0,3 s). Une pastille clignote si la position du rideau la contredit plus de 6 s.
+- Sur le P4, l'état vient des interrupteurs virtuels tenus à jour par ModBus (`modules.garage`), lus par `GET /volets?f=capteurs`. Le P4 ne sait pas si la carte du rideau est muette : la pastille garde le dernier état reçu.
+- Sur la carte du rideau, il est lu sur la broche de l'interrupteur (`modules.rideau`, SwitchMode 1 ou 2), sinon dans sa clé `etat`, et arrive dans la réponse de `/rideau?f=position`.
+- Changer de capteur : mettre dans `ouverture` ou `fermeture` l'`id` de l'interrupteur (pas son nom). Pastilles inversées (rideau fermé et pastille du haut verte) : échanger les deux ids.
+
+**Caméra de façade** (grenier du RDC). Voyant vert avec halo si le relais est allumé, gris sinon, relu au rythme du rafraîchissement. Un clic sur la caméra demande confirmation puis l'allume ou l'éteint (`POST /volets`, `action=camera`, réservé à un client autorisé par `webserver.check_privileged_access`).
+- Le relais d'`id` N est le `Power<N>` de Tasmota. Sur le grenier du RDC, le relais doit aussi être déclaré dans `tca9554.dat` : `230` (Relay7) en 7e position.
+- Changer de relais : modifier `facade.camera.id` (et `module`), activer ce relais dans son module, et le déclarer dans `tca9554.dat` s'il passe par l'expandeur.
+- Avec `"afficheWeb": "ON"` sur le relais, l'accueil garde aussi le bouton natif de Tasmota.
+
+**Trappe du RDC**. Pas de fins de course : un rapporteur à droite de la trappe montre l'angle mesuré par le MPU6050 (0° fermée, 90° verticale), lu dans la ligne d'inclinaison de l'accueil. Tant que `capteursPosition.inclinaison.activation` vaut `"OFF"`, il affiche « ?° ».
+
+**Que faut-il renvoyer ?**
+- Une clé du persist ou `tca9554.dat` : envoyer le FS de la carte (onglet « Fichiers » de la page Build), puis redémarrer.
+- `volets.js` seul : envoyer le FS, sans recompiler.
+- `vrPages.be` ou `controleRideau.be` : solidifiés, firmware à recompiler par la page Build (P4 du garage, grenier du RDC, grenier du 2e étage, carte du rideau).
+- L'ordre ne casse rien : un ancien firmware ignore les nouvelles clés, un ancien `volets.js` ignore celles qu'il ne connaît pas.
+
 ### Régler les durées pas à pas
 
 Page « Configuration » -> bouton **Réglage des volets** (`/volets`, `data/fs/vrReglage.be` et `vrPages.be::route`). Les explications sont aussi sur la page.

@@ -38,6 +38,7 @@ class TasmotaStub
     var refresh, pilotes, commandes
     var cmds, timers, regles, directions, horloge, surCmd, doublons, capteurs, lectures, positions
     var modele, inv, interne, bouge
+    var power                       # etats des relais (get_power / set_power), camera de facade (groupe 17c)
     def init() self.refresh = 1500 self.pilotes = [] self.commandes = [] self.cmds = [] self.timers = [] self.regles = {} self.directions = {} self.horloge = 0 self.doublons = 0 self.lectures = 0 self.positions = 0
                self.modele = true self.inv = {} self.interne = {} self.bouge = 0 end
     def millis(d) return self.horloge + (d == nil ? 0 : d) end
@@ -77,6 +78,8 @@ class TasmotaStub
         for id: self.directions.keys()    j["Shutter" + str(id)] = {"Position": 0, "Direction": self.directions[id], "Target": 0, "Tilt": 0}    end
         return json.dump(j)
     end
+    def get_power() return self.power end
+    def set_power(i, v) self.power[i] = v end
     # Le vrai set_timer AJOUTE sans dedoublonner (tasmota_class.be) : un doublon d'id est compte
     def set_timer(d, f, id)
         for t: self.timers    if t[0] == id    self.doublons += 1    end    end
@@ -105,6 +108,7 @@ var vr3 = {"activation": "ON", "nom": "Trappe", "id": 3, "inverse": 0, "relais1"
            "boutons": {"bouton1": bp(5, "toggle")}}
 var voletsMoteur = {"activation": "ON", "mode": 1, "environnement": {"VRs": {"VR1": vr1, "VR2": vr2, "VR3": vr3}}}
 var drivers = {"voletRoulants": voletsMoteur}
+var modules = {}                      # persist.modules : interrupteurs du maitre lus par vrPages.finsDeCourse (groupe 17b)
 var persist = {}
 var serveur = {"mqtt": {"topic": "grenier"}}
 
@@ -758,6 +762,110 @@ tasmota.horloge = T + 40000
 vrReglage.debut(1)
 verifie(pilote.button_pressed("", idx(2, 0, 1)) && !pilote.button_pressed("", idx(4, 0, 1)), "button_pressed : bouton du volet en reglage vrai, autre volet faux")
 vrReglage.annule("annule")
+# Facade du garage (2026-11-13, plan facade-garage-capteurs A1) : decor et fins de course (etat des interrupteurs du maitre)
+print("17b. Facade du garage : decor, finsDeCourse, GET /volets?f=capteurs")
+var sw = def (id, nom, etat) return {"activation": "ON", "nom": nom, "id": id, "etat": etat} end
+modules = {"garage": {"environnement": {"interrupteurs": {"interrupteur1": sw(1, "Capteur Fermeture Rideau Garage", "ON"),
+                                                               "interrupteur2": sw(2, "Capteur Ouverture Rideau Garage", "OFF")}}}}
+webserver.privilegie = true
+var nbErr2 = erreurs()
+f = vrPages.facade()
+verifie(f.find("decor") == nil && f["ouvertures"][2].find("finsDeCourse") == nil, "sans decor ni finsDeCourse : cles nil (facade des greniers inchangee)")
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(webserver.code == 200 && size(json.load(webserver.texte())) == 0, "?f=capteurs sans finsDeCourse : {}")
+voletsMoteur["facade"]["decor"] = ["chevrefeuille", "porte", "pergola"]
+vr1["facade"]["finsDeCourse"] = {"module": "garage", "ouverture": 2, "fermeture": 1}
+f = vrPages.facade()
+verifie(f.find("decor") == ["chevrefeuille", "porte", "pergola"], "facade : decor lu dans drivers.voletRoulants.facade.decor")
+verifie(f["ouvertures"][2]["id"] == 1 && f["ouvertures"][2]["finsDeCourse"]["ouverture"] == "Capteur Ouverture Rideau Garage" && f["ouvertures"][2]["finsDeCourse"]["fermeture"] == "Capteur Fermeture Rideau Garage", "facade : finsDeCourse porte les NOMS des interrupteurs (id 2 = ouverture, id 1 = fermeture)")
+verifie(f["ouvertures"][0].find("finsDeCourse") == nil && f["ouvertures"][1].find("finsDeCourse") == nil, "facade : les autres volets sans finsDeCourse")
+vr1["facade"]["finsDeCourse"]["ouverture"] = 9
+verifie(vrPages.facade()["ouvertures"][2]["finsDeCourse"]["ouverture"] == nil, "facade : interrupteur introuvable -> nom nil (la page met un nom par defaut)")
+vr1["facade"]["finsDeCourse"]["ouverture"] = 2
+tasmota.cmds = []
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+var c = json.load(webserver.texte())
+verifie(webserver.code == 200 && webserver.mime == "application/json" && webserver.ferme && size(c) == 1 && c["1"]["ouverture"] == "OFF" && c["1"]["fermeture"] == "ON" && size(c["1"]) == 2, "?f=capteurs : {id du VR: {ouverture: OFF, fermeture: ON}} lu dans etat des interrupteurs")
+verifie(tasmota.cmds.find("WebRefresh") == nil, "?f=capteurs : facade non construite (aucun WebRefresh)")
+modules["garage"]["environnement"]["interrupteurs"]["interrupteur2"]["etat"] = "ON"
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(json.load(webserver.texte())["1"]["ouverture"] == "ON", "?f=capteurs suit l'etat : ouverture passee a ON")
+modules["garage"]["environnement"]["interrupteurs"]["interrupteur2"].remove("etat")
+modules["garage"]["environnement"]["interrupteurs"]["interrupteur1"]["etat"] = "n'importe quoi"
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(size(json.load(webserver.texte())["1"]) == 0, "?f=capteurs : etat absent ou inconnu -> cle absente (inconnu, pastille grise)")
+var modOrig = modules["garage"]
+modules.remove("garage")
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(webserver.code == 200 && size(json.load(webserver.texte())["1"]) == 0, "?f=capteurs : module absent -> {} pour le volet, pas d'exception")
+modules["garage"] = modOrig
+webserver.privilegie = false
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(webserver.code == nil && size(webserver.envoye) == 0, "?f=capteurs : acces refuse, rien envoye")
+webserver.privilegie = true
+voletsMoteur["facade"]["activation"] = "OFF"
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(webserver.code == 404 && webserver.ferme, "?f=capteurs : facade inactive -> 404")
+voletsMoteur["facade"]["activation"] = "ON"
+verifie(erreurs() == nbErr2, "?f=capteurs : aucune erreur loguee (acces refuse, 404 et module absent compris)")
+# Camera de facade du RDC (2026-11-13) : relais declare par facade.camera, etat par get_power, commande par POST action=camera
+print("17c. Camera de facade : facade().camera, etat dans ?f=capteurs, POST action=camera")
+var nbErr3 = erreurs()
+modules["autres"] = {"activation": "ON", "environnement": {"relais": {"relai1": {"activation": "OFF", "nom": "Caméra de façade", "id": 7}}}}
+voletsMoteur["facade"]["camera"] = {"module": "autres", "id": 7}
+tasmota.power = [false, false, false, false, false, false, true]
+verifie(vrPages.facade().find("camera") == nil, "camera : relais inactif -> camera nil (aucun voyant)")
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(json.load(webserver.texte()).find("camera") == nil, "?f=capteurs : relais inactif -> pas de cle camera")
+modules["autres"]["environnement"]["relais"]["relai1"]["activation"] = "ON"
+f = vrPages.facade()
+verifie(f["camera"] != nil && f["camera"]["id"] == 7 && f["camera"]["nom"] == "Caméra de façade", "facade : camera {nom, id} du relais d'id 7")
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(json.load(webserver.texte())["camera"] == "ON", "?f=capteurs : camera ON (bit 6 de get_power)")
+tasmota.power[6] = false
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(json.load(webserver.texte())["camera"] == "OFF", "?f=capteurs : camera OFF")
+tasmota.power = [false]
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(json.load(webserver.texte()).find("camera") == nil, "?f=capteurs : Power7 absent de get_power -> etat inconnu, pas de cle")
+webserver.raz({"action": "camera", "etat": "ON"})
+vrPages.ordre()
+verifie(webserver.code == 400 && !json.load(webserver.texte())["ok"] && tasmota.power == [false], "POST camera, Power7 absent de get_power : 400, rien commande")
+tasmota.power = [false, false, false, false, false, false, false]
+webserver.raz({"action": "camera", "etat": "ON"})
+vrPages.ordre()
+var rc = json.load(webserver.texte())
+verifie(webserver.code == 200 && rc["ok"] && tasmota.power[6] == true && rc["message"] == "Caméra de façade allumée", "POST camera ON : set_power(6, true), 200")
+webserver.raz({"action": "camera", "etat": "OFF"})
+vrPages.ordre()
+verifie(webserver.code == 200 && tasmota.power[6] == false, "POST camera OFF : set_power(6, false)")
+webserver.raz({"action": "camera", "etat": "peut-etre"})
+vrPages.ordre()
+verifie(webserver.code == 400 && !json.load(webserver.texte())["ok"] && tasmota.power[6] == false, "POST camera, etat invalide : 400, rien commande")
+webserver.privilegie = false
+webserver.raz({"action": "camera", "etat": "ON"})
+vrPages.ordre()
+verifie(webserver.code == nil && tasmota.power[6] == false, "POST camera : acces refuse, rien commande")
+webserver.privilegie = true
+voletsMoteur["facade"].remove("camera")
+webserver.raz({"action": "camera", "etat": "ON"})
+vrPages.ordre()
+verifie(webserver.code == 400 && tasmota.power[6] == false, "POST camera sans camera declaree : 400, rien commande")
+verifie(erreurs() == nbErr3 + 3, "camera : les trois refus (Power absent, etat invalide, camera absente) logues en erreur")
+modules.remove("autres")
+voletsMoteur["facade"].remove("decor")
+vr1["facade"].remove("finsDeCourse")
 for v: [vr1, vr2, vr3]    v.remove("facade")    end
 vr3.remove("capteursPosition")
 voletsMoteur.remove("facade")

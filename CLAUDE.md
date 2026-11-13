@@ -143,8 +143,11 @@ second module solidifie ajouterait une entree de `custom_berry_solidify` et de l
 `data/fs/vrFonctions.be` fait **906 lignes**, et c'est **voulu** (decide le 2026-11-12 : exception plutot qu'un
 decoupage). Fonctions des volets roulants (sens physique, boutons, inclinaison MPU6050, facade, garde du reglage),
 appelees par `controleVoletRoulants.be` et `vrReglage.be` (plan `tasks/plans/visuel-reglage-volets.md`).
-Meme decision, meme jour, pour leurs bancs : `outils_docs/scripts_python/berry/banc_reglage_volets.be` (**767 lignes**)
-et `banc_inclinaison.be` (**729 lignes**) ; un banc par module, chaque groupe lisible seul.
+Meme decision, meme jour, pour leurs bancs : `outils_docs/scripts_python/berry/banc_reglage_volets.be` (**875 lignes**,
++108 le 2026-11-13 : fins de course et camera de la facade) et `banc_inclinaison.be` (**729 lignes**) ; un banc par module,
+chaque groupe lisible seul. Meme decision le 2026-11-13 (plan `tasks/plans/facade-garage-capteurs.md`) pour
+`data/sd/js/volets.js` (**564 lignes** : decors garage et maison, fins de course, rapporteur de la trappe, camera ; le couper
+ajouterait un fichier a `volets_pages` du cenv) et sa sonde `outils_pc/test_volets_chrome.py` (**581 lignes**).
 
 `outils_docs/scripts_python/outils_pc/build_page.py` fait **1226 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la

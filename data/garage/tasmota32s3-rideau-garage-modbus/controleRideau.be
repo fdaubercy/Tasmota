@@ -16,6 +16,7 @@ class CONTROLE_RIDEAU : Driver
     var maitreMuet      # Facade : dernier etat du maitre (nil inconnu, true muet), pour ne loguer qu'au changement
     var essaiMaitre     # Facade : tasmota.millis() de la derniere requete au maitre (muet : une requete toutes les 10 s)
     var routePosee      # Facade : route /rideau deja declaree (init puis FUNC_WEB_ADD_HANDLER)
+    var gpioEnPanne     # Facade : derniere lecture materielle d'un fin de course en echec, pour ne loguer qu'au changement
 
     # Squelette (2026-10-12) : la porte est pilotee par le driver voletRoulants DU MAITRE P4 ; celui de cette carte ne
     # tourne pas (vrFonctions et controleVoletRoulants exclus de son FS), son bloc du persist ne sert qu'a la facade.
@@ -27,6 +28,12 @@ class CONTROLE_RIDEAU : Driver
     # l'adresse serveur.rangeExtender.ipMaitre), JAMAIS sans page ouverte. Maitre muet : la position vient des fins de
     # course de CETTE carte (etat des interrupteurs designes par capteursPosition, celui que le maitre recoit par ModBus),
     # 100 ou 0, inconnue entre les deux ; la page grise alors le dessin.
+    #
+    # Fins de course (2026-11-13, plan tasks/plans/facade-garage-capteurs.md) : le bloc facade d'un volet peut porter
+    # "finsDeCourse": {"module": "rideau", "ouverture": <id interrupteur>, "fermeture": <id>} ; window.VOLETS transmet alors
+    # leurs NOMS, et la reponse de /rideau?f=position leur etat ("capteurs": {"ouverture", "fermeture"}, "ON" = contact
+    # ferme). Etat lu sur la broche (gpio.digital_read, SwitchMode 1 ou 2 seulement), repli sur la cle 'etat' du persist.
+    # "decor" de drivers.voletRoulants.facade est transmis tel quel (dessin de volets.js).
     def init()
         self.flagINIT = 0
 
@@ -69,11 +76,13 @@ class CONTROLE_RIDEAU : Driver
             for vr: fa[1]
                 ouvertures.push({"id": vr.find("id"), "nom": vr.find("nom", "Volet"), "type": vr["facade"].find("type"),
                     "place": vr["facade"].find("place", 0), "inverse": vr.find("inverse", 1), "tempsMontee": vr.find("tempsMontee", 0),
-                    "tempsDescente": vr.find("tempsDescente", 0), "inclinaison": nil, "source": "/rideau?f=position&id=" + str(vr.find("id"))})
+                    "tempsDescente": vr.find("tempsDescente", 0), "inclinaison": nil, "source": "/rideau?f=position&id=" + str(vr.find("id")),
+                    "finsDeCourse": self.nomsFins(vr["facade"].find("finsDeCourse"))})
             end
             var r = tasmota.cmd("WebRefresh", boolMute)
             var ms = (isinstance(r, map) ? r.find("WebRefresh") : nil)
-            var v = {"toit": fa[0].find("toit", "aucun"), "rafraichissement": (type(ms) == "int" && ms > 0 ? ms : 2345), "ouvertures": ouvertures}
+            var v = {"toit": fa[0].find("toit", "aucun"), "rafraichissement": (type(ms) == "int" && ms > 0 ? ms : 2345), "ouvertures": ouvertures,
+                     "decor": fa[0].find("decor")}
             webserver.content_send("<div id='vf'></div><script>window.VOLETS=" + string.replace(json.dump(v), "<", "\\u003c") + ";</script><script>")
             ouvert = true
             gestionFileFolder.readFileByLineAndContentSend("/sd/js/volets.js")
@@ -109,6 +118,8 @@ class CONTROLE_RIDEAU : Driver
         end
         var p = self.positionMaitre(id)
         var rep = (p != nil ? {"ouverture": (vr.find("inverse", 1) == 1 ? 100 - p : p), "muet": false} : {"ouverture": self.positionCapteurs(vr), "muet": true})
+        var fins = vr["facade"].find("finsDeCourse")
+        if (type(fins) == "instance")    rep["capteurs"] = self.etatsFins(fins)    end
         webserver.content_open(200, "application/json")
         webserver.content_send(json.dump(rep))
         webserver.content_close()
@@ -174,6 +185,64 @@ class CONTROLE_RIDEAU : Driver
             if (type(i) == "instance" && i.find("id") == n)    return i.find("etat")    end
         end
         return nil
+    end
+
+    # Interrupteur d'id fins[cle] dans modules[fins.module].environnement.interrupteurs, nil s'il n'existe pas
+    def interrupteurFin(fins, cle)
+        var m = modules.find(fins.find("module", ""))
+        var liste = (type(m) == "instance" ? m.find("environnement", {}).find("interrupteurs") : nil)
+        if (type(liste) != "instance" || fins.find(cle) == nil)    return nil    end
+        for i: liste
+            if (type(i) == "instance" && i.find("id") == fins[cle])    return i    end
+        end
+        return nil
+    end
+
+    # Bloc finsDeCourse -> {"ouverture": nom, "fermeture": nom} (nom nil si l'interrupteur manque), nil sans bloc
+    def nomsFins(fins)
+        if (type(fins) != "instance")    return nil    end
+        var r = {}
+        for cle: ["ouverture", "fermeture"]
+            var i = self.interrupteurFin(fins, cle)
+            r[cle] = (i != nil ? i.find("nom") : nil)
+        end
+        return r
+    end
+
+    # Etat "ON"/"OFF" de chaque fin de course (cle absente = inconnu), sens de la cle 'etat' : "ON" = contact ferme
+    def etatsFins(fins)
+        var r = {}
+        for cle: ["ouverture", "fermeture"]
+            var e = self.etatMateriel(self.interrupteurFin(fins, cle))
+            if (e != nil)    r[cle] = e    end
+        end
+        return r
+    end
+
+    # Etat d'un interrupteur lu sur sa broche, comme Tasmota le calcule (support_switch_v4.ino::SwitchHandler) : SwitchMode 1
+    # (FOLLOW) "ON" = broche haute, SwitchMode 2 (FOLLOW_INV) "ON" = broche basse (pull-up du type 160 : contact ferme a
+    # la masse). Virtuel, sans broche, autre SwitchMode ou lecture en echec : cle 'etat' du persist (regle Switch<id>#Action).
+    def etatMateriel(i)
+        if (i == nil)    return nil    end
+        var e = i.find("etat")
+        e = (e == "ON" || e == "OFF" ? e : nil)
+        var mode = i.find("SwitchMode", 1)
+        var pin = i.find("pin", -1)
+        if (i.find("virtuel", "OFF") != "OFF" || type(pin) != "int" || pin < 0 || (mode != 1 && mode != 2))    return e    end
+        var n = nil
+        try
+            import gpio
+            n = gpio.digital_read(pin)
+        except .. as erreur, message
+            if (!self.gpioEnPanne)          # une ligne par panne, pas une par rafraichissement de la page
+                logFonctions.log("CONTROLE_RIDEAU_ERREUR: Broche " + str(pin) + " illisible (" + str(erreur) + " " + str(message) + "), etat du persist !", LOG_LEVEL_ERREUR, "rideau")
+            end
+            self.gpioEnPanne = true
+            return e
+        end
+        if (type(n) != "int")    return e    end
+        self.gpioEnPanne = false
+        return ((n == 0) == (mode == 2) ? "ON" : "OFF")
     end
 
     def web_sensor()

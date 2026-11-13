@@ -566,8 +566,8 @@
 				"interrupteurs": {},
 				"relais": {
 					"relai1": {
-						"activation": "OFF",
-						"nom": "Relais CH7 (libre)",
+						"activation": "ON",
+						"nom": "Caméra de façade",
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 7,
@@ -1067,7 +1067,9 @@
 			"mode": 1,
 			"facade": {
 				"activation": "ON",
-				"toit": "deuxPans"
+				"toit": "deuxPans",
+				"decor": ["maison"],
+				"camera": {"module": "autres", "id": 7}
 			},
 			"log": "info",
 			"environnement": {

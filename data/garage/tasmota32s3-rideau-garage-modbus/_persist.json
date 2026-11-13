@@ -686,7 +686,8 @@
 			"mode": 3,
 			"facade": {
 				"activation": "ON",
-				"toit": "unPan"
+				"toit": "unPan",
+				"decor": ["chevrefeuille", "porte", "pergola"]
 			},
 			"log": "info",
 			"environnement": {
@@ -695,7 +696,7 @@
 						"activation": "ON",
 						"nom": "Volet Roulant Garage",
 						"id": 1,
-						"facade": {"type": "garage", "place": 1},
+						"facade": {"type": "garage", "place": 1, "finsDeCourse": {"module": "rideau", "ouverture": 2, "fermeture": 1}},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 1,
@@ -727,8 +728,8 @@
                         },
 						"capteursPosition": {
 							"activation": "ON",
-							"capteurOuvert": "Switch1",
-							"capteurFerme": "Switch2",
+							"capteurOuvert": "Switch2",
+							"capteurFerme": "Switch1",
 							"inclinaison": {
 								"activation": "OFF",
 								"adresse": 104,

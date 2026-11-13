@@ -16,6 +16,7 @@ var CARTE = "data/garage/tasmota32s3-rideau-garage-modbus"
 var SOURCES = size(global._argv) > 1 ? global._argv[1] : CARTE
 sys.path().push(SOURCES)
 sys.path().push("outils_docs/scripts_python/berry/bouchons_berry")
+sys.path().push("outils_docs/scripts_python/berry/bouchons_berry/rideau")      # gpio (fins de course lues sur la broche)
 
 var LOG_LEVEL_ERREUR = 1
 var LOG_LEVEL_INFO = 2
@@ -142,12 +143,12 @@ verifie(nbJournal("Position lue chez le maitre", LOG_LEVEL_INFO) == 1, "maitre e
 print("4. Maitre muet : fins de course de la carte")
 journal = []
 MAITRE = [-1, nil]
-interrupteurs("ON", "OFF")
-r = route({"f": "position", "id": "1"})
-verifie(r["ouverture"] == 100 && r["muet"] == true, "Switch1 (capteurOuvert) ON -> 100 %, muet")
-requetes = []
 interrupteurs("OFF", "ON")
-verifie(route({"f": "position", "id": "1"})["ouverture"] == 0, "Switch2 (capteurFerme) ON -> 0 %")
+r = route({"f": "position", "id": "1"})
+verifie(r["ouverture"] == 100 && r["muet"] == true, "Switch2 (capteurOuvert, Capteur Ouverture) ON -> 100 %, muet")
+requetes = []
+interrupteurs("ON", "OFF")
+verifie(route({"f": "position", "id": "1"})["ouverture"] == 0, "Switch1 (capteurFerme, Capteur Fermeture) ON -> 0 %")
 verifie(size(requetes) == 0, "maitre muet depuis moins de 10 s : pas de nouvelle requete")
 interrupteurs("OFF", "OFF")
 MAITRE = ["exception", nil]
@@ -186,6 +187,79 @@ pilote.web_add_main_button()
 tasmota.panne = false
 verifie(size(webserver.envoye) == 0, "rien envoye (" + str(webserver.envoye) + ")")
 verifie(nbJournal("CONTROLE_RIDEAU_ERREUR: Facade", LOG_LEVEL_ERREUR) == 1, "exception loguee en erreur")
+
+print("6b. Fins de course et decor (2026-11-13, plan facade-garage-capteurs) : absents du persist -> rien de nouveau")
+var vr1 = drivers["voletRoulants"]["environnement"]["VRs"]["VR1"]
+# le persist du depot les declare : les retirer pour juger le cas « persist d'avant »
+var avaitDecor = drivers["voletRoulants"]["facade"].find("decor") != nil
+drivers["voletRoulants"]["facade"].remove("decor")
+vr1["facade"].remove("finsDeCourse")
+razWeb()
+pilote.web_add_main_button()
+page = webserver.envoye.concat()
+v = json.load(page[string.find(page, "window.VOLETS=") + 14 .. string.find(page, ";</script>") - 1])
+verifie(v.find("decor") == nil && v["ouvertures"][0].find("finsDeCourse") == nil, "sans decor ni finsDeCourse : cles nil (dessin inchange)")
+MAITRE = [200, statut(30)]
+tasmota.ms += 10000
+verifie(route({"f": "position", "id": "1"}).find("capteurs") == nil, "sans finsDeCourse : pas de capteurs dans la reponse")
+
+print("6c. Fins de course declarees : noms dans window.VOLETS, etats lus sur la broche dans la reponse")
+import gpio
+verifie(avaitDecor, "persist du depot : decor declare (plan facade-garage-capteurs)")
+drivers["voletRoulants"]["facade"]["decor"] = ["chevrefeuille", "porte", "pergola"]
+vr1["facade"]["finsDeCourse"] = {"module": "rideau", "ouverture": 2, "fermeture": 1}
+var inters = modules["rideau"]["environnement"]["interrupteurs"]
+var P1 = inters["interrupteur1"]["pin"]
+var P2 = inters["interrupteur2"]["pin"]
+razWeb()
+pilote.web_add_main_button()
+page = webserver.envoye.concat()
+v = json.load(page[string.find(page, "window.VOLETS=") + 14 .. string.find(page, ";</script>") - 1])
+verifie(v["decor"] == ["chevrefeuille", "porte", "pergola"], "window.VOLETS : decor transmis")
+var fdc = v["ouvertures"][0]["finsDeCourse"]
+verifie(fdc != nil && fdc["ouverture"] == inters["interrupteur2"]["nom"] && fdc["fermeture"] == inters["interrupteur1"]["nom"],
+        "window.VOLETS : noms des interrupteurs d'id 2 (ouverture) et 1 (fermeture) : " + str(fdc))
+interrupteurs("OFF", "OFF")
+gpio.niveaux = {P1: 0, P2: 1}
+gpio.lus = []
+MAITRE = [200, statut(100)]
+tasmota.ms += 10000
+r = route({"f": "position", "id": "1"})
+def capt(r) return r.find("capteurs") end
+def egal(c, o, f) return c != nil && c.find("ouverture") == o && c.find("fermeture") == f && size(c) == (o != nil ? 1 : 0) + (f != nil ? 1 : 0) end
+verifie(egal(capt(r), "OFF", "ON"), "SwitchMode 2 : broche basse -> ON, haute -> OFF (" + str(capt(r)) + ")")
+verifie(gpio.lus.find(P1) != nil && gpio.lus.find(P2) != nil, "broches " + str(P1) + " et " + str(P2) + " lues")
+verifie(r["ouverture"] == 0 && r["muet"] == false, "position du maitre toujours la (capteurs en plus)")
+gpio.niveaux = {P1: 1, P2: 0}
+verifie(egal(capt(route({"f": "position", "id": "1"})), "ON", "OFF"), "les etats suivent la broche, pas le persist (etat OFF)")
+inters["interrupteur2"]["SwitchMode"] = 1
+verifie(capt(route({"f": "position", "id": "1"}))["ouverture"] == "OFF", "SwitchMode 1 : broche basse -> OFF")
+inters["interrupteur2"]["SwitchMode"] = 3
+interrupteurs("OFF", "ON")
+verifie(capt(route({"f": "position", "id": "1"}))["ouverture"] == "ON", "SwitchMode 3 : etat du persist")
+inters["interrupteur2"]["SwitchMode"] = 2
+inters["interrupteur2"]["virtuel"] = "ON"
+verifie(capt(route({"f": "position", "id": "1"}))["ouverture"] == "ON", "interrupteur virtuel : etat du persist")
+inters["interrupteur2"]["virtuel"] = "OFF"
+gpio.niveaux = {}
+verifie(egal(capt(route({"f": "position", "id": "1"})), "ON", "OFF"), "digital_read rend nil : etat du persist")
+journal = []
+gpio.panne = true
+r = route({"f": "position", "id": "1"})
+route({"f": "position", "id": "1"})
+gpio.panne = false
+verifie(egal(capt(r), "ON", "OFF"), "lecture de la broche en echec : repli sur l'etat du persist (" + str(capt(r)) + ")")
+verifie(nbJournal("illisible (io_error", LOG_LEVEL_ERREUR) == 1, "panne de lecture : UNE ligne erreur pour plusieurs requetes")
+inters["interrupteur2"]["etat"] = "n'importe quoi"
+inters["interrupteur2"]["virtuel"] = "ON"
+verifie(egal(capt(route({"f": "position", "id": "1"})), nil, "OFF"), "etat inconnu : cle absente (pastille grise)")
+inters["interrupteur2"]["virtuel"] = "OFF"
+vr1["facade"]["finsDeCourse"]["ouverture"] = 9
+verifie(capt(route({"f": "position", "id": "1"})).find("ouverture") == nil, "interrupteur introuvable : cle absente")
+vr1["facade"]["finsDeCourse"]["module"] = "absent"
+verifie(size(capt(route({"f": "position", "id": "1"}))) == 0, "module absent : capteurs vides, pas d'exception")
+drivers["voletRoulants"]["facade"].remove("decor")
+vr1["facade"].remove("finsDeCourse")
 
 print("7. Facade inactive")
 drivers["voletRoulants"]["facade"]["activation"] = "OFF"

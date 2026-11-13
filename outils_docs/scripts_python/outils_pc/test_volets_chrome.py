@@ -20,6 +20,11 @@ inverse » et « bloqué », texte en --c_txtwrn, angle a virgule du firmware fr
 Rideau du garage (2026-11-12, controleRideau.be) : aucun curseur, position lue a 'source' (reponse JSON de la sonde) : dessin
 laisse a la place de #vf, position suivie, maitre muet grise, position inconnue « ? », reponse illisible = muet, requetes
 jamais simultanees (reponse lente). Temoin : volets.js d'avant le mode source -> scenario rideau rouge.
+Facade du garage (2026-11-13, plan facade-garage-capteurs) : scenario « p4 » (decor, pastilles des fins de course lues a
+/volets?f=capteurs : couleurs, titres, fondu, gris si la route echoue, clignotement d'incoherence au bout de 6 s) et « rideauc »
+(carte du rideau : etats dans la reponse de la source, aucune requete a /volets?f=capteurs).
+Maison du RDC (2026-11-13) : scenario « maison » (decor 'maison', rapporteur de la trappe suivant la balise data-vi, voyant de la
+camera lu a /volets?f=capteurs, clic confirme -> POST /volets action=camera, clic refuse -> rien, gris si la route echoue).
 """
 
 import argparse
@@ -60,6 +65,14 @@ PAGES = {
 RIDEAU = {"toit": "unPan", "rafraichissement": 300, "ouvertures": [
     {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3,
      "inclinaison": None, "source": "/rideau?f=position&id=1"}]}
+FINS = {"module": "garage", "ouverture": "Capteur Ouverture Rideau Garage", "fermeture": "Capteur Fermeture Rideau Garage"}
+PAGES["p4"] = ({"toit": "unPan", "rafraichissement": R, "decor": ["chevrefeuille", "porte", "pergola"], "ouvertures": [
+    {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3,
+     "inclinaison": None, "finsDeCourse": {"ouverture": FINS["ouverture"], "fermeture": FINS["fermeture"]}}]}, {1: 30})
+PAGES["maison"] = (dict(PAGES["rdc"][0], decor=["maison"], camera={"nom": "Caméra de façade", "id": 7}), {1: 30, 2: 40, 3: 0})
+RIDEAU_C = {"toit": "unPan", "rafraichissement": 300, "decor": ["chevrefeuille", "porte", "pergola"], "ouvertures": [
+    {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3,
+     "inclinaison": None, "source": "/rideau?f=position&id=1", "finsDeCourse": {"ouverture": "Capteur Ouverture", "fermeture": "Capteur Fermeture"}}]}
 TETE = ("<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'/>"
         "<title>Accueil</title><style>:root{--c_bg:#252525;--c_txt:#eaeaea;--c_txtwrn:#ff5661;--c_ttl:#eaeaea;--c_btn:#1fa3ec;--c_btntxt:#faffff}"
         "div,input{padding:5px;font-size:1em;}body{text-align:center;font-family:verdana,sans-serif;background:var(--c_bg);}"
@@ -81,8 +94,8 @@ def verifie(obtenu, attendu, libelle):
 
 def page(nom, js):
     """Accueil imite ; nom 'sans' : ajout des volets present mais aucune table de curseurs (aucun s271)."""
-    facade, valeurs = (RIDEAU, {}) if nom == "rideau" else PAGES["rdc" if nom == "sans" else nom]
-    curseurs = "" if nom in ("sans", "rideau") else ("<table style='width:100%'>" + "".join(
+    facade, valeurs = (RIDEAU, {}) if nom == "rideau" else (RIDEAU_C, {}) if nom == "rideauc" else PAGES["rdc" if nom == "sans" else nom]
+    curseurs = "" if nom in ("sans", "rideau", "rideauc") else ("<table style='width:100%'>" + "".join(
         f"<tr><td style='width:15%'><button>&#9660;</button></td><td style='width:70%'><div style='padding:0px 2px;text-align:center;"
         f"font-size:12px;'><span>Shutter {n}</span><input id='s27{n}' type='range' min='0' max='100' value='{v}' "
         f"onchange='lc(\"u\",{n},value)'></div></td><td style='width:15%'><button>&#9650;</button></td></tr>"
@@ -99,6 +112,9 @@ class Carte(BaseHTTPRequestHandler):
     simultanees = 0
     max_simultanees = 0
     requetes = 0
+    capteurs: dict | None = None                      # reponse de /volets?f=capteurs ; None : 500 en texte
+    posts: list = []                                  # corps des POST /volets recus (camera)
+    req_capteurs = 0
 
     def log_message(self, format, *args):
         pass
@@ -115,13 +131,30 @@ class Carte(BaseHTTPRequestHandler):
         p = Carte.position
         return (500, "panne", "text/plain") if p is None else (200, json.dumps(p), "application/json")
 
+    def do_POST(self):
+        corps = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode("utf-8")
+        args = dict(urllib.parse.parse_qsl(corps))
+        Carte.posts.append(args)
+        if args.get("action") == "camera" and isinstance(Carte.capteurs, dict):
+            Carte.capteurs = dict(Carte.capteurs, camera=args.get("etat"))
+        reponse = json.dumps({"ok": True, "message": "Caméra de façade", "etat": {}}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(reponse)))
+        self.end_headers()
+        self.wfile.write(reponse)
+
     def do_GET(self):
         url = urllib.parse.urlparse(self.path)
         nom, type_ = url.path.strip("/"), "text/html; charset=utf-8"
-        if nom == "rideau" and url.query:
+        if nom in ("rideau", "rideauc") and url.query:
             code, corps, type_ = self.position_rideau()
+        elif nom == "volets" and url.query == "f=capteurs":
+            Carte.req_capteurs += 1
+            code, corps, type_ = ((500, "panne", "text/plain") if Carte.capteurs is None
+                                  else (200, json.dumps(Carte.capteurs), "application/json"))
         else:
-            code, corps = (200, page(nom, Carte.js)) if nom in PAGES or nom in ("sans", "rideau") else (404, "inconnu")
+            code, corps = (200, page(nom, Carte.js)) if nom in PAGES or nom in ("sans", "rideau", "rideauc") else (404, "inconnu")
         corps = corps.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", type_)
@@ -319,6 +352,28 @@ def etat_rideau(m):
     return [o[0], o[1], "maître muet" in o[2], m.cdp.js("document.querySelector(\"#vf svg g[data-id='1']\").style.opacity")]
 
 
+def jusqua(condition, secondes):
+    """Attend une condition (jamais une duree fixe, lecon du 2026-11-13) ; rend son dernier resultat."""
+    fin = time.monotonic() + secondes
+    while time.monotonic() < fin:
+        if condition():
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def releve(m, lecture, fin_cond, secondes):
+    """Releve toutes les valeurs lues jusqu'a fin_cond (ou le delai) : une etape intermediaire n'est jamais manquee."""
+    vus, fin = [], time.monotonic() + secondes
+    while time.monotonic() < fin:
+        v = lecture()
+        vus.append(v)
+        if fin_cond(v):
+            break
+        time.sleep(0.05)
+    return vus
+
+
 def sonde_rideau(m, capture):
     Carte.position, Carte.max_simultanees, Carte.requetes = {"ouverture": 30, "muet": False}, 0, 0
     verifie(bool(m.ouvre("rideau")), True, "rideau : page chargée")
@@ -327,24 +382,23 @@ def sonde_rideau(m, capture):
     verifie(place, ["entre", True], "rideau : aucun curseur : dessin laissé à la place de #vf")
     verifie(etat_rideau(m), ["30", "30 %", False, ""], "rideau : position lue à 'source' (30 %), sans grisé")
     Carte.position = {"ouverture": 90, "muet": False}
-    time.sleep(1.0)
-    milieu = int(ouv(m, 1)[0])
-    verifie(31 <= milieu <= 89, True, f"rideau : poursuite 30 -> 90 ({milieu} % peu après)")
-    time.sleep(2.5)
+    vus = [int(v) for v in releve(m, lambda: ouv(m, 1)[0], lambda v: int(v) >= 90, 8)]
+    verifie(any(31 <= v <= 89 for v in vus), True, f"rideau : poursuite 30 -> 90 (positions vues : {sorted(set(vus))})")
+    jusqua(lambda: etat_rideau(m) == ["90", "90 %", False, ""], 8)
     verifie(etat_rideau(m), ["90", "90 %", False, ""], "rideau : arrivée sur 90 %")
     Carte.position = {"ouverture": 100, "muet": True}
-    time.sleep(1.5)
+    jusqua(lambda: etat_rideau(m) == ["100", "100 %", True, "0.45"], 8)
     verifie(etat_rideau(m), ["100", "100 %", True, "0.45"], "rideau : maître muet, fin de course ouverte : 100 %, grisé, « maître muet »")
     if capture:
         m.cdp.capture(str(Path(capture) / "facade_rideau_muet.png"))
     Carte.position = {"ouverture": None, "muet": True}
-    time.sleep(1.2)
+    jusqua(lambda: etat_rideau(m) == ["", "?", True, "0.45"], 8)
     verifie(etat_rideau(m), ["", "?", True, "0.45"], "rideau : maître muet entre les fins de course : « ? », grisé")
     Carte.position = {"ouverture": 20, "muet": False}
-    time.sleep(3.5)
+    jusqua(lambda: etat_rideau(m) == ["20", "20 %", False, ""], 8)
     verifie(etat_rideau(m), ["20", "20 %", False, ""], "rideau : maître revenu : 20 %, plus de grisé")
     Carte.position = None
-    time.sleep(1.2)
+    jusqua(lambda: etat_rideau(m)[1:] == ["?", True, "0.45"], 8)
     verifie(etat_rideau(m)[1:], ["?", True, "0.45"], "rideau : réponse illisible (500 en texte) : muet, « ? »")
     Carte.position = {"ouverture": 40, "muet": False}
     time.sleep(2.5)
@@ -355,6 +409,157 @@ def sonde_rideau(m, capture):
     time.sleep(1.2)
     verifie([Carte.max_simultanees, Carte.requetes >= 8], [1, True],
             f"rideau : requêtes jamais simultanées malgré une réponse lente ({Carte.requetes} requêtes)")
+
+
+def pastille(m, cle):
+    """[remplissage calcule du boitier, titre, transition du boitier, opacite du groupe] de la pastille cle."""
+    return m.cdp.js(f"""(() => {{ const g = document.querySelector("#vf [data-capteur='{cle}']"); if (!g) return null;
+      const b = g.querySelector('rect'); return [getComputedStyle(b).fill, g.querySelector('title').textContent,
+      b.style.transition, g.style.opacity]; }})()""")
+
+
+def opacites(m, cle, secondes):
+    """Valeurs distinctes de l'opacite de la pastille cle, relevees toutes les 50 ms pendant 'secondes' (dans la page)."""
+    return sorted(m.cdp.js("new Promise(r => { const g = document.querySelector(\"#vf [data-capteur='" + cle + "']\"); const s = new Set();"
+                           " const n = setInterval(() => s.add(g.style.opacity), 50);"
+                           f" setTimeout(() => {{ clearInterval(n); r([...s]); }}, {int(secondes * 1000)}); }})"))
+
+
+VERT_RGB, ROUGE_RGB, GRIS_RGB = "rgb(60, 176, 74)", "rgb(224, 69, 58)", "rgb(138, 143, 148)"
+
+
+def vrai(v):
+    """Resultat d'attend() : True seulement si l'expression a rendu true (une exception JS rend un dict, vrai pour bool())."""
+    return v is True
+
+
+def couleurs(fo, ff):
+    """Expression JS : les deux pastilles ont fini leur fondu sur les couleurs fo (ouverture) et ff (fermeture)."""
+    return ("(() => { const c = k => { const b = document.querySelector(\"#vf [data-capteur='\" + k + \"'] rect\");"
+            f" return b && getComputedStyle(b).fill; }}; return c('ouverture') === '{fo}' && c('fermeture') === '{ff}'; }})()")
+
+
+def debut_clignotement(m, cle, delai_ms):
+    """Ms entre l'appel et la premiere opacite 0.25 de la pastille cle (mesure dans la page, toutes les 20 ms) ; None sinon."""
+    return m.cdp.js("new Promise(r => { const g = document.querySelector(\"#vf [data-capteur='" + cle + "']\"), t0 = performance.now();"
+                    " const n = setInterval(() => { const dt = performance.now() - t0;"
+                    " if (g.style.opacity === '0.25') { clearInterval(n); r(Math.round(dt)); }"
+                    f" else if (dt > {delai_ms}) {{ clearInterval(n); r(null); }} }}, 20); }})")
+
+
+def sonde_p4(m, capture):
+    Carte.capteurs, Carte.req_capteurs = {"1": {"ouverture": "OFF", "fermeture": "ON"}}, 0
+    verifie(bool(m.ouvre("p4")), True, "p4 : page chargée")
+    verifie(vrai(attend(m.cdp, couleurs(ROUGE_RGB, VERT_RGB), 6)), True, "p4 : pastilles lues (ouverture OFF rouge, fermeture ON verte)")
+    verifie(m.cdp.js("[...document.querySelectorAll('#vf [data-decor]')].map(g => g.getAttribute('data-decor'))"),
+            ["chevrefeuille", "porte", "pergola"], "p4 : décor posé : chevrefeuille, porte, pergola")
+    verifie(m.cdp.js("document.querySelector('#vf svg').getAttribute('viewBox')"), "0 0 420 200", "p4 : dessin élargi pour le décor")
+    o, f = pastille(m, "ouverture"), pastille(m, "fermeture")
+    verifie([o[1], f[1]], [FINS["ouverture"] + " : contact ouvert", FINS["fermeture"] + " : contact fermé"],
+            "p4 : titres « nom : contact ouvert|fermé »")
+    verifie("fill" in o[2] and "0.3s" in o[2], True, "p4 : fondu CSS du remplissage (fill 0.3s)")
+    verifie(m.cdp.js("(() => { const a = document.querySelector(\"#vf [data-capteur='ouverture'] rect\").getBoundingClientRect(),"
+                     " b = document.querySelector(\"#vf [data-capteur='fermeture'] rect\").getBoundingClientRect(),"
+                     " r = document.querySelector(\"#vf g[data-id='1'] rect\").getBoundingClientRect(); return [a.top < b.top, a.left > r.right - 1]; })()"),
+            [True, True], "p4 : ouverture en haut, fermeture en bas, sur le rail droit du rideau")
+    verifie(Carte.req_capteurs >= 1, True, "p4 : /volets?f=capteurs lu")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_p4_decor_capteurs.png"))
+    Carte.capteurs = {"1": {"ouverture": "ON", "fermeture": "OFF"}}
+    verifie(vrai(attend(m.cdp, couleurs(VERT_RGB, ROUGE_RGB), 6)), True, "p4 : états inversés : les couleurs suivent")
+    Carte.capteurs = {"1": {"ouverture": "ON"}}
+    verifie(vrai(attend(m.cdp, couleurs(VERT_RGB, GRIS_RGB), 6)) and pastille(m, "fermeture")[1], FINS["fermeture"] + " : contact inconnu",
+            "p4 : état absent de la réponse : pastille grise « contact inconnu »")
+    Carte.capteurs = None
+    verifie(vrai(attend(m.cdp, couleurs(GRIS_RGB, GRIS_RGB), 6)), True, "p4 : la route échoue (500) : les deux pastilles grises")
+    # Incoherence : rideau ouvert a 100 % (curseur 0, inverse 1) sans contact d'ouverture : clignote au-dela de 6 s, pas avant
+    Carte.capteurs = {"1": {"ouverture": "OFF", "fermeture": "OFF"}}
+    verifie(vrai(attend(m.cdp, couleurs(ROUGE_RGB, ROUGE_RGB), 6)), True, "p4 : deux contacts ouverts, rideau à mi-course : rouges")
+    pose(m, 1, 0)
+    dt = debut_clignotement(m, "ouverture", 9000)
+    # mesure lancee ~0,2 s apres pose() (aller-retour CDP) : borne basse a 5,5 s
+    verifie(dt is not None and 5500 < dt < 8000, True, f"p4 : ouvert à 100 % sans contact : clignote après plus de 6 s ({dt} ms)")
+    vus = opacites(m, "ouverture", 1.5)
+    verifie([x in vus for x in ("1", "0.25")] + [opacites(m, "fermeture", 0.5)], [True, True, [""]],
+            "p4 : la pastille d'ouverture clignote (opacités 1 et 0.25), pas celle de fermeture")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_p4_incoherence.png"))
+    Carte.capteurs = {"1": {"ouverture": "ON", "fermeture": "OFF"}}
+    verifie(vrai(attend(m.cdp, "document.querySelector(\"#vf [data-capteur='ouverture']\").style.opacity === ''", 6)), True,
+            "p4 : contact d'ouverture revenu : le clignotement s'arrête")
+    verifie(opacites(m, "ouverture", 1.0), [""], "p4 : plus de clignotement ensuite")
+
+
+def sonde_rideau_capteurs(m, capture):
+    Carte.position, Carte.max_simultanees, Carte.requetes = {"ouverture": 100, "muet": False, "capteurs": {"ouverture": "ON", "fermeture": "OFF"}}, 0, 0
+    Carte.capteurs = {"1": {"ouverture": "OFF", "fermeture": "OFF"}}
+    verifie(bool(m.ouvre("rideauc")), True, "rideau + capteurs : page chargée")
+    verifie(vrai(attend(m.cdp, couleurs(VERT_RGB, ROUGE_RGB), 6)), True, "rideau + capteurs : états lus dans la réponse de la source (clé « capteurs »)")
+    Carte.req_capteurs = 0                       # requete du scenario precedent encore en vol a la navigation : ne compte pas
+    verifie([pastille(m, "ouverture")[1], pastille(m, "fermeture")[1]], ["Capteur Ouverture : contact fermé", "Capteur Fermeture : contact ouvert"],
+            "rideau + capteurs : titres")
+    Carte.position = {"ouverture": 0, "muet": False, "capteurs": {"ouverture": "OFF", "fermeture": "ON"}}
+    verifie(vrai(attend(m.cdp, couleurs(ROUGE_RGB, VERT_RGB), 6)), True, "rideau + capteurs : rideau fermé, les pastilles suivent")
+    verifie(Carte.req_capteurs, 0, "rideau + capteurs : aucune requête à /volets?f=capteurs (une seule requête par rafraîchissement)")
+    Carte.position = {"ouverture": 50, "muet": True}
+    verifie(vrai(attend(m.cdp, couleurs(GRIS_RGB, GRIS_RGB), 6)), True, "rideau + capteurs : source muette sans capteurs : gris")
+    Carte.position = {"ouverture": 100, "muet": False, "capteurs": {"ouverture": "OFF", "fermeture": "OFF"}}
+    verifie(vrai(attend(m.cdp, couleurs(ROUGE_RGB, ROUGE_RGB), 6)), True, "rideau + capteurs : deux contacts ouverts lus")
+    dt = debut_clignotement(m, "ouverture", 10000)
+    verifie(dt is not None, True, f"rideau + capteurs : ouvert à 100 % sans contact d'ouverture : clignote ({dt} ms)")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_rideau_capteurs.png"))
+
+
+def voyant(m):
+    """[remplissage calcule du voyant de la camera, halo affiche, titre]."""
+    return m.cdp.js("(() => { const g = document.querySelector('#vf [data-camera]'); if (!g) return null; const c = g.querySelectorAll('circle');"
+                    " return [getComputedStyle(c[2]).fill, getComputedStyle(c[1]).display !== 'none', g.querySelector('title').textContent]; })()")
+
+
+def attend_post(n, delai):
+    limite = time.monotonic() + delai
+    while time.monotonic() < limite and len(Carte.posts) < n:
+        time.sleep(0.05)
+    return len(Carte.posts)
+
+
+GRIS_CAMERA = "rgb(119, 119, 119)"
+
+
+def sonde_maison(m, capture):
+    Carte.capteurs, Carte.posts = {"camera": "OFF"}, []
+    verifie(bool(m.ouvre("maison")), True, "maison : page chargée")
+    verifie(vrai(attend(m.cdp, "!!(document.querySelector('#vf [data-decor=maison]') && document.querySelector('#vf [data-camera]'))", 5)), True,
+            "maison : toit de la maison et caméra dessinés")
+    verifie(m.cdp.js("document.querySelector('#vf svg').getAttribute('viewBox')"), "0 0 400 214", "maison : viewBox 400 x 214")
+    verifie(vrai(attend(m.cdp, "document.querySelector('#vf [data-camera] title').textContent.indexOf('éteinte') > 0", 6)), True, "maison : caméra OFF lue")
+    verifie(voyant(m), [GRIS_CAMERA, False, "Caméra de façade : éteinte (clic pour allumer)"], "maison : caméra éteinte : voyant gris, sans halo")
+    verifie(vrai(attend(m.cdp, "document.querySelector(\"#vf svg g[data-id='2']\").getAttribute('data-ouverture') === '40'", 5)), True,
+            "maison : volet de la cuisine animé comme avant (40 %)")
+    verifie(m.cdp.js("(() => { const t = [...document.querySelectorAll('#vf svg text')].find(x => /°$/.test(x.textContent)); return t && t.textContent; })()"),
+            "?°", "maison : rapporteur sans balise d'angle : « ?° »")
+    balise(m, "47,0", "")
+    verifie(vrai(attend(m.cdp, "[...document.querySelectorAll('#vf svg text')].some(x => x.textContent === '47°')", 5)), True,
+            "maison : rapporteur suit la balise data-vi (47,0 -> 47°)")
+    Carte.capteurs = {"camera": "ON"}
+    verifie(vrai(attend(m.cdp, "document.querySelector('#vf [data-camera] title').textContent.indexOf('allumée') > 0", 6)), True, "maison : caméra ON lue")
+    verifie(vrai(attend(m.cdp, "getComputedStyle(document.querySelectorAll('#vf [data-camera] circle')[2]).fill === '" + VERT_RGB + "'", 3)), True,
+            "maison : caméra allumée : voyant vert")
+    verifie(voyant(m), [VERT_RGB, True, "Caméra de façade : allumée (clic pour éteindre)"], "maison : halo affiché, titre « clic pour éteindre »")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_maison_camera.png"))
+    m.cdp.js("window.confirm = () => false; document.querySelector('#vf [data-camera]').dispatchEvent(new MouseEvent('click', {bubbles: true})); 1")
+    verifie(attend_post(1, 1.5), 0, "maison : clic refusé à la confirmation : aucun POST")
+    m.cdp.js("window.confirm = q => (window.question = q, true); document.querySelector('#vf [data-camera]').dispatchEvent(new MouseEvent('click', {bubbles: true})); 1")
+    verifie(attend_post(1, 5), 1, "maison : clic confirmé : un POST /volets")
+    verifie([Carte.posts[0] if Carte.posts else None, m.cdp.js("window.question")], [{"action": "camera", "etat": "OFF"}, "Éteindre : Caméra de façade ?"],
+            "maison : caméra allumée -> action=camera, etat=OFF, question « Éteindre »")
+    verifie(vrai(attend(m.cdp, "document.querySelector('#vf [data-camera] title').textContent.indexOf('éteinte') > 0", 6)), True,
+            "maison : état relu après la commande : éteinte")
+    Carte.capteurs = None
+    verifie(vrai(attend(m.cdp, "document.querySelector('#vf [data-camera] title').textContent.indexOf('état inconnu') > 0", 6)), True,
+            "maison : la route échoue : « état inconnu », voyant gris")
 
 
 def principal():
@@ -373,11 +578,14 @@ def principal():
         sonde_garage(m, args.capture)
         sonde_etage2(m, args.capture)
         sonde_rideau(m, args.capture)
+        sonde_p4(m, args.capture)
+        sonde_rideau_capteurs(m, args.capture)
+        sonde_maison(m, args.capture)
         verifie(bool(m.ouvre("sans")), True, "sans curseur : page chargée")
         time.sleep(0.3)
         verifie(m.cdp.js("[document.getElementById('vf').childElementCount, document.querySelectorAll('svg').length,"
                          " typeof window.Volets.demarre]"), [0, 0, "function"], "aucun s271 : rien n'est dessiné")
-        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x and PANNE not in x and not ("rideau?f=position" in x and "500" in x)],
+        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x and PANNE not in x and not (("rideau?f=position" in x or "volets?f=capteurs" in x) and "500" in x)],
                 [], "aucune erreur dans la console (hors le 500 voulu du rideau)")
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")
