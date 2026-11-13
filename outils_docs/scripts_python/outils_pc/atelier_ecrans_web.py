@@ -21,6 +21,8 @@ Routes (les POST exigent l'en-tete X-Atelier-Ecrans: 1 et la meme origine ; corp
                        du catalogue dans data/*/*/ ; rien d'autre (404)
     GET  /images       ?env= : {images: [noms des .png du dossier de la carte]} (objet img, A14)
     GET  /image        ?env=&nom= : octets d'un PNG de cette liste (image/png), 404 pour tout autre nom
+    GET  /icones       {icones: [{nom, mdi, servi}]} : glyphes Material Design du firmware (atelier_ecrans_icones) ;
+                       GET /lib/mdi.ttf = leur police locale (aucun CDN)
     GET  /lib/qr.js    qr-code-styling de la page des etiquettes (QR_LIB), apercu de l'objet qrcode
     POST /importer     {env} -> {description, avertissements, editables, bruts, source} : pages.jsonl de la carte lu comme
                        HASPmota (atelier_ecrans_import) ; rien n'est ecrit (404 sans pages.jsonl, 400 carte sans ecran)
@@ -76,6 +78,7 @@ import atelier_ecrans_navigation as nav
 import atelier_ecrans_systeme as aes
 import atelier_ecrans_description as aed
 import atelier_ecrans_display as adi
+import atelier_ecrans_icones as aic
 import atelier_ecrans_display_fichiers as adf
 import atelier_ecrans_ecran as aecr
 import atelier_ecrans_ecriture as aee
@@ -334,6 +337,10 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
                     self._json({"images": images(racine, env_atelier(racine, un("env")))})
                 elif url.path == "/image":
                     self._envoie(200, image(racine, env_atelier(racine, un("env")), un("nom")), "image/png")
+                elif url.path == "/icones":
+                    self._json(aic.charge(racine))
+                elif url.path == "/lib/mdi.ttf":
+                    self._envoie(200, aic.police(racine), "font/ttf")
                 elif url.path == "/lib/qr.js":
                     lib = Path(racine) / QR_LIB
                     if not lib.is_file():

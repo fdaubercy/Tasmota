@@ -2132,6 +2132,17 @@ carte à écran, puis « Écrire » ; le module Berry ne pose que les valeurs su
 `CHAMPS` hors des groupes connus, un écran trop petit pour la page (changement d'écran refusé avec le motif) ou un objet
 posé à la main sur la page sont refusés par le validateur. Pas d'icônes pour l'instant (A15 et A18 du plan).
 
+### Panneau « Icônes »
+
+Onglet « Icônes » du panneau de droite : la grille des 120 glyphes Material Design embarqués dans le firmware, avec
+recherche par nom. Un clic pose le glyphe en `montserrat-28` dans l'objet choisi (libellé ou bouton), sinon dans un
+nouveau libellé. L'aperçu dessine ces glyphes par la police locale `materialdesignicons-webfont.ttf` (aucun CDN) ; les
+symboles Font Awesome du firmware restent des carrés vides. Sous la grille : le parcours pour une icône absente du
+firmware (PNG blanc sur fond transparent, couleur par `image_recolor`) et les sites de l'annuaire avec leur licence.
+Le catalogue `outils_docs/schemas/icones_firmware.json` vient de `lib/libesp32_lvgl/LVGL_assets/gen.sh` : après une
+synchro du fork, `python outils_docs/scripts_python/outils_pc/genere_icones_firmware.py --verifier` (Python système,
+fontTools) dit s'il est à refaire, sans `--verifier` il le réécrit.
+
 ### Importer un pages.jsonl écrit à la main
 
 Une carte dont le dossier a un `pages.jsonl` montre, sous « + page », le bouton **Importer le pages.jsonl de la carte**.

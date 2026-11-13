@@ -23,6 +23,8 @@ from pathlib import Path
 import acces_web
 import atelier_ecrans_catalogue as cat
 import atelier_ecrans_description as aed
+import atelier_ecrans_icones as aic
+import genere_icones_firmware as gic
 import atelier_ecrans_web as aew
 import fichiers_berry_ini as fbi
 
@@ -50,7 +52,7 @@ def bmp():
 
 
 def copie(racine):
-    for f in (*fbi.FICHIERS_INI, "tasmota/user_config_override.h", cat.CATALOGUE):
+    for f in (*fbi.FICHIERS_INI, "tasmota/user_config_override.h", cat.CATALOGUE, aic.CATALOGUE, aic.TTF, gic.GEN):
         (racine / f).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(DEPOT / f, racine / f)
     shutil.copytree(DEPOT / aed.DOSSIER, racine / aed.DOSSIER)
@@ -306,8 +308,22 @@ def test_images(b):
             "GET /lib/qr.js : bibliotheque des etiquettes, octets du depot")
 
 
+def test_icones(b):
+    statut, r = b.requete("GET", "/icones")
+    paires = sorted((i["mdi"], i["servi"]) for i in r["icones"])
+    attendu = sorted((f"{m:X}", f"{s:X}") for m, s in gic.codes(DEPOT))
+    verifie((statut, paires == attendu, len(attendu) > 100), (200, True, True), "GET /icones : les glyphes de gen.sh, ni plus ni moins")
+    verifie(({i["servi"]: i["nom"] for i in r["icones"]}.get("E335"), {i["servi"]: i["nom"] for i in r["icones"]}.get("E72A")),
+            ("lightbulb", "washing-machine"), "GET /icones : noms lus dans la police (E335, E72A)")
+    statut, _ = b.requete("GET", "/lib/mdi.ttf")
+    verifie((statut, b.entetes.get("Content-Type"), b.brut == (DEPOT / aic.TTF).read_bytes()), (200, "font/ttf", True),
+            "GET /lib/mdi.ttf : police locale, octets du depot")
+    (b.racine / aic.CATALOGUE).unlink()
+    verifie(b.requete("GET", "/icones")[0], 404, "GET /icones : catalogue absent -> 404")
+
+
 TESTS = [test_page, test_cartes, test_catalogue, test_ecriture_routes, test_description, test_apercu, test_acces, test_valeurs, test_capture, test_police,
-         test_images]
+         test_images, test_icones]
 
 
 if __name__ == "__main__":

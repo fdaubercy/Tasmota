@@ -54,8 +54,8 @@ function dessineObjet(o, commun) {
   s.fontFamily = famille(a.text_font); s.fontSize = taillePolice(a.text_font) + 'px';
   if (o.type === 'btn' || o.type === 'obj') s.background = couleur(a.bg_color, o.type === 'btn' ? '#2196F3' : '#FFFFFF');
   else if (a.bg_color) s.background = couleur(a.bg_color, 'transparent');
-  if (o.type === 'label') { s.textAlign = ['left', 'center', 'right'][a.align] || 'left'; d.textContent = a.text === undefined ? '' : String(a.text); }
-  if (o.type === 'btn') { s.display = 'flex'; s.alignItems = 'center'; s.justifyContent = 'center'; d.textContent = a.text === undefined ? '' : String(a.text); }
+  if (o.type === 'label') { s.textAlign = ['left', 'center', 'right'][a.align] || 'left'; posteTexte(d, a.text); }
+  if (o.type === 'btn') { s.display = 'flex'; s.alignItems = 'center'; s.justifyContent = 'center'; posteTexte(d, a.text); }
   if (o.type === 'bar' || o.type === 'slider') {
     if (!a.bg_color) s.background = '#555555';
     var i = el('div', { class: 'indic' });
@@ -245,7 +245,7 @@ function demarre() {
   Array.prototype.forEach.call(document.querySelectorAll('#panneaux button'), function (b) {
     b.onclick = function () {
       Array.prototype.forEach.call(document.querySelectorAll('#panneaux button'), function (x) { x.classList.toggle('actif', x === b); });
-      ['proprietes', 'liaison', 'remarques'].forEach(function (id) { $(id).hidden = b.getAttribute('data-panneau') !== id; });
+      ['proprietes', 'liaison', 'remarques', 'icones'].forEach(function (id) { $(id).hidden = b.getAttribute('data-panneau') !== id; });
     };
   });
   $('zoomMoins').onclick = function () { zoome(1 / 1.25); };

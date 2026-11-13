@@ -998,6 +998,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `logFonctions.be::dernieresErreurs` ; liste `berry_commun.ecran_systeme` du cenv, exclue de tous les envs tant qu'aucun
     autoexec ne la charge (chargee par celui de l'ecran des debits) ; bancs `berry/banc_ecran_systeme.py`, `berry/banc_page_systeme.py` (vrai
     `ecranLvgl.be` genere : chaque ecriture trouve son objet, un appui = un appel), `outils_pc/test_atelier_ecrans_systeme.py`.
+    Panneau « Icones » (A15, 2026-11-13) : `atelier_ecrans_icones.py` (routes `GET /icones`, `/lib/mdi.ttf`), `atelier_ecrans_page_icones.py` (grille,
+    recherche, glyphes dessines par la police MDI locale), catalogue `outils_docs/schemas/icones_firmware.json` genere d'apres `gen.sh` par
+    `outils_pc/genere_icones_firmware.py` (Python systeme, fontTools ; `--verifier` apres une synchro du fork), sonde `test_atelier_ecrans_page_chrome_icones.py`.
     Bancs `test_atelier_ecrans_*.py`, sonde `test_atelier_ecrans_page_chrome.py`, `build/test_cible_atelier_ecrans.py`. Mode d'emploi :
     `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md` ; plan `tasks/plans/atelier-ecrans.md`.
   - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,

@@ -1,0 +1,607 @@
+{
+ "version": 1,
+ "source": "lib/libesp32_lvgl/LVGL_assets/gen.sh",
+ "police": "lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf",
+ "icones": [
+  {
+   "nom": "account",
+   "mdi": "F0004",
+   "servi": "E004"
+  },
+  {
+   "nom": "air-conditioner",
+   "mdi": "F001B",
+   "servi": "E01B"
+  },
+  {
+   "nom": "alert",
+   "mdi": "F0026",
+   "servi": "E026"
+  },
+  {
+   "nom": "arrow-down",
+   "mdi": "F0045",
+   "servi": "E045"
+  },
+  {
+   "nom": "arrow-down-box",
+   "mdi": "F06C0",
+   "servi": "E6C0"
+  },
+  {
+   "nom": "arrow-left",
+   "mdi": "F004D",
+   "servi": "E04D"
+  },
+  {
+   "nom": "arrow-right",
+   "mdi": "F0054",
+   "servi": "E054"
+  },
+  {
+   "nom": "arrow-up",
+   "mdi": "F005D",
+   "servi": "E05D"
+  },
+  {
+   "nom": "arrow-up-box",
+   "mdi": "F06C3",
+   "servi": "E6C3"
+  },
+  {
+   "nom": "battery-high",
+   "mdi": "F12A3",
+   "servi": "F2A3"
+  },
+  {
+   "nom": "battery-low",
+   "mdi": "F12A1",
+   "servi": "F2A1"
+  },
+  {
+   "nom": "battery-medium",
+   "mdi": "F12A2",
+   "servi": "F2A2"
+  },
+  {
+   "nom": "battery-outline",
+   "mdi": "F008E",
+   "servi": "E08E"
+  },
+  {
+   "nom": "bed",
+   "mdi": "F02E3",
+   "servi": "E2E3"
+  },
+  {
+   "nom": "bell",
+   "mdi": "F009A",
+   "servi": "E09A"
+  },
+  {
+   "nom": "blinds",
+   "mdi": "F00AC",
+   "servi": "E0AC"
+  },
+  {
+   "nom": "blinds-open",
+   "mdi": "F1011",
+   "servi": "E011"
+  },
+  {
+   "nom": "bluetooth",
+   "mdi": "F00AF",
+   "servi": "E0AF"
+  },
+  {
+   "nom": "calendar",
+   "mdi": "F00ED",
+   "servi": "E0ED"
+  },
+  {
+   "nom": "car",
+   "mdi": "F010B",
+   "servi": "E10B"
+  },
+  {
+   "nom": "cctv",
+   "mdi": "F07AE",
+   "servi": "E7AE"
+  },
+  {
+   "nom": "ceiling-light",
+   "mdi": "F0769",
+   "servi": "E769"
+  },
+  {
+   "nom": "cellphone",
+   "mdi": "F011C",
+   "servi": "E11C"
+  },
+  {
+   "nom": "check",
+   "mdi": "F012C",
+   "servi": "E12C"
+  },
+  {
+   "nom": "chevron-down",
+   "mdi": "F0140",
+   "servi": "E140"
+  },
+  {
+   "nom": "chevron-left",
+   "mdi": "F0141",
+   "servi": "E141"
+  },
+  {
+   "nom": "chevron-right",
+   "mdi": "F0142",
+   "servi": "E142"
+  },
+  {
+   "nom": "chevron-up",
+   "mdi": "F0143",
+   "servi": "E143"
+  },
+  {
+   "nom": "clock-outline",
+   "mdi": "F0150",
+   "servi": "E150"
+  },
+  {
+   "nom": "close",
+   "mdi": "F0156",
+   "servi": "E156"
+  },
+  {
+   "nom": "coach-lamp",
+   "mdi": "F1020",
+   "servi": "F020"
+  },
+  {
+   "nom": "coffee",
+   "mdi": "F0176",
+   "servi": "E176"
+  },
+  {
+   "nom": "cog",
+   "mdi": "F0493",
+   "servi": "E493"
+  },
+  {
+   "nom": "desk-lamp",
+   "mdi": "F095F",
+   "servi": "E95F"
+  },
+  {
+   "nom": "dishwasher",
+   "mdi": "F0AAC",
+   "servi": "EAAC"
+  },
+  {
+   "nom": "door-closed",
+   "mdi": "F081B",
+   "servi": "E81B"
+  },
+  {
+   "nom": "door-closed-lock",
+   "mdi": "F10AF",
+   "servi": "F0AF"
+  },
+  {
+   "nom": "door-open",
+   "mdi": "F081C",
+   "servi": "E81C"
+  },
+  {
+   "nom": "dots-vertical",
+   "mdi": "F01D9",
+   "servi": "E1D9"
+  },
+  {
+   "nom": "engine",
+   "mdi": "F01FA",
+   "servi": "E1FA"
+  },
+  {
+   "nom": "ev-station",
+   "mdi": "F05F1",
+   "servi": "E5F1"
+  },
+  {
+   "nom": "fan",
+   "mdi": "F0210",
+   "servi": "E210"
+  },
+  {
+   "nom": "fire",
+   "mdi": "F0238",
+   "servi": "E238"
+  },
+  {
+   "nom": "floor-lamp",
+   "mdi": "F08DD",
+   "servi": "E8DD"
+  },
+  {
+   "nom": "fountain",
+   "mdi": "F096B",
+   "servi": "E96B"
+  },
+  {
+   "nom": "fridge-outline",
+   "mdi": "F028F",
+   "servi": "E28F"
+  },
+  {
+   "nom": "garage-open-variant",
+   "mdi": "F12D4",
+   "servi": "F2D4"
+  },
+  {
+   "nom": "garage-variant",
+   "mdi": "F12D3",
+   "servi": "F2D3"
+  },
+  {
+   "nom": "history",
+   "mdi": "F02DA",
+   "servi": "E2DA"
+  },
+  {
+   "nom": "home",
+   "mdi": "F02DC",
+   "servi": "E2DC"
+  },
+  {
+   "nom": "home-outline",
+   "mdi": "F06A1",
+   "servi": "E6A1"
+  },
+  {
+   "nom": "human-greeting-variant",
+   "mdi": "F064A",
+   "servi": "E64A"
+  },
+  {
+   "nom": "kettle",
+   "mdi": "F05FA",
+   "servi": "E5FA"
+  },
+  {
+   "nom": "key-variant",
+   "mdi": "F030B",
+   "servi": "E30B"
+  },
+  {
+   "nom": "lamp",
+   "mdi": "F06B5",
+   "servi": "E6B5"
+  },
+  {
+   "nom": "laptop",
+   "mdi": "F0322",
+   "servi": "E322"
+  },
+  {
+   "nom": "leaf",
+   "mdi": "F032A",
+   "servi": "E32A"
+  },
+  {
+   "nom": "lightbulb",
+   "mdi": "F0335",
+   "servi": "E335"
+  },
+  {
+   "nom": "lightbulb-on",
+   "mdi": "F06E8",
+   "servi": "E6E8"
+  },
+  {
+   "nom": "lightning-bolt",
+   "mdi": "F140B",
+   "servi": "F40B"
+  },
+  {
+   "nom": "lock",
+   "mdi": "F033E",
+   "servi": "E33E"
+  },
+  {
+   "nom": "lock-open-variant",
+   "mdi": "F0FC6",
+   "servi": "EFC6"
+  },
+  {
+   "nom": "microwave",
+   "mdi": "F0C99",
+   "servi": "EC99"
+  },
+  {
+   "nom": "minus",
+   "mdi": "F0374",
+   "servi": "E374"
+  },
+  {
+   "nom": "monitor-speaker",
+   "mdi": "F0F5F",
+   "servi": "EF5F"
+  },
+  {
+   "nom": "music",
+   "mdi": "F075A",
+   "servi": "E75A"
+  },
+  {
+   "nom": "outdoor-lamp",
+   "mdi": "F1054",
+   "servi": "F154"
+  },
+  {
+   "nom": "pause",
+   "mdi": "F03E4",
+   "servi": "E3E4"
+  },
+  {
+   "nom": "play",
+   "mdi": "F040A",
+   "servi": "E40A"
+  },
+  {
+   "nom": "plus",
+   "mdi": "F0415",
+   "servi": "E415"
+  },
+  {
+   "nom": "pool",
+   "mdi": "F0606",
+   "servi": "E606"
+  },
+  {
+   "nom": "power",
+   "mdi": "F0425",
+   "servi": "E425"
+  },
+  {
+   "nom": "power-plug",
+   "mdi": "F06A5",
+   "servi": "E6A5"
+  },
+  {
+   "nom": "radiator",
+   "mdi": "F0438",
+   "servi": "E438"
+  },
+  {
+   "nom": "radiator-disabled",
+   "mdi": "F0AD7",
+   "servi": "EAD7"
+  },
+  {
+   "nom": "repeat",
+   "mdi": "F0456",
+   "servi": "E456"
+  },
+  {
+   "nom": "repeat-off",
+   "mdi": "F0457",
+   "servi": "E457"
+  },
+  {
+   "nom": "repeat-once",
+   "mdi": "F0458",
+   "servi": "E458"
+  },
+  {
+   "nom": "robot-mower-outline",
+   "mdi": "F11F3",
+   "servi": "F1F3"
+  },
+  {
+   "nom": "robot-vacuum",
+   "mdi": "F070D",
+   "servi": "E70D"
+  },
+  {
+   "nom": "run",
+   "mdi": "F070E",
+   "servi": "E70E"
+  },
+  {
+   "nom": "shield-check",
+   "mdi": "F0565",
+   "servi": "E565"
+  },
+  {
+   "nom": "shield-home",
+   "mdi": "F068A",
+   "servi": "E68A"
+  },
+  {
+   "nom": "shield-lock",
+   "mdi": "F099D",
+   "servi": "E99D"
+  },
+  {
+   "nom": "shower",
+   "mdi": "F09A0",
+   "servi": "E9A0"
+  },
+  {
+   "nom": "shuffle",
+   "mdi": "F049D",
+   "servi": "E49D"
+  },
+  {
+   "nom": "shuffle-disabled",
+   "mdi": "F049E",
+   "servi": "E49E"
+  },
+  {
+   "nom": "silverware-fork-knife",
+   "mdi": "F0A70",
+   "servi": "EA70"
+  },
+  {
+   "nom": "skip-next",
+   "mdi": "F04AD",
+   "servi": "E4AD"
+  },
+  {
+   "nom": "skip-previous",
+   "mdi": "F04AE",
+   "servi": "E4AE"
+  },
+  {
+   "nom": "snowflake",
+   "mdi": "F0717",
+   "servi": "E717"
+  },
+  {
+   "nom": "sofa",
+   "mdi": "F04B9",
+   "servi": "E4B9"
+  },
+  {
+   "nom": "speaker",
+   "mdi": "F04C3",
+   "servi": "E4C3"
+  },
+  {
+   "nom": "stop",
+   "mdi": "F04DB",
+   "servi": "E4DB"
+  },
+  {
+   "nom": "stove",
+   "mdi": "F04DE",
+   "servi": "E4DE"
+  },
+  {
+   "nom": "string-lights",
+   "mdi": "F12BA",
+   "servi": "F2BA"
+  },
+  {
+   "nom": "subdirectory-arrow-left",
+   "mdi": "F060C",
+   "servi": "E60C"
+  },
+  {
+   "nom": "television",
+   "mdi": "F0502",
+   "servi": "E502"
+  },
+  {
+   "nom": "thermometer",
+   "mdi": "F050F",
+   "servi": "E50F"
+  },
+  {
+   "nom": "timer-outline",
+   "mdi": "F051B",
+   "servi": "E51B"
+  },
+  {
+   "nom": "toilet",
+   "mdi": "F09AB",
+   "servi": "E9AB"
+  },
+  {
+   "nom": "trash-can-outline",
+   "mdi": "F0A7A",
+   "servi": "EA7A"
+  },
+  {
+   "nom": "tumble-dryer",
+   "mdi": "F0917",
+   "servi": "E917"
+  },
+  {
+   "nom": "vanity-light",
+   "mdi": "F11E1",
+   "servi": "F1E1"
+  },
+  {
+   "nom": "volume-high",
+   "mdi": "F057E",
+   "servi": "E57E"
+  },
+  {
+   "nom": "volume-medium",
+   "mdi": "F0580",
+   "servi": "E580"
+  },
+  {
+   "nom": "volume-mute",
+   "mdi": "F075F",
+   "servi": "E75F"
+  },
+  {
+   "nom": "wall-sconce",
+   "mdi": "F091C",
+   "servi": "E91C"
+  },
+  {
+   "nom": "washing-machine",
+   "mdi": "F072A",
+   "servi": "E72A"
+  },
+  {
+   "nom": "water",
+   "mdi": "F058C",
+   "servi": "E58C"
+  },
+  {
+   "nom": "water-percent",
+   "mdi": "F058E",
+   "servi": "E58E"
+  },
+  {
+   "nom": "water-pump",
+   "mdi": "F058F",
+   "servi": "E58F"
+  },
+  {
+   "nom": "weather-night",
+   "mdi": "F0594",
+   "servi": "E594"
+  },
+  {
+   "nom": "weather-sunny",
+   "mdi": "F0599",
+   "servi": "E599"
+  },
+  {
+   "nom": "white-balance-sunny",
+   "mdi": "F05A8",
+   "servi": "E5A8"
+  },
+  {
+   "nom": "wifi",
+   "mdi": "F05A9",
+   "servi": "E5A9"
+  },
+  {
+   "nom": "window-closed-variant",
+   "mdi": "F11DB",
+   "servi": "F1DB"
+  },
+  {
+   "nom": "window-shutter",
+   "mdi": "F111C",
+   "servi": "F21C"
+  },
+  {
+   "nom": "window-shutter-alert",
+   "mdi": "F111D",
+   "servi": "F21D"
+  },
+  {
+   "nom": "window-shutter-open",
+   "mdi": "F111E",
+   "servi": "F21E"
+  }
+ ]
+}

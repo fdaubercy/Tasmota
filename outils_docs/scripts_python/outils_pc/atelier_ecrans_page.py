@@ -17,6 +17,7 @@ from atelier_ecrans_page_polices import HTML as HTML_POLICES, JS as JS_POLICES
 from atelier_ecrans_page_display import CSS as CSS_DISPLAY, HTML as HTML_DISPLAY, JS as JS_DISPLAY
 from atelier_ecrans_page_import import CSS as CSS_IMPORT, HTML as HTML_IMPORT, JS as JS_IMPORT
 from atelier_ecrans_page_palier2 import CSS as CSS_PALIER2, JS as JS_PALIER2
+from atelier_ecrans_page_icones import CSS as CSS_ICONES, JS as JS_ICONES
 from atelier_ecrans_page_navigation import CSS as CSS_NAV, JS as JS_NAV
 import lieux
 
@@ -151,8 +152,8 @@ HTML = """
   </div>
  </div>
  <div class="carte">
-  <div class="onglets" id="panneaux"><button type="button" data-panneau="proprietes" class="actif">Propriétés</button><button type="button" data-panneau="liaison">Liaison</button><button type="button" data-panneau="remarques" id="ongletRemarques">Remarques</button></div>
-  <div class="panneau" id="proprietes"></div><div class="panneau" id="liaison" hidden></div><div class="panneau" id="remarques" hidden></div>
+  <div class="onglets" id="panneaux"><button type="button" data-panneau="proprietes" class="actif">Propriétés</button><button type="button" data-panneau="liaison">Liaison</button><button type="button" data-panneau="remarques" id="ongletRemarques">Remarques</button><button type="button" data-panneau="icones">Icônes</button></div>
+  <div class="panneau" id="proprietes"></div><div class="panneau" id="liaison" hidden></div><div class="panneau" id="remarques" hidden></div><div class="panneau" id="icones" hidden></div>
  </div>
 </div>
 """ + HTML_DISPLAY + """
@@ -165,6 +166,6 @@ THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getIt
 
 PAGE = ("<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Atelier des écrans</title>"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"icon\" href=\"data:,\">"
-        + THEME_TETE + "<style>" + CSS + CSS_DISPLAY + CSS_IMPORT + CSS_PALIER2 + CSS_NAV + "</style></head><body>" + HTML
+        + THEME_TETE + "<style>" + CSS + CSS_DISPLAY + CSS_IMPORT + CSS_PALIER2 + CSS_ICONES + CSS_NAV + "</style></head><body>" + HTML
         + "<script src=\"/lib/qr.js\"></script>"     # qr-code-styling (apercu du QR code) ; absente : carre gris
-        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_POLICES + JS_CANEVAS + JS_IMPORT + JS_DISPLAY + JS_PALIER2 + JS_NAV + "</script></body></html>")
+        + "<script>" + lieux.JS + JS + JS_REMARQUES + JS_ECRITURE + JS_POLICES + JS_CANEVAS + JS_IMPORT + JS_DISPLAY + JS_PALIER2 + JS_ICONES + JS_NAV + "</script></body></html>")

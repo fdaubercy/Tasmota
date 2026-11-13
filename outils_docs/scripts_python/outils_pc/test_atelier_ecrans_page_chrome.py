@@ -31,6 +31,7 @@ import atelier_ecrans_remarques as aer                                          
 import atelier_ecrans_web as aew                                                    # noqa: E402
 import test_atelier_ecrans_remarques as tar                                         # noqa: E402
 import test_atelier_ecrans_page_chrome_palier2 as tp2                               # noqa: E402
+import test_atelier_ecrans_page_chrome_icones as tic                                # noqa: E402
 import test_atelier_ecrans_web as taw                                              # noqa: E402
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre     # noqa: E402
 
@@ -454,6 +455,7 @@ def main():
         cdp.appel("Page.navigate", url=f"http://127.0.0.1:{banc.port}/?env={ENV}")
         sonde(cdp, banc)
         tp2.sonde_systeme(cdp, banc, verifie, ENV)
+        tic.sonde_icones(cdp, banc, verifie)
         sonde_remarques(cdp, banc)
         verifie(instantane(banc.racine) == avant, True, "copie du depot inchangee hors remarques.json (ecran.json non ecrit)")
         sonde_ecriture(cdp, banc)

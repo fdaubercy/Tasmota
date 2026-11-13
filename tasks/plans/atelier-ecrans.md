@@ -312,14 +312,14 @@ Conception : § 7 de la même spec.
 Sources : `outils_docs/ICONES_IMAGES_SOURCES.md` (commit 495e0776f : ordre de recherche, licences, formats selon la cible).
 Après A14 (l'import d'un PNG aboutit dans l'objet `img`). Si A18 est faite avant : la grille lit son catalogue
 `outils_docs/schemas/icones.json` au lieu de relire `gen.sh`.
-- [ ] Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
+- [x] Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
   `lib/libesp32_lvgl/LVGL_assets/gen.sh`, `0xf0335=>0xE335` = icône MDI F0335 servie en U+E335 dans montserrat-10/14/20/28
-  et icons-xx), recherche par nom ; clic -> label avec le glyphe en montserrat-28 (ou texte de l'objet choisi)
-- [ ] Aperçu : glyphes dessinés par la police locale `lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`
-  (codes E0xxx -> F0xxx), sans CDN ; aujourd'hui des carrés vides (cas de l'écran de la cave : E335, E6E8, E72A, E58F)
-- [ ] Liens vers les sites de l'annuaire (Pictogrammers MDI, Material Symbols, Tabler, Lucide, Phosphor, Simple Icons ;
+  et icons-xx), recherche par nom ; clic -> label avec le glyphe en montserrat-28 (ou texte de l'objet choisi) — preuve : onglet « Icônes », `atelier_ecrans_page_icones.py` ; `outils_pc/test_atelier_ecrans_page_chrome_icones.py` : 120 cases = catalogue, recherche, clic -> libellé montserrat-28 ; `test_atelier_ecrans_web.py::test_icones` : catalogue = codes de gen.sh, noms de la police
+- [x] Aperçu : glyphes dessinés par la police locale `lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`
+  (codes E0xxx -> F0xxx), sans CDN ; aujourd'hui des carrés vides (cas de l'écran de la cave : E335, E6E8, E72A, E58F) — preuve : `GET /lib/mdi.ttf` (octets du dépôt) ; sonde : `document.fonts.check` vrai, U+E335 dessiné en MDI F0335 dans l'écran
+- [x] Liens vers les sites de l'annuaire (Pictogrammers MDI, Material Symbols, Tabler, Lucide, Phosphor, Simple Icons ;
   Iconify pour chercher), licence de chacun, explications dans la page : glyphe du firmware d'abord ; sinon PNG à la taille
-  d'affichage, blanc sur fond transparent, coloré par `image_recolor` + `image_recolor_opa` ; conversion SVG -> PNG
+  d'affichage, blanc sur fond transparent, coloré par `image_recolor` + `image_recolor_opa` ; conversion SVG -> PNG — preuve : 7 liens `rel=noopener noreferrer` et licences dans le panneau (sonde), parcours PNG expliqué ; les glyphes Font Awesome restent non dessinés
 - [ ] Import d'un PNG déposé par l'utilisateur (parcours de l'import de polices A9 : licence confirmée, taille contrôlée),
   rangé sous `/sd/images`, choisi dans l'objet `img` (A14)
 - [ ] Banc, sonde Chrome, relecture `relecteur-pages-web` ; commit
