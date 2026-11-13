@@ -394,7 +394,8 @@ Données lues dans le firmware sans le modifier : `tasmota.memory()` (`xdrv_52_3
 fichiers par la commande `Ufs` (`xdrv_50_filesystem.ino::UfsInfo`, sortie à lire sur une carte). Choix de Claude :
 un module Berry commun aux cartes à écran, pas un ajout dans chaque module métier ; lecture toutes les 5 s, seulement
 quand la page est affichée.
-- [ ] [utilisateur] Données en plus de la mémoire, proposées le 2026-11-13, à retenir ou non (champs de `Status` à lire
+- [x] [utilisateur] Données en plus de la mémoire — preuve : « Je garde tout », réponse de l'utilisateur du 2026-11-13
+  Détail : proposées le 2026-11-13, toutes retenues (champs de `Status` à lire
   sur une carte avant de s'y fier). Santé : RAM libre minimale depuis le démarrage et courbe sur 1 h, verdict « mise à
   jour OTA possible » (`program_free` >= `program`), charge (`LoadAvg`, `Sleep`), seuils vert / orange / rouge.
   Redémarrages : uptime, cause, nombre de démarrages. Réseau : RSSI, point d'accès (BSSID), IP, nombre de pertes du
