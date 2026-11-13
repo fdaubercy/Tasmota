@@ -207,7 +207,7 @@ var AV_FORMES = (function () {
   function instantane() { return JSON.stringify(AV.formes); }
   function restaure(s) {
     var t; try { t = JSON.parse(s); } catch (e) { t = []; }
-    AV.formes = (Array.isArray(t) ? t : []).map(F.normalise).filter(Boolean);
+    AV.formes = (Array.isArray(t) ? t : []).slice(0, 500).map(F.normalise).filter(Boolean);     // plafond : 500 formes relues
     if (!AV.formes.some(function (f) { return f.id === AV.selection; })) AV.selection = null;
   }
   function sauve() { try { localStorage.setItem(cle(), instantane()); } catch (e) { /* stockage indisponible : le dessin reste en memoire */ } }

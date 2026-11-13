@@ -12,11 +12,20 @@ JS = r"""
     fond: null, abonnes: [] };
   AV.photo.width = AV.larg; AV.photo.height = AV.haut;
   AV.surChangement = function (fn) { AV.abonnes.push(fn); };
-  AV.change = function () { AV.abonnes.forEach(function (f) { try { f(); } catch (e) { console.error(e); } }); poids(); };
+  // le fond garde ne vaut plus des que le dessin, le mode, la photo ou la carte changent ; genFond ecarte les reponses d'un POST en vol
+  var genFond = 0;
+  AV.invalide = function () { genFond++; AV.fond = null; $('av-empreinte').textContent = ''; };
+  AV.change = function () { AV.invalide(); AV.abonnes.forEach(function (f) { try { f(); } catch (e) { console.error(e); } }); poids(); };
   function redessine() { if (AV.dessine) AV.dessine(); }
   function stocke(cle, v) { try { localStorage.setItem(cle, JSON.stringify(v)); } catch (e) {} }
   function lit(cle) { try { return JSON.parse(localStorage.getItem(cle)); } catch (e) { return null; } }
   function info(texte, mauvais) { var m = $('av-msg'); m.textContent = texte; m.className = mauvais ? 'mauvais' : 'doux'; }
+  function borne(v, a, b) { return typeof v === 'number' && isFinite(v) && v >= a && v <= b; }
+  // rectangle de recadrage relu du localStorage : x, y, w, h dans [0, 1], ratio raisonnable, sinon rejete
+  function recMemo() {
+    var m = lit('av.rec.' + AV.env);
+    return m && borne(m.x, 0, 1) && borne(m.y, 0, 1) && borne(m.w, 0.05, 1) && borne(m.h, 0.05, 1) && m.x + m.w <= 1.001 && m.y + m.h <= 1.001 && borne(m.r, 0.1, 10) ? m : null;
+  }
   function kio(n) { return (n / 1024).toFixed(1).replace('.', ',') + ' Ko'; }
 
   // ---- theme sombre / clair (memorise, defaut = systeme) ---------------------------------------
@@ -28,6 +37,7 @@ JS = r"""
   $('av-theme').addEventListener('click', function () {
     var t = document.documentElement.getAttribute('data-theme') === 'sombre' ? 'clair' : 'sombre';
     theme(t); try { localStorage.setItem('atelier-visuels-theme', t); } catch (e) {}
+    dessineRecadrage();
   });
 
   // ---- cartes (GET /envs) ---------------------------------------------------------------------
@@ -38,16 +48,16 @@ JS = r"""
     remplitParLieu($('av-carte'), cartes.map(function (c) { return { nom: c.env, lieu: c.lieu }; }), d.lieux, dernier);
     choisitCarte();
   }).catch(function () { info('Liste des cartes indisponible', true); });
-  function ratioMemo() { var m = lit('av.rec.' + AV.env); return m && m.r > 0 ? m.r : 0.5625; }
+  function ratioMemo() { var m = recMemo(); return m ? m.r : 0.5625; }
   function choisitCarte() {
     AV.env = AV.carte = $('av-carte').value || null;
     if (AV.charge) AV.charge();                    // relit les formes de cette carte (editeur de formes)
     var c = cartes.filter(function (x) { return x.env === AV.env; })[0];
     AV.puce = c ? c.puce : '';
     try { localStorage.setItem('av.env', AV.env); } catch (e) {}
-    var m = lit('av.rec.' + AV.env);
-    AV.rec = m && m.w > 0 && m.h > 0 ? { x: m.x, y: m.y, w: m.w, h: m.h } : { x: 0, y: 0, w: 1, h: 1 };
-    AV.fond = null; $('av-empreinte').textContent = '';
+    var m = recMemo();
+    AV.rec = m ? { x: m.x, y: m.y, w: m.w, h: m.h } : { x: 0, y: 0, w: 1, h: 1 };
+    AV.invalide();
     if (AV.src) applique(); else { AV.haut = Math.round(AV.larg * ratioMemo()); redessine(); AV.change(); }
   }
   $('av-carte').addEventListener('change', choisitCarte);
@@ -55,17 +65,16 @@ JS = r"""
   // ---- photo : lecture, rotation, recadrage ---------------------------------------------------
   function charge(fichier) {
     if (!fichier || fichier.type.indexOf('image/') !== 0) { info("Ce fichier n'est pas une image", true); return; }
-    var lecteur = new FileReader();
-    lecteur.onload = function () {
-      var img = new Image();
-      img.onload = function () {
-        AV.img = img; AV.rot = 0; AV.rec = { x: 0, y: 0, w: 1, h: 1 }; tourne(0);
-        info('Photo chargee : ' + img.naturalWidth + ' x ' + img.naturalHeight + ' px', false);
-      };
-      img.onerror = function () { info('Image illisible', true); };
-      img.src = lecteur.result;
+    if (fichier.size > 30 * 1048576) { info('Photo trop lourde (' + Math.round(fichier.size / 1048576) + ' Mo) : 30 Mo au plus', true); return; }
+    var url = URL.createObjectURL(fichier), img = new Image();      // pas de lecture en data-URI : rien de copie en memoire
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      if (!img.naturalWidth || !img.naturalHeight) { info('Image illisible (dimensions nulles)', true); return; }
+      AV.img = img; AV.rot = 0; AV.rec = { x: 0, y: 0, w: 1, h: 1 }; tourne(0);
+      info('Photo chargée : ' + img.naturalWidth + ' x ' + img.naturalHeight + ' px', false);
     };
-    lecteur.readAsDataURL(fichier);
+    img.onerror = function () { URL.revokeObjectURL(url); info('Image illisible', true); };
+    img.src = url;
   }
   function tourne(quarts) {
     AV.rot = (AV.rot + quarts + 4) % 4;
@@ -94,11 +103,12 @@ JS = r"""
     rc.width = 260; rc.height = Math.round(260 * AV.src.height / AV.src.width);
     rctx.drawImage(AV.src, 0, 0, rc.width, rc.height);
     var r = AV.rec, x = r.x * rc.width, y = r.y * rc.height, w = r.w * rc.width, h = r.h * rc.height;
-    rctx.fillStyle = 'rgba(0,0,0,.55)';
+    var st = getComputedStyle(document.documentElement), acc = st.getPropertyValue('--ac').trim() || '#1478b8';
+    rctx.fillStyle = st.getPropertyValue('--voile').trim() || 'rgba(0,0,0,.55)';
     rctx.fillRect(0, 0, rc.width, y); rctx.fillRect(0, y + h, rc.width, rc.height - y - h);
     rctx.fillRect(0, y, x, h); rctx.fillRect(x + w, y, rc.width - x - w, h);
-    rctx.strokeStyle = '#1fa3ec'; rctx.lineWidth = 2; rctx.strokeRect(x, y, w, h);
-    rctx.fillStyle = '#1fa3ec';
+    rctx.strokeStyle = acc; rctx.lineWidth = 2; rctx.strokeRect(x, y, w, h);
+    rctx.fillStyle = acc;
     [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(function (p) { rctx.fillRect(p[0] - 5, p[1] - 5, 10, 10); });
   }
   var geste = null;
@@ -130,6 +140,7 @@ JS = r"""
   rc.addEventListener('pointerup', function () { geste = null; });
 
   $('av-fichier').addEventListener('change', function (e) { charge(e.target.files[0]); });
+  $('av-importe').addEventListener('click', function () { $('av-fichier').click(); });
   var zone = $('av-zone');
   zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('survol'); });
   zone.addEventListener('dragleave', function () { zone.classList.remove('survol'); });
@@ -158,7 +169,7 @@ JS = r"""
     el.textContent = b ? kio(b.size) : '-';
     el.className = !b ? 'doux' : b.size > limite ? 'mauvais' : b.size > S.avert ? 'alerte' : 'bon';
     el.title = b ? "Avertissement au-dessus de " + kio(S.avert) + ', refus au-dessus de ' + kio(limite) : '';
-    $('av-garder').disabled = !b || b.size > limite;
+    $('av-garder').disabled = !b || b.size > limite || (AV.mode === 'plat' && !AV.formes.some(function (f) { return !f.zone; }));   // rien a garder
     $('av-type').textContent = t || '';
   }
   function poids() {
@@ -177,17 +188,18 @@ JS = r"""
   }
   $('av-garder').addEventListener('click', function () {
     if (!blob || !AV.env) return;
-    var t = type, env = AV.env;
+    var t = type, env = AV.env, g0 = genFond;
     fetch('/fond?env=' + encodeURIComponent(env) + '&type=' + t, { method: 'POST', headers: { 'X-Atelier-Visuels': '1' }, body: blob })
       .then(function (r) { return r.text().then(function (x) { return [r.status, x]; }); })
       .then(function (a) {
-        if (a[0] !== 200) { info('Fond refuse : ' + a[1], true); return; }
+        if (env !== AV.env || g0 !== genFond) { info('Fond obsolète : le dessin ou la carte a changé pendant l\'envoi, à garder de nouveau', true); return; }
+        if (a[0] !== 200) { info('Fond refusé : ' + a[1], true); return; }
         var d = JSON.parse(a[1]); AV.fond = { env: env, type: t, empreinte: d.empreinte, octets: d.octets };
-        info('Fond garde (' + t + ', ' + kio(d.octets) + ')' + (d.avertissement ? ' : ' + d.avertissement : ''), false);
+        info('Fond gardé (' + t + ', ' + kio(d.octets) + ')' + (d.avertissement ? ' : ' + d.avertissement : ''), false);
         $('av-empreinte').textContent = d.empreinte;
       }).catch(function () { info('Serveur injoignable', true); });
   });
-  ['av-export', 'av-ecrire'].forEach(function (i) { $(i).disabled = true; $(i).title = 'a venir'; });
+  ['av-export', 'av-ecrire'].forEach(function (i) { $(i).disabled = true; $(i).title = 'à venir'; });
   $('av-larg-v').textContent = AV.larg + ' px'; $('av-qualite-v').textContent = $('av-qualite').value + ' %';
   AV.majPoids = poids;
   mode('plat');

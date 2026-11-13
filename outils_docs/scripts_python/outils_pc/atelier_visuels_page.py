@@ -18,13 +18,14 @@ import atelier_visuels_page_js as js
 import lieux
 
 CSS = """
-:root{--fond:#f4f5f7;--carte:#fff;--bord:#cfd3d9;--texte:#1d2025;--doux:#5c626b;--acc:#1478b8;--champ:#eceef1;--bon:#1a7f45;--alerte:#b86b00;--mauvais:#c62828;--bg:var(--champ);--pa:var(--carte);--tx:var(--texte);--mu:var(--doux);--li:var(--bord);color-scheme:light}
-:root[data-theme="sombre"]{--fond:#1f1f1f;--carte:#2a2a2a;--bord:#3a3a3a;--texte:#e8e8e8;--doux:#9a9a9a;--acc:#1fa3ec;--champ:#333;--bon:#3ddc84;--alerte:#ffb02e;--mauvais:#ff6b6b;--bg:var(--champ);--pa:var(--carte);--tx:var(--texte);--mu:var(--doux);--li:var(--bord);color-scheme:dark}
+:root{--fond:#f4f5f7;--carte:#fff;--bord:#cfd3d9;--texte:#1d2025;--doux:#5c626b;--acc:#1478b8;--ac:var(--acc);--sur-acc:#fff;--voile:rgba(0,0,0,.55);--champ:#eceef1;--bon:#1a7f45;--alerte:#b86b00;--mauvais:#c62828;--bg:var(--champ);--pa:var(--carte);--tx:var(--texte);--mu:var(--doux);--li:var(--bord);color-scheme:light}
+:root[data-theme="sombre"]{--fond:#1f1f1f;--carte:#2a2a2a;--bord:#3a3a3a;--texte:#e8e8e8;--doux:#9a9a9a;--acc:#1fa3ec;--ac:var(--acc);--sur-acc:#0d1b26;--voile:rgba(0,0,0,.55);--champ:#333;--bon:#3ddc84;--alerte:#ffb02e;--mauvais:#ff6b6b;--bg:var(--champ);--pa:var(--carte);--tx:var(--texte);--mu:var(--doux);--li:var(--bord);color-scheme:dark}
 *{box-sizing:border-box}body{margin:0;background:var(--fond);color:var(--texte);font:14px "Segoe UI",sans-serif}
 header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:var(--carte);border-bottom:1px solid var(--bord)}
 header h1{font-size:16px;margin:0 8px 0 0}.sp{flex:1}
 select,button,input,.btn{background:var(--champ);color:var(--texte);border:1px solid var(--bord);border-radius:6px;padding:6px 10px;font:inherit}
-button,.btn{cursor:pointer;display:inline-block;text-align:center}button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+button,.btn{cursor:pointer;display:inline-block;text-align:center}button.on{background:var(--acc);border-color:var(--acc);color:var(--sur-acc)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 button:disabled{opacity:.5;cursor:not-allowed}input[type=range]{padding:0}
 main{display:grid;grid-template-columns:280px minmax(0,1fr) 300px;gap:0;min-height:calc(100vh - 56px)}
 main>div{padding:8px;overflow:auto}
@@ -49,11 +50,11 @@ HTML = """
 <button id="av-theme" type="button">Sombre</button></header>
 <main><div>
 <div class="pan"><h2>1. Photo</h2><div class="g">
-<div id="av-zone"><label class="btn">Déposer une photo…<input type="file" id="av-fichier" accept="image/*" hidden></label>
+<div id="av-zone"><button type="button" id="av-importe">Déposer une photo…</button><input type="file" id="av-fichier" class="vh" accept="image/*" tabindex="-1" aria-label="Photo à importer">
 <div class="doux">ou glisser l'image ici</div></div>
-<canvas id="av-crop" hidden></canvas>
+<canvas id="av-crop" hidden role="img" aria-label="Recadrage de la photo : glisser le cadre ou ses coins"></canvas>
 <div class="row"><button id="av-rot" type="button">Tourner de 90°</button><button id="av-rec0" type="button">Tout garder</button></div>
-<div class="row"><span class="doux">Largeur de travail</span><span id="av-larg-v"></span></div>
+<div class="row"><label class="doux" for="av-larg">Largeur de travail</label><span id="av-larg-v"></span></div>
 <input type="range" id="av-larg" min="320" max="800" step="10" value="480">
 </div></div>
 """ + formes.HTML_FORMES + """
@@ -73,7 +74,7 @@ THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getIt
               " ? 'sombre' : 'clair'; document.documentElement.setAttribute('data-theme', t); })();</script>")
 
 # Colle : le poids suit toute modification des formes (AV.surFormes, cote editeur) ; l'editeur a lu 'defaut' avant le choix de la carte.
-COLLE = "if (AV.surFormes) AV.surFormes(function () { AV.majPoids(); }); if (AV.env && AV.charge) AV.charge(); AV.majPoids();"
+COLLE = "if (AV.surFormes) AV.surFormes(function () { AV.invalide(); AV.majPoids(); }); if (AV.env && AV.charge) AV.charge(); AV.majPoids();"
 
 SEUILS = {"avert": avd.SEUIL_AVERT, "esp32": avd.SEUILS_REFUS["esp32"], "autre": avd.SEUILS_REFUS["autre"]}
 

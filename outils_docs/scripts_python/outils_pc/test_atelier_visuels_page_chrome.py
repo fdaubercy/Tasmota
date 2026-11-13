@@ -8,6 +8,7 @@ CONDITIONS, jamais des durees ; les Chrome sont arretes et on verifie qu'aucun `
 """
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -54,8 +55,35 @@ FABRIQUE = """(function(){var c=document.createElement('canvas');c.width=600;c.h
 x.fillStyle='#d03030';x.fillRect(0,0,300,300);x.fillStyle='#3050d0';x.fillRect(300,0,300,300);x.fillStyle='#f0d020';x.fillRect(20,20,80,80);
 return new Promise(function(ok){c.toBlob(function(b){var f=new File([b],'essai.png',{type:'image/png'});var d=new DataTransfer();d.items.add(f);
 var i=document.getElementById('av-fichier');i.files=d.files;i.dispatchEvent(new Event('change',{bubbles:true}));ok('ok');},'image/png');});})()"""
-DOUBLURE_SVG = ("if(!window.AV.svg){window.AV.svg=function(){return '<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\">"
-                "<path d=\"M0 0L9 9\" fill=\"#abc\"/></svg>';};window.AV.change();}")
+SVG_SANS_DIMENSIONS = ("(function(){var d=new DataTransfer();d.items.add(new File(['<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"0\" height=\"0\"></svg>'],'v.svg',{type:'image/svg+xml'}));"
+                       "var i=document.getElementById('av-fichier');i.files=d.files;i.dispatchEvent(new Event('change',{bubbles:true}));})()")
+FICHIER_GROS = ("(function(){var d=new DataTransfer();d.items.add(new File([new Uint8Array(31*1048576)],'gros.png',{type:'image/png'}));"
+                "var i=document.getElementById('av-fichier');i.files=d.files;i.dispatchEvent(new Event('change',{bubbles:true}));})()")
+# POST /fond retenu jusqu'a __lache() : la reponse arrive apres un changement de carte
+POST_RETENU = ("window.__lache = null; (function(){var f=window.fetch;window.fetch=function(u,o){var p=f.apply(this,arguments);"
+               "if(o&&o.method==='POST'&&String(u).indexOf('/fond')===0)return p.then(function(r){return new Promise(function(ok){window.__lache=function(){ok(r);};});});return p;};})()")
+CONTRASTE = r"""(function(){function lum(c){var m=c.match(/[\d.]+/g).map(Number).slice(0,3).map(function(x){x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);});
+  return 0.2126*m[0]+0.7152*m[1]+0.0722*m[2];}
+  function ratio(q){var s=getComputedStyle(document.querySelector(q)),a=lum(s.color),b=lum(s.backgroundColor);return (Math.max(a,b)+0.05)/(Math.min(a,b)+0.05);}
+  var r=getComputedStyle(document.documentElement);
+  return {theme:document.documentElement.getAttribute('data-theme'),ac:r.getPropertyValue('--ac').trim()===r.getPropertyValue('--acc').trim()&&r.getPropertyValue('--ac').trim()!=='',
+    ratios:['#av-fond-plat','#av-garder','[data-avf-outil][aria-pressed=true]'].map(ratio)};})()"""
+TOUCHE = "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:%s,bubbles:true}))"
+POISON = r"""(function(){var e=AV.env,a=[];for(var i=1;i<=600;i++)a.push({id:i,type:'rect',x:i%50,y:i%40,l:20,h:10,fill:'#112233'});
+  a[0]={id:1,type:'gabarit',gabarit:'numero',x:10,y:10,l:30,h:20,fill:'url(javascript:alert(1))',texte:'</script><b x="1">&amp;'};
+  a[1]={id:2,type:'rect',x:'a',y:1,l:20,h:10,fill:'#abcdef'};
+  localStorage.setItem('av.formes.'+e,JSON.stringify(a));localStorage.setItem('av.rec.'+e,JSON.stringify({x:1e9,y:-5,w:1,h:1,r:1e9}));
+  localStorage.setItem('av.env',e);return e;})()"""
+MOTS_SANS_ACCENT = re.compile(r"Facade|Retablir|Arriere-plan|Cheminee|Numero|Photo chargee|Selection|Fenetre|Boite aux|refuse :|Fond garde|a venir|Element<|"
+                              r"zone a effacer|gardee en photo|Aimantation a ")
+
+
+def recharge(cdp, port):
+    cdp.js("window.__ancien = 1")
+    cdp.appel("Page.navigate", url=f"http://127.0.0.1:{port}/")
+    return condition(cdp, "!window.__ancien && document.readyState === 'complete' && !!window.AV && !!AV.env", 20)
+
+
 BLOB_ENVOYE = "window.__blob = null; (function(){var f=window.fetch;window.fetch=function(u,o){if(o&&o.body)window.__blob=o.body;return f.apply(this,arguments);};})()"
 COMPARE = ("(async function(){var b=window.__blob,m=new Uint8Array(await b.arrayBuffer());"
            "var q=await fetch('/fond?env='+encodeURIComponent(AV.env)+'&empreinte='+AV.fond.empreinte);"
@@ -76,14 +104,14 @@ def condition(cdp, expression, delai=15):
     return attend(cdp, expression, delai) is True
 
 
-def sonde(cdp):
+def sonde(cdp, port):
     js = cdp.js
     verifie(js("document.title"), "Atelier des visuels", "titre de la page")
     verifie(js("document.querySelectorAll('main > div').length"), 3, "trois colonnes")
     verifie(condition(cdp, "document.querySelectorAll('#av-carte option').length > 0"), True, "cartes chargees dans le select")
     verifie(js("document.querySelectorAll('#av-carte optgroup').length > 0"), True, "cartes groupees par lieu")
     verifie(js("[document.getElementById('av-export').disabled, document.getElementById('av-export').title, document.getElementById('av-ecrire').disabled]"),
-            [True, "a venir", True], "Exporter et Ecrire inactifs, info-bulle a venir")
+            [True, "à venir", True], "Exporter et Écrire inactifs, info-bulle à venir")
 
     # theme : le clic bascule data-theme et change le fond de la page
     lit = "[document.documentElement.getAttribute('data-theme'), getComputedStyle(document.body).backgroundColor]"
@@ -93,10 +121,27 @@ def sonde(cdp):
     verifie((avant[0] != apres[0], avant[1] != apres[1], apres[0] in ("sombre", "clair")), (True, True, True), "theme : le clic bascule data-theme et le fond")
     verifie(js("localStorage.getItem('atelier-visuels-theme')"), apres[0], "theme memorise dans localStorage")
 
-    # doublure du dessin a plat si l'editeur de formes n'est pas la
-    js(DOUBLURE_SVG)
+    # dessin a plat sans forme : poids affiche, mais rien a garder
     verifie(condition(cdp, "document.getElementById('av-poids').textContent.indexOf('Ko') > 0", 10), True, "mode dessin : poids affiche (depuis AV.svg)")
-    verifie(js("document.getElementById('av-garder').disabled"), False, "mode dessin : Garder ce fond actif")
+    verifie(js("document.getElementById('av-garder').disabled"), True, "dessin a plat sans forme : Garder ce fond inactif")
+
+    # accessibilite : import au clavier, noms accessibles, label du curseur
+    verifie(js("(function(){var i=document.getElementById('av-fichier'),b=document.getElementById('av-importe'),n=0;"
+               "i.click=function(){n++;};if(b)b.click();return [i.hasAttribute('hidden'),!!b&&b.tagName==='BUTTON',n];})()"), [False, True, 1],
+            "import de photo : bouton reel qui declenche l'input, input sans hidden")
+    verifie(js("['av-crop','avf-canevas'].map(function(i){var e=document.getElementById(i);return !!e&&!!e.getAttribute('aria-label')&&!!e.getAttribute('role');})"),
+            [True, True], "aria-label et role sur le recadrage et sur le canevas")
+    verifie(js("document.getElementById('avf-canevas').getAttribute('tabindex')"), "0", "canevas atteignable au clavier")
+    verifie(js("!!document.querySelector('label[for=av-larg]')"), True, "label for sur le curseur de largeur")
+
+    # photo anormale : message, page intacte
+    js(SVG_SANS_DIMENSIONS)
+    verifie(condition(cdp, "document.getElementById('av-msg').className === 'mauvais' && /illisible/.test(document.getElementById('av-msg').textContent)", 10), True,
+            "image SVG de dimensions nulles : Image illisible")
+    verifie(js("!AV.src && !AV.img"), True, "image sans dimensions : rien d'accepte")
+    js(FICHIER_GROS)
+    verifie(condition(cdp, "/30 Mo/.test(document.getElementById('av-msg').textContent)", 10), True, "photo de plus de 30 Mo : refusee avec un message")
+    verifie(js("!AV.src && !AV.img"), True, "photo trop grosse : rien d'accepte")
 
     # depot de l'image, rotation, recadrage
     js(FABRIQUE)
@@ -127,6 +172,19 @@ def sonde(cdp):
     verifie(condition(cdp, "Math.abs(AV.formes[0].x - " + str(x0) + ") < 0.01", 10), True, "editeur : annuler ramene la position")
     verifie(condition(cdp, "document.getElementById('av-poids').textContent.indexOf('Ko') > 0"), True, "poids du fond mis a jour apres modification des formes")
     verifie(js(POSE_SVG), 200, "AV.svg() de l'editeur accepte par POST /fond")
+    verifie(js("document.getElementById('av-garder').disabled"), False, "dessin a plat avec une forme : Garder ce fond actif")
+
+    # clic sans glisser : pas de rectangle minuscule ; fleches : 1 px, 8 px avec Maj
+    js("document.querySelector('[data-avf-outil=rect]').click()")
+    n0 = js("AV.formes.length")
+    js("__souris('pointerdown',0.8,0.8);__souris('pointerup',0.8,0.8)")
+    verifie(js("AV.formes.length"), n0, "clic sans glisser : aucun rectangle cree")
+    js("document.querySelector('[data-avf-outil=sel]').click(); AV.selection = AV.formes[0].id; AV.dessine()")
+    x1 = js("AV.formes[0].x")
+    js(TOUCHE % "false")
+    verifie(js("Math.round((AV.formes[0].x - %s) * 10) / 10" % x1), 1, "fleche droite : 1 px")
+    js(TOUCHE % "true")
+    verifie(js("Math.round((AV.formes[0].x - %s) * 10) / 10" % x1), 9, "Maj + fleche droite : 8 px de plus")
 
     # mode photo allegee
     js("document.getElementById('av-fond-photo').click()")
@@ -138,14 +196,53 @@ def sonde(cdp):
     js("document.getElementById('av-garder').click()")
     verifie(condition(cdp, "!!AV.fond"), True, "Garder ce fond : reponse du serveur recue")
     verifie(js(COMPARE)[:3], [200, True, True], "GET /fond rend exactement le blob envoye")
-    # mode dessin garde (svg)
+    # mode dessin garde (svg) ; toute modification invalide l'empreinte affichee
+    verifie(js("document.getElementById('av-empreinte').textContent.length > 0"), True, "empreinte affichee apres Garder ce fond")
     js("document.getElementById('av-fond-plat').click()")
+    verifie(js("[AV.fond, document.getElementById('av-empreinte').textContent]"), [None, ""], "changement de mode : fond et empreinte invalides")
     condition(cdp, "document.getElementById('av-type').textContent === 'svg'", 10)
-    js("window.AV.fond = null; document.getElementById('av-garder').click()")
+    js("document.getElementById('av-garder').click()")
     verifie(condition(cdp, "!!AV.fond && AV.fond.type === 'svg'"), True, "mode dessin : fond svg garde")
+    js("document.querySelector('[data-avf-gab=boite]').click()")
+    verifie(js("[AV.fond, document.getElementById('av-empreinte').textContent]"), [None, ""], "modification d'une forme : fond et empreinte invalides")
+    condition(cdp, "!document.getElementById('av-garder').disabled", 10)
+    js("document.getElementById('av-garder').click()")
+    condition(cdp, "!!AV.fond")
+    js("var q=document.getElementById('av-larg');q.value=500;q.dispatchEvent(new Event('input',{bubbles:true}))")
+    verifie(js("[AV.fond, document.getElementById('av-empreinte').textContent]"), [None, ""], "changement de largeur : fond et empreinte invalides")
+    # reponse d'un POST arrivee apres un changement de carte : ignoree
+    condition(cdp, "!document.getElementById('av-garder').disabled", 10)
+    js(POST_RETENU)
+    js("document.getElementById('av-garder').click()")
+    verifie(condition(cdp, "typeof window.__lache === 'function'"), True, "POST /fond en vol")
+    js("(function(){var s=document.getElementById('av-carte'),o=[].slice.call(s.options).filter(function(x){return x.value!==s.value;})[0];s.value=o.value;s.dispatchEvent(new Event('change',{bubbles:true}));})()")
+    js("window.__lache()")
+    verifie(condition(cdp, "/obsol/.test(document.getElementById('av-msg').textContent)", 10), True, "reponse tardive signalee comme obsolete")
+    verifie(js("[AV.fond, document.getElementById('av-empreinte').textContent]"), [None, ""], "changement de carte pendant un POST : empreinte non affichee")
     # un fichier qui n'est pas une image
     js(FICHIER_TEXTE)
     verifie(condition(cdp, "document.getElementById('av-msg').className === 'mauvais'", 10), True, "fichier non image : message d'erreur")
+    # theme : variable --ac et contraste du bouton actif (>= 4,5:1) dans les deux themes
+    for _ in range(2):
+        c = js(CONTRASTE)
+        verifie((c["ac"], min(c["ratios"]) >= 4.5), (True, True), f"theme {c['theme']} : --ac = --acc, contraste des boutons actifs {[round(r, 2) for r in c['ratios']]}")
+        js("document.getElementById('av-theme').click()")
+    page = http(f"http://127.0.0.1:{port}/", 5).decode("utf-8")
+    verifie(sorted(set(MOTS_SANS_ACCENT.findall(page))), [], "libelles de l'interface : accents")
+    verifie("#1a73e8" in page or "Style = '#" in page, False, "couleurs d'interface en dur absentes (variables du theme)")
+
+    # donnees empoisonnees du localStorage : relues et bornees, rien n'est execute
+    js(POISON)
+    verifie(recharge(cdp, port), True, "rechargement avec localStorage empoisonne")
+    verifie(js("[AV.formes.length, AV.formes[0].fill, AV.formes[0].texte]"), [500, "#888888", "</script"], "formes relues : 500 au plus, fill et texte revalides")
+    verifie(js("document.querySelectorAll('#av-canevas b, #av-canevas script').length + (window.__pwn ? 1 : 0)"), 0, "texte hostile : aucun element injecte")
+    verifie(js("/&lt;\\/script/.test(AV.svg()) && AV.svg().indexOf('<b') < 0"), True, "texte hostile echappe dans AV.svg()")
+    verifie(js(POSE_SVG), 200, "le SVG du texte hostile passe POST /fond")
+    verifie(js("[AV.rec.x, AV.rec.w, AV.haut]"), [0, 1, 270], "rectangle de recadrage absurde du localStorage rejete")
+    js("localStorage.setItem('av.env', '<img src=x onerror=window.__pwn=1>')")
+    verifie(recharge(cdp, port), True, "rechargement avec une carte memorisee inconnue")
+    verifie(js("[].slice.call(document.querySelectorAll('#av-carte option')).some(function(o){return o.value===AV.env;}) && !window.__pwn"), True, "carte inconnue : repli sur une carte de la liste")
+    js("localStorage.clear()")
     verifie(cdp.erreurs(), [], "aucune erreur dans la console de la page")
 
 
@@ -180,7 +277,7 @@ def main():
             cdp.appel(d)
         cdp.appel("Page.navigate", url=f"http://127.0.0.1:{port}/")
         attend(cdp, "document.readyState === 'complete' && !!window.AV", 20)
-        sonde(cdp)
+        sonde(cdp, port)
     finally:
         tue_arbre(chrome)
         tue_arbre(serveur)

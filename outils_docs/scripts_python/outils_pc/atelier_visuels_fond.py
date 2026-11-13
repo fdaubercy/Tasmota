@@ -29,7 +29,12 @@ def _sain(valeur):
     return all(m.group(1).strip("'\" ").startswith("#") for m in URL.finditer(valeur))
 
 
-def _nettoie(el):
+PROFONDEUR_MAX = 64
+
+
+def _nettoie(el, prof=0):
+    if prof > PROFONDEUR_MAX:
+        raise ValueError(f"SVG refuse : imbrication au-dela de {PROFONDEUR_MAX} niveaux")
     nu = ET.Element(f"{{{NS}}}{el.tag.split('}')[-1]}")
     for cle, val in el.attrib.items():
         if cle in ATTRIBUTS and _sain(val):          # attribut a espace de noms (xlink:href), on*, style : ecartes
@@ -37,7 +42,7 @@ def _nettoie(el):
     nu.text = el.text if nu.tag.endswith("}text") else None
     for fils in el:
         if isinstance(fils.tag, str) and fils.tag.startswith(f"{{{NS}}}") and fils.tag.split("}")[1] in ELEMENTS:
-            nu.append(_nettoie(fils))                # script, a, image, foreignObject, style : sous-arbre entier ecarte
+            nu.append(_nettoie(fils, prof + 1))                # script, a, image, foreignObject, style : sous-arbre entier ecarte
     return nu
 
 

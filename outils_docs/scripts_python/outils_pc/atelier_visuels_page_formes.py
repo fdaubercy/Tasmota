@@ -16,36 +16,39 @@ CSS_FORMES = """
 .avf-grille { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
 .avf-bloc button { background: var(--bg, #ffffff); color: var(--tx, #1f2328); border: 1px solid var(--li, #d0d7de); border-radius: 4px; padding: 4px 6px; font: inherit; cursor: pointer; }
 .avf-bloc button:hover { border-color: var(--ac, #0969da); }
-.avf-bloc button[aria-pressed="true"] { background: var(--ac, #0969da); border-color: var(--ac, #0969da); color: var(--bg, #ffffff); }
+.avf-bloc button[aria-pressed="true"] { background: var(--ac, #0969da); border-color: var(--ac, #0969da); color: var(--sur-acc, #ffffff); }
 .avf-bloc label { display: block; margin: 4px 0; color: var(--tx, #1f2328); font-size: 13px; }
 .avf-bloc input, .avf-bloc select { background: var(--bg, #ffffff); color: var(--tx, #1f2328); border: 1px solid var(--li, #d0d7de); border-radius: 4px; font: inherit; }
 .avf-bloc input[type=number] { width: 5em; }
 .avf-bloc [hidden] { display: none; }
 .avf-note { color: var(--mu, #656d76); font-size: 12px; }
 .avf-canevas { display: block; width: 100%; max-width: 100%; touch-action: none; user-select: none; background: var(--pa, #f6f7f9); border: 1px solid var(--li, #d0d7de); }
-.avf-poignee { cursor: pointer; }
+.avf-poignee { cursor: pointer; fill: var(--carte, #ffffff); stroke: var(--ac, #1478b8); }
+.avf-cadre { fill: none; stroke: var(--ac, #1478b8); stroke-width: 1; pointer-events: none; }
+.avf-trace { fill: none; stroke: var(--ac, #1478b8); stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
+.avf-canevas:focus-visible { outline: 2px solid var(--ac, #1478b8); }
 """
 
-_GABARITS = [("mur", "Mur de facade"), ("toitMono", "Toit monopente"), ("toitDeux", "Toit a deux pans"), ("fenetre", "Fenetre"), ("porte", "Porte"),
-             ("porteGarage", "Porte de garage"), ("voletRoulant", "Volet roulant"), ("cheminee", "Cheminee"), ("boite", "Boite aux lettres"), ("numero", "Numero")]
+_GABARITS = [("mur", "Mur de façade"), ("toitMono", "Toit monopente"), ("toitDeux", "Toit a deux pans"), ("fenetre", "Fenêtre"), ("porte", "Porte"),
+             ("porteGarage", "Porte de garage"), ("voletRoulant", "Volet roulant"), ("cheminee", "Cheminée"), ("boite", "Boîte aux lettres"), ("numero", "Numéro")]
 
 HTML_FORMES = (
     "<div id='avf-racine'>"
     "<section class='avf-bloc'><h3>Outils</h3><div class='avf-grille'>"
-    "<button type='button' data-avf-outil='sel' aria-pressed='true'>Selection</button>"
+    "<button type='button' data-avf-outil='sel' aria-pressed='true'>Sélection</button>"
     "<button type='button' data-avf-outil='rect' aria-pressed='false'>Rectangle</button>"
     "<button type='button' data-avf-outil='polygon' aria-pressed='false'>Polygone</button>"
     "<button type='button' data-avf-act='supprime'>Supprimer</button>"
     "<button type='button' data-avf-act='annule' title='Ctrl+Z'>Annuler</button>"
-    "<button type='button' data-avf-act='retablit' title='Ctrl+Y'>Retablir</button></div>"
-    "<label>Nouvelle forme : <select id='avf-zone-outil'><option value=''>dessin</option><option value='effacer'>zone a effacer</option>"
-    "<option value='garder'>zone gardee en photo</option></select></label>"
+    "<button type='button' data-avf-act='retablit' title='Ctrl+Y'>Rétablir</button></div>"
+    "<label>Nouvelle forme : <select id='avf-zone-outil'><option value=''>dessin</option><option value='effacer'>zone à effacer</option>"
+    "<option value='garder'>zone gardée en photo</option></select></label>"
     "<label>Photo en fond <input type='range' id='avf-opacite' min='0' max='1' step='0.05' value='0.4'></label>"
-    "<p class='avf-note'>Polygone : un clic par sommet, double-clic pour fermer. Aimantation a 8 px. Poids du dessin : <span id='avf-poids'>0 Ko</span></p></section>"
+    "<p class='avf-note'>Polygone : un clic par sommet, double-clic pour fermer. Aimantation à 8 px. Poids du dessin : <span id='avf-poids'>0 Ko</span></p></section>"
     "<section class='avf-bloc'><h3>Gabarits</h3><div class='avf-grille'>"
     + "".join(f"<button type='button' data-avf-gab='{k}'>{t}</button>" for k, t in _GABARITS)
     + "</div></section>"
-    "<section class='avf-bloc' id='avf-sel' hidden><h3 id='avf-titre-sel'>Element</h3>"
+    "<section class='avf-bloc' id='avf-sel' hidden><h3 id='avf-titre-sel'>Élément</h3>"
     "<label id='avf-l-fill'>Couleur <input type='color' id='avf-fill' value='#888888'> "
     "<button type='button' data-avf-act='repique'>Couleur de la photo</button></label>"
     "<label>Motif <select id='avf-motif'><option value=''>aucun (uni)</option><option value='briques'>briques</option>"
@@ -55,9 +58,9 @@ HTML_FORMES = (
     "<label id='avf-l-pente'>Pente du toit (px) <input type='number' id='avf-pente' step='1' value='0'></label>"
     "<label id='avf-l-battants'>Battants <select id='avf-battants'><option value='1'>1</option><option value='2'>2</option></select></label>"
     "<label id='avf-l-texte'>Texte <input type='text' id='avf-texte' maxlength='8'></label>"
-    "<label>Nature <select id='avf-zone'><option value=''>dessin</option><option value='effacer'>zone a effacer</option>"
-    "<option value='garder'>zone gardee en photo</option></select></label>"
+    "<label>Nature <select id='avf-zone'><option value=''>dessin</option><option value='effacer'>zone à effacer</option>"
+    "<option value='garder'>zone gardée en photo</option></select></label>"
     "<div class='avf-grille'><button type='button' data-avf-act='avant'>Premier plan</button>"
-    "<button type='button' data-avf-act='arriere'>Arriere-plan</button></div></section>"
+    "<button type='button' data-avf-act='arriere'>Arrière-plan</button></div></section>"
     "</div>"
 )

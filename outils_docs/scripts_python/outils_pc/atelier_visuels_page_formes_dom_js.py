@@ -35,7 +35,8 @@ JS_DOM = r"""
   // ---- dessin du canevas
   function construit() {
     var cont = document.getElementById('av-canevas') || document.body;
-    svg = noeud('svg', {id: 'avf-canevas', 'class': 'avf-canevas'}, cont);
+    svg = noeud('svg', {id: 'avf-canevas', 'class': 'avf-canevas', role: 'application', tabindex: '0',
+      'aria-label': 'Canevas du dessin : flèches pour déplacer la sélection de 1 px, Maj pour 8 px, Suppr pour le retirer'}, cont);
     gFond = noeud('g', {}, svg); gFormes = noeud('g', {}, svg); gSur = noeud('g', {}, svg);
     svg.addEventListener('pointerdown', bas); svg.addEventListener('pointermove', bouge); svg.addEventListener('pointerup', haut);
     svg.addEventListener('dblclick', ferme);
@@ -63,7 +64,7 @@ JS_DOM = r"""
     poignees();
     if (S.poly) {
       var p = S.poly.concat(S.souris ? [S.souris] : []);
-      noeud('polyline', {points: p.join(' '), fill: 'none', stroke: '#1a73e8', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'pointer-events': 'none'}, gSur);
+      noeud('polyline', {points: p.join(' '), 'class': 'avf-trace'}, gSur);
     }
     panneau();
     var po = $('poids'); if (po) po.textContent = (AV.poids() / 1024).toFixed(1) + ' Ko';
@@ -72,8 +73,8 @@ JS_DOM = r"""
     var f = AV.cherche(AV.selection), b, k;
     if (!f) return;
     b = F.bbox(f);
-    noeud('rect', {x: b.x, y: b.y, width: b.l, height: b.h, fill: 'none', stroke: '#1a73e8', 'stroke-width': 1, 'pointer-events': 'none'}, gSur);
-    function p(nom, x, y) { noeud('rect', {x: x - 4, y: y - 4, width: 8, height: 8, fill: '#ffffff', stroke: '#1a73e8', 'data-poignee': nom, 'class': 'avf-poignee'}, gSur); }
+    noeud('rect', {x: b.x, y: b.y, width: b.l, height: b.h, 'class': 'avf-cadre'}, gSur);
+    function p(nom, x, y) { noeud('rect', {x: x - 4, y: y - 4, width: 8, height: 8, 'data-poignee': nom, 'class': 'avf-poignee'}, gSur); }
     if (f.type === 'polygon') f.points.forEach(function (q, i) { p('p' + i, q[0], q[1]); });
     else for (k in POIGNEES) p(k, b.x + b.l * POIGNEES[k][0], b.y + b.h * POIGNEES[k][1]);
   }
@@ -131,7 +132,11 @@ JS_DOM = r"""
     var d = S.drag, f;
     S.drag = null;
     if (!d) return;
-    if (d.mode === 'creer') { f = S.temp; S.temp = null; ajoute(f); return; }
+    if (d.mode === 'creer') {
+      f = S.temp; S.temp = null;
+      if (f.l < 8 && f.h < 8) { AV.dessine(); return; }       // simple clic : pas de rectangle minuscule
+      ajoute(f); return;
+    }
     AV.commit();
   }
   function ajoute(f) {
@@ -222,6 +227,10 @@ JS_DOM = r"""
       if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) { e.preventDefault(); if (e.shiftKey) AV.retablit(); else AV.annule(); }
       else if ((e.ctrlKey || e.metaKey) && (k === 'y' || k === 'Y')) { e.preventDefault(); AV.retablit(); }
       else if (k === 'Delete' || k === 'Backspace') { if (AV.selection !== null) { e.preventDefault(); supprime(); } }
+      else if (k.indexOf('Arrow') === 0 && AV.selection !== null) {
+        var pas = e.shiftKey ? 8 : 1, sel = AV.cherche(AV.selection);
+        e.preventDefault(); F.deplace(sel, k === 'ArrowLeft' ? -pas : k === 'ArrowRight' ? pas : 0, k === 'ArrowUp' ? -pas : k === 'ArrowDown' ? pas : 0); AV.commit();
+      }
       else if (k === 'Escape') { S.poly = null; S.temp = null; S.drag = null; AV.dessine(); }
     });
     outils();

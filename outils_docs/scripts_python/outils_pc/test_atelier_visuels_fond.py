@@ -67,6 +67,15 @@ def main():
     verifie(refuse("<html><body>pas du svg</body></html>") is not None, True, "HTML : ValueError")
     verifie(refuse("pas du xml") is not None, True, "texte quelconque : ValueError")
     verifie(refuse("<svg><path d='M0 0'/></svg>") is not None, True, "svg sans espace de noms : ValueError")
+    for n in (60, 70, 5000):
+        corps = "<g>" * n + "<path d='M0 0'/>" + "</g>" * n
+        try:
+            avf.nettoie_svg(svg(corps))
+            verifie(n <= 60, True, f"imbrication de {n} niveaux : acceptee (profondeur maximale 64)")
+        except ValueError:
+            verifie(n > 60, True, f"imbrication de {n} niveaux : ValueError (profondeur maximale 64)")
+        except RecursionError:
+            verifie("RecursionError", "ValueError", f"imbrication de {n} niveaux : RecursionError au lieu de ValueError")
     # poids : 50 Ko ESP32 = avertissement, 70 Ko ESP32 = refus, 150 Ko S3 = rien
     verifie("alleger" in (avf.controle_fond("svg", b"x" * 50 * 1024, "ESP32") or ""), True, "50 Ko sur ESP32 : avertissement")
     verifie(avf.refuse(b"x" * 50 * 1024, "ESP32"), False, "50 Ko sur ESP32 : pas un refus")
