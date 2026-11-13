@@ -4,7 +4,7 @@ titre: Étiquettes QR code des cartes (page 7970) : impression, page de la carte
 objectif: Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé
 statut: actif
 cree: 2026-11-12
-maj: 2026-11-12
+maj: 2026-11-13
 ---
 # Étiquettes QR code des cartes
 
@@ -261,13 +261,13 @@ Produit : `etats(racine, env, *, get=None) -> {"a_reimprimer": bool, "a_regenere
 "a_mettre_a_jour"|"inconnu"|"sans_page"}` (lecture de `/json/qrcode.json` sur la carte, adresse par
 `adresse_par_maitre` pour un esclave, délai 2 s) ; `lien_si_regle(racine, env) -> str | None`
 (`http://127.0.0.1:7970/?env=<env>` si `cartes/<env>.json` existe).
-- [ ] Bancs d'abord (rouge) : hostname changé dans le persist -> `a_reimprimer` et `a_regenerer` ; topic changé et
+- [x] Bancs d'abord (rouge) — preuve : test_etiquettes_qr_suivi.py (commit 8c7d0409f) ; hostname changé dans le persist -> `a_reimprimer` et `a_regenerer` ; topic changé et
   absent du gabarit -> aucun des deux ; carte simulée qui rend un autre `qrcode.json` -> `a_mettre_a_jour` ; carte muette
   -> `inconnu` en moins de 3 s (vigilance 5)
-- [ ] Module, routes, badges ; bancs VERT
-- [ ] « Téléverser » : URL de la page Build `?env=&depuis=qrcode&fichiers=/json/qrcode.json&redemarrer=0` (sur le modèle
+- [x] Module, routes, badges ; bancs VERT — preuve : commit 616280eea, bancs ecriture/web/suivi VERT, sonde test_etiquettes_qr_page_chrome.py VERT
+- [x] « Téléverser » — preuve : commit 5865bff17, sondes test_etiquettes_qr_page_chrome.py VERT et test_build_page_fichiers_chrome.py (cas qrcode OK ; autres cas instables avant ce commit, attentes fixes de 2,5 s) ; chemin réel `fichiers=qrcode.json&redemarrer=1` (racine du FS, rangé dans /json/ au démarrage) ; URL de la page Build `?env=&depuis=qrcode&fichiers=/json/qrcode.json&redemarrer=0` (sur le modèle
   de `atelier_graphiques_televerse.url`) ; sonde `test_build_page_fichiers_chrome.py` VERT
-- [ ] Lien « Étiquette QR à refaire » dans le message de fin d'un renommage (Fichiers Berry) et d'une modification
+- [x] Lien « Étiquette QR à refaire » — preuve : commit 24f099d11, test_fichiers_berry_renommage.py VERT, sonde test_fichiers_berry_page_chrome.py VERT, test_assistant_persist_modification.py (2 contrôles étiquette OK ; seul KO « cartes_du_parc : champs », antérieur, champ lieu) ; dans le message de fin d'un renommage (Fichiers Berry) et d'une modification
   (assistant persist) ; leurs bancs VERT
 - [ ] Régénération au build (demande du 2026-11-12) : le pré-script (`build/pre_utilitaires_platformio.py`), avant
   chaque `buildfs` (et upload série qui écrit le FS), recalcule le texte de `cartes/<env>.json` contre le persist et le
