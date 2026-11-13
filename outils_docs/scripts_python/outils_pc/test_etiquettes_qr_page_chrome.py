@@ -152,9 +152,18 @@ def sonde_impression(cdp, url, banc, capture):
     s.verifie((e["imprime"], e["feuilles"], e["cases"], e["largeur"], e["regle"]), (1, 1, 1, "25mm", 1),
               "Imprimer : une feuille, un QR code de 25 mm, regle de 50 mm")
     s.verifie(notes(banc), sorted(set(avant) | {CUVE}), "Imprimer : impression notee pour la cuve")
+    badge = "[...document.querySelectorAll('#liste-cartes button.env')].find(b => b.title === %s).textContent.indexOf('à réimprimer') >= 0" \
+        % json.dumps(CUVE)
+    s.verifie(s.attend(cdp, "ETAT.suivi[%s] !== undefined && !(%s)" % (json.dumps(CUVE), badge), 15), True,
+              "suivi (A7) : cuve tout juste imprimee, pas de badge « à réimprimer »")
+    cdp.js("""(async () => { const g = (await api('/gabarit')).gabarit; g.separateur = ' ~ ';
+      const p = await api('/gabarit/diff', {gabarit: g}); await api('/gabarit/ecrire', {gabarit: g, empreinte: p.empreinte});
+      await chargeSuivi(); })()""")
+    s.verifie(s.attend(cdp, badge, 15), True, "suivi (A7) : separateur du gabarit change, badge « à réimprimer » sur la cuve")
     cdp.js("[...document.querySelectorAll('#impression-messages button')].find(b => b.textContent === 'Annuler la note').click()")
     s.attend(cdp, "document.getElementById('impression-messages').textContent.indexOf('annulée') >= 0", 10)
     s.verifie(notes(banc), avant, "Annuler la note : impression retiree")
+    s.verifie(s.attend(cdp, "!(%s)" % badge, 15), True, "suivi (A7) : note annulee, plus de badge « à réimprimer »")
 
     cdp.js("""(() => { const c = [...document.querySelectorAll('#liste-cartes input[type=checkbox]')].slice(0, 12);
       c.forEach(x => { x.checked = true; x.dispatchEvent(new Event('change')); });

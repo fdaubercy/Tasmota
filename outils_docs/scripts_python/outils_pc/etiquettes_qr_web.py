@@ -14,6 +14,8 @@ Routes (les POST exigent l'en-tete X-Etiquettes-QR: 1 et la meme origine ; JSON)
     GET  /reglage?env=     {reglage, regle (surcharge presente), page (page /qrcode installee), esp32}
     GET  /persist?env=     {arbre} : cles du persist proposees (jamais un secret ; vide pour une carte sans persist)
     GET  /images           {images} : noms du dossier outils_docs/etiquettes_qr/images/
+    GET  /suivi            {suivi: {env: {a_reimprimer, a_regenerer}}} : badges de la liste, sans interroger les cartes
+    GET  /etat?env=        {a_reimprimer, a_regenerer, carte} : la carte est lue (etiquettes_qr_suivi.etats, 2 s au plus)
     POST /apercu           {env, reglage} -> {texte, lignes, avertissements, verdict, image, correction, erreurs}
     POST /diff             {env, reglage, page_carte} -> {fichiers: [{chemin, avant, apres, diff, ajouts, retraits}], empreinte, signaux}
     POST /ecrire           {env, reglage, page_carte, empreinte} -> {ecrits} ; 409 si build ou empreinte perimee
@@ -37,6 +39,7 @@ import acces_web
 import build_envs
 import etiquettes_qr_ecriture as eqe
 import etiquettes_qr_modele as modele
+import etiquettes_qr_suivi as suivi_qr
 import etiquettes_qr_verdict as verdict
 import lieux
 
@@ -124,6 +127,17 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                     "page": esp32(env) and page_installee(env), "esp32": esp32(env),
                     # champs proposes a l'ajout : le range extender seulement s'il est actif sur la carte
                     "champs": [c for c in modele.CHAMPS if c != "range_extender" or champs.get(c)]}
+        if chemin == "/suivi":                       # badges de la liste : local, la carte n'est pas interrogee
+            suivi = {}
+            for e in cartes():
+                try:
+                    s = suivi_qr.etats(racine, e.nom, envs=envs(), interroger=False)
+                except (LookupError, ValueError, OSError):
+                    continue                         # carte illisible : pas de badge, la liste reste utilisable
+                suivi[e.nom] = {k: s[k] for k in ("a_reimprimer", "a_regenerer")}
+            return {"suivi": suivi}
+        if chemin == "/etat":                        # une carte : lit sa page /qrcode (2 s au plus)
+            return suivi_qr.etats(racine, env_ok(un("env")), envs=envs())
         if chemin == "/persist":
             return {"arbre": modele.arbre_persist(modele.persist_de(racine, env_ok(un("env"))))}
         if chemin == "/images":

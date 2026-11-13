@@ -101,12 +101,13 @@ async function imprime(items, parPage, noter, taille) {
     messages(['Impression non notée : ' + e.message], 'rouge');
     return pages;
   }
+  chargeSuivi();                                     // « à réimprimer » s'efface
   const z = $('impression-messages');
   const d = el('div', {class: 'avert vert'}, 'Impression notée pour ' + envs.length + ' carte(s). ');
   const b = el('button', {type: 'button', class: 'btn mini'}, 'Annuler la note');
   b.onclick = async () => {
     b.disabled = true;
-    try { for (const e of envs) await api('/impression/annule', {env: e}); d.textContent = 'Note d\'impression annulée.'; }
+    try { for (const e of envs) await api('/impression/annule', {env: e}); d.textContent = 'Note d\'impression annulée.'; chargeSuivi(); }
     catch (e) { avert(z, 'Annulation impossible : ' + e.message, 'rouge'); b.disabled = false; }
   };
   d.appendChild(b);

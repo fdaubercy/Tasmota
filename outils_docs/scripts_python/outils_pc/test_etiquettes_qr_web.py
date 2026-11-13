@@ -188,11 +188,27 @@ def test_gabarit_impression(b):
     verifie(tqe.eqe.lit_impressions(b.racine)[CUVE], premiere, "annulation de la reimpression : note precedente remise")
 
 
+def test_suivi(b):
+    """A7 : badges de la liste (GET /suivi, local) et etat d'une carte (GET /etat, interroge la carte)."""
+    statut, s = b.requete("GET", "/suivi")
+    verifie((statut, s["suivi"].get(CUVE)), (200, {"a_reimprimer": False, "a_regenerer": False}),
+            "GET /suivi : cuve imprimee avec le reglage actuel, rien a refaire")
+    verifie(TV in s["suivi"], True, "GET /suivi : carte sans Berry suivie aussi (etiquette papier)")
+    g = dict(gabarit(b), separateur=" - ")
+    p = b.requete("POST", "/gabarit/diff", {"gabarit": g})[1]
+    b.requete("POST", "/gabarit/ecrire", {"gabarit": g, "empreinte": p["empreinte"]})
+    verifie(b.requete("GET", "/suivi")[1]["suivi"][CUVE]["a_reimprimer"], True, "separateur du gabarit change : cuve a reimprimer")
+    statut, e = b.requete("GET", "/etat?env=" + CUVE)
+    verifie((statut, e), (200, {"a_reimprimer": True, "a_regenerer": False, "carte": "sans_page"}),
+            "GET /etat : sans page sur la carte, carte non interrogee")
+    verifie(b.requete("GET", "/etat?env=Mauvais%20nom")[0], 404, "GET /etat : carte inconnue, 404 (comme /reglage)")
+
+
 def main():
     dossier = tempfile.mkdtemp(prefix="banc_etiquettes_qr_web_")
     b = Banc(dossier)
     try:
-        for test in (test_page, test_cartes, test_reglage_persist, test_csrf, test_apercu, test_ecriture, test_gabarit_impression):
+        for test in (test_page, test_cartes, test_reglage_persist, test_csrf, test_apercu, test_ecriture, test_gabarit_impression, test_suivi):
             test(b)
     finally:
         b.ferme()

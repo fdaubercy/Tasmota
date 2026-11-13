@@ -25,6 +25,7 @@ la date et la taille ; jamais le texte.
 import datetime
 import json
 import os
+import time
 from pathlib import Path
 
 import atelier_graphiques_ecriture as age
@@ -270,7 +271,16 @@ def _ecrit_impressions(racine, d):
     chemin = Path(racine) / IMPRESSIONS
     tmp = chemin.with_suffix(".tmp")
     tmp.write_bytes(_json(dict(sorted(d.items()))))
-    os.replace(tmp, chemin)                        # atomique : jamais de fichier a moitie ecrit
+    # Atomique : jamais de fichier a moitie ecrit. Windows refuse le remplacement tant qu'un autre fil (GET /suivi) lit le
+    # fichier : quelques millisecondes, d'ou les nouveaux essais (POST /impression en 500, sonde du 2026-11-13).
+    for essai in range(20):
+        try:
+            os.replace(tmp, chemin)
+            return
+        except PermissionError:
+            if essai == 19:
+                raise
+            time.sleep(0.05)
 
 
 def note_impression(racine, textes, taille_mm):

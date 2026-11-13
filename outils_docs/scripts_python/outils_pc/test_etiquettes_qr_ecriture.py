@@ -189,6 +189,22 @@ def test_impressions(racine):
     eqe.annule_impression(racine, CUVE)
     verifie(eqe.lit_impressions(racine), {}, "impression annulee")
     refuse(lambda: eqe.note_impression(racine, {"../x": "t"}, 25), ValueError, "env invalide refuse", "invalide")
+    # Windows refuse os.replace sur un fichier ouvert : le suivi (A7) lit impressions.json pendant qu'une impression l'ecrit
+    # (sonde du 2026-11-13 : POST /impression en 500). 2 s de lectures concurrentes : aucune ecriture ne doit echouer.
+    import threading
+    import time
+    fin, echecs, n = time.monotonic() + 2, [], 0
+    lecteur = threading.Thread(target=lambda: [eqe.lit_impressions(racine) for _ in iter(lambda: time.monotonic() < fin, False)])
+    lecteur.start()
+    while time.monotonic() < fin:
+        try:
+            eqe.note_impression(racine, {CUVE: "texte %d" % n}, 25)
+        except OSError as erreur:
+            echecs.append(repr(erreur))
+        n += 1
+    lecteur.join()
+    verifie((n > 10, echecs[:1]), (True, []), f"impression pendant des lectures concurrentes : {n} ecritures, aucune en echec")
+    eqe.annule_impression(racine, CUVE)
 
 
 def test_gabarit(racine):

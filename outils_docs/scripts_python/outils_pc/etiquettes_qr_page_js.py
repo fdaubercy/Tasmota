@@ -10,7 +10,12 @@ OPTIONS = (Path(__file__).resolve().parents[3] / "data" / "sd" / "js" / "qrcode_
 
 JS = OPTIONS + r"""
 const ETAT = {env: null, cartes: [], lieux: [], reglage: null, page: false, esp32: false, charge: '', arbre: [],
-              apercu: null, minuterie: null, demande: 0, envDemande: null, images: [], planche: new Set()};
+              apercu: null, minuterie: null, demande: 0, envDemande: null, images: [], planche: new Set(),
+              suivi: {}, etatCarte: null};
+// A7 : badges du suivi (GET /suivi, local) et etat de la page de la carte ouverte (GET /etat, lit la carte)
+const SUIVI = [['a_reimprimer', 'à réimprimer', "Le texte du QR code a changé depuis l'impression de l'étiquette"],
+               ['a_regenerer', 'à régénérer', 'Le qrcode.json de la carte ne correspond plus au réglage : réécrire']];
+const CARTE = {a_jour: ['ok', 'carte à jour'], a_mettre_a_jour: ['or', 'carte à mettre à jour'], inconnu: ['', 'carte injoignable']};
 const $ = id => document.getElementById(id);
 const LIBELLES = {hostname: 'Hostname', ip: 'IP', topic: 'Topic', env: 'Env', puce: 'Puce', lieu: 'Lieu',
                   range_extender: 'Range extender'};
@@ -56,7 +61,32 @@ function majPastilles() {
   if (!c) return;
   p.appendChild(el('span', {class: 'pastille ' + (c.regle ? 'bleu' : '')}, c.regle ? 'réglage propre' : 'gabarit commun'));
   if (c.esp32) p.appendChild(el('span', {class: 'pastille ' + (c.page ? 'ok' : '')}, c.page ? 'page /qrcode' : 'sans page'));
+  badgesSuivi(p, c.nom);
+  const ec = ETAT.etatCarte && ETAT.etatCarte.env === c.nom && CARTE[ETAT.etatCarte.carte];
+  if (ec) p.appendChild(el('span', {class: 'pastille ' + ec[0]}, ec[1]));
   if (sale()) p.appendChild(el('span', {class: 'pastille or'}, 'modifications non écrites'));
+}
+
+function badgesSuivi(parent, env) {
+  const s = ETAT.suivi[env] || {};
+  SUIVI.forEach(([cle, texte, titre]) => { if (s[cle]) parent.appendChild(el('span', {class: 'pastille or', title: titre}, texte)); });
+}
+
+async function chargeSuivi() {
+  try { ETAT.suivi = (await api('/suivi')).suivi; } catch (e) { return; }   // sans suivi, la page reste utilisable
+  dessineListe();
+  majPastilles();
+}
+
+async function chargeEtatCarte(env) {
+  ETAT.etatCarte = null;
+  let e;
+  try { e = await api('/etat?env=' + encodeURIComponent(env)); } catch (x) { return; }
+  if (ETAT.env !== env) return;                        // une autre carte a ete ouverte entre-temps
+  ETAT.etatCarte = Object.assign({env: env}, e);
+  ETAT.suivi[env] = {a_reimprimer: e.a_reimprimer, a_regenerer: e.a_regenerer};
+  dessineListe();
+  majPastilles();
 }
 
 function dessineListe() {
@@ -79,6 +109,7 @@ function dessineListe() {
       b.appendChild(el('span', {class: 'doux petit'}, (c.puce || '').replace(/^ESP32-/, '')));   // P4 et S3 homonymes
       if (c.regle) b.appendChild(el('span', {class: 'pastille bleu'}, 'propre'));
       if (c.page) b.appendChild(el('span', {class: 'pastille ok'}, 'page'));
+      badgesSuivi(b, c.nom);
       b.onclick = () => choisit(c.nom);
       ligne.appendChild(b);
       liste.appendChild(ligne);
@@ -94,6 +125,7 @@ async function chargeCartes(choisi) {
   remplitParLieu($('choix-env'), ETAT.cartes, ETAT.lieux, choisi);
   dessineListe();
   majPastilles();
+  chargeSuivi();                                       // sans attendre : les badges arrivent apres la liste
 }
 
 function siPropre(libelle, action) {
@@ -138,6 +170,7 @@ async function ouvre(env) {
     dessineListe();
     dessineTout();
     activeImpression();
+    if (r.page) chargeEtatCarte(env); else ETAT.etatCarte = null;   // lecture de la carte (2 s au plus), sans attendre
   } catch (e) {
     if (ETAT.envDemande !== env) return;
     if (ETAT.env) $('choix-env').value = ETAT.env;   // la page montre toujours l'ancienne carte

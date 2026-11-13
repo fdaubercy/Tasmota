@@ -46,8 +46,9 @@ def _carte(adresse, depot, get, delai):
         return "inconnu"
 
 
-def etats(racine, env, *, envs=None, get=None, delai=DELAI):
-    """{"a_reimprimer", "a_regenerer", "carte"} d'un env ; LookupError si ce n'est pas une carte du cenv."""
+def etats(racine, env, *, envs=None, get=None, delai=DELAI, interroger=True):
+    """{"a_reimprimer", "a_regenerer", "carte"} d'un env ; LookupError si ce n'est pas une carte du cenv.
+    interroger=False : rien sur le reseau, "carte" vaut None si la carte a une page (badges de toute la liste)."""
     racine = Path(racine)
     envs = envs if envs is not None else build_envs.liste_envs(racine)
     e = next((x for x in envs if x.nom == env and x.famille == "cartes"), None)
@@ -68,7 +69,8 @@ def etats(racine, env, *, envs=None, get=None, delai=DELAI):
         a_regenerer = modele.fichier_carte(racine, reglage, resolu) != depot
     except ValueError:                               # image du reglage devenue illisible : a refaire dans l'outil
         a_regenerer = True
-    return {"a_reimprimer": a_reimprimer, "a_regenerer": a_regenerer, "carte": _carte(e.ip, depot, get or _get, delai)}
+    carte = _carte(e.ip, depot, get or _get, delai) if interroger else None
+    return {"a_reimprimer": a_reimprimer, "a_regenerer": a_regenerer, "carte": carte}
 
 
 def lien_si_regle(racine, env):

@@ -72,6 +72,9 @@ def principal():
         verifie(vus[0], (f"http://{ip}/qrcode?f=reglage", f"http://{ip}/", 2),
                 "carte lue sur /qrcode?f=reglage, Referer de la carte (acces privilegie), delai 2 s")
 
+        get, vus = carte_qui_rend(depot)
+        e = suivi.etats(racine, CUVE, envs=envs, get=get, interroger=False)
+        verifie((e["carte"], vus), (None, []), "interroger=False (badges de la liste) : carte non interrogee")
         e = suivi.etats(racine, CUVE, envs=envs, get=carte_qui_rend(depot.replace(b"version", b"versioN"))[0])
         verifie(e["carte"], "a_mettre_a_jour", "carte qui rend un autre qrcode.json : a mettre a jour")
         e = suivi.etats(racine, CUVE, envs=envs, get=carte_qui_rend(b"absent", 404)[0])
