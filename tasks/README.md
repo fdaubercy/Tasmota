@@ -17,10 +17,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 76 % (53/78) | 25 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 et A17 ajoutés ; A14 : bancs, catalogue, générateurs faits) |
-| [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 86 % (33/40) | 7 étapes, 4 améliorations | 2026-11-12 | 2026-11-13 |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 78 % (54/78) | 24 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 et A17 ajoutés ; A14 : bancs, catalogue, générateurs faits) |
+| [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 86 % (33/40) | 7 étapes, 1 amélioration | 2026-11-12 | 2026-11-13 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ███████░░░ 73 % (36/50) | 14 étapes | 2026-11-12 | 2026-11-13 |
-| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 42 % (43/94) | 51 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 43 % (44/95) | 51 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
 | [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 79 % (38/46) | 8 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
@@ -65,7 +65,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 76 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 78 %
 
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Firmware de la carte postérieur à 5c3291884 (`ecranFonctions.be` déplacé dans `data/fs`) : `Status 2` comparé à la
@@ -73,11 +73,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Capture réelle depuis l'atelier (« Capture de la carte ») : image identique à l'écran, mémoire PSRAM prise par
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai du `display.ini` (A15, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Ligne non JSON d'un `pages.jsonl` importé (A13, demande du 2026-11-13) : lu dans `lv_haspmota.be::HASPmota._load`,
+- A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
-- A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Rangement des images par format (décision de l'utilisateur du 2026-11-13, au lieu du `.png` seul) : `.png`, `.jpg`,
-- A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Essai sur la carte : un objet de chaque type sur l'écran des débits, vu et touché (avec A11) ; commit
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Aperçu : glyphes dessinés par la police locale `lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Liens vers les sites de l'annuaire (Pictogrammers MDI, Material Symbols, Tabler, Lucide, Phosphor, Simple Icons ;
@@ -103,10 +102,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A9 — Essai sur carte (écran branché) : Broker coupé : valeurs grisées, touches refusées ; RS485 seul, puis Wi-Fi seul
 - A9 — Essai sur carte (écran branché) : Marche manuelle de la pompe : flotteurs ignorés, réactivés à l'arrêt et après la minuterie
 - A9 — Essai sur carte (écran branché) : Veille, réveil sans action, luminosité
-- Amélioration [projet] : Icônes et images depuis l'atelier des écrans (liens de l'annuaire, glyphes du firmware, import de PNG, explications dans la page) : action A16 proposée au plan `atelier-ecrans` le 2026-11-13
 - Amélioration [projet] : Solidifier `ecranFonctions` dans les envs à écran (plan `debits-deux-cartes` A8)
-- Amélioration [projet] : Boutons physiques du serveur à garder ou retirer (plan `envs-grenier-rdc-sonoff-cave` A9)
-- Amélioration [projet] : Topic de la cave à changer au retour en production (A7 du plan d'origine) : seul le persist de l'écran à modifier
 
 #### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 73 %
 
@@ -125,7 +121,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
 
-#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 42 %
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 43 %
 
 - A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
 - A3 — Brochage et volets : Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
@@ -139,9 +135,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A7 — Retour en production de la cave S3 : Le jour du remplacement, sur ordre de l'utilisateur : passer l'identité de la cave S3 à 192.168.0.48 et
 - A7 — Retour en production de la cave S3 : Ancienne carte ESP32 éteinte AVANT la mise sous tension de la S3 (même IP, même client MQTT).
 - A7 — Retour en production de la cave S3 : Contrôle : Node-RED, Telegram et le Sonoff .45 (A8) voient la cave comme avant ; `lieux.py` range ses messages
+- A7 — Retour en production de la cave S3 : Écran de la cave (demande du 2026-11-13) : dans `data/cave/tasmota32s3-ecran/_persist.json`,
 - A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Réglages du Sonoff par `Backlog` et `Rule` en console seulement (pas d'`autoexec.bat` possible), proposés puis
 - A9 — Écran Waveshare 7B pour le serveur relais de la cave : Dépend du plan `debits-deux-cartes` A8 : le code d'écran générique (`ecranFonctions`, veille, luminosité, polices)
-- A9 — Écran Waveshare 7B pour le serveur relais de la cave : Boutons physiques du serveur de la cave remplacés par ceux de l'écran ? (idée de l'utilisateur, 2026-11-11). À
 - A9 — Écran Waveshare 7B pour le serveur relais de la cave : `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
 - A10 — Range extender maître sur la cave S3 : Ports d'accès aux esclaves : `<ip cave>:<8080 + id - 1>` par `RoutageRangeExtender` ; id réservé pour l'écran 7B
 - A10 — Range extender maître sur la cave S3 : Le point d'accès exige le Wi-Fi : la voie Ethernet (A6, améliorations) ne doit pas le couper.

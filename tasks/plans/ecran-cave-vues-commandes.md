@@ -176,10 +176,7 @@ Ressources sous `/sd` (préférence de l'utilisateur).
 - [ ] Veille, réveil sans action, luminosité
 
 ## Améliorations restantes
-- [ ] [projet] Icônes et images depuis l'atelier des écrans (liens de l'annuaire, glyphes du firmware, import de PNG, explications dans la page) : action A16 proposée au plan `atelier-ecrans` le 2026-11-13
 - [ ] [projet] Solidifier `ecranFonctions` dans les envs à écran (plan `debits-deux-cartes` A8)
-- [ ] [projet] Boutons physiques du serveur à garder ou retirer (plan `envs-grenier-rdc-sonoff-cave` A9)
-- [ ] [projet] Topic de la cave à changer au retour en production (A7 du plan d'origine) : seul le persist de l'écran à modifier
 
 ## Vérification
 Bancs Berry VERTS (`banc_pompe_cave`, `banc_ecran_cave`, `banc_test_modbus`, `banc_ecran_debits`, `banc_demarrage`),

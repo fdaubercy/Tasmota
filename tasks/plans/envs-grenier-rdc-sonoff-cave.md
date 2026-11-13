@@ -148,6 +148,9 @@ Wifi Cave » puis MAISON). Le Sonoff Dual R3 (.46) doit donc être éteint AVANT
 - [ ] Ancienne carte ESP32 éteinte AVANT la mise sous tension de la S3 (même IP, même client MQTT).
 - [ ] Contrôle : Node-RED, Telegram et le Sonoff .45 (A8) voient la cave comme avant ; `lieux.py` range ses messages
   en Cave sans passer par le dossier `-sauvegarde`.
+- [ ] Écran de la cave (demande du 2026-11-13) : dans `data/cave/tasmota32s3-ecran/_persist.json`,
+  `modules.ecranCave.sources.cave` passe de `cave/serveur-rly-cave-v2` à `cave/serveur-rly-cave`, sinon l'écran
+  n'entend plus la cave et grise tout ; contrôle : valeurs non grisées sur l'écran (plan `ecran-cave-vues-commandes`).
 
 ## A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45)
 - [x] Analyse en lecture seule (Status 0, Template, Rules, UfsSize) — preuve : relevé HTTP du 2026-11-11 recopié au Contexte
@@ -224,11 +227,12 @@ qui affiche et commande ce que porte le serveur (relais, lumières, température
   n'y est pas encore validé sur carte ni solidifié. Reprendre ce module tel quel ; ne pas le recopier dans ce plan.
 - [x] Maquette des vues de la cave (lumières, relais, température et humidité, pompe) proposée puis validée par
   l'utilisateur (skill `lvgl-haspmota`), interface HASPmota ou LVGL selon le choix fait pour les débits. — preuve : validée le 2026-11-13, pages HASPmota commitées 6c848e703 (plan `ecran-cave-vues-commandes`, A7)
-- [ ] Boutons physiques du serveur de la cave remplacés par ceux de l'écran ? (idée de l'utilisateur, 2026-11-11). À
+- [x] Boutons physiques du serveur de la cave remplacés par ceux de l'écran ? (idée de l'utilisateur, 2026-11-11). À
   trancher avec lui, entrée DI par entrée DI. Réserve de Claude : l'écran est une autre carte, reliée par le réseau ;
   s'il tombe, on ne commande plus rien sur place. Garder au moins un bouton physique pour la pompe de la cave et pour
   la lumière ; les entrées DI libérées restent câblables plus tard. Si des boutons sont retirés : persist et brochage
-  de la cave mis à jour, `banc_demarrage.py`.
+  de la cave mis à jour, `banc_demarrage.py`. — preuve : décision de l'utilisateur du 2026-11-13 : on ne retire
+  aucun bouton physique ; boutons et écran commandent ensemble.
 - [ ] `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
 
 ## A10 — Range extender maître sur la cave S3
