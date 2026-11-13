@@ -17,10 +17,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 81 % (50/69) | 19 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 ajouté) |
-| [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | ████████░░ 83 % (31/40) | 9 étapes, 4 améliorations | 2026-11-12 | 2026-11-13 |
-| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ███████░░░ 69 % (34/50) | 16 étapes | 2026-11-12 | 2026-11-13 |
-| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 41 % (42/94) | 52 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 76 % (53/78) | 25 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A13 et A15 faits ; essais sur carte dans A11 ; A16 et A17 ajoutés ; A14 : bancs, catalogue, générateurs faits) |
+| [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 86 % (33/40) | 7 étapes, 4 améliorations | 2026-11-12 | 2026-11-13 |
+| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | ███████░░░ 73 % (36/50) | 14 étapes | 2026-11-12 | 2026-11-13 |
+| [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 42 % (43/94) | 51 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
 | [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 79 % (38/46) | 8 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
 | [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) | Faire passer les 6 débits de la carte d'acquisition (esclave ModBus id 1) à une carte d'affichage (maître id 0) par une lecture groupée RS485 et un push UDP, sans rien changer au garage | actif | ██████░░░░ 62 % (33/49) | 16 étapes, 3 améliorations | 2026-11-09 | 2026-11-11 |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ███████░░░ 68 % (35/50) | 15 étapes, 4 améliorations | 2026-11-08 | 2026-11-09 |
@@ -65,7 +65,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 81 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 76 %
 
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Firmware de la carte postérieur à 5c3291884 (`ecranFonctions.be` déplacé dans `data/fs`) : `Status 2` comparé à la
@@ -76,23 +76,27 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
 - A11 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
-- A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Bancs d'abord (rouge) : `img` (PNG seul), `dropdown`, `switch`, `roller`, `qrcode` dans le validateur et les deux
-- A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Catalogue, validateur, générateur HASPmota, moteur LVGL pur (`lv.image`, `lv.dropdown`, `lv.switch`, `lv.roller`,
-- A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Page : palette, propriétés (éditeur de liste d'options, choix d'un PNG du dossier de la carte), dessin approché,
-- A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Règle de rangement des images ramenée au `.png` (`gestionFileFolder.be`, accord de l'utilisateur) ;
+- A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Rangement des images par format (décision de l'utilisateur du 2026-11-13, au lieu du `.png` seul) : `.png`, `.jpg`,
 - A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code : Essai sur la carte : un objet de chaque type sur l'écran des débits, vu et touché (avec A11) ; commit
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Panneau « Icônes » : grille des glyphes Material Design embarqués dans le firmware (codes lus dans
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Aperçu : glyphes dessinés par la police locale `lib/libesp32_lvgl/LVGL_assets/fonts/Symbols/materialdesignicons-webfont.ttf`
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Liens vers les sites de l'annuaire (Pictogrammers MDI, Material Symbols, Tabler, Lucide, Phosphor, Simple Icons ;
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Import d'un PNG déposé par l'utilisateur (parcours de l'import de polices A9 : licence confirmée, taille contrôlée),
 - A16 — Icônes et images depuis la page (demande du 2026-11-13, transmise par la session « Modules ESP32-S3 avec ecran ») : Banc, sonde Chrome, relecture `relecteur-pages-web` ; commit
+- A17 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un)
+- A17 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Valeurs du modèle de chaque module métier d'écran : texte du QR code, IP réelle (`diversFonctions.ipLAN`), IP
+- A17 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave :
+- A17 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A11)
+- A18 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Bancs d'abord (rouge) : validateur (forme de `navigation`, ids réservés, débordement, `menu` booléen), deux
+- A18 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Description, validateur, déroulement commun aux deux générateurs (`atelier_ecrans_description.py::deroule_navigation`)
+- A18 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Page : panneau « Barre de navigation » (activer, position, hauteur, écart, couleurs), case « dans le menu » par page,
+- A18 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Écran des débits passé à la barre construite (ses boutons de page remplacés), pages.jsonl regénéré identique au
+- A18 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A11) ; commit
 - Amélioration [projet] : Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)
 
-#### [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — 83 %
+#### [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — 86 %
 
-- A8 — Intégration, non-régression, compilation : Agent `relecteur-berry` sur tous les `.be` touchés ; remarques traitées
-- A8 — Intégration, non-régression, compilation : Compilation par la page Build : cave, écran (et débits, garage si `data/fs` solidifié touché) ; journaux SUCCESS
-- A8 — Intégration, non-régression, compilation : `PROTOCOLE_MODBUS.md` §10 et `outils_docs/README.md` (mode d'emploi de l'écran) ; plan `envs-grenier-rdc-sonoff-cave` A9 coché
+- A8 — Intégration, non-régression, compilation : Compilation par la page Build : cave, écran (et débits, garage si `data/fs` solidifié touché) ; journaux SUCCESS — fait en partie le 2026-11-13 : serveur de la cave SUCCESS (journal 20261113-084134, 77 min, avant le correctif de `controleCommandesEcran.be`) ; écran interrompu (page arrêtée par l'utilisateur à 11:18) ; débits et garage non lancés
 - A8 — Intégration, non-régression, compilation : Commit `feat(ecran-cave): integration et documentation`
 - A9 — Essai sur carte (écran branché) : Flash de l'écran (USB, effacer puis téléverser) ; `TasmotaSlaveModBus1` et `modules.ecranCave` de la cave à ON, persist renvoyé à chaud
 - A9 — Essai sur carte (écran branché) : Chaque touche commute son relais ; redémarrage après confirmation ; aucune commutation au redémarrage de l'écran ni du serveur (journal syslog)
@@ -104,10 +108,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Boutons physiques du serveur à garder ou retirer (plan `envs-grenier-rdc-sonoff-cave` A9)
 - Amélioration [projet] : Topic de la cave à changer au retour en production (A7 du plan d'origine) : seul le persist de l'écran à modifier
 
-#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 69 %
+#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 73 %
 
-- A6 — Page `/qrcode` de la carte : Essai sur une carte choisie par l'utilisateur : réglage écrit par la page 7970, firmware recompilé et FS envoyé
-- A6 — Page `/qrcode` de la carte : Commit
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Commit
@@ -123,7 +125,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
 
-#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 41 %
+#### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 42 %
 
 - A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
 - A3 — Brochage et volets : Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
@@ -139,7 +141,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A7 — Retour en production de la cave S3 : Contrôle : Node-RED, Telegram et le Sonoff .45 (A8) voient la cave comme avant ; `lieux.py` range ses messages
 - A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Réglages du Sonoff par `Backlog` et `Rule` en console seulement (pas d'`autoexec.bat` possible), proposés puis
 - A9 — Écran Waveshare 7B pour le serveur relais de la cave : Dépend du plan `debits-deux-cartes` A8 : le code d'écran générique (`ecranFonctions`, veille, luminosité, polices)
-- A9 — Écran Waveshare 7B pour le serveur relais de la cave : Maquette des vues de la cave (lumières, relais, température et humidité, pompe) proposée puis validée par
 - A9 — Écran Waveshare 7B pour le serveur relais de la cave : Boutons physiques du serveur de la cave remplacés par ceux de l'écran ? (idée de l'utilisateur, 2026-11-11). À
 - A9 — Écran Waveshare 7B pour le serveur relais de la cave : `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
 - A10 — Range extender maître sur la cave S3 : Ports d'accès aux esclaves : `<ip cave>:<8080 + id - 1>` par `RoutageRangeExtender` ; id réservé pour l'écran 7B
@@ -198,7 +199,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : RS485 seul (Wi-Fi de l'acquisition coupé) : les 6 débits sur l'écran au rythme du relevé ; push seul (câble débranché) : écran à jour ≤ 2 s après la fin d'une fenêtre ; les deux coupés : « inconnu » après 2 fenêtres
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Affichage redémarré : l'acquisition revient seule sur le point d'accès, aucun redémarrage de sa part, compteurs continus ; tas des deux cartes mesuré avant et après une heure
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Téléphone sur `SERVEUR-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
+- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Téléphone sur `ECRAN-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Commit par `/commite`
 - A7 — Retour au plan « debitmetres-chauffage » : Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)

@@ -222,8 +222,8 @@ qui affiche et commande ce que porte le serveur (relais, lumières, température
   l'utilisateur), sinon le maître relève un esclave absent.
 - [ ] Dépend du plan `debits-deux-cartes` A8 : le code d'écran générique (`ecranFonctions`, veille, luminosité, polices)
   n'y est pas encore validé sur carte ni solidifié. Reprendre ce module tel quel ; ne pas le recopier dans ce plan.
-- [ ] Maquette des vues de la cave (lumières, relais, température et humidité, pompe) proposée puis validée par
-  l'utilisateur (skill `lvgl-haspmota`), interface HASPmota ou LVGL selon le choix fait pour les débits.
+- [x] Maquette des vues de la cave (lumières, relais, température et humidité, pompe) proposée puis validée par
+  l'utilisateur (skill `lvgl-haspmota`), interface HASPmota ou LVGL selon le choix fait pour les débits. — preuve : validée le 2026-11-13, pages HASPmota commitées 6c848e703 (plan `ecran-cave-vues-commandes`, A7)
 - [ ] Boutons physiques du serveur de la cave remplacés par ceux de l'écran ? (idée de l'utilisateur, 2026-11-11). À
   trancher avec lui, entrée DI par entrée DI. Réserve de Claude : l'écran est une autre carte, reliée par le réseau ;
   s'il tombe, on ne commande plus rien sur place. Garder au moins un bouton physique pour la pompe de la cave et pour

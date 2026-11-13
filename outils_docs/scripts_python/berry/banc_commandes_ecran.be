@@ -40,11 +40,11 @@ var PERSIST = nil
 var NBRELAIS = 5
 
 class TasmotaStub
-    var puissance, timers, cmds, t, sw, reponse, nbLectures, rules
-    def init() self.puissance = [false, false, false, false, false] self.timers = {} self.cmds = [] self.t = 1000000 self.sw = {} self.reponse = "" self.nbLectures = 0 self.rules = [] end
+    var puissance, timers, cmds, t, sw, reponse, nbLectures, rules, ms
+    def init() self.puissance = [false, false, false, false, false] self.timers = {} self.cmds = [] self.t = 1000000 self.sw = {} self.reponse = "" self.nbLectures = 0 self.rules = [] self.ms = 0 end
     def response_append(s) self.reponse += s end
     def yield() end
-    def millis(n) return 0 end
+    def millis(n) return self.ms end
     def time_reached(t) return true end
     def read_sensors()
         self.nbLectures += 1
@@ -199,6 +199,19 @@ push(1, mot(5, true))
 verifie("trois fois le meme mot : une seule commande Power3", 1, nbCmds("Power3"))
 push(1, mot(5, false))
 verifie("meme seq mais autre sens : ignore aussi (relance de l'ecran)", 1, nbCmds("Power3"))
+
+print("--- meme_seq_apres_redemarrage_de_l_ecran")
+monte(true)
+tasmota.ms = 0
+push(1, mot(1, true))
+tasmota.ms = 10000
+push(1, mot(1, true))
+verifie("relance dans les 30 s : ignoree", 1, nbCmds("Power3"))
+tasmota.puissance[2] = false
+tasmota.ms = 41000
+push(1, mot(1, true))                                 # ecran redemarre : seq repartie de 1, 31 s apres le dernier mot
+verifie("meme seq au-dela de 30 s : executee (ecran redemarre)", 2, nbCmds("Power3"))
+tasmota.ms = 0
 
 print("--- releve_sans_action")
 monte(true)

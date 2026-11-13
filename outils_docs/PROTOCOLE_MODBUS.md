@@ -1146,9 +1146,9 @@ ESP32-S3-Touch-LCD-7B, RS485 sur 16/15) : aucun serveur n'a de broches libres po
 
 | Paire | Maître (ModBus + range extender id 0) | Esclave | Mode de communication | Voie | État |
 |---|---|---|---|---|---|
-| Débitmètres de la PAC (bureau) | Écran `tasmota32s3-bureau-ecran-debits-pac` (192.168.0.51, AP `SERVEUR-DEBITS-PAC-GATEWAY`, NAPT ON) | Acquisition `tasmota32s3-bureau-serveur-debits-pac` (ModBus id 1, range extender id 1, `ipMaitre` .51) | ModBus RTU (relevé groupé, registres 4704 à 4710, période 10 s) + push UDP multi-valeurs de l'esclave | Les deux : **filaire** RS485 (écran 16/15, acquisition 17/18, 19 200 8N1, voie de commande `Serial`) et **Wi-Fi** (l'acquisition est cliente du point d'accès de l'écran) ; chaque voie suffit seule | Configuré au dépôt, pas encore essayé sur carte |
+| Débitmètres de la PAC (bureau) | Écran `tasmota32s3-bureau-ecran-debits-pac` (192.168.0.51, AP `ECRAN-DEBITS-PAC-GATEWAY`, NAPT ON) | Acquisition `tasmota32s3-bureau-serveur-debits-pac` (ModBus id 1, range extender id 1, `ipMaitre` .51) | ModBus RTU (relevé groupé, registres 4704 à 4710, période 10 s) + push UDP multi-valeurs de l'esclave | Les deux : **filaire** RS485 (écran 16/15, acquisition 17/18, 19 200 8N1, voie de commande `Serial`) et **Wi-Fi** (l'acquisition est cliente du point d'accès de l'écran) ; chaque voie suffit seule | Configuré au dépôt, pas encore essayé sur carte |
 | Grenier du rez-de-chaussée (volets) | Serveur `tasmota32s3-rdc-grenier` (Waveshare 8DI-8RO, AP `SERVEUR-GRENIER-RDC-GATEWAY`, NAPT ON) | Écran à venir : `TasmotaSlaveModBus1` id 1 « ECRAN-GRENIER-RDC », **inactif** | ModBus (Serial ON + UDP ON au maître) ; l'esclave se présentera par `ImAlive` | **Filaire** RS485 (grenier RX 18 / TX 17, 7B 16/15) et **Wi-Fi** par le range extender du grenier (décisions de l'utilisateur du 2026-11-11 et du 2026-11-12) | Maître prêt dans le persist, env de l'écran pas encore créé |
-| Serveur relais de la cave | Serveur `tasmota32s3-serveur-rly` (range extender id 0, AP `SERVEUR-RLY-CAVE-GATEWAY`, NAPT ON, ModBus ON depuis le 2026-11-12) | Écran 7B `tasmota32s3-cave-ecran` (ECRAN-CAVE, topic `cave/ecran`) : ModBus id 1, range extender id 1 client de `SERVEUR-RLY-CAVE-GATEWAY` ; côté maître `TasmotaSlaveModBus1` id 1 « ECRAN-CAVE », **inactif** jusqu'au flash | ModBus (Serial ON + UDP ON au maître) ; l'esclave se présentera par `ImAlive` | **Filaire** RS485 (cave RX 18 / TX 17, 7B 16/15) et **Wi-Fi** par le range extender de la cave (décision de l'utilisateur du 2026-11-12) | Maître compilé le 2026-11-12 ; env de l'écran créé le 2026-11-12 (sans vues, A9), à compiler et flasher |
+| Serveur relais de la cave | Serveur `tasmota32s3-serveur-rly` (range extender id 0, AP `SERVEUR-RLY-CAVE-GATEWAY`, NAPT ON, ModBus ON depuis le 2026-11-12) | Écran 7B `tasmota32s3-cave-ecran` (ECRAN-CAVE, topic `cave/ecran`) : ModBus id 1, range extender id 1 client de `SERVEUR-RLY-CAVE-GATEWAY` ; côté maître `TasmotaSlaveModBus1` id 1 « ECRAN-CAVE », **inactif** jusqu'au flash | ModBus (Serial ON + UDP ON au maître) ; l'esclave se présentera par `ImAlive` | **Filaire** RS485 (cave RX 18 / TX 17, 7B 16/15) et **Wi-Fi** par le range extender de la cave (décision de l'utilisateur du 2026-11-12) | Maître compilé le 2026-11-12 ; vues, touches et affichage de l'écran écrits le 2026-11-13 (plan `ecran-cave-vues-commandes`), à flasher ; esclave et `ecranCave` du maître à passer à ON au flash |
 
 Les rôles s'inversent d'une paire à l'autre. Aux débits, l'écran est maître parce qu'il interroge l'acquisition et
 tient le point d'accès ; au grenier, le serveur garde les deux rôles (choix de l'utilisateur) et l'écran sera esclave.
@@ -1250,3 +1250,25 @@ course d'un volet) ; un bouton n'appelle rien. Une règle Tasmota sur ce JSON ne
 Il reste donc à écrire l'appel, à la réception, qui traduit la touche en ordre de volet ou de relais (sur le modèle
 de `capteurVirtuel`), et le chemin inverse pour afficher les états sur l'écran : écriture du maître dans les registres
 de l'esclave, ou lecture MQTT par l'écran.
+
+### Écran de la cave : touches par ModBus, affichage par MQTT (2026-11-13)
+
+Réalisé pour la cave (plan `tasks/plans/ecran-cave-vues-commandes.md`) ; le grenier pourra reprendre le même schéma.
+
+- **Touche de l'écran vers le maître.** L'écran pousse le mot `(seq << 1) | voulu` (`voulu` = 1 pour ON) au registre
+  `32 + touche - 1` (type bouton) par `modbusFonctions.be::pousseEtat` ; `seq` va de 1 à 127, propre à chaque touche,
+  jamais 0 (`ecranCaveFonctions.be::touche`). L'écran relance le même mot toutes les 2 s, 5 fois au plus, jusqu'à ce
+  que l'état lu par MQTT égale `voulu` ; la touche 5 (redémarrage du serveur) n'est jamais relancée.
+- **Réception par le maître.** Une ligne dans la branche `boutons` de `modBus_TasmotaSlaveModBus.be`, pour un push
+  seulement (`Automatique`), appelle `global.commandesEsclave.recoit(esclave, idModBus, mot)` ; seule la cave pose cet
+  objet (`controleCommandesEcran.be`, sous la garde `modules.ecranCave`) : les autres cartes ne changent pas. Une même
+  `seq` revenue dans les 30 s (relances de l'écran) est ignorée ; au-delà, elle est exécutée (écran redémarré, `seq`
+  repartie de 1). Action : `globalFonctions.modifEtatRelai` (la pompe du vide-cave en marche manuelle suspend ses
+  flotteurs jusqu'à l'arrêt), ou `Restart 1` pour la touche 5 sur ON seulement.
+- **Boutons virtuels du maître.** Cinq boutons `virtuel: "ModBus_TasmotaSlaveModBus1"` (la clé du driver de l'esclave,
+  pas son `name`), `idModBus` 1 à 5, `id` 11 à 15 ; ils ajoutent des clés `Button11` à `Button15` au JSON SENSOR, que
+  rien ne lit (l'historique exclut `Button*`).
+- **Affichage.** L'écran s'abonne à `tele/<cave>/SENSOR`, `tele/<cave>/STATE`, `stat/<cave>/RESULT`,
+  `stat/<cave>/STATUS10` et `tele/<cuve>/SENSOR` (topics dans `modules.ecranCave.sources` de son persist) ; chaque
+  valeur est datée et grisée après `modules.ecranCave.peremption` (900 s). Pas d'écriture du maître dans les registres
+  de l'écran : MQTT suffit, et un état périmé interdit la touche.
