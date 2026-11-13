@@ -16,7 +16,7 @@ TYPES_FOND = ("svg", "webp", "jpg")
 TYPES_ELEMENT = ("voyant", "valeur", "liaison")
 LIAISONS = ("modbus_serie", "modbus_esclave", "udp", "rgx", "wifi")
 AVEC_SEUIL = ("modbus_serie", "modbus_esclave", "udp")      # rgx (etat ok) et wifi (up) n'ont pas d'age
-REFRAICHISSEMENT_MIN = 2
+REFRAICHISSEMENT_MIN = 1000  # ms ; defaut de la carte : 2345 (WebRefresh)
 
 
 def _nombre(v):
