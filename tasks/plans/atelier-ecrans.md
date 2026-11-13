@@ -296,7 +296,7 @@ Conception : § 5 de la même spec.
   `test_atelier_ecrans_page_chrome.py::sonde_import` VERT (confirmation sur carte décrite, diff d'écriture fermé, brut
   hachuré, aperçu = source, Annuler, rien d'écrit) ; relecture : 1 défaut et 3 suggestions corrigés (remarque sur un brut
   refusée, texte brut d'une ligne) (2026-11-13)
-- [ ] Commit
+- [x] Commit — preuve : commit b4d2757ac (2026-11-13)
 
 ## A14 — Objets du palier 2 : image, liste déroulante, interrupteur, roue, QR code
 Conception : § 7 de la même spec.
