@@ -83,7 +83,7 @@
    "x2": 400,
    "y2": 220,
    "source": {
-    "type": "udp",
+    "type": "esclave",
     "mac": "AABBCCDDEEFF",
     "seuil_s": 600
    }
@@ -96,7 +96,7 @@
    "x2": 400,
    "y2": 230,
    "source": {
-    "type": "rgx",
+    "type": "esclave",
     "mac": "AABBCCDDEEFF"
    }
   },

@@ -14,8 +14,8 @@ SEUIL_AVERT = 40 * 1024
 SEUILS_REFUS = {"esp32": 60 * 1024, "autre": 200 * 1024}
 TYPES_FOND = ("svg", "webp", "jpg")
 TYPES_ELEMENT = ("voyant", "valeur", "liaison")
-LIAISONS = ("modbus_serie", "modbus_esclave", "udp", "rgx", "wifi")
-AVEC_SEUIL = ("modbus_serie", "modbus_esclave", "udp")      # rgx (etat ok) et wifi (up) n'ont pas d'age
+LIAISONS = ("modbus_serie", "modbus_esclave", "esclave", "wifi")
+AVEC_SEUIL = ("modbus_serie", "modbus_esclave")      # esclave et wifi : seuil_s facultatif
 REFRAICHISSEMENT_MIN = 1000  # ms ; defaut de la carte : 2345 (WebRefresh)
 
 
@@ -49,7 +49,7 @@ def _source(p, el, err):
                 err.append(f"{p} : condition {cle} refusee ici")
     if st == "modbus_esclave" and not (_entier(s.get("id")) and s["id"] >= 1):
         err.append(f"{p} : source.id absent ou invalide (entier >= 1)")
-    if st in ("udp", "rgx") and not (isinstance(s.get("mac"), str) and s["mac"]):
+    if st == "esclave" and not (isinstance(s.get("mac"), str) and s["mac"]):
         err.append(f"{p} : source.mac absent")
     if "seuil_s" in s and not (_nombre(s["seuil_s"]) and s["seuil_s"] > 0):
         err.append(f"{p} : seuil_s doit etre un nombre positif")
@@ -138,7 +138,7 @@ def _actifs(groupe):
 
 def sources(racine, env):
     """Sources proposables pour la carte `env`, d'apres son persist et son discovery.json au depot."""
-    res = {"relais": [], "mesures": [], "esclaves": [], "udp": [], "rgx": [], "periodeReleve": None, "telePeriod": None}
+    res = {"relais": [], "mesures": [], "esclaves": [], "esclaves_reseau": [], "periodeReleve": None, "telePeriod": None}
     try:
         dossier = fbe.dossier_carte(env)
     except ValueError:
@@ -171,16 +171,11 @@ def sources(racine, env):
             continue
         cfg = entree.get("config")
         nom = str(fiche.get("nom") or (cfg.get("dn") if isinstance(cfg, dict) else "") or mac)
-        # shortcut: rgx et udp viennent du meme fichier (le persist ne garde pas les clients du point d'acces), a separer si besoin
-        res["udp"].append({"mac": mac, "nom": nom})
-        res["rgx"].append({"mac": mac, "nom": nom})
+        res["esclaves_reseau"].append({"mac": mac, "nom": nom})
     return res
 
 
 def defauts_seuils(src):
-    """Seuils par defaut de `seuil_s` (spec §6.2) : ModBus 3 x periodeReleve (30 s sinon), udp 2 x telePeriod."""
+    """Seuils par defaut de `seuil_s` (spec §6.2) : ModBus 3 x periodeReleve (30 s sinon)."""
     modbus = 3 * src["periodeReleve"] if src.get("periodeReleve") else 30
-    d = {"modbus_serie": modbus, "modbus_esclave": modbus}
-    if src.get("telePeriod"):
-        d["udp"] = 2 * src["telePeriod"]
-    return d
+    return {"modbus_serie": modbus, "modbus_esclave": modbus}

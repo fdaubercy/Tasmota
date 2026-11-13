@@ -86,7 +86,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -99,7 +99,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -207,7 +207,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -220,7 +220,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -330,7 +330,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -343,7 +343,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -453,7 +453,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -466,7 +466,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -576,7 +576,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -589,7 +589,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -699,7 +699,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -712,7 +712,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -821,7 +821,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -834,7 +834,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -941,7 +941,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -954,7 +954,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1063,7 +1063,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1076,7 +1076,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1186,7 +1186,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1199,7 +1199,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1308,7 +1308,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1321,7 +1321,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1431,7 +1431,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1444,7 +1444,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1554,7 +1554,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1567,7 +1567,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1677,7 +1677,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1690,7 +1690,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1800,7 +1800,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1813,7 +1813,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -1923,7 +1923,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -1936,7 +1936,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -2044,7 +2044,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -2057,7 +2057,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -2165,7 +2165,7 @@
      "x2": 400,
      "y2": 220,
      "source": {
-      "type": "udp",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF",
       "seuil_s": 600
      }
@@ -2178,7 +2178,7 @@
      "x2": 400,
      "y2": 230,
      "source": {
-      "type": "rgx",
+      "type": "esclave",
       "mac": "AABBCCDDEEFF"
      }
     },
@@ -2199,6 +2199,616 @@
   "puce": "ESP32-P4",
   "erreurs": [
    "au-dessus du seuil"
+  ]
+ },
+ {
+  "nom": "esclave sans mac",
+  "desc": {
+   "version": 1,
+   "fond": {
+    "type": "svg",
+    "largeur": 480,
+    "hauteur": 320
+   },
+   "rafraichissement": 2345,
+   "elements": [
+    {
+     "id": "v1",
+     "type": "voyant",
+     "x": 100,
+     "y": 80,
+     "source": {
+      "type": "relais",
+      "n": 1
+     },
+     "style": {
+      "forme": "rond"
+     }
+    },
+    {
+     "id": "v2",
+     "type": "voyant",
+     "x": 120,
+     "y": 80,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "Switch1"
+      ],
+      "on": 1
+     }
+    },
+    {
+     "id": "n1",
+     "type": "valeur",
+     "x": 240,
+     "y": 160,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "ANALOG",
+       "A1"
+      ]
+     },
+     "style": {
+      "unite": "cm",
+      "decimales": 1
+     }
+    },
+    {
+     "id": "l1",
+     "type": "liaison",
+     "x": 50,
+     "y": 50,
+     "x2": 400,
+     "y2": 200,
+     "source": {
+      "type": "modbus_esclave",
+      "id": 3,
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l2",
+     "type": "liaison",
+     "x": 50,
+     "y": 60,
+     "x2": 400,
+     "y2": 210,
+     "source": {
+      "type": "modbus_serie",
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l3",
+     "type": "liaison",
+     "x": 50,
+     "y": 70,
+     "x2": 400,
+     "y2": 220,
+     "source": {
+      "type": "esclave",
+      "seuil_s": 600
+     }
+    },
+    {
+     "id": "l4",
+     "type": "liaison",
+     "x": 50,
+     "y": 80,
+     "x2": 400,
+     "y2": 230,
+     "source": {
+      "type": "esclave",
+      "mac": "AABBCCDDEEFF"
+     }
+    },
+    {
+     "id": "l5",
+     "type": "liaison",
+     "x": 50,
+     "y": 90,
+     "x2": 400,
+     "y2": 240,
+     "source": {
+      "type": "wifi"
+     }
+    }
+   ]
+  },
+  "octets": 30000,
+  "puce": "ESP32",
+  "erreurs": [
+   "source.mac absent"
+  ]
+ },
+ {
+  "nom": "esclave seuil_s negatif",
+  "desc": {
+   "version": 1,
+   "fond": {
+    "type": "svg",
+    "largeur": 480,
+    "hauteur": 320
+   },
+   "rafraichissement": 2345,
+   "elements": [
+    {
+     "id": "v1",
+     "type": "voyant",
+     "x": 100,
+     "y": 80,
+     "source": {
+      "type": "relais",
+      "n": 1
+     },
+     "style": {
+      "forme": "rond"
+     }
+    },
+    {
+     "id": "v2",
+     "type": "voyant",
+     "x": 120,
+     "y": 80,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "Switch1"
+      ],
+      "on": 1
+     }
+    },
+    {
+     "id": "n1",
+     "type": "valeur",
+     "x": 240,
+     "y": 160,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "ANALOG",
+       "A1"
+      ]
+     },
+     "style": {
+      "unite": "cm",
+      "decimales": 1
+     }
+    },
+    {
+     "id": "l1",
+     "type": "liaison",
+     "x": 50,
+     "y": 50,
+     "x2": 400,
+     "y2": 200,
+     "source": {
+      "type": "modbus_esclave",
+      "id": 3,
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l2",
+     "type": "liaison",
+     "x": 50,
+     "y": 60,
+     "x2": 400,
+     "y2": 210,
+     "source": {
+      "type": "modbus_serie",
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l3",
+     "type": "liaison",
+     "x": 50,
+     "y": 70,
+     "x2": 400,
+     "y2": 220,
+     "source": {
+      "type": "esclave",
+      "mac": "AABBCCDDEEFF",
+      "seuil_s": -5
+     }
+    },
+    {
+     "id": "l4",
+     "type": "liaison",
+     "x": 50,
+     "y": 80,
+     "x2": 400,
+     "y2": 230,
+     "source": {
+      "type": "esclave",
+      "mac": "AABBCCDDEEFF"
+     }
+    },
+    {
+     "id": "l5",
+     "type": "liaison",
+     "x": 50,
+     "y": 90,
+     "x2": 400,
+     "y2": 240,
+     "source": {
+      "type": "wifi"
+     }
+    }
+   ]
+  },
+  "octets": 30000,
+  "puce": "ESP32",
+  "erreurs": [
+   "seuil_s"
+  ]
+ },
+ {
+  "nom": "esclave sans seuil_s",
+  "desc": {
+   "version": 1,
+   "fond": {
+    "type": "svg",
+    "largeur": 480,
+    "hauteur": 320
+   },
+   "rafraichissement": 2345,
+   "elements": [
+    {
+     "id": "v1",
+     "type": "voyant",
+     "x": 100,
+     "y": 80,
+     "source": {
+      "type": "relais",
+      "n": 1
+     },
+     "style": {
+      "forme": "rond"
+     }
+    },
+    {
+     "id": "v2",
+     "type": "voyant",
+     "x": 120,
+     "y": 80,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "Switch1"
+      ],
+      "on": 1
+     }
+    },
+    {
+     "id": "n1",
+     "type": "valeur",
+     "x": 240,
+     "y": 160,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "ANALOG",
+       "A1"
+      ]
+     },
+     "style": {
+      "unite": "cm",
+      "decimales": 1
+     }
+    },
+    {
+     "id": "l1",
+     "type": "liaison",
+     "x": 50,
+     "y": 50,
+     "x2": 400,
+     "y2": 200,
+     "source": {
+      "type": "modbus_esclave",
+      "id": 3,
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l2",
+     "type": "liaison",
+     "x": 50,
+     "y": 60,
+     "x2": 400,
+     "y2": 210,
+     "source": {
+      "type": "modbus_serie",
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l3",
+     "type": "liaison",
+     "x": 50,
+     "y": 70,
+     "x2": 400,
+     "y2": 220,
+     "source": {
+      "type": "esclave",
+      "mac": "AABBCCDDEEFF"
+     }
+    },
+    {
+     "id": "l4",
+     "type": "liaison",
+     "x": 50,
+     "y": 80,
+     "x2": 400,
+     "y2": 230,
+     "source": {
+      "type": "esclave",
+      "mac": "AABBCCDDEEFF"
+     }
+    },
+    {
+     "id": "l5",
+     "type": "liaison",
+     "x": 50,
+     "y": 90,
+     "x2": 400,
+     "y2": 240,
+     "source": {
+      "type": "wifi"
+     }
+    }
+   ]
+  },
+  "octets": 30000,
+  "puce": "ESP32",
+  "erreurs": []
+ },
+ {
+  "nom": "type udp supprime",
+  "desc": {
+   "version": 1,
+   "fond": {
+    "type": "svg",
+    "largeur": 480,
+    "hauteur": 320
+   },
+   "rafraichissement": 2345,
+   "elements": [
+    {
+     "id": "v1",
+     "type": "voyant",
+     "x": 100,
+     "y": 80,
+     "source": {
+      "type": "relais",
+      "n": 1
+     },
+     "style": {
+      "forme": "rond"
+     }
+    },
+    {
+     "id": "v2",
+     "type": "voyant",
+     "x": 120,
+     "y": 80,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "Switch1"
+      ],
+      "on": 1
+     }
+    },
+    {
+     "id": "n1",
+     "type": "valeur",
+     "x": 240,
+     "y": 160,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "ANALOG",
+       "A1"
+      ]
+     },
+     "style": {
+      "unite": "cm",
+      "decimales": 1
+     }
+    },
+    {
+     "id": "l1",
+     "type": "liaison",
+     "x": 50,
+     "y": 50,
+     "x2": 400,
+     "y2": 200,
+     "source": {
+      "type": "modbus_esclave",
+      "id": 3,
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l2",
+     "type": "liaison",
+     "x": 50,
+     "y": 60,
+     "x2": 400,
+     "y2": 210,
+     "source": {
+      "type": "modbus_serie",
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l3",
+     "type": "liaison",
+     "x": 50,
+     "y": 70,
+     "x2": 400,
+     "y2": 220,
+     "source": {
+      "type": "udp",
+      "mac": "AABBCCDDEEFF",
+      "seuil_s": 600
+     }
+    },
+    {
+     "id": "l4",
+     "type": "liaison",
+     "x": 50,
+     "y": 80,
+     "x2": 400,
+     "y2": 230,
+     "source": {
+      "type": "esclave",
+      "mac": "AABBCCDDEEFF"
+     }
+    },
+    {
+     "id": "l5",
+     "type": "liaison",
+     "x": 50,
+     "y": 90,
+     "x2": 400,
+     "y2": 240,
+     "source": {
+      "type": "wifi"
+     }
+    }
+   ]
+  },
+  "octets": 30000,
+  "puce": "ESP32",
+  "erreurs": [
+   "inconnue"
+  ]
+ },
+ {
+  "nom": "modbus_esclave sans seuil_s",
+  "desc": {
+   "version": 1,
+   "fond": {
+    "type": "svg",
+    "largeur": 480,
+    "hauteur": 320
+   },
+   "rafraichissement": 2345,
+   "elements": [
+    {
+     "id": "v1",
+     "type": "voyant",
+     "x": 100,
+     "y": 80,
+     "source": {
+      "type": "relais",
+      "n": 1
+     },
+     "style": {
+      "forme": "rond"
+     }
+    },
+    {
+     "id": "v2",
+     "type": "voyant",
+     "x": 120,
+     "y": 80,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "Switch1"
+      ],
+      "on": 1
+     }
+    },
+    {
+     "id": "n1",
+     "type": "valeur",
+     "x": 240,
+     "y": 160,
+     "source": {
+      "type": "mesure",
+      "chemin": [
+       "ANALOG",
+       "A1"
+      ]
+     },
+     "style": {
+      "unite": "cm",
+      "decimales": 1
+     }
+    },
+    {
+     "id": "l1",
+     "type": "liaison",
+     "x": 50,
+     "y": 50,
+     "x2": 400,
+     "y2": 200,
+     "source": {
+      "type": "modbus_esclave",
+      "id": 3,
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l2",
+     "type": "liaison",
+     "x": 50,
+     "y": 60,
+     "x2": 400,
+     "y2": 210,
+     "source": {
+      "type": "modbus_serie",
+      "seuil_s": 90
+     }
+    },
+    {
+     "id": "l3",
+     "type": "liaison",
+     "x": 50,
+     "y": 70,
+     "x2": 400,
+     "y2": 220,
+     "source": {
+      "type": "modbus_esclave",
+      "id": 3
+     }
+    },
+    {
+     "id": "l4",
+     "type": "liaison",
+     "x": 50,
+     "y": 80,
+     "x2": 400,
+     "y2": 230,
+     "source": {
+      "type": "esclave",
+      "mac": "AABBCCDDEEFF"
+     }
+    },
+    {
+     "id": "l5",
+     "type": "liaison",
+     "x": 50,
+     "y": 90,
+     "x2": 400,
+     "y2": 240,
+     "source": {
+      "type": "wifi"
+     }
+    }
+   ]
+  },
+  "octets": 30000,
+  "puce": "ESP32",
+  "erreurs": [
+   "seuil_s absent"
   ]
  }
 ]

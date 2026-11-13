@@ -35,7 +35,7 @@ def cas_partages():
             verifie(err == [], f"{c['nom']} : {err}")
     ex = json.loads((RACINE / "outils_docs/schemas/exemple_visuel.json").read_text(encoding="utf-8"))
     verifie(av.valide(ex, None, "ESP32") == [], "exemple_visuel.json invalide")
-    verifie(len(cas) >= 15, "moins de 15 cas")
+    verifie(len(cas) >= 22, "moins de 22 cas")
 
 
 def seuils():
@@ -59,11 +59,11 @@ def sources_cuve():
         s = av.sources(tmp, CUVE)
         verifie({"n": 1, "nom": "Ruban"} in s["relais"], f"relais {s['relais']}")
         verifie({"id": 7, "nom": "Esclave test"} in s["esclaves"], f"esclaves {s['esclaves']}")
-        verifie(s["udp"] == [{"mac": "AABBCCDDEEFF", "nom": "Rideau"}] == s["rgx"], f"udp {s['udp']}")
+        verifie(s["esclaves_reseau"] == [{"mac": "AABBCCDDEEFF", "nom": "Rideau"}] and "udp" not in s and "rgx" not in s, f"esclaves_reseau {s}")
         verifie(s["periodeReleve"] == 10 and s["telePeriod"] == 300, f"periodes {s['periodeReleve']} {s['telePeriod']}")
         verifie({"chemin": ["Button1"], "nom": "Bouton ruban"} in s["mesures"], f"mesures {s['mesures']}")
         verifie("SECRET-A-NE-PAS-VOIR" not in json.dumps(s) and "XYZ" not in json.dumps(s), "secret dans les sources")
-        verifie(av.defauts_seuils(s) == {"modbus_serie": 30, "modbus_esclave": 30, "udp": 600}, f"defauts {av.defauts_seuils(s)}")
+        verifie(av.defauts_seuils(s) == {"modbus_serie": 30, "modbus_esclave": 30}, f"defauts {av.defauts_seuils(s)}")
         verifie(av.defauts_seuils({"periodeReleve": None, "telePeriod": None}) == {"modbus_serie": 30, "modbus_esclave": 30},
                 "defauts sans periode")
         verifie(av.sources(tmp, "tasmota32-inconnu-x")["relais"] == [], "env inconnu")
