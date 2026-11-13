@@ -150,8 +150,11 @@ sur `up` -> `ecranCaveFonctions.touche`). Pages : 1 Accueil (disposition C : cap
 (veille, extinction, luminosité par `ecranFonctions.regle`). Menu ☰ en page 0 (fenêtre qui s'ouvre par-dessus) avec
 « Redémarrer le serveur » et une confirmation à deux touches. Valeur périmée = grisée, horloge de la barre du haut barrée tant que le broker n'est pas joint ; ventilation = icône animée si
 POWER2 ON ; pompe vide-cave « auto » et « manuel » ; alertes des flotteurs en rouge. Polices : celles de `/sd/polices`.
+Icônes d'appareil (demande du 2026-11-13) : glyphes Material Design du firmware en `montserrat-28` (ampoule `\uE335`,
+allumée `\uE6E8` par la clé `lumieresIcone`, lave-linge `\uE72A`, pompes `\uE58F`), couleur selon l'état ; sources d'icônes :
+`outils_docs/ICONES_IMAGES_SOURCES.md` (à consulter avant de dessiner une icône).
 Ressources sous `/sd` (préférence de l'utilisateur).
-- [ ] Maquette du rendu (capture de l'aperçu de l'atelier) validée par l'utilisateur avant l'écriture des pages
+- [x] Maquette du rendu (capture de l'aperçu de l'atelier) validée par l'utilisateur avant l'écriture des pages — preuve : validation du 2026-11-13 (« OK pour le reste », icônes d'appareil ajoutées à sa demande : ampoule, lave-linge, pompe, couleur selon l'état), 10 captures de l'aperçu réel, console sans erreur
 - [ ] `ecran.json` validé par `atelier_ecrans_description.valide` ; `pages.jsonl` généré
 - [ ] `banc_ecran_cave` étendu : chaque objet référencé par `affiche` existe dans `pages.jsonl` ; `confirmation_avant_redemarrage` ; `menu_ouvre_et_ferme`
 - [ ] Commit `feat(ecran-cave): pages HASPmota (accueil, graphiques, cuve, reglages, menu)`
@@ -173,6 +176,7 @@ Ressources sous `/sd` (préférence de l'utilisateur).
 - [ ] Veille, réveil sans action, luminosité
 
 ## Améliorations restantes
+- [ ] [projet] Icônes et images depuis l'atelier des écrans (liens de l'annuaire, glyphes du firmware, import de PNG, explications dans la page) : action A16 proposée au plan `atelier-ecrans` le 2026-11-13
 - [ ] [projet] Solidifier `ecranFonctions` dans les envs à écran (plan `debits-deux-cartes` A8)
 - [ ] [projet] Boutons physiques du serveur à garder ou retirer (plan `envs-grenier-rdc-sonoff-cave` A9)
 - [ ] [projet] Topic de la cave à changer au retour en production (A7 du plan d'origine) : seul le persist de l'écran à modifier
