@@ -402,8 +402,10 @@ quand la page est affichée.
   Wi-Fi et durée hors ligne, reconnexions MQTT, heure synchronisée ou non. Métier : ModBus (esclaves joignables,
   délais dépassés, âge du dernier push), clients du range extender. Écran : luminosité, délai de veille. Journal : les
   dernières erreurs Berry. Version et date du firmware, température de la puce. Boutons : redémarrer, GC
-- [ ] Module commun (`data/fs`, accord de l'utilisateur avant écriture ; solidifié ou non selon la RAM, ajouté à
-  `custom_berry_solidify` ou à `custom_files_upload` des envs à écran) ; banc Berry sur bouchons (`tasmota.memory`, `Ufs`),
+- [ ] Module commun (`data/fs`, accord de l'utilisateur du 2026-11-13 ; chargé depuis le FS, non solidifié : avis de
+  Claude retenu, ajouté à `custom_files_upload` des envs à écran et exclu des autres) ; dernières erreurs Berry gardées
+  en mémoire par `data/fs/logFonctions.be` (accord du 2026-11-13, après le commit de la session « Modules ESP32-S3 avec
+  ecran » qui y ajoute les cibles `ecranCave` et `ecranDebits`) ; banc Berry sur bouchons (`tasmota.memory`, `Ufs`),
   avec mutants ; `banc_demarrage.py`
 - [ ] Page dans chaque `ecran.json` : barres et arcs (palier 1) avec libellés, icônes du firmware (`clock-outline`, `wifi`,
   `thermometer`…) et PNG pour celles qui manquent (`memory`, `chip`, `harddisk`, `micro-sd` : catalogue A18, import A15) ;

@@ -82,7 +82,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Page : grille avec recherche par nom, filtre par source (firmware, LVGL, PNG, sites), fiche d'une icône (code à
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Tuile de l'annuaire, tâche VS Code, cible Custom détachée ; mode d'emploi (`outils_docs/README.md`), carte des
-- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Module commun (`data/fs`, accord de l'utilisateur avant écriture ; solidifié ou non selon la RAM, ajouté à
+- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Module commun (`data/fs`, accord de l'utilisateur du 2026-11-13 ; chargé depuis le FS, non solidifié : avis de
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Page dans chaque `ecran.json` : barres et arcs (palier 1) avec libellés, icônes du firmware (`clock-outline`, `wifi`,
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Bancs (description valide, deux générateurs), sonde Chrome de l'aperçu ; compilation par la page Build ; essai sur
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
