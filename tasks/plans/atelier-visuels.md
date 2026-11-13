@@ -177,15 +177,15 @@ les zones vivent dans le réglage de l'outil, pas sur la carte.
   corps de 1 Mo + 1 = 413 ; type inconnu = 400 ; SVG malveillant = 400 avec le message ; fond gardé relu par
   `GET /fond` octet pour octet ; 21e fond = le plus ancien évincé — preuve : test_atelier_visuels_web.py VERT code 0, serveur arrete en fin de banc
 - [ ] Tests lancés : rouges
-- [ ] `atelier_visuels_fond.py`, `atelier_visuels_web.py` (squelette de `tapp_web.py`), page et JS écrits selon la
-  maquette choisie en A1 ; tests verts
+- [x] `atelier_visuels_fond.py`, `atelier_visuels_web.py` (squelette de `tapp_web.py`), page et JS écrits selon la
+  maquette choisie en A1 ; tests verts — preuve : atelier_visuels_page.py + _page_js.py (disposition A, 3 colonnes, theme sombre/clair), test_atelier_visuels_web.py VERT, test_atelier_visuels_page_chrome.py VERT
 - [x] Editeur de formes (module `atelier_visuels_page_formes*.py`) : rectangle, polygone, 10 gabarits, motifs briques/tuiles/lames, couleur mediane, aimantation 8 px, annuler/retablir 100 pas, zones effacer/garder, `AV.svg()` propre — preuve : test_atelier_visuels_page_formes.py VERT (31 verifications node, SVG sans perte par nettoie_svg) ; liaison DOM non essayee (sonde Chrome a faire)
 - [ ] Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`),
   enregistrée dans le pré-script ; `test_cible_atelier_visuels.py` vert ; `garde_build.py` et son banc verts ;
   tuile de l'annuaire et tâche VS Code ajoutées, annuaire relancé, tuile vue
-- [ ] Sonde `test_atelier_visuels_page_chrome.py` : fabrique une image de test dans le navigateur (formes colorées sur
+- [x] Sonde `test_atelier_visuels_page_chrome.py` : fabrique une image de test dans le navigateur (formes colorées sur
   un canvas, aucune photo réelle), la dépose, recadre, produit les deux modes, lit le poids affiché, garde le fond,
-  compare `GET /fond` au blob ; attend des conditions, jamais une durée ; arrête ses Chrome (mémoire du 2026-11-13)
+  compare `GET /fond` au blob ; attend des conditions, jamais une durée ; arrête ses Chrome (mémoire du 2026-11-13) — preuve : test_atelier_visuels_page_chrome.py VERT (image fabriquee, recadrage, rotation, 2 modes, poids, GET /fond == blob, theme, editeur de formes, aucun Chrome sonde_atelier_visuels_page_* vivant)
 - [ ] `relecteur-pages-web` lancé, remarques traitées
 - [ ] Commit `feat(atelier-visuels): page 7990, import de la photo, fond photo ou dessin, poids (A5)`
 
@@ -238,12 +238,13 @@ décoché : fichiers, ligne et cenv retirés) ; `atelier_visuels_suivi.py::etat(
 `/ufsd?download=/json/visuel.json`, comme le suivi des étiquettes QR ; `lecteur` injectable pour le test).
 Page : bouton « Écrire dans le dépôt » (diff montré, confirmation), puis lien « Téléverser »
 `http://<hôte>:7700/?env=&depuis=visuel&fichiers=visuel.json,visuel.svg&redemarrer=1` ; badge de suivi par carte.
-- [ ] `test_atelier_visuels_ecriture.py` écrit (copie temporaire du dépôt, relue par `ProjectConfig`) : écriture crée
+- [x] `test_atelier_visuels_ecriture.py` écrit (copie temporaire du dépôt, relue par `ProjectConfig`) : écriture crée
   les fichiers, la ligne d'autoexec en dernière position, lève la liste pour l'env et l'exclut ailleurs ; empreinte
   périmée = refus, rien écrit ; build en cours = refus ; `retire` rend le dépôt à l'identique ; fond `webp` remplace
-  un `svg` existant
-- [ ] `test_atelier_visuels_suivi.py` écrit : les quatre états, lecteur qui lève = `inconnue`
+  un `svg` existant — preuve : `test_atelier_visuels_ecriture.py` BANC_VISUELS_ECRITURE: OK (cenv sans puis avec la liste `visuel_accueil`, rouge ModuleNotFoundError avant les modules)
+- [x] `test_atelier_visuels_suivi.py` écrit : les quatre états, lecteur qui lève = `inconnue` — preuve : `test_atelier_visuels_suivi.py` BANC_VISUELS_SUIVI: OK (rouge avant le module)
 - [ ] Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
+  (reste : `banc_demarrage.py` sur la copie après écriture, à lancer APRÈS le build en cours ; écriture et suivi : rouges puis verts le 2026-11-13)
 - [ ] `AT_ORIGINES` : entrée `visuel` ; `sonde_atelier` étendue ; sonde Chrome de l'outil : « Écrire » puis lien Build
   présent avec les bons fichiers
 - [ ] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert
