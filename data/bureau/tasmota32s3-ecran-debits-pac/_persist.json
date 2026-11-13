@@ -191,6 +191,13 @@
 	},
 	"modules": {
 		"activation": "ON",
+		"ecranSysteme": {
+			"name": "EcranSysteme",
+			"activation": "ON",
+			"page": 4,
+			"log": "info",
+			"environnement": {}
+		},
 		"ecranDebits": {
 			"name": "EcranDebits",
 			"activation": "ON",
