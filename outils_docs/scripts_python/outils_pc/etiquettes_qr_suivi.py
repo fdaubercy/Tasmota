@@ -54,8 +54,7 @@ def etats(racine, env, *, envs=None, get=None, delai=DELAI, interroger=True):
     e = next((x for x in envs if x.nom == env and x.famille == "cartes"), None)
     if e is None:
         raise LookupError(f"carte inconnue : {env!r}")
-    reglage = modele.charge_reglage(racine, env)
-    resolu = modele.resout_avec(reglage, modele.champs_standards(racine, env, envs), modele.persist_de(racine, env))
+    reglage, resolu = _resolu(racine, env, envs)
     note = ecriture.lit_impressions(racine).get(env)
     a_reimprimer = isinstance(note, dict) and note.get("empreinte") != modele.empreinte(resolu["texte"])
     dossier = fbe.dossier_carte(env)
@@ -71,6 +70,28 @@ def etats(racine, env, *, envs=None, get=None, delai=DELAI, interroger=True):
         a_regenerer = True
     carte = _carte(e.ip, depot, get or _get, delai) if interroger else None
     return {"a_reimprimer": a_reimprimer, "a_regenerer": a_regenerer, "carte": carte}
+
+
+def _resolu(racine, env, envs):
+    reglage = modele.charge_reglage(racine, env)
+    return reglage, modele.resout_avec(reglage, modele.champs_standards(racine, env, envs), modele.persist_de(racine, env))
+
+
+def fichier_attendu(racine, env, envs=None):
+    """Contenu que qrcode.json devrait avoir d'apres le reglage, le persist et le .h du moment (regeneration au build)."""
+    envs = envs if envs is not None else build_envs.liste_envs(Path(racine))
+    return modele.fichier_carte(racine, *_resolu(Path(racine), env, envs))
+
+
+def texte_si_regle(racine, env):
+    """Texte resolu de l'etiquette d'un env qui a un reglage, sinon None (et None si illisible : jamais d'echec chez
+    l'appelant). Les autres outils le comparent avant et apres leur ecriture pour proposer « Etiquette QR a refaire »."""
+    try:
+        if not modele.chemin_surcharge(racine, env).is_file():
+            return None
+        return _resolu(Path(racine), env, build_envs.liste_envs(Path(racine)))[1]["texte"]
+    except (LookupError, ValueError, OSError):
+        return None
 
 
 def lien_si_regle(racine, env):

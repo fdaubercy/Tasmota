@@ -6,7 +6,9 @@ Le renommage se fait SUR PLACE (renommer puis revenir rend le cenv octet pour oc
   2. .h : la section est remplacee la ou elle est, identite nouvelle (comme une creation) ; section partagee
      (#if defined(A) || defined(B)) : copie ajoutee apres elle et seul defined(X) quitte la condition ;
   3. dossier data/<lieu>/<carte> DEPLACE (pas copie), _persist.json aux valeurs d'identite nouvelles ;
-  4. default_envs : la ligne garde son etat (active ou commentee) au nouveau nom ; data_dir suit le dossier.
+  4. default_envs : la ligne garde son etat (active ou commentee) au nouveau nom ; data_dir suit le dossier ;
+  5. reglage d'etiquette QR (outils_docs/etiquettes_qr/cartes/<env>.json, range par nom d'env) deplace au nouveau nom ;
+     le resultat porte alors le lien « Etiquette QR a refaire » vers la page 7970 (hostname et topic changent).
 Une seule Transaction (atomique, sauvegardes horodatees). L'identite actuelle de l'env ne compte pas dans le
 controle d'unicite : garder son IP est permis. Seules les cartes se renomment ; rien n'est commite.
 """
@@ -22,6 +24,8 @@ import fichiers_berry_etat as fbe
 import fichiers_berry_ini as fbi
 import fichiers_berry_sauvegarde as fbs
 import fichiers_berry_suppression as fbx
+import etiquettes_qr_modele as qr_modele
+import etiquettes_qr_suivi as qr_suivi
 
 
 @dataclass
@@ -115,6 +119,12 @@ def _calcule(racine, r):
     fbx.citations(racine, r.env, av, {fbi.FICHIER_CENV: res["cenv"], fbx.OVERRIDE: res["override"]})
     textes = [fbx.diff(l_c, res["cenv"], fbi.FICHIER_CENV), fbx.diff(l_h, res["h"], fbc.FICHIER_H),
               fbx.diff(l_o, res["override"], fbx.OVERRIDE), f"dossier deplace : {dossier} -> {nouveau_dossier}"]
+    etiquette = [qr_modele.chemin_surcharge(racine, e).relative_to(racine).as_posix() for e in (r.env, nouvel_env)]
+    res["etiquette"] = etiquette if (racine / etiquette[0]).is_file() else None
+    if res["etiquette"]:
+        if (racine / etiquette[1]).exists():
+            refus.append(f"{etiquette[1]} existe deja : reglage d'etiquette QR a ranger a la main")
+        textes.append("reglage d'etiquette QR deplace : {} -> {}".format(*etiquette))
     if res["persist"] is not None:
         textes.append(fbx.diff(fbi.decoupe(t_persist), fbi.decoupe(res["persist"]), nouveau_dossier + "/_persist.json"))
     res["diff"] = fbc._masque("\n".join(t for t in textes if t))
@@ -148,7 +158,9 @@ def renomme(racine, r, empreinte_lue, builds_en_cours):
         if res["override"] != l_o:
             tr.ecrit(fbx.OVERRIDE, fbc._encode(res["override"], e_o))
         tr.renomme(res["dossier"], res["nouveau_dossier"])
+        if res["etiquette"]:
+            tr.renomme(*res["etiquette"])
         if res["persist"] is not None:
             tr.ecrit(res["nouveau_dossier"] + "/_persist.json", res["persist"].encode("utf-8", errors="surrogateescape"))
     return {"renomme": True, "env": res["nouvel_env"], "dossier": res["nouveau_dossier"], "sauvegarde": str(tr.dossier),
-            "avertissements": res["avertissements"]}
+            "avertissements": res["avertissements"], "etiquette_qr": qr_suivi.lien_si_regle(racine, res["nouvel_env"])}

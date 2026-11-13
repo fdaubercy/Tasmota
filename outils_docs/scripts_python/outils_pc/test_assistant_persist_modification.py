@@ -173,6 +173,12 @@ def test_modification(t):
     r0 = reps(racine, ENV)
     d = fbe.dossier_carte(ENV)
     origine = fichiers(racine, ENV)
+    # reglage d'etiquette QR (A7 du plan etiquettes-qrcode) : le hostname dans le texte, gabarit du vrai depot
+    qr = racine / "outils_docs/etiquettes_qr"
+    (qr / "cartes").mkdir(parents=True, exist_ok=True)
+    (qr / "gabarit.json").write_bytes((RACINE / "outils_docs/etiquettes_qr/gabarit.json").read_bytes())
+    (qr / "cartes" / f"{ENV}.json").write_text(json.dumps({"lignes": [{"source": "standard", "cle": "hostname", "libelle": "Hostname"}]}),
+                                               encoding="utf-8")
     # rien_change_ecart_vide
     p = prepare(racine, ENV, r0)
     verifie((p["vide"], p["refus"], p["diff"], p["env"], p["dossier"]), (True, [], "", ENV, d), "rien_change_ecart_vide : prepare")
@@ -186,6 +192,7 @@ def test_modification(t):
     verifie((p["diff"] != "", p["chemins"] != []), (True, True), "bloc_retire : diff et chemins du persist non vides")
     res, msg = modifie(racine, ENV, r1)
     verifie((res is not None and res["modifie"], msg), (True, None), "bloc_retire : modifie")
+    verifie(res["etiquette_qr"], None, "bloc_retire : texte de l'etiquette QR inchange, pas de lien")
     meme_carte(racine, neuf(t, "o1", reponses(blocs=[b for b in SANS_RE if b != "historique"])), ENV, "bloc_retire : = env cree sans le bloc")
     verifie(fichiers(racine, ENV) != origine, True, "bloc_retire : fichiers changes")
     p = prepare(racine, ENV, r0)                                  # bloc_ajoute : le retour
@@ -196,6 +203,7 @@ def test_modification(t):
     r2 = replace(r0, hostname="PISCINE2-GARAGE", client="PISCINE2-GARAGE", topic="garage/piscine2", ssid_ap="PISCINE2-GARAGE-GATEWAY")
     res, msg = modifie(racine, ENV, r2)
     verifie((res is not None, msg), (True, None), "identite_changee : modifie")
+    verifie(res["etiquette_qr"], "http://127.0.0.1:7970/?env=" + ENV, "identite_changee : hostname de l'etiquette QR change, lien a refaire")
     pers = json.loads(lit(racine, d + "/_persist.json"))
     verifie((pers["serveur"]["hostname"], pers["serveur"]["mqtt"]["topic"]), ("PISCINE2-GARAGE", "garage/piscine2"), "identite_changee : persist")
     h = "\n".join(section(racine, ENV, fbc.FICHIER_H))

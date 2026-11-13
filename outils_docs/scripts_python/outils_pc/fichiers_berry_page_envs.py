@@ -84,6 +84,9 @@ async function renommer() {
   montreDiff("r-diff", "");
   z.appendChild(h("div", {"class": "ok", id: "r-ok", texte: "Renommé en " + r.donnees.env + " (dossier " + r.donnees.dossier +
     "). Sauvegarde : " + r.donnees.sauvegarde}));
+  if (r.donnees.etiquette_qr)                       // hostname et topic changes : l'etiquette imprimee ne vaut plus
+    z.appendChild(h("div", {"class": "avert", id: "r-etiquette"}, "Étiquette QR à refaire : ",
+                    h("a", {href: r.donnees.etiquette_qr, target: "_blank", rel: "noopener"}, "page des étiquettes")));
   retours(z, {refus: [], avertissements: r.donnees.avertissements});
   await chargeEnvs();
   $("env").value = r.donnees.env;

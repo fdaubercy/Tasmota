@@ -44,6 +44,7 @@ import fichiers_berry_ini as fbi
 import fichiers_berry_renommage as fbr
 import fichiers_berry_sauvegarde as fbs
 import fichiers_berry_suppression as fbx
+import etiquettes_qr_suivi as qr_suivi
 
 PUCES = {prefixe: puce for puce, prefixe in parc.PREFIXES.items()}
 
@@ -291,8 +292,10 @@ def modifie(racine, env, r, empreinte_lue, builds_en_cours):
         raise RuntimeError("les fichiers de la carte, le modele ou la saisie ont change depuis le diff : refaire « Voir le diff »")
     if res["vide"]:
         raise ValueError("aucun changement : rien a modifier")
+    etiquette = qr_suivi.texte_si_regle(racine, env)
     with fbs.Transaction(racine, "modification-assistant") as tr:
         for f, octets in res["_ecritures"].items():
             tr.ecrit(f, octets)
+    a_refaire = etiquette is not None and qr_suivi.texte_si_regle(racine, env) != etiquette    # texte imprime perime
     return {"modifie": True, "env": env, "diff": res["diff"], "sauvegarde": str(tr.dossier),
-            "avertissements": res["avertissements"]}
+            "avertissements": res["avertissements"], "etiquette_qr": qr_suivi.lien_si_regle(racine, env) if a_refaire else None}

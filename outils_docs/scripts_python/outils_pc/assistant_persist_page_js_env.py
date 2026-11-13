@@ -90,6 +90,11 @@ async function modifieEnv() {
   }
   var c = r.donnees;
   zone.appendChild(el("p", {"class": "ok", id: "modification-ok"}, "Env " + c.env + " modifié (sauvegarde : " + c.sauvegarde + ")."));
+  if (c.etiquette_qr) {                             // texte de l'etiquette change : celle imprimee ne vaut plus
+    var p = el("p", {"class": "avert", id: "modification-etiquette"}, "Étiquette QR à refaire : ");
+    p.appendChild(el("a", {href: c.etiquette_qr, target: "_blank", rel: "noopener"}, "page des étiquettes"));
+    zone.appendChild(p);
+  }
   liste(zone, c.avertissements || [], "avert"); zone.appendChild(el("pre", {id: "modification-diff"}, c.diff));
   await chargeEnv(c.env, true);
 }

@@ -231,11 +231,16 @@ def sonde_renommer_supprimer(m):
     clic(cdp, "r-proposer")
     verifie(attend(cdp, "document.getElementById('r-MQTT_TOPIC') && document.getElementById('r-MQTT_TOPIC').value", 10),
             "garage/porte-test2", "renommage : identite reproposee")
+    etiquettes = m.depot / "outils_docs/etiquettes_qr/cartes"             # reglage d'etiquette QR : deplace, lien a refaire
+    etiquettes.mkdir(parents=True, exist_ok=True)
+    (etiquettes / f"{essai}.json").write_bytes(b"{}")
     clic(cdp, "r-prepare")
     verifie(attend(cdp, "!document.getElementById('r-renommer').disabled", 10), True, "renommage : diff sans refus")
     clic(cdp, "r-renommer")
     verifie(attend(cdp, "!!document.getElementById('r-ok') && document.getElementById('env').value === '" + renomme + "'", 15),
             True, "renommage : env renomme et choisi")
+    verifie(cdp.js("(document.querySelector('#r-etiquette a') || {}).href || null"),
+            "http://127.0.0.1:7970/?env=" + renomme, "renommage : lien « Étiquette QR à refaire » vers la page 7970")
     verifie(((m.depot / "data/garage/tasmota32s3-porte-test2/autoexec.be").is_file(),
              (m.depot / "data/garage/tasmota32s3-porte-test").exists()), (True, False), "renommage : dossier deplace")
     verifie(clic(cdp, "supprimer"), "ok", "bouton « Supprimer cet env… »")

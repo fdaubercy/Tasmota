@@ -67,7 +67,14 @@ def renomme(racine, r):
 
 def test_renommage_rideau(racine):
     persist_avant = (racine / DOSSIER_RIDEAU / "_persist.json").read_bytes()
+    etiquettes = racine / "outils_docs/etiquettes_qr/cartes"
+    etiquettes.mkdir(parents=True, exist_ok=True)
+    (etiquettes / f"{RIDEAU}.json").write_bytes(b'{"lignes": []}')
     p, res = renomme(racine, renommage())
+    verifie(("reglage d'etiquette QR deplace" in p["diff"], res["etiquette_qr"]),
+            (True, "http://127.0.0.1:7970/?env=tasmota32s3-garage-porte2"), "etiquette QR : deplacement annonce, lien a refaire")
+    verifie(((etiquettes / f"{RIDEAU}.json").exists(), (etiquettes / "tasmota32s3-garage-porte2.json").read_bytes()),
+            (False, b'{"lignes": []}'), "etiquette QR : reglage deplace au nouveau nom, contenu intact")
     envs = {e.nom for e in build_envs.liste_envs(racine)}
     verifie(("tasmota32s3-garage-porte2" in envs, RIDEAU in envs), (True, False), "page build : nouvel env vu, ancien absent")
     nouveau = racine / "data/garage/tasmota32s3-porte2"
@@ -90,7 +97,7 @@ def test_renommage_rideau(racine):
 def test_aller_retour(racine):
     avant = octets(racine, fbi.FICHIER_CENV, OVERRIDE, DOSSIER_RIDEAU + "/_persist.json")
     origine = identite_persist(racine, DOSSIER_RIDEAU)
-    renomme(racine, renommage())
+    verifie(renomme(racine, renommage())[1]["etiquette_qr"], None, "etiquette QR : env sans reglage, pas de lien")
     renomme(racine, renommage(env="tasmota32s3-garage-porte2", nom="rideau-garage-modbus", define=DEFINE_RIDEAU, **origine))
     verifie(octets(racine, fbi.FICHIER_CENV, OVERRIDE, DOSSIER_RIDEAU + "/_persist.json") == avant, True,
             "renommer puis revenir : cenv, override et persist identiques octet pour octet")
