@@ -211,6 +211,7 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   permissives d'office, CC BY avec confirmation, autres masquées ; SVG nettoyé par `nettoie_svg` ; cache hors dépôt ; ligne
   ajoutée à `LICENCES.md` à la conservation ; test avec un faux serveur (SVG hostile nettoyé, jeu inconnu refusé, hôte
   non permis refusé, licence non permissive masquée, hors ligne) ; essai réel d'une recherche « camera »
+  - [x] Module autonome `atelier_visuels_icones_web.py` + banc `test_atelier_visuels_icones_web.py`, essai réel « camera » (routes HTTP restent à brancher) — preuve : banc VERT 42 contrôles ; essai réel 47 icônes, svg mdi:camera 325 o ; README § « Recherche d'icônes en ligne »
 - [ ] Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`)
   puis les collections de `ICONES_IMAGES_SOURCES.md` ; conversion en tracé `path` (jeu des tracés MDI rangé dans
   `outils_docs/visuels_accueil/icones/` avec sa licence) ; taille réglable ; `icone_on` / `icone_off` / `icone_inconnu` et
@@ -275,13 +276,13 @@ est faux pour un fournisseur externe ; le SVG rendu passe par `atelier_visuels_f
 `POST /ia/demande`, `POST /ia/cle` (la clé n'est jamais renvoyée).
 - [ ] Lire la documentation de chaque offre gratuite visée (limites, données utilisées pour l'entraînement) et noter le
   résultat dans le README ; choisir avec l'utilisateur les fournisseurs retenus
-- [ ] Test écrit : `demande` refuse sans confirmation pour un fournisseur externe ; clé jamais présente dans une réponse HTTP,
+- [x] Test écrit : `demande` refuse sans confirmation pour un fournisseur externe ; clé jamais présente dans une réponse HTTP,
   un journal ni le dépôt ; réponse 429 simulée = quota « rouge » et aucun réessai ; SVG hostile rendu par un faux
-  fournisseur = nettoyé ; plafond saisi à 80 % = « orange »
+  fournisseur = nettoyé ; plafond saisi à 80 % = « orange » — preuve : `test_atelier_visuels_ia.py` VERT (modules `atelier_visuels_ia.py`, `atelier_visuels_ia_config.py`, 2026-11-13)
 - [ ] Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
   contrôle des fichiers changés) et en importer les fonctions communes au lieu de les recopier ; remarques épinglées sur une
   zone de la photo (états ouverte, proposée, appliquée, refusée) dans `outils_docs/visuels_accueil/cartes/<env>/remarques.json`
-- [ ] Fournisseur *Claude Code local* (`claude -p`, lecture seule, jamais bypassPermissions, hooks coupés) puis Ollama,
+- [x] Fournisseur *Claude Code local* (`claude -p`, lecture seule, jamais bypassPermissions, hooks coupés) puis Ollama,
   puis une API externe au choix de l'utilisateur ; chacun avec un faux fournisseur dans le banc
 - [ ] Panneau de la page : consigne, choix du procédé, avertissement avant envoi, compteur de quota, résultat ouvert dans
   l'éditeur ; sonde Chrome avec faux fournisseur
