@@ -289,11 +289,11 @@ Consomme : `tasks/plans/atelier-ecrans.md` A4 et A5 faits ; `/json/qrcode.json` 
 - [ ] Commit
 
 ## A9 — Documentation
-- [ ] `outils_docs/README.md` § « Étiquettes QR code (page web) » : usage, verdict, impression à 100 %, planche, page de
+- [x] `outils_docs/README.md` § « Étiquettes QR code (page web) » — preuve : commit 37e8bceb2, relu par la skill ecriture-naturelle ; usage, verdict, impression à 100 %, planche, page de
   la carte, suivi
-- [ ] `CLAUDE.md` (carte des documents) : modules `etiquettes_qr_*`, `qrcodePage.be`, liste `etiquette_qr`, bancs ;
+- [x] `CLAUDE.md` (carte des documents) — preuve : commit 37e8bceb2, `verifie_references_docs.py` : 0 défaut ; modules `etiquettes_qr_*`, `qrcodePage.be`, liste `etiquette_qr`, bancs ;
   `verifie_references_docs.py` VERT
-- [ ] Commit ; plan passé `statut: clos`
+- [x] Commit — preuve : commit 37e8bceb2 ; plan laissé `statut: actif` tant que l'A8 et l'A10 restent ouvertes
 
 ## A10 — Fiches en ligne (GitHub Pages) et filtre durci
 Décidé le 2026-11-12 : au choix par carte, le QR code contient le texte (défaut, hors réseau) OU un lien fixe vers une
