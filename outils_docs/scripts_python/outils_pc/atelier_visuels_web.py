@@ -9,7 +9,8 @@ Routes (le POST exige l'en-tete X-Atelier-Visuels: 1 et la meme origine ; client
     GET  /lib.js    ImageTracer      GET /visuel.js  data/sd/js/visuel.js (404 s'il n'existe pas encore)
     POST /fond?env=&type=svg|webp|jpg   corps binaire brut, 1 Mo au plus -> {empreinte, octets, avertissement}
     GET  /fond?env=&empreinte=          le fond garde (20 au plus, le plus ancien evince)
-Refus : 400 (saisie, SVG dangereux, fond trop lourd), 403, 404, 413 (corps), 500. Banc : test_atelier_visuels_web.py.
+Routes des modules autonomes : atelier_visuels_web_routes.py (icones, IA, ecriture, suivi).
+Refus : 400 (saisie, SVG dangereux, fond trop lourd), 403, 404, 409 (build, depot change), 413 (corps), 500, 503 (Iconify injoignable). Banc : test_atelier_visuels_web.py.
 """
 
 import argparse
@@ -27,6 +28,7 @@ import atelier_visuels_fond as avf
 from annuaire_outils import hote_autorise
 import lieux
 import tapp_envoi
+import atelier_visuels_web_routes as routes
 
 PORT_DEFAUT = 7990
 DEPOT = Path(__file__).resolve().parents[3]
@@ -37,9 +39,11 @@ LIB = Path("outils_docs/visuels_accueil/lib/imagetracer_v1.2.6.js")
 VISUEL_JS = Path("data/sd/js/visuel.js")
 
 
-def fabrique_gestionnaire(acces, racine):
+def fabrique_gestionnaire(acces, racine, **injections):
+    """injections (banc) : builds_en_cours, ouvre, cache_icones, config_fichier, fabrique_ia, lecteur."""
     fonds = OrderedDict()             # empreinte -> (type, octets)
     verrou = threading.Lock()
+    route_get, route_post = routes.fabrique_routes(racine, fonds, verrou, **injections)
 
     def env_valide(env):
         if env not in tapp_envoi.cartes(racine):
@@ -65,6 +69,10 @@ def fabrique_gestionnaire(acces, racine):
                 self._envoie(404, str(e).encode("utf-8"))
             except ValueError as e:
                 self._envoie(400, str(e).encode("utf-8"))
+            except RuntimeError as e:
+                self._envoie(409, str(e).encode("utf-8"))
+            except routes.HorsLigne as e:
+                self._envoie(503, str(e).encode("utf-8"))
             except Exception as e:
                 self._envoie(500, f"erreur inattendue : {type(e).__name__} : {e}".encode("utf-8"))
 
@@ -102,8 +110,13 @@ def fabrique_gestionnaire(acces, racine):
                 if trouve is None:
                     raise LookupError("fond inconnu")
                 self._envoie(200, trouve[1], MIME[trouve[0]])
+            elif url.path in routes.ROUTES_GET:
+                self._json(route_get(url.path, q))
             else:
                 self._envoie(404, b"introuvable")
+
+        def _json(self, objet):
+            self._envoie(200, json.dumps(objet, ensure_ascii=False).encode("utf-8"), "application/json")
 
         def do_POST(self):
             if not self._admis():
@@ -116,12 +129,20 @@ def fabrique_gestionnaire(acces, racine):
 
         def _post(self):
             url = urlsplit(self.path)
-            if url.path != "/fond":
+            if url.path != "/fond" and url.path not in routes.ROUTES_POST:
                 raise LookupError("introuvable")
-            longueur = int(self.headers.get("Content-Length", "0") or 0)
-            if not 0 <= longueur <= MAX_CORPS:
+            maxi = routes.MAX_CORPS_IA if url.path in routes.CHEMINS_IA else MAX_CORPS
+            try:
+                longueur = int(self.headers.get("Content-Length", "0") or 0)
+            except ValueError:
+                longueur = -1
+            if not 0 <= longueur <= maxi:
                 self.close_connection = True              # corps non lu
-                self._envoie(413, f"corps de plus de {MAX_CORPS} octets".encode("utf-8"))
+                self._envoie(413, f"corps de plus de {maxi} octets".encode("utf-8"))
+                return
+            if url.path != "/fond":
+                q = {k: v[0] for k, v in parse_qs(url.query, keep_blank_values=True).items()}
+                self._json(route_post(url.path, q, self.rfile.read(longueur)))
                 return
             q = {k: v[0] for k, v in parse_qs(url.query, keep_blank_values=True).items()}
             env, type_ = env_valide(q.get("env")), q.get("type")

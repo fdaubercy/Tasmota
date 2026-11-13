@@ -211,6 +211,7 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   permissives d'office, CC BY avec confirmation, autres masquées ; SVG nettoyé par `nettoie_svg` ; cache hors dépôt ; ligne
   ajoutée à `LICENCES.md` à la conservation ; test avec un faux serveur (SVG hostile nettoyé, jeu inconnu refusé, hôte
   non permis refusé, licence non permissive masquée, hors ligne) ; essai réel d'une recherche « camera »
+  - [x] Routes `GET /icones/recherche`, `GET /icones/svg`, `POST /icones/garde` branchées dans `atelier_visuels_web.py` (via `atelier_visuels_web_routes.py`) — preuve : `test_atelier_visuels_web.py` VERT (hôte Iconify fixe par faux `ouvre`, nom `../` 400, licence NC masquée, garde 403 sans en-tête, 409 si déjà gardée)
   - [x] Module autonome `atelier_visuels_icones_web.py` + banc `test_atelier_visuels_icones_web.py`, essai réel « camera » (routes HTTP restent à brancher) — preuve : banc VERT 42 contrôles ; essai réel 47 icônes, svg mdi:camera 325 o ; README § « Recherche d'icônes en ligne »
 - [ ] Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`)
   puis les collections de `ICONES_IMAGES_SOURCES.md` ; conversion en tracé `path` (jeu des tracés MDI rangé dans
@@ -243,6 +244,7 @@ Page : bouton « Écrire dans le dépôt » (diff montré, confirmation), puis l
   périmée = refus, rien écrit ; build en cours = refus ; `retire` rend le dépôt à l'identique ; fond `webp` remplace
   un `svg` existant — preuve : `test_atelier_visuels_ecriture.py` BANC_VISUELS_ECRITURE: OK (cenv sans puis avec la liste `visuel_accueil`, rouge ModuleNotFoundError avant les modules)
 - [x] `test_atelier_visuels_suivi.py` écrit : les quatre états, lecteur qui lève = `inconnue` — preuve : `test_atelier_visuels_suivi.py` BANC_VISUELS_SUIVI: OK (rouge avant le module)
+  - [x] Routes `POST /ecriture/prevoit`, `POST /ecriture/ecrit` (409 si build en cours) et `GET /suivi?env=` (lecteur HTTP 3 s) branchées — preuve : `test_atelier_visuels_web.py` VERT (écriture pendant un build = 409 sans trace Python, lecteur sur carte muette en échec < 3,5 s) ; `prevoit` sur le vrai dépôt = 400 motivé tant que les fichiers de la page (A3/A4) manquent
 - [ ] Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
   (reste : `banc_demarrage.py` sur la copie après écriture, à lancer APRÈS le build en cours ; écriture et suivi : rouges puis verts le 2026-11-13)
 - [ ] `AT_ORIGINES` : entrée `visuel` ; `sonde_atelier` étendue ; sonde Chrome de l'outil : « Écrire » puis lien Build
@@ -280,6 +282,7 @@ est faux pour un fournisseur externe ; le SVG rendu passe par `atelier_visuels_f
 - [x] Test écrit : `demande` refuse sans confirmation pour un fournisseur externe ; clé jamais présente dans une réponse HTTP,
   un journal ni le dépôt ; réponse 429 simulée = quota « rouge » et aucun réessai ; SVG hostile rendu par un faux
   fournisseur = nettoyé ; plafond saisi à 80 % = « orange » — preuve : `test_atelier_visuels_ia.py` VERT (modules `atelier_visuels_ia.py`, `atelier_visuels_ia_config.py`, 2026-11-13)
+  - [x] Routes `GET /ia/fournisseurs`, `POST /ia/demande` (corps jusqu'à 10 Mo pour cette route seule), `POST /ia/cle`, `GET /ia/quota` branchées — preuve : `test_atelier_visuels_web.py` VERT (externe sans confirmation = refus sans appel, clé absente de toutes les réponses, 413 à 10 Mo, 403 sans en-tête)
 - [ ] Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
   contrôle des fichiers changés) et en importer les fonctions communes au lieu de les recopier ; remarques épinglées sur une
   zone de la photo (états ouverte, proposée, appliquée, refusée) dans `outils_docs/visuels_accueil/cartes/<env>/remarques.json`
