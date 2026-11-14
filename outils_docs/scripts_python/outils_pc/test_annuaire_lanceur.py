@@ -38,7 +38,8 @@ nb = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 0
 for i in range(nb):
     print(f"ligne {i}")
 print(f"faux outil pret pid={os.getpid()} lance_par={os.environ.get('OUTILS_TASMOTA_LANCE_PAR')} "
-      f"utf8={os.environ.get('PYTHONUTF8')} cwd={os.getcwd()} args={sys.argv[1:]}", flush=True)
+      f"utf8={os.environ.get('PYTHONUTF8')} jeton={os.environ.get('OUTILS_TASMOTA_JETON')} "
+      f"cwd={os.getcwd()} args={sys.argv[1:]}", flush=True)
 with open(fichier + ".tmp", "w") as f:
     f.write(str(os.getpid()))
 os.replace(fichier + ".tmp", fichier)
@@ -191,10 +192,19 @@ def section_lance_et_console():
     ligne = pret[0] if pret else ""
     verifie("lance_par=annuaire" in ligne, True, "env : OUTILS_TASMOTA_LANCE_PAR=annuaire")
     verifie("utf8=1" in ligne, True, "env : PYTHONUTF8=1")
+    verifie("jeton=None" in ligne, True, "env : sans jeton d'annuaire, OUTILS_TASMOTA_JETON absent (outil a son propre jeton)")
     verifie(f"cwd={RACINE}" in ligne, True, "cwd = racine")
     verifie(ligne.endswith(f"args={[fichier, '250', '--sans-navigateur']!r}"), True,
             "args puis --sans-navigateur")
     verifie(len(lanceur.console("faux", lignes=5)), 5, "console(id, lignes=5)")
+    # Jeton commun : pose par l'annuaire, transmis aux outils lances (acces_web.Acces l'adopte).
+    commun = "JetonCommunDeTest1234"
+    lanceur.jeton = commun
+    fichier2 = str(RACINE / "lance2.pid")
+    garde(lanceur.lance(outil("faux_jeton"), [fichier2, "0"]))
+    attend(lambda: any("faux outil pret" in l for l in lanceur.console("faux_jeton")), 5)
+    ligne2 = next((l for l in lanceur.console("faux_jeton") if "faux outil pret" in l), "")
+    verifie(f"jeton={commun} " in ligne2, True, "env : jeton de l'annuaire transmis a l'outil lance")
     verifie(lanceur.console("inconnu"), [], "TEMOIN console : outil jamais lance -> []")
     verifie(lanceur.console("../derniers"), [], "console : id hors motif refuse")
     tete = (Path(DOSSIER) / "consoles" / "faux.log").read_text(encoding="utf-8").splitlines()[0]

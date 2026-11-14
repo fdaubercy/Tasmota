@@ -12,6 +12,21 @@ Regle d'acces (decidee le 2026-10-17) :
     (HttpOnly, SameSite=Strict, un nom par port) et redirige vers l'URL sans jeton : la page, ses
     fetch et ses EventSource n'ont rien a transmettre ;
   - --local : ecoute sur 127.0.0.1 seulement (le comportement d'avant).
+  - jeton COMMUN (2026-11-14) : un outil lance par l'annuaire recoit son jeton (variable OUTILS_TASMOTA_JETON,
+    16 caracteres au moins) et l'adopte : un seul lien depuis un autre appareil. Les cookies ignorent le port,
+    donc le cookie d'un outil frere (jeton_<port>, meme valeur) ouvre aussi les autres : la barre « Annuaire »
+    marche depuis un autre appareil. Un outil lance a la main garde son jeton propre (cookie frere refuse).
+    Portee : ce jeton ouvre TOUS les outils de l'annuaire, donc le lancement et l'arret de processus et les routes
+    d'ecriture (build, fichiers Berry, assistant persist) : acceptable sur le reseau prive de la maison seulement.
+    La variable est retiree de l'environnement des la lecture (pio, git, claude lances par un outil ne l'heritent pas).
+    Un outil qui survit a un redemarrage de l'annuaire garde l'ancien jeton : depuis un autre appareil, sa barre
+    « Annuaire » mene alors a un 403 (relancer l'outil). Icones PNG : dessinees une fois par poste, puis lues dans
+    %LOCALAPPDATA%/outils_tasmota/icones/.
+
+Application (2026-11-14) : habille(html) ajoute a chaque page le manifeste, les icones (SVG et PNG 192/512/maskable,
+dessinees par acces_icone.py), theme-color, un script d'enregistrement du service worker /sw.js (page de repli
+quand l'outil est arrete : acces_repli.py) et la barre « Annuaire ». Routes publiques (aucun secret) :
+/manifest.webmanifest, /icone.svg, /icone-192.png, /icone-512.png, /icone-maskable.png, /sw.js.
 
 Integration dans un outil :
     acces_web.ajoute_options(parser)                       # --local, --sans-navigateur
@@ -45,10 +60,14 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
+import acces_icone
 import acces_repli
 
 COULEUR = "#1f2937"
 PORT_ANNUAIRE = 7600
+VAR_JETON = "OUTILS_TASMOTA_JETON"      # jeton commun, pose par l'annuaire aux outils qu'il lance
+# Icones PNG (manifeste) : chemin -> (taille, maskable)
+ICONES_PNG = {"/icone-192.png": (192, False), "/icone-512.png": (512, False), "/icone-maskable.png": (512, True)}
 ICONE = ("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' "
          "fill='" + COULEUR + "'/><path d='M14 22h36M14 32h36M14 42h24' stroke='#fff' stroke-width='6' "
          "stroke-linecap='round'/></svg>")
@@ -57,7 +76,7 @@ BARRE = ("<nav id='barre-outils' aria-label='Retour a l annuaire' style='flex:no
          "display:flex;gap:12px;align-items:center'><a id='barre-retour' style='color:#fff' href='#'>← Annuaire</a>"
          "<span style='opacity:.7'>{nom}</span></nav>"
          "<script>(function(){var a=document.getElementById('barre-retour');"
-         "var h=location.hostname;if(location.port==='" + str(PORT_ANNUAIRE) + "'||!(h==='127.0.0.1'||h==='localhost'||h==='[::1]')){a.parentNode.style.display='none';return}"
+         "var h=location.hostname;if(location.port==='" + str(PORT_ANNUAIRE) + "'||(!{partage}&&!(h==='127.0.0.1'||h==='localhost'||h==='[::1]'))){a.parentNode.style.display='none';return}"
          "a.href=location.protocol+'//'+location.hostname+':" + str(PORT_ANNUAIRE) + "/'})()</script>")
 
 PAGE_REFUSEE = ("<!doctype html><html lang=fr><meta charset=utf-8><title>Acces refuse</title>"
@@ -121,7 +140,10 @@ class Acces:
         self.local = bool(local)
         self.nom = nom
         self.hote = "127.0.0.1" if self.local else "0.0.0.0"
-        self.jeton = secrets.token_urlsafe(18)
+        # pop : le jeton ne doit pas passer aux sous-processus de l'outil (pio, git, claude...), qui n'en ont pas l'usage
+        commun = os.environ.pop(VAR_JETON, "")
+        self.partage = bool(re.fullmatch(r"[A-Za-z0-9_-]{16,}", commun))   # jeton de l'annuaire, commun a ses outils
+        self.jeton = commun if self.partage else secrets.token_urlsafe(18)
         self.cookie = f"jeton_{self.port}"      # les cookies ignorent le port : un nom par outil
 
     def lien_local(self, chemin="/"):
@@ -177,11 +199,14 @@ class Acces:
         return isinstance(donne, str) and hmac.compare_digest(donne.encode("utf-8"), self.jeton.encode("utf-8"))
 
     def _jeton_cookie(self, handler):
+        propre = None
         for morceau in (handler.headers.get("Cookie", "") or "").split(";"):
             nom, _, valeur = morceau.strip().partition("=")
             if nom == self.cookie:
-                return valeur
-        return None
+                propre = valeur
+            elif self.partage and nom.startswith("jeton_") and self._jeton_valide(valeur):
+                return valeur          # cookie d'un outil frere (meme jeton) : les cookies ignorent le port
+        return propre
 
     def autorise(self, handler):
         """Requete autorisee sans rien envoyer : ce PC, ou jeton valide (URL ou cookie)."""
@@ -193,31 +218,37 @@ class Acces:
     def manifeste(self):
         return json.dumps({"name": self.nom, "short_name": self.nom, "start_url": "/", "display": "standalone",
                            "theme_color": COULEUR, "background_color": COULEUR,
-                           "icons": [{"src": "/icone.svg", "sizes": "any", "type": "image/svg+xml",
-                                      "purpose": "any"}]}, ensure_ascii=False)
+                           "icons": [{"src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+                                     {"src": "/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                                     {"src": "/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                                     {"src": "/icone-maskable.png", "sizes": "512x512", "type": "image/png",
+                                      "purpose": "maskable"}]}, ensure_ascii=False)
 
     def habille(self, html):
         """Ajoute a une page HTML le manifeste, l'icone, theme-color et la barre de retour a l'annuaire."""
         if "id='barre-outils'" in html or "</head>" not in html:
             return html
         tete = ("<link rel='manifest' href='/manifest.webmanifest'><link rel='icon' href='/icone.svg'>"
+                "<link rel='apple-touch-icon' href='/icone-192.png'>"
                 f"<meta name='theme-color' content='{COULEUR}'>" + acces_repli.ENREGISTREMENT)
         html = html.replace("</head>", tete + "</head>", 1)
-        return re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + BARRE.replace("{nom}", _html.escape(self.nom)), html, count=1,
+        return re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + BARRE.replace("{nom}", _html.escape(self.nom)).replace("{partage}", "true" if self.partage else "false"), html, count=1,
                       flags=re.I)
 
     def _statique(self, handler):
-        """Manifeste, icone et service worker de repli : publics (le navigateur les demande sans cookie), rien de secret. True si servi."""
+        """Manifeste, icones et service worker de repli : publics (le navigateur les demande sans cookie), rien de secret. True si servi."""
         chemin = urlsplit(handler.path).path
-        if handler.command != "GET" or chemin not in ("/manifest.webmanifest", "/icone.svg", "/sw.js"):
+        if handler.command != "GET" or chemin not in ("/manifest.webmanifest", "/icone.svg", "/sw.js", *ICONES_PNG):
             return False
-        if chemin == "/sw.js":
+        if chemin in ICONES_PNG:
+            corps, genre = acces_icone.png(*ICONES_PNG[chemin]), "image/png"
+        elif chemin == "/sw.js":
             corps, genre = acces_repli.service_worker(self.nom), "text/javascript; charset=utf-8"
         elif chemin.endswith("webmanifest"):
             corps, genre = self.manifeste(), "application/manifest+json"
         else:
             corps, genre = ICONE, "image/svg+xml"
-        corps = corps.encode("utf-8")
+        corps = corps if isinstance(corps, bytes) else corps.encode("utf-8")
         handler.send_response(200)
         handler.send_header("Content-Type", genre)
         handler.send_header("Cache-Control", "no-cache")

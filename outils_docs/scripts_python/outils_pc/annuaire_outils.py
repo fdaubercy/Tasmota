@@ -273,6 +273,7 @@ def principal():
 
     acces = acces_web.Acces(args.http, args.local, NOM_ACCES)
     lanceur = Lanceur(RACINE)
+    lanceur.jeton = acces.jeton          # transmis aux outils lances (acces_web.VAR_JETON)
     rattache_au_job()
     try:
         serveur = Serveur((acces.hote, args.http), fabrique_gestionnaire(lanceur, acces))

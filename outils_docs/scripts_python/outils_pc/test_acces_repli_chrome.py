@@ -102,6 +102,13 @@ def scenario_repli(cdp):
     attend_titre(cdp, "Outil d'essai", 10)
     verifie(cdp.js("!!document.getElementById('barre-outils')"), True, "repli : page servie, barre presente")
     verifie(t.attend(cdp, "!!navigator.serviceWorker.controller", 15), True, "repli : service worker actif et maitre de la page")
+    # Installable : Chrome lui-meme ne trouve aucune erreur (manifeste, icones PNG 192 et 512, worker avec fetch).
+    time.sleep(1.5)                      # le temps que Chrome lise le manifeste et ses icones (1re generation des PNG)
+    erreurs = cdp.appel("Page.getInstallabilityErrors", delai=60).get("installabilityErrors", None)
+    verifie(erreurs, [], "installable : Chrome ne signale aucune erreur d'installation")
+    manifeste = cdp.appel("Page.getAppManifest", delai=60)
+    verifie((len(manifeste.get("errors", [])), json.loads(manifeste.get("data") or "{}").get("display")), (0, "standalone"),
+            "manifeste lu par Chrome : sans erreur, display standalone")
     arrete(srv)
     cdp.appel("Page.navigate", url=url)
     attend_titre(cdp, "est arrêté", 10)
@@ -120,10 +127,14 @@ def scenario_temoin(cdp):
     srv = serveur(port, False)
     cdp.appel("Page.navigate", url=url)
     attend_titre(cdp, "Outil d'essai", 10)
+    time.sleep(1)
+    erreurs = cdp.appel("Page.getInstallabilityErrors", delai=60).get("installabilityErrors", [])
+    verifie(len(erreurs) > 0, True, "TEMOIN sans manifeste : Chrome signale des erreurs d'installation")
     arrete(srv)
     cdp.appel("Page.navigate", url=url)
     time.sleep(2)
     verifie("est arrêté" in str(titre(cdp)), False, "TEMOIN sans worker : aucun repli (le navigateur garde son erreur)")
+    cdp.appel("Page.navigate", url="about:blank")
 
 
 def principal():

@@ -129,6 +129,7 @@ class Lanceur:
         self.python = python
         self.lances = {}         # id -> {"pid", "valeurs", "lie"}, outils lances depuis ce demarrage
         self._processus = {}     # id -> Popen : garde le handle, le PID ne peut pas etre recycle
+        self.jeton = None        # jeton de l'annuaire (pose par annuaire_outils.principal), commun aux outils lances
 
     # --- fichiers ---------------------------------------------------------------------------------
 
@@ -184,6 +185,8 @@ class Lanceur:
         """Lance l'outil avec ses arguments valides ; rend le PID (celui du python.exe lance)."""
         commande = [self.python, "-u", str(self.racine / outil.script), *args, "--sans-navigateur"]
         env = dict(os.environ, PYTHONUTF8="1", OUTILS_TASMOTA_LANCE_PAR="annuaire")
+        if self.jeton:                   # jeton commun : un seul lien depuis un autre appareil, la barre « Annuaire » marche
+            env[acces_web.VAR_JETON] = self.jeton
         drapeaux = 0
         if os.name == "nt" and not outil.dans_job:
             drapeaux = DRAPEAUX_HORS_JOB

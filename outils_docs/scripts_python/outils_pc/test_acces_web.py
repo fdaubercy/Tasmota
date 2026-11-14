@@ -174,6 +174,10 @@ def cas_presence():
 
 def principal():
     cas_presence()
+    import tempfile
+    cache_icones = tempfile.mkdtemp(prefix="icones_banc_")      # le cache disque des icones ne touche pas le vrai poste
+    ancien = os.environ.get("OUTILS_TASMOTA_DOSSIER")
+    os.environ["OUTILS_TASMOTA_DOSSIER"] = cache_icones
     acces = acces_web.Acces(0, False, "banc")
     srv = serveur(acces)
     port = acces.port
@@ -222,11 +226,50 @@ def principal():
         verifie(cas_refus(acces, ip, port) < 4, True, "TEMOIN controle inactif : les refus tombent")
     srv.shutdown()
 
+    # Jeton partage (annuaire -> outils) : le cookie d'un outil frere, de meme jeton, ouvre aussi cet outil.
+    commun = "JetonCommunDeTest1234"
+    os.environ[acces_web.VAR_JETON] = commun
+    try:
+        frere = acces_web.Acces(0, False, "frere")
+        os.environ[acces_web.VAR_JETON] = "court"
+        invalide = acces_web.Acces(0, True, "invalide")
+    finally:
+        os.environ.pop(acces_web.VAR_JETON, None)
+    verifie((frere.partage, frere.jeton), (True, commun), "partage : jeton de l'environnement adopte")
+    verifie(acces_web.VAR_JETON in os.environ, False, "partage : variable retiree de l'environnement (pas de fuite aux sous-processus)")
+    verifie((invalide.partage, invalide.jeton != "court"), (False, True), "partage : jeton trop court ignore")
+    verifie(acces_web.Acces(0, False, "seul").partage, False, "partage : sans variable, jeton propre")
+    srv_f = serveur(frere)
+    if ips:
+        ip = ips[0]
+        verifie(requete(ip, frere.port, entetes={"Cookie": f"jeton_7980={commun}"})[0], 200,
+                "partage : cookie d'un outil frere (meme jeton) accepte")
+        verifie(requete(ip, frere.port, entetes={"Cookie": f"jeton_7980=faux; {frere.cookie}={commun}"})[0], 200,
+                "partage : un cookie frere invalide ne cache pas le bon")
+        verifie(requete(ip, frere.port, entetes={"Cookie": "jeton_7980=faux"})[0], 403,
+                "partage : cookie frere au mauvais jeton refuse")
+        verifie(requete(ip, frere.port, entetes={"Cookie": f"autre_7980={commun}"})[0], 403,
+                "partage : cookie sans le prefixe jeton_ refuse")
+        # Temoin : sans partage, le meme cookie frere est refuse (c'est le cas du jeton propre a chaque outil).
+        solo = acces_web.Acces(0, False, "solo")
+        solo.jeton = commun
+        srv_s = serveur(solo)
+        verifie(requete(ip, solo.port, entetes={"Cookie": f"jeton_7980={commun}"})[0], 403,
+                "TEMOIN sans partage : cookie frere refuse")
+        srv_s.shutdown()
+    srv_f.shutdown()
+    verifie(("!true&&" in frere.habille("<head></head><body></body>"), "!false&&" in acces_web.Acces(0, True, "x").habille(
+        "<head></head><body></body>")), (True, True), "habille : la barre sait si le jeton est partage")
+
     # Routes publiques du manifeste et de l'icone (sans jeton, y compris depuis un autre appareil simule : ici ce PC).
+    import acces_icone
+    for taille_p, maskable_p in acces_web.ICONES_PNG.values():     # prechauffe : 1er dessin = plusieurs s, delai des requetes du banc = 5 s
+        acces_icone.png(taille_p, maskable_p)
     acces_s = acces_web.Acces(0, True, "Outil test")
     srv2 = serveur(acces_s)
     for chemin, genre in (("/manifest.webmanifest", "application/manifest+json"), ("/icone.svg", "image/svg+xml"),
-                          ("/sw.js", "text/javascript; charset=utf-8")):
+                          ("/sw.js", "text/javascript; charset=utf-8"), ("/icone-192.png", "image/png"),
+                          ("/icone-512.png", "image/png"), ("/icone-maskable.png", "image/png")):
         st, ent = requete("127.0.0.1", acces_s.port, "GET", chemin)
         verifie((st, ent.get("Content-Type")), (200, genre), f"route {chemin}")
     st, _ = requete("127.0.0.1", acces_s.port, "POST", "/icone.svg")
@@ -237,6 +280,40 @@ def principal():
     verifie(ent.get("Content-Type") == "application/manifest+json", False, "TEMOIN _statique inactif : plus de manifeste")
     srv2.shutdown()
 
+    # Icones PNG du manifeste : PNG valide (signature, taille, CRC de chaque morceau, donnees), coin transparent sauf maskable.
+    import struct
+    import zlib
+    import acces_icone
+    SIGNATURE_PNG = bytes.fromhex("89504e470d0a1a0a")
+    for taille, maskable in ((192, False), (512, True)):
+        brut = acces_icone.png(taille, maskable)
+        pos, morceaux, idat = 8, {}, b""
+        while pos < len(brut):
+            n, genre = struct.unpack(">I4s", brut[pos:pos + 8])
+            donnees = brut[pos + 8:pos + 8 + n]
+            verifie(zlib.crc32(genre + donnees) & 0xFFFFFFFF, struct.unpack(">I", brut[pos + 8 + n:pos + 12 + n])[0],
+                    f"png {taille} : CRC de {genre.decode()}")
+            morceaux[genre] = donnees
+            idat += donnees if genre == b"IDAT" else b""
+            pos += 12 + n
+        verifie((brut[:8], struct.unpack(">II", morceaux[b"IHDR"][:8])), (SIGNATURE_PNG, (taille, taille)),
+                f"png {taille} : signature et dimensions")
+        pixels = zlib.decompress(idat)
+        verifie(len(pixels), taille * (taille * 4 + 1), f"png {taille} : donnees completes")
+        verifie(pixels[1 + 3], 255 if maskable else 0, f"png {taille} : coin " + ("plein (maskable)" if maskable else "transparent"))
+    verifie(acces_icone.png(192, False) is acces_icone.png(192, False), True, "png : resultat garde en memoire")
+    fichier = acces_icone._fichier(192, False)
+    verifie(fichier.is_file() and fichier.read_bytes() == acces_icone.png(192, False), True, "png : ecrit dans le cache disque")
+    acces_icone.png.cache_clear()
+    acces_icone._dessine.cache_clear()
+    verifie(acces_icone.png(192, False) == fichier.read_bytes(), True, "png : relu depuis le disque (sans redessiner)")
+    acces_icone.png.cache_clear()
+    acces_icone._dessine.cache_clear()
+    fichier.write_bytes(fichier.read_bytes()[:50])                      # fichier tronque : redessine et repare
+    verifie(acces_icone.png(192, False)[-12:] == acces_icone.FIN_PNG and fichier.stat().st_size > 100, True,
+            "png : cache tronque -> redessine et reecrit")
+    verifie(len(json.loads(acces_web.Acces(0, True, "m").manifeste())["icons"]), 4, "manifeste : svg + 3 png")
+
     # Habillage : manifeste, icone, theme-color, barre de retour ; idempotent ; page sans </head> intacte.
     a = acces_web.Acces(7999, True, "Outil test")
     h = a.habille("<html><head></head><body><p>x</p></body></html>")
@@ -245,6 +322,11 @@ def principal():
     verifie(a.habille("<p>x</p>"), "<p>x</p>", "habille : page sans </head> intacte")
     verifie(json.loads(a.manifeste())["name"], "Outil test", "manifeste : nom")
 
+    if ancien is None:
+        os.environ.pop("OUTILS_TASMOTA_DOSSIER", None)
+    else:
+        os.environ["OUTILS_TASMOTA_DOSSIER"] = ancien
+    shutil.rmtree(cache_icones, ignore_errors=True)
     print()
     print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")
     return 0 if not ECHECS else 1

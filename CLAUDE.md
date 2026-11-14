@@ -760,6 +760,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Le flux TCP brut du pont serie reste reserve a ce PC. Pare-feu Windows : autoriser Python sur
     les reseaux prives au premier lancement, sinon les autres appareils n'atteignent pas la page.
     Ecrit aussi la fiche de presence de l'outil (`%LOCALAPPDATA%\outils_tasmota\presence\`), lue par l'annuaire.
+    Jeton COMMUN (2026-11-14) : l'annuaire passe son jeton aux outils qu'il lance (`OUTILS_TASMOTA_JETON`), le cookie d'un
+    outil frere ouvre les autres ; un outil lance a la main garde son jeton propre. Un seul secret ouvre tous les outils
+    (reseau prive seulement) ; la variable est retiree de l'environnement des la lecture. Application : `habille()` ajoute a toute
+    page manifeste, icones PNG (`acces_icone.py`), `theme-color`, barre « Annuaire » et service worker de repli quand l'outil
+    est arrete (`acces_repli.py`, `/sw.js`, contexte securise seulement) ; routes publiques sans secret. Sondes
+    `test_acces_repli_chrome.py` (installabilite jugee par Chrome, repli) et `test_annuaire_lieux_chrome.py` (etat memorise).
   - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).

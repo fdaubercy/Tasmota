@@ -119,6 +119,42 @@ def recharge(m):
     t.attend(m.cdp, PRET, 15)
 
 
+AFFICHE = "(id => getComputedStyle(document.getElementById(id)).display !== 'none')"
+
+
+def sonde_etat_memorise(m):
+    """Etat rendu au retour depuis un outil (barre « Annuaire » : la page est rechargee) : onglet actif et console ouverte,
+    gardes dans localStorage (annuaire-onglet, annuaire-console), relus apres le chargement du registre."""
+    cdp = m.cdp
+    cdp.js("document.getElementById('onglet-aide').click()")
+    verifie(cdp.js(f"{AFFICHE}('vue-aide')"), True, "etat : clic Aide -> vue Aide affichee")
+    verifie(cdp.js("localStorage.getItem('annuaire-onglet')"), "aide", "etat : onglet Aide memorise")
+    recharge(m)
+    verifie((cdp.js(f"{AFFICHE}('vue-aide')"), cdp.js(f"{AFFICHE}('vue-outils')")), (True, False),
+            "etat : apres rechargement, l'onglet Aide est rouvert")
+    cdp.js("localStorage.removeItem('annuaire-onglet')")                      # temoin : la memoire seule decide
+    recharge(m)
+    verifie((cdp.js(f"{AFFICHE}('vue-aide')"), cdp.js(f"{AFFICHE}('vue-outils')")), (False, True),
+            "etat : memoire effacee -> onglet Outils par defaut")
+    cdp.js("document.getElementById('onglet-aide').click(); document.getElementById('onglet-outils').click()")
+    verifie(cdp.js("localStorage.getItem('annuaire-onglet')"), None, "etat : retour a Outils efface la memoire")
+    # Console : ouvreConsole() ecrit la memoire (la tuile n'a un bouton « console » que pour un outil lance par l'annuaire).
+    cdp.js("ouvreConsole(parId('syslog'))")
+    verifie(cdp.js("localStorage.getItem('annuaire-console')"), "syslog", "etat : console ouverte memorisee")
+    recharge(m)
+    verifie((cdp.js(f"{AFFICHE}('panneau')"), "Serveur syslog" in str(cdp.js("document.getElementById('panneau-titre').textContent"))),
+            (True, True), "etat : apres rechargement, la console de l'outil est rouverte")
+    cdp.js("document.getElementById('panneau-ferme').click()")
+    verifie(cdp.js("localStorage.getItem('annuaire-console')"), None, "etat : fermer la console efface la memoire")
+    recharge(m)
+    verifie(cdp.js(f"{AFFICHE}('panneau')"), False, "etat : console fermee, rien a rouvrir")
+    cdp.js("localStorage.setItem('annuaire-console', 'outil_disparu')")      # outil retire du registre : ignore
+    recharge(m)
+    verifie(cdp.js(f"{AFFICHE}('panneau')"), False, "etat : console d'un outil inconnu ignoree")
+    cdp.js("localStorage.removeItem('annuaire-console')")
+    verifie([e for e in cdp.erreurs() if "favicon" not in e], [], "etat : aucune erreur JS")
+
+
 def sonde(m):
     cdp = m.cdp
     sys.path.insert(0, str(ICI))
@@ -147,6 +183,7 @@ def sonde(m):
     verifie(cdp.js(JS_LIENS)["syslog"], SYSLOG + "?lieu=garage", "rechargement : le lien porte le lieu")
     clique(cdp, "")
     verifie(cdp.js(JS_LIENS)["syslog"], SYSLOG, "Tous : retour au lien nu")
+    sonde_etat_memorise(m)
     cdp.js("localStorage.setItem('annuaire-lieu', '<b>x</b>')")       # memoire inconnue : ignoree
     recharge(m)
     verifie(cdp.js(JS_RANGEE)[0][2], "true", "memoire inconnue : Tous")
