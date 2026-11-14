@@ -302,6 +302,8 @@ function dessineTout() {
   options($('entre-lignes'), ENTRE, r.entre_lignes === undefined ? '\n' : r.entre_lignes);
   $('taille').value = r.taille_mm || 25;
   $('mm').textContent = (r.taille_mm || 25) + ' mm';
+  $('petit-nom').checked = r.petit_nom === true;       // vient du gabarit commun ou de la carte
+  majPlanche();
   ETAT.apercu = null;
   dessineContenu();
   dessineLignes();

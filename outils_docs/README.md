@@ -2245,7 +2245,7 @@ réseau : un esclave derrière le NAPT du maître n'est pas joignable ainsi.
 **Style et gabarit.** Points, coins, couleurs, image au centre (PNG, JPEG ou SVG de 8 Ko au plus, rangée dans
 `outils_docs/etiquettes_qr/images/`). Le gabarit commun (`outils_docs/etiquettes_qr/gabarit.json`) vaut pour toutes les
 cartes ; une carte qui s'en écarte garde son réglage dans `outils_docs/etiquettes_qr/cartes/<env>.json` (pastille
-« réglage propre »). Ces fichiers restent hors du FS des cartes.
+« réglage propre »). Pour fixer des valeurs par défaut, régler une carte puis « Faire du réglage de cette carte le gabarit commun… » (onglet Gabarit commun) : lignes, style, taille, contenu texte ou lien et « petit nom sous le code » sont alors chargés à l'ouverture et repris par les autres programmes (build, atelier des écrans). Ces fichiers restent hors du FS des cartes.
 
 **Verdict de lisibilité.** Il dépend du nombre d'octets du texte (UTF-8, accents compris), de la taille imprimée et de
 l'image (une image au centre impose la correction H, qui grossit le code). Seuils calés le 2026-11-12 sur un essai réel :

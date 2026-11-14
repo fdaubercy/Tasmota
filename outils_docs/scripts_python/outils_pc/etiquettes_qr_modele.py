@@ -124,6 +124,8 @@ def valide_reglage(reglage, racine=None):
     taille = reglage.get("taille_mm", 25)
     if isinstance(taille, bool) or not isinstance(taille, (int, float)) or not 10 <= taille <= 100:
         err.append("taille de 10 à 100 mm")
+    if not isinstance(reglage.get("petit_nom", False), bool):
+        err.append("petit nom sous le code : vrai ou faux")
     if reglage.get("contenu", "texte") not in ("texte", "lien"):
         err.append("contenu du QR code : « texte » ou « lien »")
     if style.get("image") is not None:

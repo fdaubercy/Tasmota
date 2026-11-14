@@ -206,7 +206,7 @@ $('btn-essai').onclick = garde(imprimeEssai);
 $('btn-png').onclick = garde(() => exporte('png'));
 $('btn-svg').onclick = garde(() => exporte('svg'));
 $('planche-taille').oninput = majPlanche;
-$('petit-nom').onchange = majPlanche;
+$('petit-nom').onchange = () => { if ($('petit-nom').checked) ETAT.reglage.petit_nom = true; else delete ETAT.reglage.petit_nom; majPlanche(); change(); };
 $('planche-tout').onchange = e => {
   ETAT.planche = new Set(e.target.checked ? ETAT.cartes.map(c => c.nom) : []);
   dessineListe();

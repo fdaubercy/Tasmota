@@ -79,6 +79,8 @@ def test_texte():
     verifie(r["texte"], "Hostname : CUVE\nModBus : 2\nNote : a b\nActif : oui\nTableau", "texte lu (saut de ligne par defaut)")
     verifie(m.resout_avec({**reglage, "entre_lignes": " · "}, champs, PERSIST)["texte"],
             "Hostname : CUVE · ModBus : 2 · Note : a b · Actif : oui · Tableau", "texte lu sur une ligne")
+    verifie(m.valide_reglage({**m.charge_gabarit(RACINE), "petit_nom": True}), [], "petit_nom vrai accepte")
+    verifie("petit nom" in " ".join(m.valide_reglage({**m.charge_gabarit(RACINE), "petit_nom": "oui"})), True, "petit_nom non booleen refuse")
     verifie("entre les lignes" in " ".join(m.valide_reglage({**m.charge_gabarit(RACINE), "entre_lignes": "\t"})), True,
             "separateur de lignes inconnu refuse")
     verifie([l["etat"] for l in r["lignes"]], ["ok", "introuvable", "ok", "refuse", "ok", "ok", "ok"], "etats des lignes")

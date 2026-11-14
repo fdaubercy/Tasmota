@@ -207,6 +207,7 @@ def sonde_impression(cdp, url, banc, capture):
                 print(f"     PDF : {Path(capture) / 'planche-25mm.pdf'}", flush=True)
     s.verifie(len(notes(banc)), len(set(avant)) + imprimes, f"planche : les {imprimes} cartes imprimees notees, pas les refusees")
 
+    cdp.js("(() => { const n = document.getElementById('petit-nom'); n.checked = false; n.dispatchEvent(new Event('change')); })()")
     types = cdp.js("""(async () => { const p = await exporte('png'), v = await exporte('svg');
       return [p.type, p.size > 1000, v.type, v.size > 1000]; })()""")
     s.verifie(types, ["image/png", True, "image/svg+xml", True], "export PNG et SVG de la cuve")
