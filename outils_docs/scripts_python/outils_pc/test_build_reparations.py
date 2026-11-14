@@ -233,6 +233,55 @@ def passe_reparateur(d):
     lu = json.loads((Path(d) / "local.json").read_text(encoding="utf-8"))
     verifie("ajoute_regle_locale : ecrite et en memoire", [x["id"] for x in lu["regles"]] == ["ia1"] and n in r.regles)
     verifie("ajoute_regle_locale : regle invalide refusee", leve(r.ajoute_regle_locale, regle(motif="(")))
+    # libelles d'etape : ceux de build_progression, aucun recopie
+    import build_progression as bp
+    verifie("etapes : libelles de build_progression", set(br.ETAPES_SUIVI) ==
+            {bp.ETAPE_PREBUILD, bp.ETAPE_COMPILATION, bp.ETAPE_LIENS, bp.ETAPE_FS})
+
+    # historique et reparation en cours modifies sous le verrou de la serie (lus par Serie.reparations())
+    class SerieGardee(bs.Serie):
+        def _ajoute(self, type_, env, **champs):
+            if type_ == "reparation":
+                hors_verrou.append(not self.verrou._is_owned())
+            super()._ajoute(type_, env, **champs)
+
+    class ListeGardee(list):
+        def append(self, x):
+            hors_verrou.append(not s.verrou._is_owned())
+            super().append(x)
+    hors_verrou = []
+    s = SerieGardee(racine, Path(d) / "donnees", builds_en_cours=lambda: [], sondage=0.05)
+    r = br.Reparateur(s, regles, libere=faux_libere)
+    r.historique = ListeGardee()
+    appels = []
+
+    def lance_pio(*a):                                     # 1er appel : la panne de verrou dans le journal ; 2e : succes
+        appels.append(1)
+        if len(appels) > 1:
+            return True, "", [], "Compilation"
+        s._ajoute("ligne", "e1", action="compiler", texte=j1)
+        return False, "x", [], "Compilation"
+    r.execute(L, "compiler", "", lance_pio)
+    verifie("execute : relance puis succes", len(appels) == 2 and r.historique[-1]["etat"] == "reussie")
+    verifie("verrou : historique et annonces sous le verrou", len(hors_verrou) >= 3 and not any(hors_verrou))
+
+    # base illisible : aucune regle, avertissement visible une fois par serie
+    casse = Path(d) / "base_casse.json"
+    casse.write_text("{", encoding="utf-8")
+    ancienne, br.BASE = br.BASE, casse
+    try:
+        regles_d, cause = br.charge_defaut(Path(d) / "n")
+        s = bs.Serie(racine, Path(d) / "donnees", builds_en_cours=lambda: [], sondage=0.05)
+        r = br.pour_serie(s)
+    finally:
+        br.BASE = ancienne
+    verifie("base illisible : aucune regle, cause rendue", regles_d == [] and "illisible" in cause)
+    for _ in range(2):
+        r.execute(L, "compiler", "", lambda *a: (True, "", [], ""))
+    av = [e for e in s.evenements if e["type"] == "reparation"]
+    verifie("base illisible : un seul avertissement echouee",
+            len(av) == 1 and av[0]["etat"] == "echouee" and av[0]["message"].startswith("catalogue des réparations illisible"))
+    verifie("base lisible : pas d'avertissement", br.charge_defaut(Path(d) / "n")[1] == "")
 
 
 def mutant(nom, remplace_ancien, remplace_nouveau):

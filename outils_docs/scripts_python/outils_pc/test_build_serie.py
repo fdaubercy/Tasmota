@@ -1275,6 +1275,23 @@ def reparateur(m, libere=None, horloge=time.monotonic, secondes=0.05):
 
 def test_reparations():
     """Plan build-reparations A3 : panne de verrou reparee et etape relancee ; pas de boucle ; envoi jamais relance."""
+    with tempfile.TemporaryDirectory() as t:              # fabrique du reparateur en panne : la serie ne reste pas en cours
+        m = Montage(t)
+        bonne = m.serie.fabrique_reparateur
+
+        def panne(s):
+            raise OSError("catalogue en panne")
+        m.serie.fabrique_reparateur = panne
+        try:
+            m.serie.lance([com(A)], {"compiler"})
+            leve = False
+        except OSError:
+            leve = True
+        verifie((leve, m.serie.en_cours(), m.appels()), (True, False, []),
+                "reparations : fabrique qui leve -> erreur propagee, serie pas en cours, rien lance")
+        m.serie.fabrique_reparateur = bonne
+        ev = m.lance([com(A)], {"compiler"})
+        verifie(du_type(ev, "fin_env")[0]["resultat"], "succes", "reparations : lancement suivant possible")
     with tempfile.TemporaryDirectory() as t:              # echoue une fois, puis reussit
         m = Montage(t, {A: {"build": ECHEC_VERROU}})
         reparateur(m, libere=lambda c, l, p, d: (m.scenario.write_text("{}", encoding="utf-8"),

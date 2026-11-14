@@ -358,6 +358,7 @@ class Serie:
     def lance(self, lignes, actions, fichiers=None, publier=False):
         lignes, actions = list(lignes), set(actions)
         motifs = self.controle(lignes, actions, fichiers)
+        reparateur = self.fabrique_reparateur(self)     # avant _actif : une fabrique qui leve ne bloque pas la page
         with self.verrou:
             if self._actif:
                 motifs = motifs or ["un lancement est déjà en cours"]
@@ -365,7 +366,7 @@ class Serie:
                 raise RuntimeError(" ; ".join(motifs))
             self._actif, self._arret, self._arret_immediat = True, False, False
             self._publier = bool(publier)
-            self.reparateur = self.fabrique_reparateur(self)
+            self.reparateur = reparateur
             self._choix = {"fichiers": list(fichiers["liste"]), "recharger_berry": bool(fichiers.get("recharger_berry")),
                            "redemarrer": bool(fichiers.get("redemarrer")), "transport": fichiers.get("transport", "http"),
                            "effacer": bool(fichiers.get("effacer"))} if fichiers else {}

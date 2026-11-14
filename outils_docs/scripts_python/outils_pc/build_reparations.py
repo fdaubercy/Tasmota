@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import build_reparations_verrou as verrou
+from build_progression import ETAPE_COMPILATION, ETAPE_FS, ETAPE_LIENS, ETAPE_PREBUILD
 
 BASE = Path(__file__).resolve().parents[2] / "schemas" / "reparations_build.json"
 LIGNES_FIN = 50                      # la correspondance ne regarde que la fin du journal (borne le cout d'un motif lent)
@@ -156,24 +157,24 @@ RELANCES_MAX = 2                      # par etape (env, action, cible) et par se
 CHOIX_DELAI_S = 600                   # sans reponse en 10 min : pas de reparation, l'env echoue, la serie continue
 BOUTONS = ("fermer", "attendre", "annuler")
 # libelle d'etape de build_progression -> nom d'etape du catalogue ; toute autre etape (envoi...) n'est jamais reparee
-ETAPES_SUIVI = {"Pré-build": "prebuild", "Compilation": "compilation", "Édition des liens": "liens",
-                "Construction du FS": "buildfs"}
+ETAPES_SUIVI = {ETAPE_PREBUILD: "prebuild", ETAPE_COMPILATION: "compilation", ETAPE_LIENS: "liens", ETAPE_FS: "buildfs"}
 _CHEMIN = re.compile(r"Permission denied: '([^']+)'")
 _NOM_ENV = re.compile(r"[A-Za-z0-9_.-]+")
 
 
 def charge_defaut(chemin_local):
-    """Catalogue de base du depot + local ; une erreur ne doit jamais casser la serie (alors : aucune regle)."""
+    """(regles, cause) : catalogue de base du depot + local ; base illisible = aucune regle et sa cause (jamais d'exception)."""
     try:
-        return charge_catalogue(BASE, chemin_local)
-    except ValueError:
-        return []
+        return charge_catalogue(BASE, chemin_local), ""
+    except ValueError as e:
+        return [], filtre_secrets(str(e))
 
 
 def pour_serie(serie):
     """Reparateur d'une serie (un par lancement : compteurs remis a zero) ; catalogue local a cote des donnees de la page."""
     local = Path(serie.dossier) / "reparations.json"
-    return Reparateur(serie, charge_defaut(local), chemin_local=local)
+    regles, cause = charge_defaut(local)
+    return Reparateur(serie, regles, chemin_local=local, avertissement=cause)
 
 
 class Reparateur:
@@ -183,7 +184,7 @@ class Reparateur:
     jamais un envoi (cible upload, erase_upload, uploadfs), 2 relances au plus par etape, une regle ne s'applique pas deux
     fois a la meme panne (signature = id + ligne reconnue), un arret demande prime (alors `interrompue`)."""
 
-    def __init__(self, serie, regles, horloge=time.monotonic, libere=None, libre=None, chemin_local=None):
+    def __init__(self, serie, regles, horloge=time.monotonic, libere=None, libre=None, chemin_local=None, avertissement=""):
         self.serie, self.regles, self.horloge = serie, list(regles), horloge
         self.libere = libere or verrou.libere
         self.libre = libre or verrou.est_libre
@@ -195,10 +196,14 @@ class Reparateur:
         self._choix = None                # demande ouverte : {env, choix}
         self._abandon = ""
         self._attendre_libre = False
+        self._avertissement = avertissement   # catalogue de base illisible : dit une fois par serie
 
     # -- boucle de relance (appelee par Serie._execute_env) --
     def execute(self, ligne, action, cible, lance_pio):
         """lance_pio(ligne, action, cible) ; relance tant que `traite` le demande ; rend le dernier resultat."""
+        if self._avertissement:
+            message, self._avertissement = "catalogue des réparations illisible : " + self._avertissement, ""
+            self.serie._ajoute("reparation", ligne.env, action=action, regle="", etat="echouee", message=message)
         while True:
             n = self.serie.numero
             rendu = lance_pio(ligne, action, cible)
@@ -237,8 +242,10 @@ class Reparateur:
             chemin = trouve.group(1).replace("\\\\", "\\")
         vus.add(signature)
         self._relances[cle] = self._relances.get(cle, 0) + 1
-        self._courante = {"env": env, "action": action, "regle": regle.id, "titre": regle.titre, "etat": "", "message": ""}
-        self.historique.append(self._courante)
+        with self.serie.verrou:                            # historique lu par Serie.reparations() sous ce verrou
+            self._courante = {"env": env, "action": action, "regle": regle.id, "titre": regle.titre, "etat": "",
+                              "message": ""}
+            self.historique.append(self._courante)
         self._annonce("en_cours", f"{regle.titre} (relance {self._relances[cle]}/{RELANCES_MAX})")
         self._abandon, self._attendre_libre = "", False
         for a in regle.actions:
@@ -332,20 +339,22 @@ class Reparateur:
             return False
         return demande
 
-    def _annonce(self, etat, message):
-        c = self._courante
-        c.update(etat=etat, message=message)
-        self.serie._ajoute("reparation", c["env"], action=c["action"], regle=c["regle"], etat=etat, message=message)
-        self._ligne(f"{c['titre']} : {etat}, {message}")
+    def _annonce(self, etat, message, c=None):
+        with self.serie.verrou:
+            c = c or self._courante
+            c.update(etat=etat, message=message)
+            self.serie._ajoute("reparation", c["env"], action=c["action"], regle=c["regle"], etat=etat, message=message)
+        self._ligne(f"{c['titre']} : {etat}, {message}", c)
 
     def _clos(self, ok, message):
-        if self._courante is not None:
-            self._annonce("reussie" if ok else "echouee", message)
-            self._courante = None
+        with self.serie.verrou:
+            c, self._courante = self._courante, None
+        if c is not None:
+            self._annonce("reussie" if ok else "echouee", message, c)
 
-    def _ligne(self, texte):
+    def _ligne(self, texte, c=None):
         """Ligne « [réparation] … » : evenement `ligne` et fin du dernier journal de l'env."""
-        c = self._courante or {}
+        c = c or self._courante or {}
         texte = "[réparation] " + texte
         self.serie._ajoute("ligne", c.get("env"), action=c.get("action"), texte=texte)
         journaux = list((Path(self.serie.dossier) / "journaux").glob(f"*-{c.get('env')}-{c.get('action')}*.log"))
