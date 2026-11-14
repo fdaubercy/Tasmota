@@ -119,7 +119,7 @@ SEULEMENT si `charge()` a rendu une map (modèle `qrcodePage_init`).
 - [x] Cenv : liste `visuel_accueil` ajoutée à `[berry_commun]`, `${berry_commun.visuel_accueil}` dans le
   `custom_files_exclude` de chaque env ; `banc_demarrage.py` vert (instantanés inchangés) — preuve : 19 lignes ${berry_commun.visuel_accueil} (17 envs + 2 envs qui levent etiquette_qr) ; banc_demarrage.py VERT sans --enregistre
 - [x] `relecteur-berry` lancé, remarques traitées — preuve : relecteur-berry : aucun bloquant ; RAM de html() et cache du fond notes
-- [ ] Commit `feat(visuel): module Berry du visuel d'accueil, route /visuel, liste visuel_accueil exclue partout (A3)`
+- [x] Commit `feat(visuel): module Berry du visuel d'accueil, route /visuel, liste visuel_accueil exclue partout (A3)` — preuve : commit 9af9e2820 (11 fichiers, sans trailer Co-Authored-By, non poussé) ; banc_visuel, banc_repartition_fichiers et banc_demarrage verts relancés le 2026-11-14
 
 ## A4 — Moteur `visuel.js` et premier essai sur carte à la main
 Fichiers : créer `data/sd/js/visuel.js`, `outils_pc/test_visuel_js.mjs` ; fichiers d'essai écrits à la main dans le
