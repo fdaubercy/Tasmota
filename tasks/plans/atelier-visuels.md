@@ -4,7 +4,7 @@ titre: Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, poi
 objectif: Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module
 statut: actif
 cree: 2026-11-13
-maj: 2026-11-13
+maj: 2026-11-14
 ---
 # Atelier des visuels d'accueil
 
@@ -204,6 +204,7 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
 - [ ] Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le
   persist en contient une ; `/etat` sur une IP qui ne répond pas rend `inconnu` en moins de 3,5 s ; `/valide` rend les
   erreurs du validateur
+  - [ ] Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur
 - [ ] Tests lancés : rouges ; modules écrits ; tests verts
 - [ ] Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
   Iconify et noter ses limites ; routes `GET /icones/recherche?q=` et `GET /icones/svg?jeu=&nom=` (hôte fixe, jeu et nom
@@ -217,8 +218,10 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   puis les collections de `ICONES_IMAGES_SOURCES.md` ; conversion en tracé `path` (jeu des tracés MDI rangé dans
   `outils_docs/visuels_accueil/icones/` avec sa licence) ; taille réglable ; `icone_on` / `icone_off` / `icone_inconnu` et
   couleur par état ; import d'un `.svg` nettoyé ; test : l'icône change avec l'état simulé (caméra ON/OFF) dans l'aperçu
-- [ ] Sonde Chrome étendue : un élément de chaque type posé et déplacé, source choisie, aperçu simulé bascule ON/OFF
-  (classe `on` lue dans le SVG), liaison active puis muette
+  - [x] Recherche en ligne dans la page (licence sur chaque résultat, NC masquée, hors ligne = message, attribution confirmée avant conservation), icône posée comme voyant, `icone_on` / `icone_off` / `icone_inconnu`, taille réglable, import d'un `.svg` du PC nettoyé par le serveur — preuve : sonde_icones VERT (faux Iconify, dépôt copié), commit 52a4d672e
+  - [ ] Banque locale du firmware (`icones_firmware.json`) dans le sélecteur : aucune route ne la sert (police de glyphes, pas de tracé) ; à décider avec l'utilisateur
+- [x] Sonde Chrome étendue : un élément de chaque type posé et déplacé, source choisie, aperçu simulé bascule ON/OFF
+  (classe `on` lue dans le SVG), liaison active puis muette — preuve : test_atelier_visuels_page_chrome_faux.py::sonde_points VERT (voyant, valeur, liaison posés, source, déplacés, aperçu ON/OFF lu dans la classe du SVG, liaison active/muette), commit 2e1c0e438
 - [ ] `relecteur-pages-web` lancé, remarques traitées
 - [ ] Commit `feat(atelier-visuels): points chauds, sources du persist, apercu simule ou reel (A6)`
 
@@ -249,12 +252,13 @@ Page : bouton « Écrire dans le dépôt » (diff montré, confirmation), puis l
   (reste : `banc_demarrage.py` sur la copie après écriture, à lancer APRÈS le build en cours ; écriture et suivi : rouges puis verts le 2026-11-13)
 - [ ] `AT_ORIGINES` : entrée `visuel` ; `sonde_atelier` étendue ; sonde Chrome de l'outil : « Écrire » puis lien Build
   présent avec les bons fichiers
+  - [x] Page : « Écrire dans le dépôt » (diff, confirmation, refus pendant un build, motif de validation affiché), badge de suivi, lien « Téléverser » vers la page Build (`?env=&depuis=visuel&fichiers=visuel.json,visuel.<type>&redemarrer=1`) — preuve : sonde_ecriture VERT sur dépôt copié, commit 3f37b3948 (reste : `AT_ORIGINES` et `sonde_atelier` côté page Build)
 - [ ] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert
 - [ ] `relecteur-pages-web` lancé, remarques traitées
-- [ ] Export (spec § 2.5) : boutons « Télécharger le SVG », « Copier le code SVG », « Copier le code HTML »
+- [x] Export (spec § 2.5) : boutons « Télécharger le SVG », « Copier le code SVG », « Copier le code HTML »
   (fragment autonome : SVG + calques + script d'animation de `visuel.js` en ligne, aucune requête), « Télécharger le
   PNG » (canvas) ; test : le fragment HTML s'affiche seul dans la sonde Chrome et son voyant change d'état sans la
-  carte ; aucun envoi au serveur ni écriture au dépôt
+  carte ; aucun envoi au serveur ni écriture au dépôt — preuve : sonde_export VERT : SVG, code SVG, code HTML copiés (crochets AV.presse / AV.telecharge), PNG signature 137 80 78 71, fragment HTML ouvert seul dans une iframe srcdoc : voyant ON -> OFF et liaison muette -> active au clic sans requête, commit eed444696
 - [ ] Commit `feat(atelier-visuels): ecriture au depot, lien Build, suivi depot/carte, mode d'emploi (A7)`
 
 ## A8 — Première carte réelle, cohabitation, mesures, rangement
@@ -288,8 +292,8 @@ est faux pour un fournisseur externe ; le SVG rendu passe par `atelier_visuels_f
   zone de la photo (états ouverte, proposée, appliquée, refusée) dans `outils_docs/visuels_accueil/cartes/<env>/remarques.json`
 - [x] Fournisseur *Claude Code local* (`claude -p`, lecture seule, jamais bypassPermissions, hooks coupés) puis Ollama,
   puis une API externe au choix de l'utilisateur ; chacun avec un faux fournisseur dans le banc — preuve : `atelier_visuels_ia.py` (ClaudeLocal, Ollama, ApiExterne) et `test_atelier_visuels_ia.py` VERT (faux claude, faux serveurs locaux, faux fournisseurs ; aucun essai réel)
-- [ ] Panneau de la page : consigne, choix du procédé, avertissement avant envoi, compteur de quota, résultat ouvert dans
-  l'éditeur ; sonde Chrome avec faux fournisseur
+- [x] Panneau de la page : consigne, choix du procédé, avertissement avant envoi, compteur de quota, résultat ouvert dans
+  l'éditeur ; sonde Chrome avec faux fournisseur — preuve : sonde_ia VERT (faux fournisseur) : avertissement nommant le service, confirmation à refaire à chaque envoi, quota, clé jamais relue (ni DOM ni stockage), SVG nettoyé ouvert dans l'éditeur en une étape annulable, commit feb1af500
 - [ ] Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
   (`rendu-cible-page-reelle.png`) ; `relecteur-pages-web`
 - [ ] Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
