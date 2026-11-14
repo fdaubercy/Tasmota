@@ -69,8 +69,8 @@ secrets), `menage_memoire.py` (liste « à garder »), `build/cible_menage.py`.
 - [x] Tuile de l'annuaire (groupe « Ateliers »), tâche VS Code « Outil : menage du depot », cible Custom détachée `build/cible_menage.py` (`NOM_CIBLE` ajouté à `CIBLES_OUTILS` de `.claude/hooks/garde_build.py`, `garde_build` vérifie la liste) — preuve : annuaire_registre.py entrée « menage » (7995), tâche .vscode/tasks.json, build/cible_menage.py, 'menage' dans CIBLES_OUTILS ; test_annuaire.py VERT (16 outils, 2 passes) ; garde_build vérifié par test_garde_build.py
 - [x] Banc `build/test_cible_menage.py`, `test_garde_build.py` vert — preuve : test_cible_menage.py VERT (4 cas : autre service, déjà lancée, démarrage détaché, démarrage raté), test_garde_build.py VERT
 - [x] Entrée dans la Carte des documents de `CLAUDE.md`, section dans `outils_docs/README.md`, ligne dans `outils_docs/SOUS_AGENTS.md` — preuve : CLAUDE.md (menage_web.py), outils_docs/README.md § Ménage du dépôt, SOUS_AGENTS.md ; verifie_references_docs.py : 0 défaut
-- [ ] Relecture par `relecteur-outils-python` et `relecteur-pages-web` avant commit
-- [ ] Commit (avec `controleur-secrets` puis `preparateur-push` avant le push)
+- [x] Relecture par `relecteur-outils-python` et `relecteur-pages-web` avant commit — preuve : relecteur-outils-python : rien de bloquant (2 renvois corriges) ; relecteur-pages-web : XSS/CSRF/Host sains, 3 points corriges (Chrome orphelins, couleurs en variables, rapport efface apres POST reussi), sonde VERT x2, 0 Chrome sonde_ a +15 s
+- [x] Commit (avec `controleur-secrets` puis `preparateur-push` avant le push) — preuve : commits A6 + correctifs, controleur-secrets sans rien a signaler avant chacun ; preparateur-push reste a lancer avant le push (aucun push fait)
 
 ## A7 — Essais réels et décision sur la version 2
 - [ ] Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés

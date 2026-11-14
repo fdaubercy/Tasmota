@@ -112,11 +112,16 @@ class Montage:
         raise TimeoutError(f"{url} ne repond pas")
 
     def ferme(self):
-        tue_arbre(self.chrome)
-        if self.t.name:      # Chrome laisse des processus fils : on les cherche par le profil de cette sonde
-            subprocess.run(["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'chrome.exe' -and "
-                            f"$_.CommandLine -like '*{self.t.name}*' }} | ForEach-Object {{ taskkill /F /PID $_.ProcessId }}".replace("}} |", "} |")],
-                           capture_output=True)
+        if self.chrome:
+            tue_arbre(self.chrome)
+        if self.t:           # Chrome laisse des processus fils, parfois relances : on balaie par le profil de cette sonde
+            commande = ("$p = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'chrome.exe' -and $_.CommandLine -like '*" + self.t.name
+                        + "*' }); $p | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; $p.Count")
+            for _ in range(8):      # jusqu'a ce qu'un balayage ne trouve plus rien (Chrome relance des fils pendant son arret)
+                r = subprocess.run(["powershell", "-NoProfile", "-Command", commande], capture_output=True, text=True)
+                if r.stdout.strip() == "0":
+                    break
+                time.sleep(0.7)
         if self.serveur:
             self.serveur.shutdown()
             self.serveur.server_close()
@@ -194,8 +199,10 @@ def scenario(m, temoin):
 
 
 def passage(page, temoin=None):
-    m = Montage(page)
+    m = Montage.__new__(Montage)          # ferme() nettoie meme si __init__ plante apres avoir lance Chrome
+    m.t = m.chrome = m.serveur = None
     try:
+        m.__init__(page)
         scenario(m, temoin)
     finally:
         m.ferme()

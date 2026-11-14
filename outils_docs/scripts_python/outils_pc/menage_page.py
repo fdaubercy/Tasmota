@@ -9,10 +9,10 @@ Sonde : test_menage_page_chrome.py.
 CSS = """
 :root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--bleu:#2563eb;--vert:#1e7e3a;
   --orange:#a86400;--rouge:#c0392b;--btn:#fff;--btn-bord:#888;--piste:#e9e9ea;--orange-fond:#fff4e0;--vert-fond:#e3f4e8;
-  --rouge-fond:#fdecea;--champ:#fff}
+  --rouge-fond:#fdecea;--champ:#fff;--sur-bleu:#fff;--interrupteur:#fff;--interrupteur-on:#34c759;--ombre:rgba(0,0,0,.3)}
 :root[data-theme="sombre"]{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#3a3f47;--texte:#e6e6e6;--doux:#a8adb5;
   --bleu:#5b93ff;--vert:#3fbf63;--orange:#f0a020;--rouge:#ff6b5b;--btn:#262a30;--btn-bord:#555b64;--piste:#39393d;
-  --orange-fond:#33270f;--vert-fond:#16301f;--rouge-fond:#3a1d1a;--champ:#15171b}
+  --orange-fond:#33270f;--vert-fond:#16301f;--rouge-fond:#3a1d1a;--champ:#15171b;--sur-bleu:#0b0d10}
 *{box-sizing:border-box}
 body{margin:0;font:14px system-ui,sans-serif;color:var(--texte);background:var(--fond)}
 main{max-width:1200px;margin:0 auto;padding:12px 16px 24px}
@@ -21,9 +21,9 @@ h1{font-size:20px;margin:0} h2{font-size:15px;margin:0 0 8px}
 .theme{margin-left:auto;align-self:center;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--doux);cursor:pointer;user-select:none}
 .theme input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
 .interrupteur{position:relative;flex:none;width:2.6em;height:1.5em;border-radius:.75em;background:var(--piste);transition:background .2s}
-.interrupteur::after{content:"";position:absolute;top:.15em;left:.15em;width:1.2em;height:1.2em;border-radius:50%;background:#fff;
-  box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
-.theme input:checked + .interrupteur{background:#34c759}
+.interrupteur::after{content:"";position:absolute;top:.15em;left:.15em;width:1.2em;height:1.2em;border-radius:50%;background:var(--interrupteur);
+  box-shadow:0 1px 3px var(--ombre);transition:transform .2s}
+.theme input:checked + .interrupteur{background:var(--interrupteur-on)}
 .theme input:checked + .interrupteur::after{transform:translateX(1.1em)}
 .theme input:focus-visible + .interrupteur{outline:2px solid var(--bleu);outline-offset:2px}
 .doux{color:var(--doux)} .petit{font-size:12px} [hidden]{display:none!important}
@@ -31,7 +31,7 @@ h1{font-size:20px;margin:0} h2{font-size:15px;margin:0 0 8px}
 @media (max-width:760px){.colonnes{grid-template-columns:minmax(0,1fr)}}
 .carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:12px;margin-bottom:12px;min-width:0}
 .btn{display:inline-block;padding:6px 12px;border:1px solid var(--btn-bord);border-radius:6px;background:var(--btn);font:inherit;color:inherit;cursor:pointer}
-.btn.prim{background:#2563eb;border-color:#2563eb;color:#fff} .btn:disabled{opacity:.45;cursor:default}
+.btn.prim{background:var(--bleu);border-color:var(--bleu);color:var(--sur-bleu)} .btn:disabled{opacity:.45;cursor:default}
 .ligne{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
 label.ch{display:flex;gap:6px;align-items:flex-start;margin:4px 0}
 label.ch input{margin-top:3px;flex:none}
@@ -225,9 +225,9 @@ function lance() {
   var p = parametres();
   if (!p.zone.length || !p.categories.length) { message("ko", "Cochez au moins un dossier et un contrôle."); return; }
   if (!(p.anciennete_jours >= 0 && p.anciennete_jours <= 365)) { message("ko", "Ancienneté : un nombre de 0 à 365."); return; }
-  S.gen++; S.rapport = null; rend();
   api("POST", "/lancer", p).then(function (r) {
     if (!r.ok) { message("ko", r.texte); return; }
+    S.gen++; S.rapport = null; rend();
     etat();
   });
 }
