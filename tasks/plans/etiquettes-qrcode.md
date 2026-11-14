@@ -326,8 +326,8 @@ Produit : `controle_public(valeur: str) -> str | None` (raison du refus) ; `fich
   banc sur un dépôt temporaire avec un `origin` nu : seule `refs/heads/etiquettes` change, `development` et l'arbre
   de travail identiques avant/après, carte retirée -> fiche retirée au prochain envoi
 - [x] Relecture (agent relecteur-pages-web, opus) puis corrections — preuve : bloquant B1 corrigé (le filtre des secrets du persist voyait seulement les lignes `persist` : une ligne libre ou un texte « avant » portant un mot de passe partait sur la fiche ; désormais toute la ligne, `etiquettes_qr_publication.py::lignes_publiees`, témoins et mutants dans `test_etiquettes_qr_publication.py`) ; filtre élargi (access_token=, api_key=, JWT, jeton Telegram, AWS, Slack, mots annonciateurs : banc à 7 règles, 7 mutants rouges) ; raisons sans valeur ; titre de la fiche = env ; git sans invite d'identifiants, délai de 120 s, verrou de publication à part, jeton d'URL retiré des messages ; `update-ref` après push sans effet sur le résultat ; tests « branche bougée ailleurs » et « origin injoignable » ; mode d'emploi `outils_docs/README.md` § « Fiche en ligne (mode lien) »
-- [ ] Mise en service par l'utilisateur, une fois : Settings > Pages > Source « Deploy from a branch », branche
-  `etiquettes`, dossier `/ (root)`
+- [x] Mise en service par l'utilisateur, une fois : Settings > Pages > Source « Deploy from a branch », branche
+  `etiquettes`, dossier `/ (root)` — preuve : `GET /pages` de la page 7970 = actif, branche etiquettes ; fiche de la cuve en HTTP 200 sur fdaubercy.github.io le 2026-11-14
 - [ ] Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - [ ] Commit
 

@@ -13,12 +13,13 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-47 plans : 21 actif, 1 en-pause, 25 clos.
+48 plans : 22 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 82 % (69/91) | 22 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
-| [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | █████░░░░░ 45 % (24/64) | 40 étapes, 3 améliorations | 2026-11-13 | 2026-11-13 |
+| [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | █████░░░░░ 49 % (29/68) | 39 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
+| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | █░░░░░░░░░ 13 % (4/26) | 22 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 83 % (70/91) | 21 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ██████░░░░ 60 % (35/51) | 16 étapes, 4 améliorations | 2026-11-08 | 2026-11-13 |
 | [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 87 % (34/41) | 7 étapes | 2026-11-12 | 2026-11-13 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 89 % (50/56) | 6 étapes | 2026-11-12 | 2026-11-13 |
@@ -67,12 +68,83 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 82 %
+#### [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 49 %
 
-- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un)
-- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Valeurs du modèle de chaque module métier d'écran : texte du QR code, IP réelle (`diversFonctions.ipLAN`), IP
-- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave :
-- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20)
+- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `banc_visuel.be` écrit (lancé par `banc_visuel.py`, code de sortie 0/1) : sans `/json/visuel.json` aucun driver ;
+- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Banc lancé : rouge (modules absents)
+- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `visuelFonctions.be` et `controleVisuel.be` écrits (charte des logs ; aucun nom de builtin Berry en variable) ;
+- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Cenv : liste `visuel_accueil` ajoutée à `[berry_commun]`, `${berry_commun.visuel_accueil}` dans le
+- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `relecteur-berry` lancé, remarques traitées
+- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Commit `feat(visuel): module Berry du visuel d'accueil, route /visuel, liste visuel_accueil exclue partout (A3)`
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : `test_visuel_js.mjs` écrit (`node`, faux `document` minimal ou `jsdom` absent : le test construit le SVG par
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Test lancé : rouge
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : `visuel.js` écrit ; test vert ; `node --check` vert
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Commit `feat(visuel): moteur visuel.js des calques de l'accueil (A4)`
+- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Tests lancés : rouges
+- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`),
+- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : `relecteur-pages-web` lancé, remarques traitées
+- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Commit `feat(atelier-visuels): page 7990, import de la photo, fond photo ou dessin, poids (A5)`
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Tests lancés : rouges ; modules écrits ; tests verts
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`)
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Banque locale du firmware (`icones_firmware.json`) dans le sélecteur : aucune route ne la sert (police de glyphes, pas de tracé) ; à décider avec l'utilisateur
+- A6 — Points chauds, sources et aperçu par le vrai moteur : `relecteur-pages-web` lancé, remarques traitées
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Commit `feat(atelier-visuels): points chauds, sources du persist, apercu simule ou reel (A6)`
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : `AT_ORIGINES` : entrée `visuel` ; `sonde_atelier` étendue ; sonde Chrome de l'outil : « Écrire » puis lien Build
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : `relecteur-pages-web` lancé, remarques traitées
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Commit `feat(atelier-visuels): ecriture au depot, lien Build, suivi depot/carte, mode d'emploi (A7)`
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Accord de l'utilisateur demandé pour la règle `.svg`/`.webp` de `gestionFileFolder.be::listeEtRepartitLesFichiers`
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
+- A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
+- A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
+- A9 — Assistant IA facultatif (spec § 2.10) : Lire la documentation de chaque offre gratuite visée (limites, données utilisées pour l'entraînement) et noter le
+- A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
+- A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
+- A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
+- Amélioration [projet] : Commander un relais en cliquant son voyant (spec § 3, non-objectif)
+- Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
+- Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
+
+#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 13 %
+
+- A2 — Verrou de fichier (`build_reparations_verrou.py`) : Écrire d'abord `test_build_reparations_verrou.py` (rouge) : un processus Python de test ouvre un fichier temporaire en
+- A2 — Verrou de fichier (`build_reparations_verrou.py`) : Créer `outils_docs/scripts_python/outils_pc/build_reparations_verrou.py` : `processus_du_fichier(chemin: str) -> list[dict]`
+- A2 — Verrou de fichier (`build_reparations_verrou.py`) : Banc vert, mutant : retirer la liste blanche ou le garde du pid de la série doit rendre le banc rouge
+- A3 — Moteur et branchement dans la série : Écrire d'abord les tests dans `test_build_serie.py` (nouveau groupe, faux `pio` qui échoue avec un journal de verrou puis
+- A3 — Moteur et branchement dans la série : Étendre `build_reparations.py` : `Reparateur(serie, regles, horloge=time.monotonic)` avec
+- A3 — Moteur et branchement dans la série : Brancher dans `build_serie.py::Serie._execute_env` (quelques lignes) : boucle de relance autour de `_lance_pio`
+- A3 — Moteur et branchement dans la série : Bancs `test_build_serie.py` et `test_build_reparations.py` verts, mutants (limite de relances retirée, boucle sans signature,
+- A4 — Routes de la page (`build_web.py`) : Écrire d'abord les tests dans `test_build_web.py` : `GET /reparations` rend règles (base + locales) et historique de la
+- A4 — Routes de la page (`build_web.py`) : Ajouter les routes dans `build_web.py` (quelques lignes, logique dans `build_reparations.py`)
+- A5 — Page : bandeau, choix, panneau « Réparations » : Écrire d'abord la sonde `test_build_page_reparations_chrome.py` (rouge ; pas de pause fixe, attendre des conditions) :
+- A5 — Page : bandeau, choix, panneau « Réparations » : Créer `build_page_reparations.py` (CSS, HTML, JS du bandeau, des boutons et du panneau, inséré dans `build_page.PAGE` par
+- A5 — Page : bandeau, choix, panneau « Réparations » : Sonde verte ; Chrome `sonde_*` orphelins arrêtés après coup (compter les `HasExited` faux 15 s après)
+- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Écrire d'abord `test_build_reparations_ia.py` (rouge, `claude` remplacé par un faux programme injecté, comme le test de
+- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Créer `build_reparations_ia.py` : `diagnostique(racine, env, etape, journal, programme=None) -> dict` (`claude -p` en lecture
+- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Routes `POST /reparations/diagnostic {env}` et `POST /reparations/appliquer {env, regle}` (ce PC seulement) ; « Appliquer et
+- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Bancs verts, un essai réel de diagnostic sur un journal d'échec archivé (lecture seule, rien appliqué)
+- A7 — Documentation, essai et commit : `outils_docs/README.md` (§ « Build et téléversement (page web) » : réparations, catalogue, liste blanche, panneau), `CLAUDE.md`
+- A7 — Documentation, essai et commit : Relecteurs `relecteur-pages-web` (page et routes, sécurité : fermeture de processus, clients distants, XSS du journal) puis
+- A7 — Documentation, essai et commit : Essai réel hors série de production : un fichier du dépôt tenu ouvert par un script de test pendant un faux build (pas de vrai
+- A7 — Documentation, essai et commit : Commit par chemins explicites (module neufs, bancs, plan, spec, README)
+- A8 — Retour au plan en cours avant ce chantier : Reprendre le plan `facade-garage-capteurs` : A3 (envoi des firmwares compilés le 2026-11-14 et essais sur les cartes : rideau fermé = pastille du bas verte, camera, fins de course) : `/suivi suivre facade-garage-capteurs`
+- A8 — Retour au plan en cours avant ce chantier : Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs`
+- Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
+- Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
+
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 83 %
+
+- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un) — débits fait (qrcode.json, autoexec, cenv) ; cave non faite (autre session)
+- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave : — débits fait : page 5 de ecran.json, pages.jsonl et ecranLvgl.be régénérés, bouton 205 ; cave non faite
+- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20) — bancs verts (debits, lvgl, systeme, demarrage, tests atelier, sonde Chrome) ; essai sur carte restant (A20)
 - A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A20) ; commit
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Catalogue généré `outils_docs/schemas/icones.json` : glyphes MDI de `gen.sh` (code `\uE…`, nom lu dans la police
 - A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
@@ -92,52 +164,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
 - Amélioration [projet] : Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)
-
-#### [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 45 %
-
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `banc_visuel.be` écrit (lancé par `banc_visuel.py`, code de sortie 0/1) : sans `/json/visuel.json` aucun driver ;
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Banc lancé : rouge (modules absents)
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `visuelFonctions.be` et `controleVisuel.be` écrits (charte des logs ; aucun nom de builtin Berry en variable) ;
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Cenv : liste `visuel_accueil` ajoutée à `[berry_commun]`, `${berry_commun.visuel_accueil}` dans le
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `relecteur-berry` lancé, remarques traitées
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Commit `feat(visuel): module Berry du visuel d'accueil, route /visuel, liste visuel_accueil exclue partout (A3)`
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : `test_visuel_js.mjs` écrit (`node`, faux `document` minimal ou `jsdom` absent : le test construit le SVG par
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Test lancé : rouge
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : `visuel.js` écrit ; test vert ; `node --check` vert
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Commit `feat(visuel): moteur visuel.js des calques de l'accueil (A4)`
-- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Tests lancés : rouges
-- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`),
-- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : `relecteur-pages-web` lancé, remarques traitées
-- A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Commit `feat(atelier-visuels): page 7990, import de la photo, fond photo ou dessin, poids (A5)`
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Tests lancés : rouges ; modules écrits ; tests verts
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`)
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Sonde Chrome étendue : un élément de chaque type posé et déplacé, source choisie, aperçu simulé bascule ON/OFF
-- A6 — Points chauds, sources et aperçu par le vrai moteur : `relecteur-pages-web` lancé, remarques traitées
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Commit `feat(atelier-visuels): points chauds, sources du persist, apercu simule ou reel (A6)`
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : `AT_ORIGINES` : entrée `visuel` ; `sonde_atelier` étendue ; sonde Chrome de l'outil : « Écrire » puis lien Build
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : `relecteur-pages-web` lancé, remarques traitées
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Export (spec § 2.5) : boutons « Télécharger le SVG », « Copier le code SVG », « Copier le code HTML »
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Commit `feat(atelier-visuels): ecriture au depot, lien Build, suivi depot/carte, mode d'emploi (A7)`
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Accord de l'utilisateur demandé pour la règle `.svg`/`.webp` de `gestionFileFolder.be::listeEtRepartitLesFichiers`
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
-- A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
-- A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
-- A9 — Assistant IA facultatif (spec § 2.10) : Lire la documentation de chaque offre gratuite visée (limites, données utilisées pour l'entraînement) et noter le
-- A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
-- A9 — Assistant IA facultatif (spec § 2.10) : Panneau de la page : consigne, choix du procédé, avertissement avant envoi, compteur de quota, résultat ouvert dans
-- A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
-- A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
-- Amélioration [projet] : Commander un relais en cliquant son voyant (spec § 3, non-objectif)
-- Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
-- Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
 
 #### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 60 %
 
