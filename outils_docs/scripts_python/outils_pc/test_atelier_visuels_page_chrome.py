@@ -316,6 +316,8 @@ def main():
         cdp.appel("Page.navigate", url=f"http://127.0.0.1:{port}/")
         attend(cdp, "document.readyState === 'complete' && !!window.AV", 20)
         sonde(cdp, port)
+        import test_atelier_visuels_page_chrome_faux as faux
+        ECHECS.extend(faux.lance(cdp, t))
     finally:
         tue_arbre(chrome)
         tue_arbre(serveur)

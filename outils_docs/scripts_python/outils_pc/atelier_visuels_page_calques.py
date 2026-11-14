@@ -37,18 +37,18 @@ var AV_CALQUES = (function () {
         : ['circle', {cx: r1(el.x), cy: r1(el.y), r: t / 2, fill: cs[k], stroke: '#ffffff', 'stroke-width': 1}];
       enf.push(['g', {'class': 's-' + k}, [forme]]);
     });
-    return ['g', {'class': 'av-v ' + etatVoyant(sim, el.id), 'data-id': el.id, role: 'img', 'aria-label': 'Voyant ' + el.id}, enf];
+    return ['g', {'class': 'av-v ' + etatVoyant(sim, el.id), 'data-el': el.id, role: 'img', 'aria-label': 'Voyant ' + el.id}, enf];
   }
   function noeudValeur(el) {
     var st = el.style || {}, txt = String(st.exemple === undefined ? '0' : st.exemple).slice(0, 12) + (st.unite ? ' ' + String(st.unite).slice(0, 6) : ''), t = num(st.taille, 14, 8, 60);
     var w = Math.round(txt.length * t * 0.6 + 10);
-    return ['g', {'class': 'av-val', 'data-id': el.id}, [
+    return ['g', {'class': 'av-val', 'data-el': el.id}, [
       ['rect', {x: r1(el.x - w / 2), y: r1(el.y - t * 0.8), width: w, height: r1(t * 1.4), rx: 4, fill: '#1f1f1f', 'fill-opacity': 0.75}],
       ['text', {x: r1(el.x), y: r1(el.y + t * 0.3), 'font-size': t, 'font-family': 'sans-serif', 'text-anchor': 'middle', fill: coul(st.couleur, '#ffffff')}, txt]]];
   }
   function noeudLiaison(el, sim) {
     var a = sim && sim[el.id] === 'muette' ? 'muette' : 'active';
-    return ['g', {'class': 'av-l ' + a, 'data-id': el.id}, [['line', {x1: r1(el.x), y1: r1(el.y), x2: r1(el.x2), y2: r1(el.y2), stroke: '#3ddc84'}]]];
+    return ['g', {'class': 'av-l ' + a, 'data-el': el.id}, [['line', {x1: r1(el.x), y1: r1(el.y), x2: r1(el.x2), y2: r1(el.y2), stroke: '#3ddc84'}]]];
   }
   function rendu(els, sim) {
     return [['style', {}, CSS], ['g', {'class': 'av-calques'}, (els || []).map(function (el) {
