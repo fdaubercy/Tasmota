@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "fond": {"type": "svg", "largeur": 400, "hauteur": 214},
+ "rafraichissement": 2345,
+ "elements": [
+  {"id": "r1", "type": "voyant", "x": 90, "y": 80, "source": {"type": "relais", "n": 1}, "style": {"forme": "rond"}},
+  {"id": "t1", "type": "valeur", "x": 150, "y": 120, "source": {"type": "mesure", "chemin": ["DS18B20", "Temperature"]}, "style": {"texte_avant": "Eau ", "unite": " °C", "decimales": 1}},
+  {"id": "l1", "type": "liaison", "x": 60, "y": 195, "x2": 340, "y2": 195, "source": {"type": "modbus_serie", "seuil_s": 30}}
+ ]
+}

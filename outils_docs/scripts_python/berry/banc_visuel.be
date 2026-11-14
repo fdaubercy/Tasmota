@@ -122,9 +122,12 @@ def repart(texte)
     end
 end
 VF.FICHIER = FS + "/json/visuel.json"
-# Charge controleVisuel.be (compile + execution, comme demarrage.charge) ; rend sa valeur
+# Charge controleVisuel.be (compile + execution, puis init(m) que 'import' appelle seul sur la carte) ;
+# rend le driver pose, ou nil si la description n'en a pas permis
 def charge_controle()
-    return compile(lisFichier(SOURCES + "/fs/controleVisuel.be"))()
+    var m = compile(lisFichier(SOURCES + "/fs/controleVisuel.be"))()
+    m.init(m)
+    return size(pilotes) > 0 ? pilotes[size(pilotes) - 1] : nil
 end
 def description(elements, extra)
     var d = {"version": 1, "fond": {"type": "svg", "largeur": 480, "hauteur": 320}, "elements": elements}
