@@ -54,9 +54,9 @@ secrets), `menage_memoire.py` (liste « à garder »), `build/cible_menage.py`.
 - [x] Banc `test_menage_memoire.py` : ajout, retrait, fichier corrompu, écriture interrompue — preuve : test_menage_memoire.py VERT (code 0) : ajout, doublon, anti-slash, .. et absolu refuses, retrait, disparu retire, fichier corrompu, forme inattendue, ecriture interrompue (ancien contenu intact, aucun .tmp), liste pleine ; mutant sans controle de chemin vu
 
 ## A4 — Serveur et routes
-- [ ] `menage_web.py` : `GET /` (page), `GET /etat`, `POST /lancer`, `GET /rapport`, `POST /garder`, `POST /ignorer` ; règle d'accès de `acces_web.py` (en-tête `X-Menage: 1`, même origine, jeton depuis un autre appareil) ; exception inattendue = 500 avec son message
-- [ ] Fiche de présence de l'outil pour l'annuaire, `--sans-navigateur`, `--local`
-- [ ] Banc `test_menage_web.py` : refus sans en-tête, mauvaise origine, paramètre hors liste blanche, client distant sans jeton
+- [x] `menage_web.py` : `GET /` (page), `GET /etat`, `POST /lancer`, `GET /rapport`, `POST /garder`, `POST /ignorer` ; règle d'accès de `acces_web.py` (en-tête `X-Menage: 1`, même origine, jeton depuis un autre appareil) ; exception inattendue = 500 avec son message — preuve : outils_pc/menage_web.py : routes GET / /options /etat /rapport /gardes, POST /lancer /arreter /garder /degarder /ignorer ; X-Menage, origine, hote_autorise, corps borne a 16 Ko ; page provisoire menage_page.py (A5) ; banc : 40 verifications OK
+- [x] Fiche de présence de l'outil pour l'annuaire, `--sans-navigateur`, `--local` — preuve : fiche de presence ecrite par acces_web.Acces.annonce (meme mecanisme que les autres outils), options --sans-navigateur et --local par acces_web.ajoute_options ; tuile de l'annuaire en A6
+- [x] Banc `test_menage_web.py` : refus sans en-tête, mauvaise origine, paramètre hors liste blanche, client distant sans jeton — preuve : test_menage_web.py VERT (code 0) : sans en-tete 403, autre origine 403, Host etranger 403, client distant sans jeton 403 (avec jeton 303), parametres hostiles 400, build en cours 409, 2e lancement 409, mutant sans controle d'origine vu
 
 ## A5 — Page
 - [ ] Paramètres : périmètre (cases par dossier), catégories de contrôles, ancienneté du « en cours », modèle et effort ; valeurs précédentes mémorisées dans le navigateur (`localStorage` gardé par try/catch)
