@@ -35,7 +35,7 @@ TYPES_FOND = ("svg", "webp", "jpg")
 MARQUE = ("; atelier des visuels : option posee pour le visuel d'accueil de cet env (copie figee de la base pour l'exclusion),"
           " retiree avec le visuel")
 COMMENTAIRE_LISTE = (
-    "; Visuel d'accueil (atelier 7990, 2026-11-13) : modules et moteur de dessin. SEULS les envs qui ont un visuel les embarquent ;",
+    "; Visuel d'accueil (atelier 7985, 2026-11-13) : modules et moteur de dessin. SEULS les envs qui ont un visuel les embarquent ;",
     "; exclue de tous les autres envs (regle du 2026-10-31), levee env par env par atelier_visuels_ecriture.py.")
 
 

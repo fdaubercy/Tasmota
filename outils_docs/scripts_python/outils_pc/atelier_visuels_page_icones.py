@@ -9,11 +9,18 @@ Banque locale du firmware (`icones_firmware.json`) : aucune route ne la sert (po
 CSS_ICONES = """
 #avi-res{display:flex;flex-wrap:wrap;gap:4px;max-height:150px;overflow:auto}
 #avi-res button{font-size:12px;padding:3px 6px}
+#avi-fw{display:flex;flex-wrap:wrap;gap:3px;max-height:150px;overflow:auto}
+#avi-fw button{width:34px;height:34px;padding:3px;color:var(--texte)}
+#avi-fw button svg{width:100%;height:100%}
 #avi-prev{width:48px;height:48px;background:var(--champ);border:1px solid var(--bord);border-radius:6px;color:var(--texte)}
 """
 
 HTML_ICONES = (
     "<div class='pan' id='avi-panel'><h2>Icônes</h2><div class='g'>"
+    "<div class='doux'>Icônes du firmware (sans réseau)</div>"
+    "<input type='search' id='avi-fq' maxlength='40' placeholder='Filtrer (camera, home…)' aria-label='Filtrer les icônes du firmware'>"
+    "<div id='avi-fw' role='list' aria-label='Icônes du firmware'></div>"
+    "<div class='doux'>Recherche en ligne (Iconify)</div>"
     "<div class='row'><input type='search' id='avi-q' maxlength='40' placeholder='Chercher (camera, lampe…)' aria-label='Recherche d’icône en ligne'>"
     "<button type='button' id='avi-cherche'>Chercher</button></div>"
     "<div id='avi-res' role='list' aria-label='Résultats'></div>"
@@ -41,12 +48,12 @@ JS_ICONES = r"""
     [].forEach.call(r.getElementsByTagName('path'), function (p) { ch.push(p.getAttribute('d') || ''); });
     return Cq.icone({w: vb[2], h: vb[3], d: ch.join(' ').trim()});
   }
-  function affiche(ic, jeu, nom, licence, attribution) {
-    courante = ic ? Object.assign({}, ic, {jeu: jeu, nom: nom, licence: licence, attribution: attribution}) : null;
+  function affiche(ic, jeu, nom, licence, attribution, origine) {
+    courante = ic ? Object.assign({}, ic, {jeu: jeu, nom: nom, licence: licence, attribution: attribution, origine: origine || ''}) : null;
     var p = $('avi-prev'); vide(p);
     if (ic) { p.setAttribute('viewBox', '0 0 ' + ic.w + ' ' + ic.h); p.appendChild(F.bati(['path', {d: ic.d, fill: 'currentColor'}], document)); }
     $('avi-attr-l').hidden = !(ic && attribution); $('avi-attr').checked = false;
-    info(ic ? jeu + ':' + nom + ' · licence ' + licence + (attribution ? ' (attribution)' : '') : 'Aucune icône choisie', false);
+    info(ic ? (jeu || origine || 'import') + ':' + nom + ' · licence ' + licence + (attribution ? ' (attribution)' : '') : 'Aucune icône choisie', false);
   }
   function cherche() {
     var q = $('avi-q').value.trim(), res = $('avi-res');
@@ -74,8 +81,28 @@ JS_ICONES = r"""
       affiche(t, ic.jeu, ic.nom, r.json.licence, ic.attribution);
     }).catch(function () { info('Serveur injoignable', true); });
   }
-  function icone() { return courante ? {w: courante.w, h: courante.h, d: courante.d, jeu: courante.jeu, nom: courante.nom} : null; }
+  function icone() { return courante ? {w: courante.w, h: courante.h, d: courante.d, jeu: courante.jeu || courante.origine, nom: courante.nom} : null; }
   function pris() { if (!courante) { info('Choisissez d’abord une icône', true); return false; } return true; }
+  // banque du firmware : tracés fournis par GET /icones/firmware (hors ligne), AVANT la recherche en ligne
+  var banque = [];
+  AV.api('GET', '/icones/firmware').then(function (r) {
+    if (!r.ok || !r.json) { info('Banque du firmware indisponible : ' + (r.texte || r.status), true); return; }
+    var g = $('avi-fw');
+    banque = (r.json.icones || []).map(function (i) {
+      var ic = Cq.icone({w: r.json.w, h: r.json.h, d: i.d}), li, b, s;
+      if (!ic) return null;
+      li = document.createElement('div'); li.setAttribute('role', 'listitem'); li.setAttribute('data-nom', i.nom);
+      b = document.createElement('button'); b.type = 'button'; b.title = i.nom; b.setAttribute('aria-label', i.nom);
+      s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 ' + ic.w + ' ' + ic.h); s.appendChild(F.bati(['path', {d: ic.d, fill: 'currentColor'}], document));
+      b.appendChild(s); li.appendChild(b); g.appendChild(li);
+      b.addEventListener('click', function () { affiche(ic, '', i.nom, r.json.licence || 'Apache-2.0', false, 'firmware'); });
+      return {nom: i.nom, li: li};
+    }).filter(Boolean);
+  }).catch(function () { info('Banque du firmware indisponible', true); });
+  $('avi-fq').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    banque.forEach(function (b) { b.li.hidden = q !== '' && b.nom.indexOf(q) < 0; });
+  });
   $('avi-cherche').addEventListener('click', cherche);
   $('avi-q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); cherche(); } });
   $('avi-pose').addEventListener('click', function () {
@@ -98,6 +125,7 @@ JS_ICONES = r"""
   });
   $('avi-garde').addEventListener('click', function () {
     if (!pris()) return;
+    if (courante.origine === 'firmware') { info('Icône du firmware : déjà dans le dépôt, rien à garder', false); return; }
     if (!courante.jeu) { info('Icône importée du PC : rien à garder (licence à confirmer à la main)', true); return; }
     if (courante.attribution && !$('avi-attr').checked) { info('Cochez la confirmation d’attribution pour garder cette icône', true); return; }
     AV.api('POST', '/icones/garde', {jeu: courante.jeu, nom: courante.nom, confirme_attribution: courante.attribution && $('avi-attr').checked})

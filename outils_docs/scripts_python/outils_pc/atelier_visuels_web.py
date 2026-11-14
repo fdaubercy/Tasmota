@@ -1,7 +1,7 @@
-"""Atelier des visuels d'accueil (page web, port 7990) : serveur du fond (nettoyage, poids) ; page et points chauds a venir.
+"""Atelier des visuels d'accueil (page web, port 7985) : serveur du fond (nettoyage, poids) ; page et points chauds a venir.
 
 UTILISATION
-    python outils_docs/scripts_python/outils_pc/atelier_visuels_web.py [--http 7990] [--local] [--sans-navigateur]
+    python outils_docs/scripts_python/outils_pc/atelier_visuels_web.py [--http 7985] [--local] [--sans-navigateur]
     Regle d'acces : acces_web.py. Rien n'est ecrit au depot ; les fonds restent en memoire du serveur.
 
 Routes (le POST exige l'en-tete X-Atelier-Visuels: 1 et la meme origine ; client local : Host local) :
@@ -30,7 +30,7 @@ import lieux
 import tapp_envoi
 import atelier_visuels_web_routes as routes
 
-PORT_DEFAUT = 7990
+PORT_DEFAUT = 7985
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 1024 * 1024
 MAX_FONDS = 20

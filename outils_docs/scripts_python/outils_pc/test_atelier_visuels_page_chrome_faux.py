@@ -1,4 +1,4 @@
-"""Sonde Chrome de la page 7990 contre un serveur AVEC FAUX (icones Iconify, fournisseurs d'IA, carte muette) et un depot COPIE
+"""Sonde Chrome de la page 7985 contre un serveur AVEC FAUX (icones Iconify, fournisseurs d'IA, carte muette) et un depot COPIE
 (le vrai depot n'est jamais ecrit) : recherche d'icones, icone par etat, points chauds et apercu simule, ecriture et lien Build, assistant IA.
 
 UTILISATION (a la main ; aucun pio, aucune carte, aucun reseau)
@@ -21,6 +21,7 @@ sys.path.insert(0, str(ICI))
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # noqa: E402
 
 ECHECS = []
+sys.stdout.reconfigure(errors="replace")        # un libelle accentue ne doit pas faire planter l'affichage
 CUVE = "tasmota32s3-garage-capteurs-cuve-modbus"
 
 
@@ -57,6 +58,8 @@ def mode_faux(port, depot):
     from http.server import ThreadingHTTPServer
 
     racine = te.copie(Path(depot), True)
+    (racine / "outils_docs/schemas").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(te.DEPOT / "outils_docs/schemas/icones_firmware_traces.json", racine / "outils_docs/schemas/icones_firmware_traces.json")
     tmp = Path(depot).parent / "faux"
     tmp.mkdir(exist_ok=True)
     svgs = {"camera": "M4 4h16v16H4z", "camera-off": "M2 2l20 20", "fleur": "M1 1h4v4z"}
@@ -108,8 +111,27 @@ def cherche(cdp, mot):
     cdp.js("var q=document.getElementById('avi-q');q.value=%s;document.getElementById('avi-cherche').click()" % json.dumps(mot))
 
 
+def sonde_banque(cdp):
+    js = cdp.js
+    verifie(condition(cdp, "document.querySelectorAll('#avi-fw button').length === 120"), True, "banque : les 120 icones du firmware sont proposees, sans reseau")
+    js("var q=document.getElementById('avi-fq');q.value='light';q.dispatchEvent(new Event('input',{bubbles:true}))")
+    verifie(js("(function(){var v=[].filter.call(document.querySelectorAll('#avi-fw [role=listitem]'),function(e){return !e.hidden;});return [v.length>0&&v.length<60,v.every(function(e){return /light/.test(e.getAttribute('data-nom'));})];})()"),
+            [True, True], "banque : le filtre ne garde que les noms qui correspondent")
+    js("var q=document.getElementById('avi-fq');q.value='';q.dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#avi-fw [data-nom=lightbulb] button').click()")
+    verifie(js("[document.querySelector('#avi-prev path').getAttribute('d').slice(0,4), /firmware:lightbulb/.test(document.getElementById('avi-info').textContent)]"),
+            ["M256", True], "banque : l'icone choisie est dessinee d'apres son tracé")
+    js("document.getElementById('avi-pose').click()")
+    verifie(js("[AV.elements[0].style.icone_on.w, AV.elements[0].style.icone_on.d === document.querySelector('#avi-prev path').getAttribute('d'), AV.elements[0].style.icone_on.jeu]"),
+            [512, True, "firmware"], "banque : l'icone posee devient un tracé inline (style.icone_on), pas un glyphe de police")
+    verifie(js("/d=.M256/.test(AV.svgComplet())"), True, "banque : le tracé figure dans les calques exportes")
+    js("document.getElementById('avi-garde').click()")
+    verifie(js("/déjà dans le dépôt/.test(document.getElementById('avi-info').textContent)"), True, "banque : rien a garder pour une icone du firmware")
+    js("AV.elements=[];AV.sauveEls();AV.dessine()")
+
+
 def sonde_icones(cdp, depot):
     js = cdp.js
+    sonde_banque(cdp)
     cherche(cdp, "camera")
     verifie(condition(cdp, "document.querySelectorAll('#avi-res button').length === 3"), True, "icones : 3 resultats, la licence NC est masquee")
     verifie(js("[].map.call(document.querySelectorAll('#avi-res button'),function(b){return b.textContent;})"),
@@ -300,7 +322,7 @@ def sonde_ecriture(cdp, depot):
     # description invalide : le serveur refuse, la page montre le motif
     js("AV.elements.push({id:'v9',type:'voyant',x:5,y:5,source:{type:'relais'},style:{}});AV.dessine()")
     js("document.getElementById('av-ecrire').click()")
-    verifie(condition(cdp, "document.getElementById('ave-msg').className === 'mauvais' && /source\\.n/.test(document.getElementById('ave-msg').textContent)"), True, "ecriture : description invalide, motif du serveur affiche")
+    verifie(condition(cdp, "document.getElementById('ave-msg').className === 'mauvais' && /source\\.n/.test(document.getElementById('ave-msg').textContent)", 90), True, "ecriture : description invalide, motif du serveur affiche")
     js("document.getElementById('ave-ferme').click();AV.elements.pop();AV.sauveEls();AV.dessine()")
 
 
@@ -358,7 +380,7 @@ def lance(cdp, t):
         sonde_ecriture(cdp, depot)
         import test_atelier_visuels_page_chrome as principal
         sonde_ia(cdp, depot, principal.FABRIQUE)
-        verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e and "/ecriture/" not in e], [], "faux : aucune erreur dans la console de la page")
+        verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e and "/ecriture/" not in e and "/icone.svg" not in e], [], "faux : aucune erreur dans la console de la page")
     finally:
         tue_arbre(serveur)
     return ECHECS

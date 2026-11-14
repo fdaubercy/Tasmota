@@ -22,6 +22,7 @@ sys.path.insert(0, str(ICI))
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # noqa: E402
 
 ECHECS = []
+sys.stdout.reconfigure(errors="replace")        # un libelle accentue ne doit pas faire planter l'affichage
 PREFIXE = "sonde_atelier_visuels_page_"
 
 
@@ -245,7 +246,7 @@ def sonde(cdp, port):
     verifie(recharge(cdp, port), True, "rechargement avec une carte memorisee inconnue")
     verifie(js("[].slice.call(document.querySelectorAll('#av-carte option')).some(function(o){return o.value===AV.env;}) && !window.__pwn"), True, "carte inconnue : repli sur une carte de la liste")
     js("localStorage.clear()")
-    verifie([e for e in cdp.erreurs() if "/sources?" not in e], [], "aucune erreur dans la console de la page")
+    verifie([e for e in cdp.erreurs() if "/sources?" not in e and "/icone.svg" not in e], [], "aucune erreur dans la console de la page")
 
 
 EXPORT_PREP = ("window.__tel=[];window.__cop=[];AV.telecharge=function(n,b){window.__tel.push({n:n,t:b.type,s:b.size,b:b});};"

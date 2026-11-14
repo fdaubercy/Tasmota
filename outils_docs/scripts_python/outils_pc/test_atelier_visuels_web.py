@@ -113,6 +113,17 @@ def routes_modules(racine, env):
         st, corps = requete(port, "GET", "/icones/recherche?q=maison")
         verifie((st, [i["nom"] for i in json.loads(corps)["icones"]]), (200, ["home"]), "GET /icones/recherche : licence NC masquee")
         verifie(requete(port, "GET", "/icones/recherche?q=" + "a" * 41)[0], 400, "recherche trop longue : 400")
+        st, corps = requete(port, "GET", "/icones/firmware")
+        j = json.loads(corps) if st == 200 else {}
+        verifie((st, len(j.get("icones", [])) > 0, j.get("w")), (200, True, 512), "GET /icones/firmware : 200, icones non vides")
+        vide = Path(tempfile.mkdtemp(prefix="test_visuels_fw_"))
+        srv2, port2 = serveur_sur(vide, builds_en_cours=lambda: [])
+        try:
+            verifie(requete(port2, "GET", "/icones/firmware")[0], 404, "GET /icones/firmware : JSON absent (copie vide) : 404")
+        finally:
+            srv2.shutdown()
+            srv2.server_close()
+            shutil.rmtree(vide, ignore_errors=True)
         verifie(requete(port, "GET", "/icones/svg?jeu=mdi&nom=../x")[0], 400, "nom d'icone avec ../ : 400")
         st, corps = requete(port, "GET", "/icones/svg?jeu=mdi&nom=home")
         verifie((st, json.loads(corps)["licence"]), (200, "Apache-2.0"), "GET /icones/svg : svg et licence")

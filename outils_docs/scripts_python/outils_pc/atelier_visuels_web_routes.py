@@ -1,6 +1,7 @@
 """Routes JSON de l'atelier des visuels branchees sur les modules autonomes (icones, IA, ecriture, suivi) ; le serveur
 (`atelier_visuels_web.py`) garde l'acces, les en-tetes, les tailles et les codes. Rien ici ne parle HTTP au client.
 
+    GET  /icones/firmware        -> {licence, w, h, icones: [{nom, d}]} (tracés des icones du firmware, hors ligne ; atelier_visuels_icones_traces.py)
     GET  /icones/recherche?q=     GET /icones/svg?jeu=&nom=     POST /icones/garde {jeu, nom, confirme_attribution}
     GET  /ia/fournisseurs         GET /ia/quota?fournisseur=
     POST /ia/demande {env, fournisseur, consigne, confirme, empreinte | photo (base64)}   POST /ia/cle {fournisseur, cle}
@@ -27,6 +28,7 @@ import atelier_visuels_ia as ia
 import atelier_visuels_description as avd
 import atelier_visuels_ia_config as cfg
 import atelier_visuels_icones_web as ico
+import atelier_visuels_icones_traces as ict
 import atelier_visuels_suivi as avs
 import build_envs
 import tapp_envoi
@@ -34,7 +36,7 @@ import tapp_envoi
 DELAI_CARTE = 3
 MAX_CORPS_IA = 10 * 1024 * 1024        # corps JSON de /ia/demande, photo en base64 comprise ; 1 Mo pour les autres routes
 CHEMINS_IA = {"/ia/demande"}
-ROUTES_GET = {"/sources", "/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
+ROUTES_GET = {"/sources", "/icones/firmware", "/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
 ROUTES_POST = {"/icones/garde", "/ia/demande", "/ia/cle", "/ecriture/prevoit", "/ecriture/ecrit",
                "/ecriture/prevoit_retire", "/ecriture/retire"}
 HorsLigne = ico.HorsLigne
@@ -98,6 +100,8 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
         return trouve[1], trouve[0]
 
     def get(chemin, q):
+        if chemin == "/icones/firmware":
+            return ict.charge(racine)
         if chemin == "/icones/recherche":
             return {"icones": ico.recherche(q.get("q"), ouvre, cache)}
         if chemin == "/icones/svg":
