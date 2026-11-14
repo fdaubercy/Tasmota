@@ -182,14 +182,14 @@ les zones vivent dans le réglage de l'outil, pas sur la carte.
 - [x] `atelier_visuels_fond.py`, `atelier_visuels_web.py` (squelette de `tapp_web.py`), page et JS écrits selon la
   maquette choisie en A1 ; tests verts — preuve : atelier_visuels_page.py + _page_js.py (disposition A, 3 colonnes, theme sombre/clair), test_atelier_visuels_web.py VERT, test_atelier_visuels_page_chrome.py VERT
 - [x] Editeur de formes (module `atelier_visuels_page_formes*.py`) : rectangle, polygone, 10 gabarits, motifs briques/tuiles/lames, couleur mediane, aimantation 8 px, annuler/retablir 100 pas, zones effacer/garder, `AV.svg()` propre — preuve : test_atelier_visuels_page_formes.py VERT (31 verifications node, SVG sans perte par nettoie_svg) ; liaison DOM non essayee (sonde Chrome a faire)
-- [ ] Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`),
+- [x] Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`), — preuve : commit 2cdffb14d ; build/test_cible_atelier_visuels.py VERT et build/test_garde_build.py VERT relancés le 2026-11-14
   enregistrée dans le pré-script ; `test_cible_atelier_visuels.py` vert ; `garde_build.py` et son banc verts ;
   tuile de l'annuaire et tâche VS Code ajoutées, annuaire relancé, tuile vue
 - [x] Sonde `test_atelier_visuels_page_chrome.py` : fabrique une image de test dans le navigateur (formes colorées sur
   un canvas, aucune photo réelle), la dépose, recadre, produit les deux modes, lit le poids affiché, garde le fond,
   compare `GET /fond` au blob ; attend des conditions, jamais une durée ; arrête ses Chrome (mémoire du 2026-11-13) — preuve : test_atelier_visuels_page_chrome.py VERT (image fabriquee, recadrage, rotation, 2 modes, poids, GET /fond == blob, theme, editeur de formes, aucun Chrome sonde_atelier_visuels_page_* vivant)
-- [ ] `relecteur-pages-web` lancé, remarques traitées
-- [ ] Commit `feat(atelier-visuels): page 7985, import de la photo, fond photo ou dessin, poids (A5)`
+- [x] `relecteur-pages-web` lancé, remarques traitées — preuve : relecture du 2026-11-14, remarques traitées, voir commits 93d3c3033, f084d2f65, b2f059975, 23f266755, 4d3e9ea16 ; sonde Chrome 171 contrôles OK
+- [x] Commit `feat(atelier-visuels): page 7985, import de la photo, fond photo ou dessin, poids (A5)` — preuve : commits 552d07e54 (page) puis 98ef73fdc, eed444696 (le titre prévu a été réparti en plusieurs commits) ; atelier désormais sur le port 7985 (8b85e6e21)
 
 ## A6 — Points chauds, sources et aperçu par le vrai moteur
 Fichiers : créer `outils_pc/atelier_visuels_page_canevas.py` (glisser copié et allégé de
@@ -224,8 +224,8 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   - [x] Banque locale du firmware (`icones_firmware.json`) dans le sélecteur : tracés SVG générés par fontTools, route GET /icones/firmware — preuve : commit ffc9adc14, sonde Chrome VERT (120 icônes, filtre, pose en tracé inline), test_atelier_visuels_icones_traces.py VERT, test_atelier_visuels_web.py VERT. Annuler/rétablir des points chauds : 7516a8c2c. Zones « garder en photo » (UNE image data: bornée) : e4f80ad79, test_atelier_visuels_fond.py VERT
 - [x] Sonde Chrome étendue : un élément de chaque type posé et déplacé, source choisie, aperçu simulé bascule ON/OFF
   (classe `on` lue dans le SVG), liaison active puis muette — preuve : test_atelier_visuels_page_chrome_faux.py::sonde_points VERT (voyant, valeur, liaison posés, source, déplacés, aperçu ON/OFF lu dans la classe du SVG, liaison active/muette), commit 2e1c0e438
-- [ ] `relecteur-pages-web` lancé, remarques traitées
-- [ ] Commit `feat(atelier-visuels): points chauds, sources du persist, apercu simule ou reel (A6)`
+- [x] `relecteur-pages-web` lancé, remarques traitées — preuve : relectures du 2026-11-14 (page, puis fonctions 2 et 3), corrections 93d3c3033, bcc19c2c3 ; mutants de nettoie_svg rouges
+- [x] Commit `feat(atelier-visuels): points chauds, sources du persist, apercu simule ou reel (A6)` — preuve : commits 2e1c0e438, ffc9adc14, 7516a8c2c, e4f80ad79, bcc19c2c3
 
 ## A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation
 Fichiers : créer `outils_pc/atelier_visuels_ecriture.py`, `atelier_visuels_suivi.py`,
@@ -256,15 +256,15 @@ Page : bouton « Écrire dans le dépôt » (diff montré, confirmation), puis l
   présent avec les bons fichiers — preuve : commit eeed51559, `test_build_page_fichiers_chrome.py` OK « visuel : carte choisie… » et « visuel : image prete… » (les 2 KO restants de ce banc, « ordre » et « aucune erreur JS », existent aussi sans ma modification)
   - [x] Page : « Écrire dans le dépôt » (diff, confirmation, refus pendant un build, motif de validation affiché), badge de suivi, lien « Téléverser » vers la page Build (`?env=&depuis=visuel&fichiers=visuel.json,visuel.<type>&redemarrer=1`) — preuve : sonde_ecriture VERT sur dépôt copié, commit 3f37b3948 (reste : `AT_ORIGINES` et `sonde_atelier` côté page Build)
 - [x] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert — preuve : commit ee7bde47c, 0 défaut
-- [ ] `relecteur-pages-web` lancé, remarques traitées
+- [x] `relecteur-pages-web` lancé, remarques traitées — preuve : relecture du 2026-11-14 (défaut majeur du diff de confirmation corrigé en 93d3c3033)
 - [x] Export (spec § 2.5) : boutons « Télécharger le SVG », « Copier le code SVG », « Copier le code HTML »
   (fragment autonome : SVG + calques + script d'animation de `visuel.js` en ligne, aucune requête), « Télécharger le
   PNG » (canvas) ; test : le fragment HTML s'affiche seul dans la sonde Chrome et son voyant change d'état sans la
   carte ; aucun envoi au serveur ni écriture au dépôt — preuve : sonde_export VERT : SVG, code SVG, code HTML copiés (crochets AV.presse / AV.telecharge), PNG signature 137 80 78 71, fragment HTML ouvert seul dans une iframe srcdoc : voyant ON -> OFF et liaison muette -> active au clic sans requête, commit eed444696
-- [ ] Commit `feat(atelier-visuels): ecriture au depot, lien Build, suivi depot/carte, mode d'emploi (A7)`
+- [x] Commit `feat(atelier-visuels): ecriture au depot, lien Build, suivi depot/carte, mode d'emploi (A7)` — preuve : commits 3f37b3948, 93d3c3033, 23f266755, 64d8a102d, 80db631a0
 
 ## A8 — Première carte réelle, cohabitation, mesures, rangement
-- [ ] Accord de l'utilisateur demandé pour la règle `.svg`/`.webp` de `gestionFileFolder.be::listeEtRepartitLesFichiers`
+- [x] Accord de l'utilisateur demandé pour la règle `.svg`/`.webp` de `gestionFileFolder.be::listeEtRepartitLesFichiers` — preuve : accord donné par l'utilisateur dans la conversation du 2026-11-13 (« OK, ajoute .svg et .webp à la règle de rangement ») ; règle faite en 9af9e2820, banc_repartition_fichiers VERT
   (spec § 6.4) ; si oui : règle ajoutée, `banc_repartition_fichiers` étendu et vert ; si non : repli racine noté dans
   la spec et le README
 - [ ] Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
@@ -283,7 +283,7 @@ Interfaces produites : `fournisseurs() -> list[{"id","nom","externe": bool,"grat
 est faux pour un fournisseur externe ; le SVG rendu passe par `atelier_visuels_fond.nettoie_svg`) ; `quota(fournisseur) ->
 {"envois_jour", "plafond", "etat": "ok"|"orange"|"rouge", "reprise": str | None}` ; routes `GET /ia/fournisseurs`,
 `POST /ia/demande`, `POST /ia/cle` (la clé n'est jamais renvoyée).
-- [ ] Lire la documentation de chaque offre gratuite visée (limites, données utilisées pour l'entraînement) et noter le
+- [x] Lire la documentation de chaque offre gratuite visée (limites, données utilisées pour l'entraînement) et noter le — preuve : outils_docs/visuels_accueil/FOURNISSEURS_IA.md (commit b3ef5c61e), valeurs de limites Gemini et Mistral non vérifiées (derrière connexion)
   résultat dans le README ; choisir avec l'utilisateur les fournisseurs retenus
 - [x] Test écrit : `demande` refuse sans confirmation pour un fournisseur externe ; clé jamais présente dans une réponse HTTP,
   un journal ni le dépôt ; réponse 429 simulée = quota « rouge » et aucun réessai ; SVG hostile rendu par un faux
