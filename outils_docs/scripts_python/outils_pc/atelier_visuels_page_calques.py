@@ -88,6 +88,31 @@ var AV_CALQUES = (function () {
     });
     return c;
   };
+  // zones « garder en photo » : un seul morceau de photo (union des zones, transparent ailleurs), pose par-dessus le dessin
+  var s0 = AV.svg, cache = {cle: null, im: ''}, ver = 0;
+  AV.surChangement(function () { ver++; });
+  function imageGarder() {
+    var z = AV.zones('garder'), c, g, bs, x0, y0, x1, y1, url, cle;
+    if (!z.length || !AV.src || typeof document === 'undefined') return '';
+    cle = ver + '|' + AV.larg + 'x' + AV.haut + '|' + JSON.stringify(z);
+    if (cache.cle === cle) return cache.im;
+    bs = z.map(F.bbox);
+    x0 = Math.max(0, Math.floor(Math.min.apply(null, bs.map(function (b) { return b.x; })))); y0 = Math.max(0, Math.floor(Math.min.apply(null, bs.map(function (b) { return b.y; }))));
+    x1 = Math.min(AV.larg, Math.ceil(Math.max.apply(null, bs.map(function (b) { return b.x + b.l; })))); y1 = Math.min(AV.haut, Math.ceil(Math.max.apply(null, bs.map(function (b) { return b.y + b.h; }))));
+    if (x1 - x0 < 2 || y1 - y0 < 2) return '';
+    c = document.createElement('canvas'); c.width = x1 - x0; c.height = y1 - y0; g = c.getContext('2d');
+    g.beginPath();
+    z.forEach(function (f) {
+      if (f.type === 'polygon') { f.points.forEach(function (p, j) { if (j) g.lineTo(p[0] - x0, p[1] - y0); else g.moveTo(p[0] - x0, p[1] - y0); }); g.closePath(); }
+      else g.rect(f.x - x0, f.y - y0, f.l, f.h);
+    });
+    g.clip(); g.drawImage(AV.photo, -x0, -y0);
+    url = c.toDataURL('image/webp', 0.8);
+    if (url.indexOf('data:image/webp') !== 0) url = c.toDataURL('image/png');
+    cache = {cle: cle, im: F.ser(['image', {x: x0, y: y0, width: x1 - x0, height: y1 - y0, href: url}])};
+    return cache.im;
+  }
+  AV.svg = function () { var s = s0(), im = imageGarder(); return im ? s.replace(/<\/svg>$/, im + '</svg>') : s; };
   AV.calques = function () { return AV_CALQUES.chaine(AV.elements, AV.sim); };
 })();
 """

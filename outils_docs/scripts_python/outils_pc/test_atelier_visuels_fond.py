@@ -39,6 +39,53 @@ def svg(corps, attrs=""):
     return f'<svg xmlns="{NS}" {attrs}>{corps}</svg>'
 
 
+
+def essais_images():
+    """UNE <image> data: bornee, seulement sur demande (images=True) ; tout le reste est refuse."""
+    import base64
+    webp = b"RIFF\0\0\0\0WEBPVP8 " + b"\0" * 16
+    jpeg = b"\xff\xd8\xff\xe0" + b"\0" * 16
+    png = b"\x89PNG\r\n\x1a\n" + b"\0" * 16
+    b64 = lambda o: base64.b64encode(o).decode()
+    href = lambda t, o: f"data:image/{t};base64,{b64(o)}"
+    image = lambda h, extra="": f'<image href="{h}" x="1" y="2" width="30" height="40" {extra}/>'
+
+    def net(corps, **kw):
+        return avf.nettoie_svg(svg(corps, ""), **kw)
+
+    def erreur(corps, **kw):
+        try:
+            net(corps, **kw)
+        except ValueError as e:
+            return str(e)
+        return None
+
+    for t, o in (("webp", webp), ("jpeg", jpeg), ("png", png)):
+        sortie = net(image(href(t, o), 'onload="x()" style="x:y" opacity="0.5"'), images=True)
+        verifie((sortie.count("<image"), "onload" in sortie, "style" in sortie, 'opacity="0.5"' in sortie, href(t, o) in sortie), (1, False, False, True, True), f"image {t} data: acceptee, attributs nettoyes")
+    verifie("<image" in net(image(href("webp", webp))), False, "sans images=True : l'image est ecartee comme avant")
+    verifie("<image" in net("<g>" + image(href("webp", webp)) + "</g>", images=True), True, "image dans un <g> acceptee")
+    verifie("<image" in net(image(href("webp", webp), 'xlink:href="http://x/y.png"').replace("xlink:href=", "xmlns:xlink='http://www.w3.org/1999/xlink' xlink:href="), images=True), True, "xlink:href ignore, href data: garde")
+    cas = {
+        "deux images": image(href("webp", webp)) + image(href("png", png)),
+        "image trop lourde": image(href("webp", b"RIFF\0\0\0\0WEBP" + b"\0" * (avf.IMAGE_MAX + 1))),
+        "type svg+xml": image("data:image/svg+xml;base64," + b64(b"<svg/>")),
+        "type annonce webp, octets jpeg": image(href("webp", jpeg)),
+        "type annonce png, octets webp": image(href("png", webp)),
+        "base64 invalide": image("data:image/webp;base64,@@@@"),
+        "href http": image("https://exemple.org/p.png"),
+        "href javascript": image("javascript:alert(1)"),
+        "sans href": '<image x="1" y="2" width="3" height="4"/>',
+        "href seulement en xlink": '<image xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="' + href("webp", webp) + '" width="3" height="4"/>',
+        "image dans defs": "<defs>" + image(href("webp", webp)) + "</defs>",
+        "image dans pattern": '<pattern id="p" width="4" height="4">' + image(href("webp", webp)) + "</pattern>",
+        "charset dans le type": image("data:image/webp;charset=x;base64," + b64(webp)),
+    }
+    for nom, corps in cas.items():
+        verifie(erreur(corps, images=True) is not None, True, f"images=True, refus : {nom}")
+    verifie(erreur(cas["deux images"]), None, "sans images=True : deux images ne font pas d'erreur (ecartees)")
+    verifie(erreur(cas["image trop lourde"]), None, "sans images=True : une image trop lourde est simplement ecartee")
+
 def main():
     verifie(canon(avf.nettoie_svg(SAIN)), canon(SAIN), "SVG sain : meme arbre (formes, motif, texte, attributs) apres nettoyage")
     for libelle, corps, absent in (
@@ -92,6 +139,7 @@ def main():
         except ValueError:
             verifie(True, True, f"type/contenu {t} refuse")
     verifie(avf.controle_fond("webp", b"RIFF\0\0\0\0WEBPVP8 ", "S3"), None, "entete WebP valide accepte")
+    essais_images()
     print("VERT" if not ECHECS else f"ROUGE : {ECHECS}")
     return 1 if ECHECS else 0
 

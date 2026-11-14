@@ -421,7 +421,7 @@ def lance(cdp, t):
         sonde_annule(cdp)
         import test_atelier_visuels_page_chrome as principal
         sonde_ia(cdp, depot, principal.FABRIQUE)
-        verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e and "/ecriture/" not in e and "/icone.svg" not in e], [], "faux : aucune erreur dans la console de la page")
+        verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e and "/ecriture/" not in e and "/icone.svg" not in e and not ("/fond?" in e and "400" in e)], [], "faux : aucune erreur dans la console de la page")
     finally:
         tue_arbre(serveur)
     return ECHECS

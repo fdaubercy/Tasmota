@@ -80,7 +80,7 @@ def serveur_sur(racine, **inj):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     acces = acces_web.Acces(port, True, "Atelier des visuels")
-    srv = ThreadingHTTPServer(("127.0.0.1", port), avw.fabrique_gestionnaire(acces, racine, **inj))
+    srv = avw.Serveur(("127.0.0.1", port), avw.fabrique_gestionnaire(acces, racine, **inj))
     srv.daemon_threads = True
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv, port
@@ -113,6 +113,19 @@ def routes_modules(racine, env):
         st, corps = requete(port, "GET", "/icones/recherche?q=maison")
         verifie((st, [i["nom"] for i in json.loads(corps)["icones"]]), (200, ["home"]), "GET /icones/recherche : licence NC masquee")
         verifie(requete(port, "GET", "/icones/recherche?q=" + "a" * 41)[0], 400, "recherche trop longue : 400")
+        verifie(avw.Serveur.request_queue_size >= 64, True, "file d'ecoute d'au moins 64 (socketserver : 5)")
+        socks, refus = [], 0
+        for _ in range(30):                                   # rafale : 30 connexions ouvertes ensemble, aucune refusee
+            s = socket.socket()
+            s.settimeout(5)
+            try:
+                s.connect(("127.0.0.1", port))
+            except OSError:
+                refus += 1
+            socks.append(s)
+        verifie(refus, 0, "rafale de 30 connexions simultanees : aucune refusee")
+        for s in socks:
+            s.close()
         st, corps = requete(port, "GET", "/icones/firmware")
         j = json.loads(corps) if st == 200 else {}
         verifie((st, len(j.get("icones", [])) > 0, j.get("w")), (200, True, 512), "GET /icones/firmware : 200, icones non vides")

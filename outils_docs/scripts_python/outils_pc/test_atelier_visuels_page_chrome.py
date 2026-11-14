@@ -188,6 +188,7 @@ def sonde(cdp, port):
     verifie(js("Math.round((AV.formes[0].x - %s) * 10) / 10" % x1), 9, "Maj + fleche droite : 8 px de plus")
 
     sonde_export(cdp)
+    sonde_garder(cdp)
 
     # mode photo allegee
     js("document.getElementById('av-fond-photo').click()")
@@ -246,7 +247,7 @@ def sonde(cdp, port):
     verifie(recharge(cdp, port), True, "rechargement avec une carte memorisee inconnue")
     verifie(js("[].slice.call(document.querySelectorAll('#av-carte option')).some(function(o){return o.value===AV.env;}) && !window.__pwn"), True, "carte inconnue : repli sur une carte de la liste")
     js("localStorage.clear()")
-    verifie([e for e in cdp.erreurs() if "/sources?" not in e and "/icone.svg" not in e], [], "aucune erreur dans la console de la page")
+    verifie([e for e in cdp.erreurs() if "/sources?" not in e and "/icone.svg" not in e and not ("/fond?" in e and "400" in e)], [], "aucune erreur dans la console de la page")
 
 
 EXPORT_PREP = ("window.__tel=[];window.__cop=[];AV.telecharge=function(n,b){window.__tel.push({n:n,t:b.type,s:b.size,b:b});};"
@@ -267,6 +268,16 @@ INCONNU = ("(async function(){AV.elements=[{id:'v1',type:'voyant',x:60,y:60,sour
            "var h=AV.fragmentHtml(),f=document.createElement('iframe');f.srcdoc='<!doctype html><body>'+h;document.body.appendChild(f);"
            "await new Promise(function(ok){f.onload=ok;});var d=f.contentDocument,g=d.querySelector('.av-v'),r=[g.getAttribute('class')];"
            "for(var i=0;i<2;i++){g.querySelector('circle').dispatchEvent(new MouseEvent('click',{bubbles:true}));r.push(g.getAttribute('class'));}f.remove();return r;})()")
+
+
+GARDER = ("(async function(){AV.formes.push(AV_FORMES.normalise({id:AV.idSuivant(),type:'rect',x:20,y:20,l:80,h:60,zone:'garder'}));AV.commit();var s=AV.svg(),"
+          "n=(s.match(/<image /g)||[]).length,post=async function(b){var r=await fetch('/fond?env='+encodeURIComponent(AV.env)+'&type=svg',{method:'POST',headers:{'X-Atelier-Visuels':'1'},body:b});return r.status;};"
+          "var ok=await post(s),im=s.match(/<image [^>]*\\/>/)[0],deux=await post(s.replace('</svg>',im+'</svg>')),http=await post(s.replace(/href=\"data:[^\"]*\"/,'href=\"https://exemple.org/p.png\"'));"
+          "AV.formes.pop();AV.commit();return [n,ok,deux,http,(AV.svg().match(/<image /g)||[]).length];})()")
+
+
+def sonde_garder(cdp):
+    verifie(cdp.js(GARDER), [1, 200, 400, 400, 0], "zone a garder : UNE image data: dans le SVG, acceptee par POST /fond ; deux images et image distante refusees ; sans zone, aucune image")
 
 
 def sonde_export(cdp):

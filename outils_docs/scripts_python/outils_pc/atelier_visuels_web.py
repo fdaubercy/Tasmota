@@ -40,6 +40,11 @@ LIB = Path("outils_docs/visuels_accueil/lib/imagetracer_v1.2.6.js")
 VISUEL_JS = Path("data/sd/js/visuel.js")
 
 
+class Serveur(ThreadingHTTPServer):
+    """File d'attente d'ecoute elargie : la page lance une dizaine de requetes d'un coup, les 5 de socketserver refusaient des connexions."""
+    request_queue_size = 64
+
+
 def fabrique_gestionnaire(acces, racine, **injections):
     """injections (banc) : builds_en_cours, ouvre, cache_icones, config_fichier, fabrique_ia, lecteur."""
     fonds = OrderedDict()             # empreinte -> (type, octets)
@@ -156,7 +161,7 @@ def fabrique_gestionnaire(acces, racine, **injections):
             env, type_ = env_valide(q.get("env")), q.get("type")
             octets = self.rfile.read(longueur)
             if type_ == "svg":
-                octets = avf.nettoie_svg(octets.decode("utf-8")).encode("utf-8")
+                octets = avf.nettoie_svg(octets.decode("utf-8"), images=True).encode("utf-8")   # le fond peut porter UNE image data: bornee
             puce = lieux.puce(env)
             message = avf.controle_fond(type_, octets, puce)
             if avf.refuse(octets, puce):
@@ -179,7 +184,7 @@ def principal():
     args = options.parse_args()
     acces = acces_web.Acces(args.http, args.local, "Atelier des visuels")
     try:
-        serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(acces, DEPOT))
+        serveur = Serveur((acces.hote, args.http), fabrique_gestionnaire(acces, DEPOT))
     except OSError as erreur:
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
         return 1
