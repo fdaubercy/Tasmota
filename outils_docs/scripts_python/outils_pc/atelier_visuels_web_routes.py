@@ -4,8 +4,15 @@
     GET  /icones/recherche?q=     GET /icones/svg?jeu=&nom=     POST /icones/garde {jeu, nom, confirme_attribution}
     GET  /ia/fournisseurs         GET /ia/quota?fournisseur=
     POST /ia/demande {env, fournisseur, consigne, confirme, empreinte | photo (base64)}   POST /ia/cle {fournisseur, cle}
-    POST /ecriture/prevoit {env, description, empreinte_fond?}   POST /ecriture/ecrit {... + empreinte (celle du diff)}
-    GET  /suivi?env=              {carte: identique | differente | absente | inconnue}
+    POST /ecriture/prevoit {env, description, empreinte_fond?}
+         -> {diff: [{chemin, avant, apres}] (avant/apres null = absent), empreinte, avertissements}
+    POST /ecriture/ecrit {env, description, empreinte_fond?, empreinte (celle du diff)} -> {ecrits: [chemin]}
+    POST /ecriture/prevoit_retire {env}  -> meme forme que prevoit (visuel decoche)
+    POST /ecriture/retire {env, empreinte (celle de prevoit_retire)} -> {ecrits: [chemin]}
+    GET  /suivi?env=              -> {carte: identique | differente | absente | inconnue}
+Reponses : icones/recherche {icones: [{jeu, nom, licence, permissive, attribution}]} ; icones/svg {svg, licence, auteur, origine} ; icones/garde {chemin, licence} ;
+  ia/fournisseurs {fournisseurs, reglages} ; ia/cle {fournisseur, cle: {presente, ...}} ; ia/demande {svg | operations | erreur, quota: {envois_jour, plafond, etat, reprise}} ; ia/quota {envois_jour, plafond, etat, reprise}.
+En plus (serveur) : POST /fond?env=&type= -> {empreinte, octets, avertissement} ; GET /fond?env=&empreinte= ; GET /envs {envs, lieux}.
 Erreurs : ValueError (400), LookupError (404), RuntimeError (409), HorsLigne (503). La cle d'un fournisseur n'est jamais rendue.
 """
 import base64
@@ -26,7 +33,8 @@ DELAI_CARTE = 3
 MAX_CORPS_IA = 10 * 1024 * 1024        # corps JSON de /ia/demande, photo en base64 comprise ; 1 Mo pour les autres routes
 CHEMINS_IA = {"/ia/demande"}
 ROUTES_GET = {"/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
-ROUTES_POST = {"/icones/garde", "/ia/demande", "/ia/cle", "/ecriture/prevoit", "/ecriture/ecrit"}
+ROUTES_POST = {"/icones/garde", "/ia/demande", "/ia/cle", "/ecriture/prevoit", "/ecriture/ecrit",
+               "/ecriture/prevoit_retire", "/ecriture/retire"}
 HorsLigne = ico.HorsLigne
 
 
@@ -136,6 +144,12 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
             else:
                 image = fond_garde(d.get("empreinte"))[0]
             return ia.demande(str(racine), env, fid, d.get("consigne"), image, d.get("confirme") is True, c, fabrique_ia)
+        if chemin == "/ecriture/prevoit_retire":
+            return ave.prevoit_retire(racine, env)
+        if chemin == "/ecriture/retire":
+            if not isinstance(d.get("empreinte"), str):
+                raise ValueError("empreinte du diff absente")
+            return {"ecrits": ave.retire(racine, env, d["empreinte"], builds)}
         if chemin in ("/ecriture/prevoit", "/ecriture/ecrit"):
             fond, type_fond = fond_garde(d.get("empreinte_fond"))
             args = (racine, env, d.get("description"), fond, type_fond)

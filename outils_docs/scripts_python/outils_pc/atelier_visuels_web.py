@@ -34,6 +34,7 @@ PORT_DEFAUT = 7990
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 1024 * 1024
 MAX_FONDS = 20
+DELAI_SOCKET = 10
 MIME = {"svg": "image/svg+xml", "webp": "image/webp", "jpg": "image/jpeg"}
 LIB = Path("outils_docs/visuels_accueil/lib/imagetracer_v1.2.6.js")
 VISUEL_JS = Path("data/sd/js/visuel.js")
@@ -51,11 +52,15 @@ def fabrique_gestionnaire(acces, racine, **injections):
         return env
 
     class Gestionnaire(BaseHTTPRequestHandler):
+        timeout = DELAI_SOCKET            # un client lent ne garde pas un thread
+
         def log_message(self, *args):
             pass
 
-        def _envoie(self, statut, corps, type_mime="text/plain; charset=utf-8"):
+        def _envoie(self, statut, corps, type_mime="text/plain; charset=utf-8", entetes=()):
             self.send_response(statut)
+            for k, v in entetes:
+                self.send_header(k, v)
             self.send_header("Content-Type", type_mime)
             self.send_header("Content-Length", str(len(corps)))
             self.send_header("Cache-Control", "no-store")
@@ -71,6 +76,9 @@ def fabrique_gestionnaire(acces, racine, **injections):
                 self._envoie(400, str(e).encode("utf-8"))
             except RuntimeError as e:
                 self._envoie(409, str(e).encode("utf-8"))
+            except TimeoutError:
+                self.close_connection = True
+                self._envoie(408, b"corps trop lent")
             except routes.HorsLigne as e:
                 self._envoie(503, str(e).encode("utf-8"))
             except Exception as e:
@@ -109,7 +117,7 @@ def fabrique_gestionnaire(acces, racine, **injections):
                     trouve = fonds.get(q.get("empreinte"))
                 if trouve is None:
                     raise LookupError("fond inconnu")
-                self._envoie(200, trouve[1], MIME[trouve[0]])
+                self._envoie(200, trouve[1], MIME[trouve[0]], (("Content-Security-Policy", "sandbox"), ("X-Content-Type-Options", "nosniff")))
             elif url.path in routes.ROUTES_GET:
                 self._json(route_get(url.path, q))
             else:

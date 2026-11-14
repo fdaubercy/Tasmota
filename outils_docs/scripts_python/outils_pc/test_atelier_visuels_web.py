@@ -187,6 +187,61 @@ def suivi_muet():
     verifie((leve, duree < 3.5), (True, True), f"carte muette : lecteur en echec en {duree:.1f} s (< 3,5 s)")
 
 
+def corps_lent(port, env):
+    """Envoie la moitie du corps puis se tait ; une autre requete doit passer pendant ce temps, et le serveur lacher la socket < 12 s."""
+    s = socket.create_connection(("127.0.0.1", port), timeout=15)
+    s.sendall(f"POST /fond?env={env}&type=svg HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nX-Atelier-Visuels: 1\r\nContent-Length: 1000\r\n\r\n".encode() + b"x" * 500)
+    t0 = time.monotonic()
+    autre = requete(port, "GET", "/envs")[0] == 200 and time.monotonic() - t0 < 3
+    try:
+        s.recv(4096)                       # reponse (408) ou fermeture
+    except OSError:
+        pass
+    s.close()
+    return autre and time.monotonic() - t0 < 12
+
+
+def retrait(racine, env):
+    """/ecriture/prevoit_retire et /retire : memes garde-fous que /ecrit ; retrait sur copie du depot."""
+    tmp = Path(tempfile.mkdtemp(prefix="test_visuels_retire_"))
+    builds = []
+    try:
+        for f in ave.FICHIERS_PAGE:
+            if (racine / f).is_file():
+                (tmp / f).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(racine / f, tmp / f)
+        srv, port = serveur_sur(racine, builds_en_cours=lambda: list(builds))
+        try:
+            verifie(jpost(port, "/ecriture/prevoit_retire", {"env": env}, {})[0], 403, "prevoit_retire sans en-tete : 403")
+            verifie(jpost(port, "/ecriture/retire", {"env": env, "empreinte": "x"}, {})[0], 403, "retire sans en-tete : 403")
+            verifie(jpost(port, "/ecriture/prevoit_retire", {"env": "inconnue"})[0], 404, "prevoit_retire : carte inconnue 404")
+            verifie(jpost(port, "/ecriture/retire", {"env": env})[0], 400, "retire sans empreinte : 400")
+            builds.append("pio run -e x")
+            st, corps = jpost(port, "/ecriture/retire", {"env": env, "empreinte": "x"})
+            verifie((st, b"build" in corps), (409, True), "retire pendant un build : 409")
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        # retrait reel sur copie : racine temporaire (cartes lues du depot reel via tapp_envoi, donc copie du dossier de la carte)
+        shutil.copytree(racine / "data", tmp / "data", dirs_exist_ok=True, ignore=shutil.ignore_patterns("*.bin"))
+        for f in ("platformio_tasmota_cenv.ini", "platformio_override.ini"):
+            if (racine / f).is_file():
+                shutil.copy2(racine / f, tmp / f)
+        srv, port = serveur_sur(tmp, builds_en_cours=lambda: [])
+        try:
+            st, corps = jpost(port, "/ecriture/prevoit_retire", {"env": env})
+            ok = st == 200 and "empreinte" in json.loads(corps)
+            verifie(st, 200, "prevoit_retire sur copie : 200")
+            if ok:
+                st, corps = jpost(port, "/ecriture/retire", {"env": env, "empreinte": json.loads(corps)["empreinte"]})
+                verifie((st, "ecrits" in json.loads(corps)), (200, True), "retire sur copie : ecrits rendus")
+        finally:
+            srv.shutdown()
+            srv.server_close()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     racine = avw.DEPOT
     envs = tapp_envoi.cartes(racine)
@@ -207,7 +262,8 @@ def main():
         verifie((st, [e["env"] for e in d["envs"]] == envs, bool(d["lieux"]), d["envs"][0]["lieu"] == lieux.lieu(env)), (200, True, True, True), "GET /envs : cartes, lieux, lieu de chaque carte")
         st, corps = requete(port, "GET", "/")
         verifie((st, b"<title>Atelier des visuels</title>" in corps, corps.count(b"<main>"), b'id="av-canevas"' in corps, b'id="av-garder"' in corps), (200, True, 1, True, True), "GET / : la page (titre, corps a trois colonnes, canevas, bouton Garder)")
-        verifie(corps.count(b"</div></main>") + corps.count(b"<div>"), corps.count(b"</div>") and corps.count(b"<div>") + corps.count(b"</div></main>"), "GET / : page rendue en entier")
+        verifie((corps.count(b"<div"), corps.count(b"</div>")) == (corps.count(b"</div>"),) * 2, True, "GET / : balises <div et </div> en nombre egal")
+        verifie(corps.rstrip().endswith(b"</html>"), True, "GET / : page terminee par </html>")
         st, corps = requete(port, "GET", "/lib.js")
         verifie((st, b"ImageTracer" in corps), (200, True), "GET /lib.js : la bibliotheque de vectorisation")
         st, _ = requete(port, "GET", "/visuel.js")
@@ -227,6 +283,9 @@ def main():
         verifie(b"script" in requete(port, "GET", f"/fond?env={env}&empreinte={emp}")[1], False, "le fond garde ne contient plus le script")
         st, corps = poste(b"<!DOCTYPE svg [<!ENTITY a 'b'>]><svg xmlns='" + NS.encode() + b"'/>")
         verifie((st, b"DOCTYPE" in corps), (400, True), "SVG a DOCTYPE : 400 avec le message")
+        profond = b"<svg xmlns='" + NS.encode() + b"'>" + b"<g>" * 200 + b"</g>" * 200 + b"</svg>"
+        verifie(poste(profond)[0], 400, "SVG imbrique sur 200 niveaux : 400, jamais 500")
+        verifie(poste(b"<svg xmlns='" + NS.encode() + b"'><g></svg>")[0], 400, "SVG mal forme : 400, jamais 500")
         verifie(poste(b"pas du svg")[0], 400, "texte qui n'est pas du SVG : 400")
         verifie(poste(b"pas une image", "jpg")[0], 400, "jpg sans signature : 400")
         verifie(poste(svg, e="carte-inconnue")[0], 404, "carte inconnue : 404")
@@ -235,7 +294,13 @@ def main():
         r = json.loads(corps)
         st2, relu = requete(port, "GET", f"/fond?env={env}&empreinte={r['empreinte']}")
         verifie((st, st2, r["octets"] == len(relu), relu.decode().startswith("<svg")), (200, 200, True, True), "fond garde relu par GET /fond, meme poids")
+        c = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
+        c.request("GET", f"/fond?env={env}&empreinte={r['empreinte']}")
+        rep = c.getresponse(); rep.read(); c.close()
+        verifie((rep.getheader("Content-Security-Policy"), rep.getheader("X-Content-Type-Options")), ("sandbox", "nosniff"), "GET /fond : CSP sandbox et nosniff")
         verifie(requete(port, "GET", f"/fond?env={env}&empreinte={'0' * 64}")[0], 404, "empreinte inconnue : 404")
+        lent_ok = corps_lent(port, env)
+        verifie(lent_ok, True, "corps POST a moitie envoye puis silence : le serveur ferme en moins de 12 s, sans bloquer les autres")
         jpg = b"\xff\xd8\xff\xe0" + bytes(range(256)) * 4
         r = json.loads(poste(jpg, "jpg")[1])
         verifie(requete(port, "GET", f"/fond?env={env}&empreinte={r['empreinte']}")[1], jpg, "fond binaire relu octet pour octet")
@@ -252,6 +317,7 @@ def main():
         serveur.shutdown()
         serveur.server_close()
     routes_modules(racine, env)
+    retrait(racine, env)
     suivi_muet()
     print("VERT" if not ECHECS else f"ROUGE : {ECHECS}")
     return 1 if ECHECS else 0
