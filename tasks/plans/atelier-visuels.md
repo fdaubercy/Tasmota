@@ -109,16 +109,16 @@ chaque bloc seulement si une source de ce type existe ; module absent = bloc vid
 `graphiquesFonctions.envoieFichier`, `Cache-Control: max-age=86400` ; `f=etat` : JSON ; autre `f` : 404) ;
 `controleVisuel.be` : classe `CONTROLE_VISUEL : Driver`, `web_add_main_button()` et `web_add_handler()` posés
 SEULEMENT si `charge()` a rendu une map (modèle `qrcodePage_init`).
-- [ ] `banc_visuel.be` écrit (lancé par `banc_visuel.py`, code de sortie 0/1) : sans `/json/visuel.json` aucun driver ;
+- [x] `banc_visuel.be` écrit (lancé par `banc_visuel.py`, code de sortie 0/1) : sans `/json/visuel.json` aucun driver ;
   description valide : `html()` sans `</` dans le JSON, `etat()` avec les seuls blocs demandés ; description qui cite un
   relais absent : élément ignoré, pas d'exception (vigilance 2) ; modules ModBus/UDP absents : blocs vides (3) ; fond
-  manquant : `f=fond` 404 et un `erreur` dans le journal (4) ; `f=etat` sans `info` ; accès non privilégié refusé
+  manquant : `f=fond` 404 et un `erreur` dans le journal (4) ; `f=etat` sans `info` ; accès non privilégié refusé — preuve : banc_visuel.{be,py} : BANC_VISUEL: OK, 14 mutants rouges, 21 cas partages avec cas_visuel.json
 - [ ] Banc lancé : rouge (modules absents)
-- [ ] `visuelFonctions.be` et `controleVisuel.be` écrits (charte des logs ; aucun nom de builtin Berry en variable) ;
-  hook `verifie_berry_edition` vert ; banc vert
-- [ ] Cenv : liste `visuel_accueil` ajoutée à `[berry_commun]`, `${berry_commun.visuel_accueil}` dans le
-  `custom_files_exclude` de chaque env ; `banc_demarrage.py` vert (instantanés inchangés)
-- [ ] `relecteur-berry` lancé, remarques traitées
+- [x] `visuelFonctions.be` et `controleVisuel.be` écrits (charte des logs ; aucun nom de builtin Berry en variable) ;
+  hook `verifie_berry_edition` vert ; banc vert — preuve : verifie_berry 0 erreur 0 avertissement, banc_visuel VERT
+- [x] Cenv : liste `visuel_accueil` ajoutée à `[berry_commun]`, `${berry_commun.visuel_accueil}` dans le
+  `custom_files_exclude` de chaque env ; `banc_demarrage.py` vert (instantanés inchangés) — preuve : 19 lignes ${berry_commun.visuel_accueil} (17 envs + 2 envs qui levent etiquette_qr) ; banc_demarrage.py VERT sans --enregistre
+- [x] `relecteur-berry` lancé, remarques traitées — preuve : relecteur-berry : aucun bloquant ; RAM de html() et cache du fond notes
 - [ ] Commit `feat(visuel): module Berry du visuel d'accueil, route /visuel, liste visuel_accueil exclue partout (A3)`
 
 ## A4 — Moteur `visuel.js` et premier essai sur carte à la main

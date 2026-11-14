@@ -112,6 +112,13 @@ verifie(FS["fichiers"].find("/sd/images/PNG/fond.png") == bytes("89504e47") && e
         && FS["dossiers"].contains("/sd/images/PNG") && !existe("/fond.png") && existe("/note.png.txt")
         && !existe("/sd/images/PNG/note.png.txt"), "images : deplacees dans /sd/images/<FORMAT>, octets identiques")
 
+# Fonds du visuel d'accueil : .svg et .webp (4 lettres : dossier WEBP, pas EBP), un nom qui les contient seulement reste
+remet({"/visuel.svg": bytes("3c737667"), "/visuel.WEBP": bytes("52494646"), "/note.svg.txt": bytes("01"), "/x.webp.bak": bytes("02")}, {"/sd": true, "/.extensions": true})
+lance()
+verifie(FS["fichiers"].find("/sd/images/SVG/visuel.svg") == bytes("3c737667") && FS["fichiers"].find("/sd/images/WEBP/visuel.WEBP") == bytes("52494646")
+        && !existe("/visuel.svg") && !existe("/visuel.WEBP") && existe("/note.svg.txt") && existe("/x.webp.bak") && !existe("/sd/images/EBP/visuel.WEBP"),
+        "svg et webp : deplaces dans /sd/images/SVG et /sd/images/WEBP, les noms qui les contiennent seulement restent")
+
 # Dossier des extensions absent : le .tapp est deplace des ce demarrage
 remet({"/x.tapp": bytes("0102")}, {"/sd": true})
 lance()

@@ -89,9 +89,10 @@ def gestionFileFolder_listeEtRepartitLesFichiers()
                 path.mkdir("/sd/css")
                 filePath = "/sd/css/" + nameFile
             # Images des ecrans HASPmota / LVGL : un dossier par format sous /sd/images (choix de l'utilisateur, 2026-11-13),
-            # citees en "A:sd/images/PNG/<nom>" ; le firmware ne decode que le PNG (LodePNG)
-            elif string.endswith(nameFile, ".png", true) || string.endswith(nameFile, ".jpg", true) || string.endswith(nameFile, ".bmp", true)
-                var extension = string.toupper(nameFile[-3 ..])   # pas `format` : builtin, refuse par la solidification stricte
+            # citees en "A:sd/images/PNG/<nom>" ; le firmware ne decode que le PNG (LodePNG). .svg et .webp : fonds du
+            # visuel d'accueil (visuelFonctions.cheminFond, /sd/images/SVG|WEBP/visuel.*)
+            elif string.endswith(nameFile, ".png", true) || string.endswith(nameFile, ".jpg", true) || string.endswith(nameFile, ".bmp", true) || string.endswith(nameFile, ".svg", true) || string.endswith(nameFile, ".webp", true)
+                var extension = string.toupper(nameFile[(string.endswith(nameFile, ".webp", true) ? -4 : -3) ..])   # pas `format` : builtin, refuse par la solidification stricte
                 path.mkdir("/sd/images")
                 path.mkdir("/sd/images/" + extension)
                 filePath = "/sd/images/" + extension + "/" + nameFile

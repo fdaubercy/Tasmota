@@ -26,7 +26,12 @@ MUTANTS = [
     ("image : nom qui contient .png", 'string.endswith(nameFile, ".png", true)', 'string.find(nameFile, ".png") > -1'),
     ("images non rangees", 'filePath = "/sd/images/" + extension + "/" + nameFile', 'filePath = ""'),
     ("images sans dossier par format", 'filePath = "/sd/images/" + extension + "/" + nameFile', 'filePath = "/sd/images/" + nameFile'),
-    ("dossier du format en minuscules", 'string.toupper(nameFile[-3 ..])', 'nameFile[-3 ..]'),
+    ("dossier du format en minuscules", 'string.toupper(nameFile[(string.endswith(nameFile, ".webp", true) ? -4 : -3) ..])',
+     'nameFile[(string.endswith(nameFile, ".webp", true) ? -4 : -3) ..]'),
+    ("webp : dossier EBP (3 dernieres lettres)", '".webp", true) ? -4 : -3) ..])', '".webp", true) ? -3 : -3) ..])'),
+    ("svg non range", ' || string.endswith(nameFile, ".svg", true) ||', ' ||'),
+    ("webp non range", ' || string.endswith(nameFile, ".webp", true)\n', '\n'),
+    ("svg : nom qui contient .svg", 'string.endswith(nameFile, ".svg", true)', 'string.find(nameFile, ".svg") > -1'),
     ("homonyme remplace sans le dire", '"REPARTITION_FICHIERS: %s remplace', '"REPARTITION_FICHIERS: %s ecrit'),
 ]
 
