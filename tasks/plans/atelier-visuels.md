@@ -113,7 +113,7 @@ SEULEMENT si `charge()` a rendu une map (modèle `qrcodePage_init`).
   description valide : `html()` sans `</` dans le JSON, `etat()` avec les seuls blocs demandés ; description qui cite un
   relais absent : élément ignoré, pas d'exception (vigilance 2) ; modules ModBus/UDP absents : blocs vides (3) ; fond
   manquant : `f=fond` 404 et un `erreur` dans le journal (4) ; `f=etat` sans `info` ; accès non privilégié refusé — preuve : banc_visuel.{be,py} : BANC_VISUEL: OK, 14 mutants rouges, 21 cas partages avec cas_visuel.json
-- [ ] Banc lancé : rouge (modules absents)
+- [x] Banc lancé : rouge (modules absents) — preuve : banc_visuel.lance() sur un dossier sans visuelFonctions.be ni controleVisuel.be (2026-11-14) : « BANC_VISUEL: OK » absent, io_error « cannot open file …/fs/visuelFonctions.be » ; banc vert sur data/ (VERT)
 - [x] `visuelFonctions.be` et `controleVisuel.be` écrits (charte des logs ; aucun nom de builtin Berry en variable) ;
   hook `verifie_berry_edition` vert ; banc vert — preuve : verifie_berry 0 erreur 0 avertissement, banc_visuel VERT
 - [x] Cenv : liste `visuel_accueil` ajoutée à `[berry_commun]`, `${berry_commun.visuel_accueil}` dans le
