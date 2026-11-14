@@ -1,4 +1,4 @@
-# Atelier des visuels d'accueil (page 7990) : conception
+# Atelier des visuels d'accueil (page 7985) : conception
 
 Date : 2026-11-13. Statut : validé par l'utilisateur le 2026-11-13 (« OK on y va »). Restent ouverts : la photo de
 l'essai du palier 1 (à fournir), l'accord explicite pour la règle de rangement du § 6.4 (repli : fond lu à la racine).
@@ -19,7 +19,7 @@ dessin donne un style homogène avec la façade des volets, pèse moins, et ne m
 
 ## 2. Objectifs
 
-1. Une page web de l'annuaire, « Atelier des visuels », port **7990**, groupe Maintenance, arrêt libre : rien n'est
+1. Une page web de l'annuaire, « Atelier des visuels », port **7985**, groupe Maintenance, arrêt libre : rien n'est
    écrit avant « Écrire dans le dépôt ». Disposition A (trois colonnes) retenue par l'utilisateur le 2026-11-13, avec un
    **bouton Sombre / Clair** comme les autres pages de l'annuaire (variables CSS, mémorisé, défaut = réglage du système).
 2. On choisit une carte du parc (par lieu, comme les autres pages), on dépose une photo depuis le PC, on la recadre.
@@ -295,7 +295,7 @@ c'est un fichier de l'utilisateur : **à faire une fois, à la main, après son 
 `banc_repartition_fichiers`. Tant qu'elle n'est pas faite, le lecteur Berry cherche le fond d'abord au chemin rangé, puis
 à la racine.
 
-### 6.5 L'outil PC (port 7990)
+### 6.5 L'outil PC (port 7985)
 
 Modules, dans `outils_docs/scripts_python/outils_pc/`, selon le squelette de `tapp_web.py` :
 
@@ -305,7 +305,7 @@ Modules, dans `outils_docs/scripts_python/outils_pc/`, selon le squelette de `ta
   `etiquettes_qr_ecriture.py` ; `atelier_visuels_suivi.py` : comparaison dépôt / carte.
 - `build/cible_atelier_visuels.py`, `NOM_CIBLE = "atelier_visuels"`, page lancée détachée ; enregistrée dans
   `pre_utilitaires_platformio.py` ; tuile dans `annuaire_registre.OUTILS` ; tâche VS Code « Outil : atelier des visuels
-  (http://127.0.0.1:7990) » ; `visuel` ajouté à `build_page_atelier.AT_ORIGINES`.
+  (http://127.0.0.1:7985) » ; `visuel` ajouté à `build_page_atelier.AT_ORIGINES`.
 - La page sert `visuel.js` (le même fichier que la carte) et la bibliothèque de vectorisation, rangée dans le dépôt à
   côté de l'outil avec sa licence, jamais envoyée sur la carte.
 - **Traitement d'image dans le navigateur** : la photo est lue par `FileReader`, affichée dans un canvas, recadrée par un

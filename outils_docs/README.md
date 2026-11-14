@@ -2338,12 +2338,11 @@ Conception : [spec](../docs/superpowers/specs/2026-11-13-atelier-visuels-accueil
 
 ### Lancer la page
 
-Port **7990**. Pas encore de tuile dans l'annuaire ni de cible PlatformIO (`build/cible_atelier_visuels.py` n'existe pas) :
-- **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/atelier_visuels_web.py` (`--http 7990`, `--local`,
+Port **7985**. Pas encore de tuile dans l'annuaire ni de cible PlatformIO (`build/cible_atelier_visuels.py` n'existe pas) :
+- **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/atelier_visuels_web.py` (`--http 7985`, `--local`,
   `--sans-navigateur`). Règle d'accès commune : `acces_web.py` (depuis un autre appareil, lien à jeton de la console).
 
-Attention : l'organigramme des plans (`organigramme_plans_web.py`, tuile de l'annuaire) utilise aussi le port 7990 par
-défaut. Ne pas lancer les deux ensemble tant qu'un des deux n'a pas changé de port.
+Le port 7990 appartient à l'organigramme des plans (`organigramme_plans_web.py`, tuile de l'annuaire) : l'atelier des visuels a donc pris le 7985 (décidé le 2026-11-14).
 
 ### Utilisation
 

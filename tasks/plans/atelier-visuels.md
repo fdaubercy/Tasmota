@@ -1,6 +1,6 @@
 ---
 chantier: atelier-visuels
-titre: Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes
+titre: Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes
 objectif: Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module
 statut: actif
 cree: 2026-11-13
@@ -13,7 +13,7 @@ spec: 2026-11-13-atelier-visuels-accueil-design.md
 ## Contexte
 Demande de l'utilisateur du 2026-11-13. **Spec validée le même jour :
 `docs/superpowers/specs/2026-11-13-atelier-visuels-accueil-design.md`** (à lire avant toute action ; décisions au § 6,
-paliers au § 7, choix laissés au constructeur au § 8). En bref : page de l'annuaire, port 7990 ; une photo déposée,
+paliers au § 7, choix laissés au constructeur au § 8). En bref : page de l'annuaire, port 7985 ; une photo déposée,
 recadrée, puis un fond au choix, *photo* (WebP réduit) ou *dessin* (SVG vectorisé dans le navigateur) ; des points chauds
 (*voyant*, *valeur*, *liaison*) posés à la souris et reliés aux états de la carte ; description `visuel.json` + fond
 dans `data/<lieu>/<carte>/` ; module Berry commun `visuelFonctions.be` + `controleVisuel.be` et moteur `visuel.js`
@@ -73,7 +73,7 @@ page d'essai et rendus PNG dans le scratchpad de la session (hors dépôt : ce s
 A3 attend la fin du build en cours de l'utilisateur (règle : aucune édition de data/ ni du cenv pendant un pio run).
 Fichiers : `outils_docs/visuels_accueil/maquettes_visuels.html` (`?m=A|B`), `modele-A.png`, `modele-B.png`,
 `calques.png`, `README.md`, sur le modèle de `outils_docs/etiquettes_qr/`.
-- [x] Deux dispositions de la page 7990 (A : canevas à gauche, panneaux import/fond/élément à droite ; B : canevas
+- [x] Deux dispositions de la page 7985 (A : canevas à gauche, panneaux import/fond/élément à droite ; B : canevas
   pleine largeur, panneaux en bandeau repliable), clair et sombre, captures relues — preuve : outils_docs/visuels_accueil/maquettes_visuels.html (?m=A|B), modele-A.png et modele-B.png relus (la planche `calques.png` reste à faire)
 - [x] Une planche `calques.png` : voyant (rond, carré, icône MDI), valeur (texte sur cartouche), liaison active et muette — preuve : outils_docs/visuels_accueil/calques.png relue (voyant rond, carré, icône MDI, clignotant ; valeur en cartouche, contour, inconnue ; liaison active, alerte, muette, coupée ; puis le tout posé sur le dessin de la maison), source planche_calques.html
   (trait pointillé animé, trait gris) sur un fond d'exemple dessiné
@@ -147,12 +147,12 @@ une `liaison` est active si `t - horodatage < seuil_s * 1000` (ModBus, UDP), si 
   partout, `banc_demarrage.py` vert
 - [x] Commit `feat(visuel): moteur visuel.js des calques de l'accueil (A4)` — preuve : commit f49537fae
 
-## A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids
+## A5 — Outil 7985 : squelette, import de la photo, deux modes de fond, poids
 Fichiers : créer `outils_pc/atelier_visuels_web.py`, `atelier_visuels_page.py`, `atelier_visuels_page_js.py`,
 `atelier_visuels_fond.py`, `test_atelier_visuels_web.py`, `test_atelier_visuels_fond.py`,
 `test_atelier_visuels_page_chrome.py`, `build/cible_atelier_visuels.py`, `build/test_cible_atelier_visuels.py` ;
 modifier `build/pre_utilitaires_platformio.py` (enregistrement de la cible), `annuaire_registre.py` (tuile, port
-7990, groupe Maintenance, `_o.lieu`), `.vscode/tasks.json` (« Outil : atelier des visuels (http://127.0.0.1:7990) »),
+7985, groupe Maintenance, `_o.lieu`), `.vscode/tasks.json` (« Outil : atelier des visuels (http://127.0.0.1:7985) »),
 `.claude/hooks/garde_build.py::CIBLES_OUTILS` (+ `atelier_visuels`) et `build/test_garde_build.py`.
 Interfaces produites : routes `GET /` (page), `GET /envs` (`lieux.pour_page`), `GET /visuel.js` (le fichier de
 `data/sd/js`), `GET /lib.js` (la bibliothèque de l'A0), `POST /fond?env=&type=svg|webp|jpg` (corps binaire brut, 1 Mo
@@ -189,7 +189,7 @@ les zones vivent dans le réglage de l'outil, pas sur la carte.
   un canvas, aucune photo réelle), la dépose, recadre, produit les deux modes, lit le poids affiché, garde le fond,
   compare `GET /fond` au blob ; attend des conditions, jamais une durée ; arrête ses Chrome (mémoire du 2026-11-13) — preuve : test_atelier_visuels_page_chrome.py VERT (image fabriquee, recadrage, rotation, 2 modes, poids, GET /fond == blob, theme, editeur de formes, aucun Chrome sonde_atelier_visuels_page_* vivant)
 - [ ] `relecteur-pages-web` lancé, remarques traitées
-- [ ] Commit `feat(atelier-visuels): page 7990, import de la photo, fond photo ou dessin, poids (A5)`
+- [ ] Commit `feat(atelier-visuels): page 7985, import de la photo, fond photo ou dessin, poids (A5)`
 
 ## A6 — Points chauds, sources et aperçu par le vrai moteur
 Fichiers : créer `outils_pc/atelier_visuels_page_canevas.py` (glisser copié et allégé de
