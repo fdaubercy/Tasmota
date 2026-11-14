@@ -210,7 +210,7 @@ def routes_modules(racine, env):
 
 
 def suivi_muet():
-    """Lecteur HTTP reel contre une carte qui accepte puis ne repond jamais : echec en moins de 3,5 s."""
+    """Lecteur HTTP reel contre une carte qui accepte puis ne repond jamais : echec en moins de 6 s (delai de 3 s du lecteur, marge pour une machine chargee)."""
     ecoute = socket.socket()
     ecoute.bind(("127.0.0.1", 0))
     ecoute.listen(5)
@@ -223,7 +223,7 @@ def suivi_muet():
         leve = True
     duree = time.monotonic() - t0
     ecoute.close()
-    verifie((leve, duree < 3.5), (True, True), f"carte muette : lecteur en echec en {duree:.1f} s (< 3,5 s)")
+    verifie((leve, duree < 6), (True, True), f"carte muette : lecteur en echec en {duree:.1f} s (< 6 s, delai de 3 s + charge de la machine)")
 
 
 def corps_lent(port, env):

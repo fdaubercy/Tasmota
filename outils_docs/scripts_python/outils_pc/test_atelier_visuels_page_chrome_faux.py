@@ -296,6 +296,23 @@ def sonde_annule(cdp):
     verifie(js("[AV.formes.length, AV.elements.length]"), [0, 2], "annuler : Ctrl+Z apres un dessin annule la forme, pas les points chauds")
     js(CTRL % "'y'")
     verifie(js("[AV.formes.length, AV.elements.length]"), [1, 2], "annuler : Ctrl+Y retablit la forme")
+    # bascule : points annules jusqu'au bout, puis une forme annulee ; Ctrl+Y vise la forme, pas le point
+    js("AV.formes=[];AV.commit();AV.elements=[];AV.sauveEls();AV.charge()")
+    js("AV.formes.push(AV_FORMES.normalise({id:AV.idSuivant(),type:'rect',x:10,y:10,l:50,h:40}));AV.commit()")
+    js("document.querySelector('[data-avp-outil=voyant]').click();__pt('pointerdown',100,60);__pt('pointerup',100,60)")
+    js(CTRL % "'z'")
+    js(CTRL % "'z'")
+    verifie(js("[AV.formes.length, AV.elements.length]"), [0, 0], "annuler : point puis forme annules")
+    js(CTRL % "'y'")
+    verifie(js("[AV.formes.length, AV.elements.length]"), [1, 0], "annuler : Ctrl+Y apres l'annulation d'une forme vise la forme, pas le point")
+    # glisser en cours : Ctrl+Z / Ctrl+Y ignores, le deplacement n'est pas perdu
+    js("AV.formes=[];AV.commit();AV.elements=[];AV.sauveEls();AV.charge()")
+    js("document.querySelector('[data-avp-outil=voyant]').click();__pt('pointerdown',100,60);__pt('pointerup',100,60)")
+    js("AV.selEl=AV.elements[0].id;AV.dessine();__pt('pointerdown',100,60)")
+    js(CTRL % "'z'")
+    js(CTRL % "'y'")
+    js("__pt('pointermove',150,90);__pt('pointerup',150,90)")
+    verifie(js("[AV.elements.length, AV.elements[0] && AV.elements[0].x, AV.elements[0] && AV.elements[0].y]"), [1, 150, 90], "annuler : Ctrl+Z pendant un glisser est ignore, le deplacement est garde")
     js("AV.formes=[];AV.commit();AV.elements=[];AV.sauveEls();AV.charge()")
 
 # ---------------------------------------------------------------- bloc 4 : ecriture, suivi, lien Build

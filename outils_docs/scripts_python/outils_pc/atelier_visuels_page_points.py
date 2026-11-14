@@ -90,12 +90,14 @@ JS_POINTS = r"""
   var a0 = AV.annule, r0 = AV.retablit, k0 = AV.commit;
   AV.commit = function () { AV.dernier = 'forme'; k0(); };
   AV.annule = function () {
+    if (AV.glisse && AV.glisse()) return;
     var s = AV.dernier === 'element' && hist && hist.profondeur() > 0 ? hist.annule() : null;
-    if (s !== null) restaureEls(s); else a0();
+    if (s !== null) restaureEls(s); else { AV.dernier = 'forme'; a0(); }
   };
   AV.retablit = function () {
+    if (AV.glisse && AV.glisse()) return;
     var s = AV.dernier === 'element' && hist ? hist.retablit() : null;
-    if (s !== null) restaureEls(s); else r0();
+    if (s !== null) restaureEls(s); else { AV.dernier = 'forme'; r0(); }
   };
   var d0 = AV.dessine, c0 = AV.charge;
   AV.dessine = function () { d0(); overlay(); };

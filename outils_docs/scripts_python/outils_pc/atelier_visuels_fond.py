@@ -23,7 +23,7 @@ ATTRIBUTS = {"d", "fill", "stroke", "stroke-width", "opacity", "fill-opacity", "
 DANGER = re.compile(r"<!\s*(DOCTYPE|ENTITY)", re.I)
 URL = re.compile(r"url\(\s*([^)]*)\)", re.I)
 IMAGE_MAX = 150 * 1024
-IMAGE_HREF = re.compile(r"^data:image/(webp|jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$")
+IMAGE_HREF = re.compile(r"^data:image/(webp|jpeg|png);base64,([A-Za-z0-9+/]+={0,2})\Z")
 IMAGE_SIGNATURES = {"webp": lambda o: o[:4] == b"RIFF" and o[8:12] == b"WEBP", "jpeg": lambda o: o[:3] == b"\xff\xd8\xff", "png": lambda o: o[:8] == b"\x89PNG\r\n\x1a\n"}
 IMAGE_ATTRIBUTS = {"x", "y", "width", "height", "opacity", "preserveAspectRatio"}
 SIGNATURES = {"webp": lambda o: o[:4] == b"RIFF" and o[8:12] == b"WEBP", "jpg": lambda o: o[:3] == b"\xff\xd8\xff"}

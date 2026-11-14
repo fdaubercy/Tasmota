@@ -188,6 +188,7 @@ JS_ELEMENTS = r"""
     if (el.type === 'liaison') { el.x2 = Math.max(0, Math.min(AV.larg, el.x2)); el.y2 = Math.max(0, Math.min(AV.haut, el.y2)); }
     AV.dessine();
   }
+  AV.glisse = function () { return !!S.drag; };      // Ctrl+Z / Ctrl+Y ignores pendant un glisser (AV.elements serait remplace)
   function haut() { if (S.drag) { S.drag = null; AV.commitEls(); } }
   // ---- poignees d'une liaison (par-dessus les calques)
   var d0 = AV.dessine;

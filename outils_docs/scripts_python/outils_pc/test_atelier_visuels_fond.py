@@ -79,6 +79,7 @@ def essais_images():
         "href seulement en xlink": '<image xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="' + href("webp", webp) + '" width="3" height="4"/>',
         "image dans defs": "<defs>" + image(href("webp", webp)) + "</defs>",
         "image dans pattern": '<pattern id="p" width="4" height="4">' + image(href("webp", webp)) + "</pattern>",
+        "saut de ligne final (&#10;)": image(href("webp", webp) + "&#10;"),
         "charset dans le type": image("data:image/webp;charset=x;base64," + b64(webp)),
     }
     for nom, corps in cas.items():
