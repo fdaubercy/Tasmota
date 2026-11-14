@@ -63,6 +63,28 @@ def main():
         verifie(requete(port, "POST", "/")[0], 403, "POST / : refuse")
         verifie(requete(port, "POST", "/publier")[0], 403, "POST /publier sans en-tete : refuse (rien publie)")
         verifie(requete(port, "POST", "/publier", hote="evil.example")[0], 403, "POST /publier, Host hostile : refuse")
+        # alerte de retard : la page « en ligne » est simulee (aucun acces reseau), temoin = un plan dont le % change
+        import json
+        import organigramme_plans as org
+        d = org.donnees()
+        en_ligne = org.page_html(d)
+        import etiquettes_qr_publication as pub
+        vrai = (pub._pointe, pub._publies)
+        try:
+            pub._pointe = lambda racine: "x"
+            pub._publies = lambda racine, pointe: {"organigramme.html": en_ligne}
+            verifie(org.retard_publication(), {"n": 0, "noms": []}, "retard : page identique -> 0")
+            d["plans"][0]["pct"] = (d["plans"][0]["pct"] + 7) % 100
+            pub._publies = lambda racine, pointe: {"organigramme.html": org.page_html(d)}
+            r = org.retard_publication()
+            verifie((r["n"], r["noms"]), (1, [d["plans"][0]["nom"]]), "retard : TEMOIN un plan different -> 1, nomme")
+            pub._publies = lambda racine, pointe: {}
+            verifie(org.retard_publication(), None, "retard : rien en ligne -> None (pas de bandeau)")
+        finally:
+            pub._pointe, pub._publies = vrai
+        statut, corps = requete(port, "GET", "/retard")
+        verifie(statut, 200, "GET /retard : 200")
+        json.loads(corps)
     finally:
         serveur.shutdown()
         serveur.server_close()

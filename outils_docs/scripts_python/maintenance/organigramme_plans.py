@@ -162,6 +162,22 @@ def publie_pages():
     return commit
 
 
+def retard_publication():
+    """Plans dont la page en ligne differe de l'etat actuel : {'n': nombre, 'noms': [...]} ; None si la page publiee est illisible.
+    Compare statut, % et etapes (pas les dates). Un fetch de la seule branche `etiquettes`."""
+    sys.path.insert(0, os.path.join(RACINE, "outils_docs", "scripts_python", "outils_pc"))
+    import etiquettes_qr_publication as pub
+    brut = pub._publies(RACINE, pub._pointe(RACINE)).get("organigramme.html")
+    m = re.search(r"const D=(\{.*?\});const P=", brut or "", re.S)
+    if not m:
+        return None
+    cle = lambda p: (p["statut"], p["pct"], p["etapes"], p["titre"])
+    en_ligne = {p["nom"]: cle(p) for p in json.loads(m.group(1))["plans"]}
+    actuels = {p["nom"]: cle(p) for p in donnees()["plans"]}
+    noms = sorted(n for n in set(en_ligne) | set(actuels) if en_ligne.get(n) != actuels.get(n))
+    return {"n": len(noms), "noms": noms}
+
+
 def pptx():
     script = os.path.join(os.path.dirname(__file__), "organigramme_pptx.mjs")
     r = subprocess.run(["node", script, os.path.join(SORTIE, "plans.json"),

@@ -8,6 +8,8 @@ Banc : test_organigramme_plans_web.py.
 """
 
 import argparse
+import json
+import time
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,6 +24,7 @@ import organigramme_plans as org          # noqa: E402
 
 PORT_DEFAUT = 7990
 VERROU = threading.Lock()                 # une publication a la fois
+_RETARD = {"t": 0.0, "v": None}          # /retard : un fetch git au plus toutes les 60 s
 BOUTON = (
     "<p style='display:flex;gap:10px;align-items:center'><button id='pub'>Publier sur GitHub Pages</button> <span id='pubm'></span>"
     "<a href='" + org.URL_PAGES + "' target='_blank' rel='noopener' title='Ouvrir la version en ligne' aria-label='Ouvrir la version en ligne' "
@@ -29,10 +32,16 @@ BOUTON = (
     "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' "
     "stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20'/>"
     "<path d='M2 12h20'/></svg></a></p>"
+    "<p id='ret' role='status' style='display:none;margin:0 0 10px;padding:6px 10px;border:1px solid #c27400;border-radius:6px;color:#c27400'></p>"
     "<script>document.getElementById('pub').onclick=function(){var b=this,m=document.getElementById('pubm');"
     "if(!confirm_pub())return;b.disabled=true;m.textContent='publication en cours...';"
     "fetch('/publier',{method:'POST',headers:{'X-Organigramme':'1'}}).then(function(r){return r.text()}).then(function(t){"
-    "m.textContent=t;b.disabled=false}).catch(function(e){m.textContent='erreur : '+e;b.disabled=false})};"
+    "m.textContent=t;b.disabled=false;retard()}).catch(function(e){m.textContent='erreur : '+e;b.disabled=false})};"
+    "function retard(){fetch('/retard',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){"
+    "var e=document.getElementById('ret');if(!d){e.style.display='none';return}"
+    "if(d.n===0){e.style.display='none';return}"
+    "e.textContent='La version en ligne est en retard de '+d.n+' plan'+(d.n>1?'s':'')+' : '+d.noms.slice(0,6).join(', ')+(d.n>6?'...':'');"
+    "e.style.display=''}).catch(function(){})}retard();"
     "function confirm_pub(){var m=document.getElementById('pubm');if(m.dataset.ok==='1'){m.dataset.ok='';return true}"
     "m.textContent='Cliquez encore pour confirmer la publication (page publique, adresses IP masquees).';m.dataset.ok='1';return false}</script>")
 
@@ -62,6 +71,14 @@ def fabrique_gestionnaire(acces):
         def do_GET(self):
             if not self._admis():
                 return
+            if urlsplit(self.path).path == "/retard":
+                if time.monotonic() - _RETARD["t"] > 60 or "frais" in self.path:
+                    try:
+                        _RETARD["v"] = org.retard_publication()
+                    except Exception:      # hors ligne, git absent : pas de bandeau
+                        _RETARD["v"] = None
+                    _RETARD["t"] = time.monotonic()
+                return self._envoie(200, json.dumps(_RETARD["v"]).encode("utf-8"), "application/json")
             if urlsplit(self.path).path != "/":
                 return self._envoie(404, b"introuvable")
             try:
@@ -81,6 +98,7 @@ def fabrique_gestionnaire(acces):
                 return self._envoie(409, "une publication est deja en cours".encode("utf-8"))
             try:
                 sha = org.publie_pages()
+                _RETARD["t"] = 0.0
                 texte = "deja a jour" if not sha else f"publiee ({sha[:9]})"
                 self._envoie(200, texte.encode("utf-8"))
             except Exception as erreur:      # reseau, branche qui a bouge : le message, pas une trace
