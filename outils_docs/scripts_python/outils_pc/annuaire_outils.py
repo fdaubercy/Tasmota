@@ -288,6 +288,8 @@ def principal():
         print(f"Port {args.http} deja utilise par un autre programme", flush=True)
         return 1
     acces.annonce(False)                 # pas webbrowser.open : il ouvrirait le navigateur DANS le job
+    acces.partage = True                 # emetteur du jeton commun : accepte le cookie d'un outil frere (barre « Annuaire »)
+    acces.publie_jeton_commun()          # outils survivants a un redemarrage : acceptent aussi ce jeton (acces_web)
     if not args.sans_navigateur:
         ouvre_navigateur(acces.lien_local())
     print("Ctrl+C pour arreter (les outils lances par l'annuaire s'arretent avec lui).", flush=True)

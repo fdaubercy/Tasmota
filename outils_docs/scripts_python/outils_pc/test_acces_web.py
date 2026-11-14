@@ -314,6 +314,98 @@ def principal():
             "png : cache tronque -> redessine et reecrit")
     verifie(len(json.loads(acces_web.Acces(0, True, "m").manifeste())["icons"]), 4, "manifeste : svg + 3 png")
 
+    # Outil survivant a un redemarrage de l'annuaire : garde son jeton, accepte aussi le jeton courant publie par
+    # l'annuaire (fichier jeton_commun.json) tant que le PID de l'annuaire vit ; jamais un outil lance a la main.
+    ancien_jeton = "AncienJetonDeLOutilSurvivant1"
+    nouveau_jeton = "NouveauJetonDeLAnnuaire12345"
+    os.environ[acces_web.VAR_JETON] = ancien_jeton
+    try:
+        survivant = acces_web.Acces(0, False, "survivant")
+    finally:
+        os.environ.pop(acces_web.VAR_JETON, None)
+    manuel = acces_web.Acces(0, False, "manuel")                       # lance a la main : pas de partage
+    annuaire = acces_web.Acces(0, True, "annuaire")
+    annuaire.jeton = nouveau_jeton
+    fichier = annuaire.fichier_jeton_commun()
+    srv_v, srv_m = serveur(survivant), serveur(manuel)
+    if ips:
+        ip = ips[0]
+        cookie_n = {"Cookie": f"jeton_7600={nouveau_jeton}"}
+        verifie(requete(ip, survivant.port, entetes=cookie_n)[0], 403, "survivant : sans fichier publie, nouveau jeton refuse")
+        annuaire.publie_jeton_commun()
+        verifie(fichier.is_file(), True, "annuaire : jeton commun publie")
+        verifie(requete(ip, survivant.port, entetes=cookie_n)[0], 200, "survivant : jeton courant de l'annuaire accepte")
+        verifie(requete(ip, survivant.port, entetes={"Cookie": f"jeton_{survivant.port}={ancien_jeton}"})[0], 200,
+                "survivant : son ancien jeton marche toujours")
+        verifie(requete(ip, survivant.port, entetes={"Cookie": "jeton_7600=autre-jeton-faux-1234567"})[0], 403,
+                "survivant : jeton quelconque refuse")
+        verifie(requete(ip, manuel.port, entetes=cookie_n)[0], 403, "TEMOIN outil lance a la main : jeton de l'annuaire refuse")
+        statut, entetes = requete(ip, survivant.port, chemin=f"/?jeton={nouveau_jeton}")
+        verifie((statut, "HttpOnly" in entetes.get("Set-Cookie", "")), (303, True), "survivant : ?jeton= courant -> cookie")
+        fichier.write_text(json.dumps({"jeton": nouveau_jeton, "pid": 99999999}), encoding="utf-8")
+        verifie(requete(ip, survivant.port, entetes=cookie_n)[0], 403, "annuaire arrete (PID mort) : jeton refuse")
+        fichier.write_text(json.dumps({"jeton": "court", "pid": os.getpid()}), encoding="utf-8")
+        verifie(requete(ip, survivant.port, entetes={"Cookie": "jeton_7600=court"})[0], 403, "fichier au jeton trop court ignore")
+        fichier.write_text("pas du json", encoding="utf-8")
+        verifie(requete(ip, survivant.port, entetes=cookie_n)[0], 403, "fichier illisible ignore")
+    # L'annuaire (emetteur) accepte le cookie d'un outil frere portant son jeton : la barre « Annuaire » d'un outil
+    # ouvert depuis un autre appareil mene a l'annuaire sans nouveau lien (partage = True pose par annuaire_outils).
+    annuaire.partage = True
+    annuaire.hote = "0.0.0.0"
+    srv_a = serveur(annuaire)
+    if ips:
+        verifie(requete(ips[0], annuaire.port, entetes={"Cookie": f"jeton_7980={nouveau_jeton}"})[0], 200,
+                "annuaire : cookie d'un outil frere (jeton commun) accepte")
+        verifie(requete(ips[0], annuaire.port, entetes={"Cookie": "jeton_7980=jeton-inconnu-de-lannuaire"})[0], 403,
+                "annuaire : cookie d'un outil au mauvais jeton refuse")
+    srv_a.shutdown()
+    annuaire._efface_jeton_commun()
+    srv_v.shutdown()
+    srv_m.shutdown()
+
+    # Barre commune : /_barre.json derriere le controle d'acces ; outils vivants d'apres les fiches de presence.
+    import acces_barre
+    import annuaire_registre
+    presence = acces_web.dossier_presence()
+    nom_tapp = annuaire_registre.par_id("fabrique_tapp").nom_acces
+    nom_build = annuaire_registre.par_id("build").nom_acces
+
+    class Occupe(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            pass
+
+        def do_GET(self):
+            corps = b'{"en_cours": true}'
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(corps)))
+            self.end_headers()
+            self.wfile.write(corps)
+    occupe = ThreadingHTTPServer(("127.0.0.1", 0), Occupe)
+    Thread(target=occupe.serve_forever, daemon=True).start()
+    (presence / "1.json").write_text(json.dumps({"nom": nom_tapp, "port": 7980, "pid": os.getpid()}), encoding="utf-8")
+    (presence / "2.json").write_text(json.dumps({"nom": nom_build, "port": occupe.server_address[1], "pid": os.getpid()}),
+                                     encoding="utf-8")
+    (presence / "3.json").write_text(json.dumps({"nom": nom_tapp, "port": 7981, "pid": 99999999}), encoding="utf-8")
+    (presence / "4.json").write_text(json.dumps({"nom": "Outil inconnu", "port": 7982, "pid": os.getpid()}), encoding="utf-8")
+    (presence / "5.json").write_text("illisible", encoding="utf-8")
+    vivants = acces_barre.outils_vivants()
+    verifie([(v["id"], v["port"], v["occupe"]) for v in vivants],
+            [("build", occupe.server_address[1], True), ("fabrique_tapp", 7980, False)],
+            "barre : outils vivants dans l'ordre du registre, occupe d'apres route_occupe (PID mort, inconnu, illisible ignores)")
+    barre = acces_web.Acces(0, False, "barre")
+    srv_b = serveur(barre)
+    statut, entetes = requete("127.0.0.1", barre.port, chemin="/_barre.json")
+    verifie((statut, entetes.get("Content-Type")), (200, "application/json; charset=utf-8"), "/_barre.json : ce PC")
+    if ips:
+        verifie(requete(ips[0], barre.port, chemin="/_barre.json")[0], 403, "/_barre.json : autre appareil sans jeton refuse")
+        verifie(requete(ips[0], barre.port, chemin="/_barre.json", entetes={"Cookie": f"{barre.cookie}={barre.jeton}"})[0], 200,
+                "/_barre.json : autre appareil avec jeton")
+    verifie(requete("127.0.0.1", barre.port, "POST", "/_barre.json")[0], 200, "/_barre.json : POST non intercepte (gestionnaire de l'outil)")
+    srv_b.shutdown()
+    occupe.shutdown()
+    for n in range(1, 6):
+        (presence / f"{n}.json").unlink(missing_ok=True)
+
     # Habillage : manifeste, icone, theme-color, barre de retour ; idempotent ; page sans </head> intacte.
     a = acces_web.Acces(7999, True, "Outil test")
     h = a.habille("<html><head></head><body><p>x</p></body></html>")

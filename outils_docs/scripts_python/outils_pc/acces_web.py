@@ -19,9 +19,12 @@ Regle d'acces (decidee le 2026-10-17) :
     Portee : ce jeton ouvre TOUS les outils de l'annuaire, donc le lancement et l'arret de processus et les routes
     d'ecriture (build, fichiers Berry, assistant persist) : acceptable sur le reseau prive de la maison seulement.
     La variable est retiree de l'environnement des la lecture (pio, git, claude lances par un outil ne l'heritent pas).
-    Un outil qui survit a un redemarrage de l'annuaire garde l'ancien jeton : depuis un autre appareil, sa barre
-    « Annuaire » mene alors a un 403 (relancer l'outil). Icones PNG : dessinees une fois par poste, puis lues dans
-    %LOCALAPPDATA%/outils_tasmota/icones/.
+    L'annuaire est l'EMETTEUR (partage = True) : il accepte le cookie d'un outil frere. Un outil qui survit a un
+    redemarrage de l'annuaire garde son ancien jeton ET accepte le jeton courant, publie par l'annuaire dans
+    jeton_commun.json (jeton + PID de l'annuaire, efface a sa sortie) tant que ce PID vit ; un outil lance a la main
+    ne lit jamais ce fichier. Icones PNG : dessinees une fois par poste, puis lues dans %LOCALAPPDATA%/outils_tasmota/icones/.
+    Barre (acces_barre.py) : lien « Annuaire », liste « En cours » (fiches de presence vivantes, route_occupe du registre)
+    et signal « termine » quand un outil passe d'occupe a libre ; GET /_barre.json derriere le controle d'acces.
 
 Application (2026-11-14) : habille(html) ajoute a chaque page le manifeste, les icones (SVG et PNG 192/512/maskable,
 dessinees par acces_icone.py), theme-color, un script d'enregistrement du service worker /sw.js (page de repli
@@ -47,6 +50,7 @@ avec quel PID et quel jeton. La fiche est ecrite de facon atomique et effacee a 
 """
 
 import atexit
+import ctypes
 import hmac
 import html as _html
 import json
@@ -60,6 +64,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
+import acces_barre
 import acces_icone
 import acces_repli
 
@@ -71,14 +76,6 @@ ICONES_PNG = {"/icone-192.png": (192, False), "/icone-512.png": (512, False), "/
 ICONE = ("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' "
          "fill='" + COULEUR + "'/><path d='M14 22h36M14 32h36M14 42h24' stroke='#fff' stroke-width='6' "
          "stroke-linecap='round'/></svg>")
-# Barre commune : lien vers l'annuaire (meme machine que la page, port 7600) ; absente sur l'annuaire lui-meme.
-BARRE = ("<nav id='barre-outils' aria-label='Retour a l annuaire' style='flex:none;position:sticky;top:0;z-index:9999;background:" + COULEUR + ";color:#fff;font:13px sans-serif;padding:6px 16px;"
-         "display:flex;gap:12px;align-items:center'><a id='barre-retour' style='color:#fff' href='#'>← Annuaire</a>"
-         "<span style='opacity:.7'>{nom}</span></nav>"
-         "<script>(function(){var a=document.getElementById('barre-retour');"
-         "var h=location.hostname;if(location.port==='" + str(PORT_ANNUAIRE) + "'||(!{partage}&&!(h==='127.0.0.1'||h==='localhost'||h==='[::1]'))){a.parentNode.style.display='none';return}"
-         "a.href=location.protocol+'//'+location.hostname+':" + str(PORT_ANNUAIRE) + "/'})()</script>")
-
 PAGE_REFUSEE = ("<!doctype html><html lang=fr><meta charset=utf-8><title>Acces refuse</title>"
                 "<body style='font-family:sans-serif;margin:2em'><h1>Acces refuse</h1>"
                 "<p>Depuis un autre appareil, ouvrez le lien <b>« depuis le reseau »</b> affiche par la "
@@ -125,6 +122,35 @@ def dossier_donnees():
         return Path(force)
     base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
     return Path(base) / "outils_tasmota"
+
+
+def pid_vivant(pid):
+    """True si le processus existe et n'est pas termine (Windows : OpenProcess + GetExitCodeProcess)."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+    k32 = ctypes.windll.kernel32
+    k32.OpenProcess.restype = ctypes.c_void_p
+    k32.OpenProcess.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+    k32.CloseHandle.argtypes = [ctypes.c_void_p]
+    h = k32.OpenProcess(0x1000, 0, pid)                  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return False
+    try:
+        code = ctypes.c_uint32()
+        k32.GetExitCodeProcess.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32)]
+        return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259     # STILL_ACTIVE
+    finally:
+        k32.CloseHandle(h)
 
 
 def dossier_presence():
@@ -196,7 +222,50 @@ class Acces:
             pass
 
     def _jeton_valide(self, donne):
-        return isinstance(donne, str) and hmac.compare_digest(donne.encode("utf-8"), self.jeton.encode("utf-8"))
+        if not isinstance(donne, str):
+            return False
+        brut = donne.encode("utf-8")
+        if hmac.compare_digest(brut, self.jeton.encode("utf-8")):
+            return True
+        courant = self._jeton_commun_courant()           # outil survivant a un redemarrage de l'annuaire
+        return bool(courant) and hmac.compare_digest(brut, courant.encode("utf-8"))
+
+    def fichier_jeton_commun(self):
+        return dossier_donnees() / "jeton_commun.json"
+
+    def publie_jeton_commun(self):
+        """Annuaire : depose son jeton courant (+ son PID) pour les outils qu'il a lances AVANT un redemarrage : ils
+        gardent leur ancien jeton mais acceptent aussi celui-ci tant que ce PID vit. Efface a la sortie normale."""
+        try:
+            fichier = self.fichier_jeton_commun()
+            fichier.parent.mkdir(parents=True, exist_ok=True)
+            tmp = fichier.with_name(fichier.name + ".tmp")
+            tmp.write_text(json.dumps({"jeton": self.jeton, "pid": os.getpid()}), encoding="utf-8")
+            os.replace(tmp, fichier)
+            atexit.register(self._efface_jeton_commun)
+        except OSError as e:
+            print(f"   (jeton commun non publie : {e})", flush=True)
+
+    def _efface_jeton_commun(self):
+        try:
+            fichier = self.fichier_jeton_commun()
+            if json.loads(fichier.read_text(encoding="utf-8")).get("pid") == os.getpid():
+                fichier.unlink()
+        except (OSError, ValueError):
+            pass
+
+    def _jeton_commun_courant(self):
+        """Jeton publie par l'annuaire vivant, pour un outil lance par lui (partage) ; None sinon. Jamais le sien."""
+        if not self.partage:
+            return None
+        try:
+            donnees = json.loads(self.fichier_jeton_commun().read_text(encoding="utf-8"))
+            jeton = donnees["jeton"]
+            if re.fullmatch(r"[A-Za-z0-9_-]{16,}", jeton) and pid_vivant(donnees.get("pid")):
+                return jeton
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        return None
 
     def _jeton_cookie(self, handler):
         propre = None
@@ -232,7 +301,7 @@ class Acces:
                 "<link rel='apple-touch-icon' href='/icone-192.png'>"
                 f"<meta name='theme-color' content='{COULEUR}'>" + acces_repli.ENREGISTREMENT)
         html = html.replace("</head>", tete + "</head>", 1)
-        return re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + BARRE.replace("{nom}", _html.escape(self.nom)).replace("{partage}", "true" if self.partage else "false"), html, count=1,
+        return re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + acces_barre.html(_html.escape(self.nom), self.partage), html, count=1,
                       flags=re.I)
 
     def _statique(self, handler):
@@ -258,9 +327,24 @@ class Acces:
         return True
 
     def controle(self, handler):
-        """En tete de do_GET / do_POST. True : continuer. False : reponse deja envoyee (403 ou redirection)."""
+        """En tete de do_GET / do_POST. True : continuer. False : reponse deja envoyee (403, redirection, route de la
+        barre /_barre.json)."""
         if self._statique(handler):
             return False
+        if not self._controle_acces(handler):
+            return False
+        if handler.command == "GET" and urlsplit(handler.path).path == "/_barre.json":
+            corps = acces_barre.barre_json().encode("utf-8")
+            handler.send_response(200)
+            handler.send_header("Content-Type", "application/json; charset=utf-8")
+            handler.send_header("Cache-Control", "no-store")
+            handler.send_header("Content-Length", str(len(corps)))
+            handler.end_headers()
+            handler.wfile.write(corps)
+            return False
+        return True
+
+    def _controle_acces(self, handler):
         if est_local(handler.client_address):
             return True
         url = urlsplit(handler.path)

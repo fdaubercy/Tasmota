@@ -762,10 +762,13 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Ecrit aussi la fiche de presence de l'outil (`%LOCALAPPDATA%\outils_tasmota\presence\`), lue par l'annuaire.
     Jeton COMMUN (2026-11-14) : l'annuaire passe son jeton aux outils qu'il lance (`OUTILS_TASMOTA_JETON`), le cookie d'un
     outil frere ouvre les autres ; un outil lance a la main garde son jeton propre. Un seul secret ouvre tous les outils
-    (reseau prive seulement) ; la variable est retiree de l'environnement des la lecture. Application : `habille()` ajoute a toute
+    (reseau prive seulement) ; la variable est retiree de l'environnement des la lecture ; l'annuaire emet le jeton et
+    accepte le cookie d'un outil ; un outil survivant a un redemarrage accepte le nouveau jeton (`jeton_commun.json`).
+    Barre commune (`acces_barre.py`, `/_barre.json`) : liste des outils en cours, signal de fin d'un outil occupe. Application : `habille()` ajoute a toute
     page manifeste, icones PNG (`acces_icone.py`), `theme-color`, barre « Annuaire » et service worker de repli quand l'outil
     est arrete (`acces_repli.py`, `/sw.js`, contexte securise seulement) ; routes publiques sans secret. Sondes
-    `test_acces_repli_chrome.py` (installabilite jugee par Chrome, repli) et `test_annuaire_lieux_chrome.py` (etat memorise).
+    `test_acces_repli_chrome.py` (installabilite jugee par Chrome, repli, barre) et `test_annuaire_lieux_chrome.py` (etat
+    memorise) ; banc REEL `test_jeton_reel.py` (annuaire isole 17600 + vrai outil Build 17700, requetes depuis l'adresse reseau).
   - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).

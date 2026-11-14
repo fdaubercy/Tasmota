@@ -102,6 +102,29 @@ def scenario_repli(cdp):
     attend_titre(cdp, "Outil d'essai", 10)
     verifie(cdp.js("!!document.getElementById('barre-outils')"), True, "repli : page servie, barre presente")
     verifie(t.attend(cdp, "!!navigator.serviceWorker.controller", 15), True, "repli : service worker actif et maitre de la page")
+    # Barre : liste « En cours » et signal « termine » quand un outil passe d'occupe a libre (reponse de /_barre.json
+    # simulee dans le navigateur : la barre lit window.fetch a chaque interrogation, toutes les 4 s).
+    verifie(t.attend(cdp, "document.getElementById('barre-encours').textContent.indexOf('En cours') === 0", 10), True,
+            "barre : bouton « En cours » affiche")
+    cdp.js("window.__occupe = true; const vrai = window.fetch; window.fetch = function (u, o) {"
+           " if (String(u).indexOf('_barre.json') >= 0) return Promise.resolve(new Response(JSON.stringify("
+           "{outils: [{id: 'build', nom: 'Build', port: 7700, occupe: window.__occupe}]}), {status: 200}));"
+           " return vrai.apply(this, arguments); }; true")
+    verifie(t.attend(cdp, "document.getElementById('barre-liste').textContent.indexOf('Build (occup') >= 0", 10), True,
+            "barre : outil occupe marque dans la liste")
+    verifie(cdp.js("document.getElementById('barre-liste').firstChild.getAttribute('href')"), "http://127.0.0.1:7700/",
+            "barre : lien de l'outil vers son port")
+    cdp.js("window.__occupe = false; true")
+    verifie(t.attend(cdp, "getComputedStyle(document.getElementById('barre-toast')).display !== 'none'", 10), True,
+            "barre : signal affiche quand l'outil passe d'occupe a libre")
+    verifie((cdp.js("document.getElementById('barre-toast').textContent"), cdp.js("document.title.indexOf('Build') >= 0")),
+            ("Build : terminé", True), "barre : texte du signal et titre de l'onglet")
+    cdp.js("window.dispatchEvent(new Event('focus')); true")
+    verifie(cdp.js("document.title"), NOM, "barre : titre de l'onglet restaure au retour (focus)")
+    cdp.js("document.getElementById('barre-encours').click(); true")
+    verifie(cdp.js("getComputedStyle(document.getElementById('barre-liste')).display !== 'none'"), True, "barre : menu ouvert")
+    cdp.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'})); true")
+    verifie(cdp.js("getComputedStyle(document.getElementById('barre-liste')).display"), "none", "barre : Echap ferme le menu")
     # Installable : Chrome lui-meme ne trouve aucune erreur (manifeste, icones PNG 192 et 512, worker avec fetch).
     time.sleep(1.5)                      # le temps que Chrome lise le manifeste et ses icones (1re generation des PNG)
     erreurs = cdp.appel("Page.getInstallabilityErrors", delai=60).get("installabilityErrors", None)

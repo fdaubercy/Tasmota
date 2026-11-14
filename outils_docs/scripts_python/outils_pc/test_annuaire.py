@@ -262,7 +262,9 @@ def section_presence():
     t0 = time.monotonic()
     pre.etat_outils({}, {o.id: {o.cle_port_page: libres[o.id]} for o in reg.OUTILS}, None)
     duree = time.monotonic() - t0
-    verifie(duree < 1.0, True, f"etat_outils, ports fermes : {duree:.2f} s < 1.0 s")
+    # Seuil 2,5 s : en serie, 17 sondes de 0,3 s prendraient ~5 s (le parallelisme reste donc verifie) ; 1 s rougissait
+    # des que le poste etait charge (compilation : 17 fils a demarrer, une connexion refusee mesuree a 2,0 s).
+    verifie(duree < 2.5, True, f"etat_outils, ports fermes : {duree:.2f} s < 2.5 s")
     lances = {"pont_serie": {"pid": os.getpid(), "valeurs": {"port": "COM3"}}}
     e = etat("sniffeur_modbus", lances=lances, derniers={"sniffeur_modbus": {"port": "COM3"}})
     verifie((e["etat"], "COM3" in e["raison"], "Pont série" in e["raison"]), ("bloque", True, True), "com_tenu")
