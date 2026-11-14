@@ -2338,7 +2338,7 @@ Conception : [spec](../docs/superpowers/specs/2026-11-13-atelier-visuels-accueil
 
 ### Lancer la page
 
-Port **7985**. Pas encore de tuile dans l'annuaire ni de cible PlatformIO (`build/cible_atelier_visuels.py` n'existe pas) :
+Port **7985**. Tuile « Atelier des visuels » de l'annuaire (groupe Ateliers), tâche VS Code « Outil : atelier des visuels (http://127.0.0.1:7985) » et cible Custom « Atelier des visuels (page web) » (`build/cible_atelier_visuels.py`, page démarrée détachée, `pio run` : jamais pendant un build ; banc `build/test_cible_atelier_visuels.py`) :
 - **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/atelier_visuels_web.py` (`--http 7985`, `--local`,
   `--sans-navigateur`). Règle d'accès commune : `acces_web.py` (depuis un autre appareil, lien à jeton de la console).
 
