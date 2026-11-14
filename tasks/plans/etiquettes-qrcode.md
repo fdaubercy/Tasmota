@@ -282,6 +282,10 @@ Produit : `etats(racine, env, *, get=None) -> {"a_reimprimer": bool, "a_regenere
 Fichiers : modifier `outils_docs/schemas/catalogue_ecran.json` (objet `qrcode`), les générateurs
 `atelier_ecrans_haspmota.py` et `atelier_ecrans_lvgl.py`, leurs bancs.
 Consomme : `tasks/plans/atelier-ecrans.md` A4 et A5 faits ; `/json/qrcode.json` (A6).
+Décision du 2026-11-14 (utilisateur) : bouton en SURIMPRESSION ; la page « QR code » (page 5, A16 d'atelier-ecrans, déjà faite sur l'écran
+des débits) est RETIRÉE une fois le bouton en place. Plan : aucun changement de générateur, l'objet `qrcode` existe (palier 2). Sur la page 0
+(layer_top) : un bouton « QR code », un fond blanc et un `qrcode` cachés (`hidden`), visibilité pilotée par une valeur du modèle de la carte
+(`qr.visible`, minuterie `delai_s` côté `ecranDebitsFonctions`), rendue par les deux interfaces. À faire builds arrêtés (écriture de `data/`).
 - [ ] Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
   lu dans `/json/qrcode.json` à l'appui, noir sur blanc sans style riche ; HASPmota `"obj":"qrcode"` (`qr_text`,
   `qr_size`), LVGL `lv.qrcode`
