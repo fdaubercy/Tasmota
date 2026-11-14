@@ -58,10 +58,11 @@ JS_ICONES = r"""
       var l = r.json.icones || [];
       info(l.length ? l.length + ' icône(s)' : 'Aucun résultat', !l.length);
       l.forEach(function (ic) {
-        var b = document.createElement('button');
-        b.type = 'button'; b.setAttribute('role', 'listitem'); b.textContent = ic.jeu + ':' + ic.nom + ' · ' + ic.licence + (ic.attribution ? ' ⚠' : '');
+        var li = document.createElement('div'), b = document.createElement('button');
+        li.setAttribute('role', 'listitem'); li.appendChild(b);
+        b.type = 'button'; b.textContent = ic.jeu + ':' + ic.nom + ' · ' + ic.licence + (ic.attribution ? ' ⚠' : '');
         b.addEventListener('click', function () { choisit(ic); });
-        res.appendChild(b);
+        res.appendChild(li);
       });
     }).catch(function () { info('Serveur injoignable', true); });
   }

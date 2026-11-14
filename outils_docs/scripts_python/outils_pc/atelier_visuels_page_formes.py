@@ -29,7 +29,7 @@ CSS_FORMES = """
 .avf-canevas:focus-visible { outline: 2px solid var(--ac, #1478b8); }
 """
 
-_GABARITS = [("mur", "Mur de façade"), ("toitMono", "Toit monopente"), ("toitDeux", "Toit a deux pans"), ("fenetre", "Fenêtre"), ("porte", "Porte"),
+_GABARITS = [("mur", "Mur de façade"), ("toitMono", "Toit monopente"), ("toitDeux", "Toit à deux pans"), ("fenetre", "Fenêtre"), ("porte", "Porte"),
              ("porteGarage", "Porte de garage"), ("voletRoulant", "Volet roulant"), ("cheminee", "Cheminée"), ("boite", "Boîte aux lettres"), ("numero", "Numéro")]
 
 HTML_FORMES = (
