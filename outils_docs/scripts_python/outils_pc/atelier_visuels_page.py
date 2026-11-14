@@ -13,6 +13,8 @@ comme les autres pages. Aucune couleur d'interface en dur hors du dessin.
 import json
 
 import atelier_visuels_description as avd
+import atelier_visuels_page_calques as calques
+import atelier_visuels_page_export as export
 import atelier_visuels_page_formes as formes
 import atelier_visuels_page_js as js
 import lieux
@@ -66,6 +68,7 @@ HTML = """
 <input type="range" id="av-qualite" min="30" max="95" value="70"></label>
 <button id="av-garder" class="on" type="button" disabled>Garder ce fond</button>
 <div id="av-msg" class="doux" role="status"></div><div id="av-empreinte" class="doux"></div></div></div>
+""" + export.HTML_EXPORT + """
 </div></main>
 """
 
@@ -80,5 +83,5 @@ SEUILS = {"avert": avd.SEUIL_AVERT, "esp32": avd.SEUILS_REFUS["esp32"], "autre":
 
 PAGE = ("<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
         "<title>Atelier des visuels</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE
-        + "<style>" + CSS + formes.CSS_FORMES + "</style></head><body>" + HTML
-        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + COLLE + "</script></body></html>")
+        + "<style>" + CSS + formes.CSS_FORMES + export.CSS_EXPORT + "</style></head><body>" + HTML
+        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + calques.JS_CALQUES + export.JS_EXPORT + COLLE + "</script></body></html>")

@@ -110,8 +110,8 @@ def sonde(cdp, port):
     verifie(js("document.querySelectorAll('main > div').length"), 3, "trois colonnes")
     verifie(condition(cdp, "document.querySelectorAll('#av-carte option').length > 0"), True, "cartes chargees dans le select")
     verifie(js("document.querySelectorAll('#av-carte optgroup').length > 0"), True, "cartes groupees par lieu")
-    verifie(js("[document.getElementById('av-export').disabled, document.getElementById('av-export').title, document.getElementById('av-ecrire').disabled]"),
-            [True, "à venir", True], "Exporter et Écrire inactifs, info-bulle à venir")
+    verifie(js("[document.getElementById('av-export').disabled, document.getElementById('av-ecrire').disabled]"), [False, True],
+            "Exporter actif, Écrire encore inactif")
 
     # theme : le clic bascule data-theme et change le fond de la page
     lit = "[document.documentElement.getAttribute('data-theme'), getComputedStyle(document.body).backgroundColor]"
@@ -186,6 +186,8 @@ def sonde(cdp, port):
     js(TOUCHE % "true")
     verifie(js("Math.round((AV.formes[0].x - %s) * 10) / 10" % x1), 9, "Maj + fleche droite : 8 px de plus")
 
+    sonde_export(cdp)
+
     # mode photo allegee
     js("document.getElementById('av-fond-photo').click()")
     verifie(condition(cdp, "['webp','jpg'].indexOf(document.getElementById('av-type').textContent) >= 0"), True, "mode photo : type webp (ou jpg en repli)")
@@ -244,6 +246,42 @@ def sonde(cdp, port):
     verifie(js("[].slice.call(document.querySelectorAll('#av-carte option')).some(function(o){return o.value===AV.env;}) && !window.__pwn"), True, "carte inconnue : repli sur une carte de la liste")
     js("localStorage.clear()")
     verifie(cdp.erreurs(), [], "aucune erreur dans la console de la page")
+
+
+EXPORT_PREP = ("window.__tel=[];window.__cop=[];AV.telecharge=function(n,b){window.__tel.push({n:n,t:b.type,s:b.size,b:b});};"
+               "AV.presse=function(t){window.__cop.push(t);return Promise.resolve();};"
+               "AV.elements=[{id:'v1',type:'voyant',x:60,y:60,source:{type:'relais',n:1},style:{}},{id:'l1',type:'liaison',x:10,y:10,x2:100,y2:80,source:{type:'wifi'}}];"
+               "AV.sim={v1:'on',l1:'muette'};AV.change();")
+FRAGMENT = ("(async function(){var h=AV.fragmentHtml(),f=document.createElement('iframe');f.srcdoc='<!doctype html><body>'+h;document.body.appendChild(f);"
+            "await new Promise(function(ok){f.onload=ok;});var d=f.contentDocument,g=d.querySelector('.av-v'),a=g.getAttribute('class');"
+            "g.querySelector('circle').dispatchEvent(new MouseEvent('click',{bubbles:true}));var b=g.getAttribute('class');"
+            "var l=d.querySelector('.av-l'),la=l.getAttribute('class');l.querySelector('line').dispatchEvent(new MouseEvent('click',{bubbles:true}));"
+            "var r=[a,b,la,l.getAttribute('class'),/visuel\.js|fetch|XMLHttpRequest| src=/.test(h)];f.remove();return r;})()")
+ZONE = ("(function(){var g=AV.photo.getContext('2d');g.fillStyle='#0000ff';g.fillRect(100,100,40,40);"
+        "AV.formes.push(AV_FORMES.normalise({id:AV.idSuivant(),type:'rect',x:90,y:90,l:60,h:60,zone:'effacer'}));var c=AV.fondPhoto().getContext('2d').getImageData(110,110,1,1).data,"
+        "o=AV.photo.getContext('2d').getImageData(110,110,1,1).data;AV.formes.pop();return [c[0]>180&&c[2]<80,o[2]>180&&o[0]<80];})()")
+
+
+def sonde_export(cdp):
+    js = cdp.js
+    js(EXPORT_PREP)
+    js("document.getElementById('av-export').click()")
+    verifie(js("document.getElementById('avx-panel').hidden"), False, "export : le panneau s'ouvre")
+    js("document.getElementById('avx-svg').click()")
+    verifie(js("[__tel.length, __tel[0].n.slice(-4), __tel[0].t]"), [1, ".svg", "image/svg+xml"], "export : SVG telecharge")
+    verifie(js("(async function(){var t=await __tel[0].b.text();return [/av-v on/.test(t),/av-l muette/.test(t),/<style>/.test(t),t.indexOf('visuel.js')<0];})()"),
+            [True, True, True, True], "export : SVG avec calques dans l'etat simule, CSS integre")
+    js("document.getElementById('avx-copie-svg').click()")
+    verifie(condition(cdp, "__cop.length === 1 && /^<svg/.test(__cop[0])"), True, "export : code SVG copie")
+    js("document.getElementById('avx-copie-html').click()")
+    verifie(condition(cdp, "__cop.length === 2 && /^<div class=\"av-visuel\"/.test(__cop[1]) && __cop[1].indexOf('<script>') > 0"), True, "export : code HTML copie")
+    verifie(js(FRAGMENT), ["av-v on", "av-v off", "av-l muette", "av-l active", False],
+            "export : le fragment HTML s'affiche seul, le voyant et la liaison changent d'etat sans carte ni requete")
+    js("document.getElementById('avx-png').click()")
+    verifie(condition(cdp, "__tel.length === 2 && __tel[1].t === 'image/png' && __tel[1].s > 100 && /\.png$/.test(__tel[1].n)", 15), True, "export : PNG telecharge")
+    verifie(js("(async function(){var u=new Uint8Array(await __tel[1].b.slice(0,4).arrayBuffer());return [u[0],u[1],u[2],u[3]];})()"), [137, 80, 78, 71], "export : signature PNG")
+    verifie(js(ZONE), [True, True], "photo : zone a effacer = aplat de la couleur du bord (la photo d'origine intacte)")
+    js("AV.elements=[];AV.sim={};AV.change();document.getElementById('av-export').click()")
 
 
 def sondes_vivantes(tue=False):

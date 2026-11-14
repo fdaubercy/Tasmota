@@ -180,9 +180,10 @@ JS = r"""
     } else if (!AV.src) fin(null, null, g);
     else {
       var q = $('av-qualite').value / 100;
-      AV.photo.toBlob(function (b) {
+      var src = AV.fondPhoto ? AV.fondPhoto() : AV.photo;
+      src.toBlob(function (b) {
         if (b && b.type === 'image/webp') fin(b, 'webp', g);
-        else AV.photo.toBlob(function (j) { fin(j, 'jpg', g); }, 'image/jpeg', q);   // repli : navigateur sans encodeur WebP
+        else src.toBlob(function (j) { fin(j, 'jpg', g); }, 'image/jpeg', q);   // repli : navigateur sans encodeur WebP
       }, 'image/webp', q);
     }
   }
@@ -199,7 +200,7 @@ JS = r"""
         $('av-empreinte').textContent = d.empreinte;
       }).catch(function () { info('Serveur injoignable', true); });
   });
-  ['av-export', 'av-ecrire'].forEach(function (i) { $(i).disabled = true; $(i).title = 'à venir'; });
+  ['av-ecrire'].forEach(function (i) { $(i).disabled = true; $(i).title = 'à venir'; });
   $('av-larg-v').textContent = AV.larg + ' px'; $('av-qualite-v').textContent = $('av-qualite').value + ' %';
   AV.majPoids = poids;
   mode('plat');
