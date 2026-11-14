@@ -513,7 +513,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - Atelier des visuels d'accueil, http://127.0.0.1:7990 (2026-11-13, plan `tasks/plans/atelier-visuels.md`, spec `docs/superpowers/specs/2026-11-13-atelier-visuels-accueil-design.md`) :
   `outils_pc/atelier_visuels_web.py` (+ `atelier_visuels_web_routes.py`, `_icones_web.py`, `_ia.py`, `_fond.py`, `_description.py`, `_ecriture.py`, `_suivi.py`, `_page*.py`) ;
   photo ou dessin vectorise en fond, points chauds (voyant, valeur, liaison), ecrits dans `data/<lieu>/<carte>/visuel.json` + fond. Cote carte : `data/fs/visuelFonctions.be`
-  + `controleVisuel.be`, moteur `data/sd/js/visuel.js`. Maquettes `outils_docs/visuels_accueil/`. Bancs `berry/banc_visuel.py`, `test_atelier_visuels_*.py`. Cible Custom pas encore faite (A5).
+  + `controleVisuel.be`, moteur `data/sd/js/visuel.js`. Maquettes `outils_docs/visuels_accueil/`. Bancs `berry/banc_visuel.py`, `test_atelier_visuels_*.py`. Mode d'emploi : `outils_docs/README.md` § « Atelier des visuels d'accueil (page web) ». Cible Custom pas encore faite (A5). Port 7990 PARTAGE avec l'organigramme des plans (`organigramme_plans_web.py`, tuile de l'annuaire) : conflit a trancher avant de donner une tuile a l'atelier.
 - `.claude/commands/commite.md`, `.claude/commands/fin-de-session.md` — commandes `/commite`,
   `/fin-de-session` ; `.claude/skills/logs-cartes/` — skill de lecture des logs.
 - `tasks/export-session-*.md` — mini-exports de passation ecrits par `/fin-de-session`.
