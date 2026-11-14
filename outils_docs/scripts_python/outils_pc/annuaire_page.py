@@ -127,6 +127,11 @@ var $ = function (id) { return document.getElementById(id); };
 var registre = null, etats = {}, derniers = {}, liensReseau = [], occupe = {}, erreurs = {}, consoleId = null;
 var modaleId = null, enCours = false;
 /*LIEUX_JS*/
+// Etat garde pour le retour depuis un outil (barre « Annuaire ») : onglet et console ouverte.
+function memo(cle, v) { try { if (v) localStorage.setItem(cle, v); else localStorage.removeItem(cle); } catch (e) {} }
+function relu(cle) { try { return localStorage.getItem(cle) || ""; } catch (e) { return ""; } }
+// Outils de suivi en continu ou de longue duree : un bouton « ↗ » les ouvre a cote de l'annuaire.
+var A_PART = ["pont_serie", "sniffeur_modbus", "sniffeur_i2c", "testeur_udp", "sniffeur_mqtt", "syslog", "build"];
 var DELAI_APPEL = 10000;     // ms : au-dela, l'appel est abandonne (AbortController)
 
 // Cree un element : h("div", {class:"x", onclick:f}, enfants...) ; les textes passent par textContent.
@@ -187,7 +192,10 @@ function tuile(o) {
     actions.appendChild(h("span", {"class": "meta", texte: attente}));
   } else {
     if (e.etat === "marche" && e.lien)
-      actions.appendChild(h("a", {"class": "btn p", href: lienLieu(o, e.lien), target: "_blank", rel: "noopener", texte: "Ouvrir ↗"}));
+      actions.appendChild(h("a", {"class": "btn p", href: lienLieu(o, e.lien), texte: "Ouvrir"}));
+    if (e.etat === "marche" && e.lien && A_PART.indexOf(o.id) >= 0)
+      actions.appendChild(h("a", {"class": "btn", href: lienLieu(o, e.lien), target: "_blank", rel: "noopener",
+                                  title: "Ouvrir dans un nouvel onglet", "aria-label": "Ouvrir " + o.nom + " dans un nouvel onglet", texte: "↗"}));
     if (e.etat !== "marche" && !e.peut_arreter)
       actions.appendChild(h("button", {"class": "btn p", type: "button", texte: "Lancer", onclick: function () { ouvreLancement(o); }}));
     if (e.peut_arreter)
@@ -271,6 +279,9 @@ async function charge() {
   }
   registre = r.donnees;
   construitAide();
+  if (relu("annuaire-onglet") === "aide") montre(true);
+  var c = parId(relu("annuaire-console"));
+  if (c) ouvreConsole(c);
   rafraichit();
 }
 
@@ -289,7 +300,7 @@ async function arrete(o) {
 }
 
 function ouvreConsole(o) {
-  consoleId = o.id;
+  consoleId = o.id; memo("annuaire-console", o.id);
   $("panneau-titre").textContent = "Console de " + o.nom + " (200 dernières lignes)";
   $("panneau").style.display = "block";
   $("panneau-texte").textContent = "…";
@@ -308,7 +319,7 @@ async function majConsole() {
   if (bas) zone.scrollTop = zone.scrollHeight;
 }
 
-$("panneau-ferme").onclick = function () { consoleId = null; $("panneau").style.display = "none"; };
+$("panneau-ferme").onclick = function () { consoleId = null; memo("annuaire-console", ""); $("panneau").style.display = "none"; };
 
 // ---------- fenetre de lancement ----------
 function champ(libelle, controle) { return h("label", {"class": "champ"}, h("span", {texte: libelle}), controle); }
@@ -411,6 +422,7 @@ function montre(aide) {
   $("vue-aide").style.display = aide ? "block" : "none";
   $("onglet-outils").className = aide ? "" : "on";
   $("onglet-aide").className = aide ? "on" : "";
+  memo("annuaire-onglet", aide ? "aide" : "");
 }
 $("onglet-outils").onclick = function () { montre(false); };
 $("onglet-aide").onclick = function () { montre(true); };

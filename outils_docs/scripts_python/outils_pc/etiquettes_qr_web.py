@@ -263,7 +263,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             try:
                 if url.path == "/":
                     import etiquettes_qr_page
-                    self._envoie(200, etiquettes_qr_page.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                    self._envoie(200, acces.habille(etiquettes_qr_page.PAGE).encode("utf-8"), "text/html; charset=utf-8")
                 elif url.path == "/lib.js":
                     lib = Path(racine) / modele.DOSSIER / "lib" / "qr-code-styling.min.js"
                     if not lib.is_file():

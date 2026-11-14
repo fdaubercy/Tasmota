@@ -102,7 +102,7 @@ def fabrique_gestionnaire(sniffeur, acces=None):
                 return
             chemin = urlsplit(self.path).path
             if chemin == "/":
-                self._envoie(200, sniffeur_modbus_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                self._envoie(200, acces.habille(sniffeur_modbus_web.PAGE).encode("utf-8"), "text/html; charset=utf-8")
             elif chemin == "/carte":
                 self._json({"persist": sniffeur.args.persist, "types": {str(k): v for k, v in sniffeur.types.items()},
                             "bus": sniffeur.bus,

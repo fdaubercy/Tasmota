@@ -222,6 +222,28 @@ def principal():
         verifie(cas_refus(acces, ip, port) < 4, True, "TEMOIN controle inactif : les refus tombent")
     srv.shutdown()
 
+    # Routes publiques du manifeste et de l'icone (sans jeton, y compris depuis un autre appareil simule : ici ce PC).
+    acces_s = acces_web.Acces(0, True, "Outil test")
+    srv2 = serveur(acces_s)
+    for chemin, genre in (("/manifest.webmanifest", "application/manifest+json"), ("/icone.svg", "image/svg+xml")):
+        st, ent = requete("127.0.0.1", acces_s.port, "GET", chemin)
+        verifie((st, ent.get("Content-Type")), (200, genre), f"route {chemin}")
+    st, _ = requete("127.0.0.1", acces_s.port, "POST", "/icone.svg")
+    verifie(st, 200, "POST /icone.svg : pas servi comme statique (passe au gestionnaire)")
+    # Temoin : sans _statique, le manifeste n'est plus servi comme tel (le test des routes doit alors tomber).
+    acces_s._statique = lambda handler: False
+    st, ent = requete("127.0.0.1", acces_s.port, "GET", "/manifest.webmanifest")
+    verifie(ent.get("Content-Type") == "application/manifest+json", False, "TEMOIN _statique inactif : plus de manifeste")
+    srv2.shutdown()
+
+    # Habillage : manifeste, icone, theme-color, barre de retour ; idempotent ; page sans </head> intacte.
+    a = acces_web.Acces(7999, True, "Outil test")
+    h = a.habille("<html><head></head><body><p>x</p></body></html>")
+    verifie(all(m in h for m in ("manifest.webmanifest", "theme-color", "barre-outils")), True, "habille : ajouts")
+    verifie(a.habille(h), h, "habille : idempotent")
+    verifie(a.habille("<p>x</p>"), "<p>x</p>", "habille : page sans </head> intacte")
+    verifie(json.loads(a.manifeste())["name"], "Outil test", "manifeste : nom")
+
     print()
     print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")
     return 0 if not ECHECS else 1

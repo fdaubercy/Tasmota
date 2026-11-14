@@ -378,7 +378,7 @@ def traite(pont, client, adresse):
         return
 
     if methode == "GET" and chemin == "/":
-        _reponse(client, "200 OK", "text/html; charset=utf-8", PAGE.encode("utf-8"))
+        _reponse(client, "200 OK", "text/html; charset=utf-8", pont.acces.habille(PAGE).encode("utf-8"))
     elif methode == "GET" and chemin == "/etat":
         _reponse(client, "200 OK", "application/json", json.dumps(pont.etat()).encode("utf-8"))
     elif methode == "GET" and chemin == "/flux":

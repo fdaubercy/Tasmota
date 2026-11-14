@@ -170,7 +170,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             params = parse_qs(url.query)
             try:
                 if url.path == "/":
-                    self._envoie(200, page().encode("utf-8"), "text/html; charset=utf-8")
+                    self._envoie(200, acces.habille(page()).encode("utf-8"), "text/html; charset=utf-8")
                 elif url.path == "/execution":
                     self._json({"en_cours": False})
                 elif url.path == "/envs":

@@ -314,7 +314,7 @@ def fabrique_gestionnaire(acces, racine, get=None, traitement=None, builds_en_co
             def route():
                 if url.path == "/":
                     import atelier_ecrans_page
-                    self._envoie(200, atelier_ecrans_page.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                    self._envoie(200, acces.habille(atelier_ecrans_page.PAGE).encode("utf-8"), "text/html; charset=utf-8")
                 elif url.path == "/cartes":
                     self._json({"cartes": cartes(racine), **lieux.pour_page()})
                 elif url.path == "/catalogue":

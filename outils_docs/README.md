@@ -932,7 +932,7 @@ Conception : [spec](../docs/superpowers/specs/2026-10-24-page-build-televersemen
 
 ### Lancer la page
 
-- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Build et téléversement ». La page
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Déploiement » : « Build et téléversement ». La page
   ne s'arrête pas avec l'annuaire pendant un lancement, et l'annuaire refuse de l'arrêter tant qu'un lancement
   est en cours.
 - **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : build et téléversement (http://127.0.0.1:7700) ».
@@ -1437,7 +1437,7 @@ la première carte du lieu (sauf si `?env=` est donné) et affiche le bandeau du
 
 ### Lancer la page
 
-- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Fichiers Berry par env ». L'annuaire
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Configuration des cartes » : « Fichiers Berry par env ». L'annuaire
   peut l'arrêter à tout moment : rien n'est écrit avant « Enregistrer ».
 - **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : fichiers Berry par env (http://127.0.0.1:7800) ». Ce
   n'est pas un `pio run` : utilisable pendant un build (l'écriture, elle, y est refusée).
@@ -1602,7 +1602,7 @@ Les listes de cartes du parc (env à modifier, carte de l'onglet autoexec.bat) s
 
 ### Lancer la page
 
-- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Assistant persist ». Rien n'est écrit
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Configuration des cartes » : « Assistant persist ». Rien n'est écrit
   avant « Créer l'env » : on peut l'arrêter à tout moment.
 - **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : assistant persist (http://127.0.0.1:7900) ».
 - **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/assistant_persist_web.py` (`--http 7900`,
@@ -1792,7 +1792,7 @@ vrais persists) : aucun n'écrit dans le vrai dépôt ni dans le vrai dossier de
 
 Page http://127.0.0.1:7980 pour fabriquer une extension Tasmota (`.tapp`) et l'envoyer à une carte. Ce qu'est une
 extension, quand s'en servir et ses pièges : [EXTENSIONS_TAPP.md](EXTENSIONS_TAPP.md). Lancement : tuile « Fabrique
-d'extensions » de l'annuaire (groupe Maintenance), tâche VS Code « Outil : fabrique d'extensions », ou cible Custom
+d'extensions » de l'annuaire (groupe Ateliers), tâche VS Code « Outil : fabrique d'extensions », ou cible Custom
 « Fabrique d'extensions (page web) » (`build/cible_tapp.py`, page démarrée détachée ; `pio run` : jamais pendant un build).
 Arrêt libre : rien n'est écrit ni envoyé sans un geste dans la page, aucune source n'est supprimée. La liste des
 cartes destinataires est groupée par lieu de la maison (`outils_pc/lieux.py`).
@@ -1845,7 +1845,7 @@ rangée en Bureau.
 
 ### Lancer la page
 
-- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Atelier des graphiques ». Rien n'est écrit
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Ateliers » : « Atelier des graphiques ». Rien n'est écrit
   avant « Écrire dans le dépôt » : on peut l'arrêter à tout moment.
 - **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : atelier des graphiques (http://127.0.0.1:7950) ».
 - **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/atelier_graphiques_web.py` (`--http 7950`,
@@ -2032,7 +2032,7 @@ maquettes `outils_docs/atelier_ecrans/` ; savoir-faire HASPmota / LVGL : skill `
 
 ### Lancer la page
 
-- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance » : « Atelier des écrans ». Rien n'est écrit
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Ateliers » : « Atelier des écrans ». Rien n'est écrit
   avant « Écrire dans le dépôt », l'arrêt est libre.
 - **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : atelier des écrans (http://127.0.0.1:7960) ».
 - **Ligne de commande** : `python outils_docs/scripts_python/outils_pc/atelier_ecrans_web.py` (`--http 7960`, `--local`,
@@ -2225,7 +2225,7 @@ Page http://127.0.0.1:7970 pour composer, carte par carte, un QR code qui affich
 l'imprimer en étiquette ou en planche A4, et le montrer sur une page de la carte. Par défaut, le QR code contient du
 texte et aucun lien : le téléphone l'affiche sans réseau, ce qui sert quand une carte ne répond plus (mode lien : voir
 « Fiche en ligne » plus bas). Lancement : tuile « Étiquettes QR
-code » de l'annuaire (groupe Maintenance), tâche VS Code « Outil : étiquettes QR code », ou cible Custom « Étiquettes QR
+code » de l'annuaire (groupe Ateliers), tâche VS Code « Outil : étiquettes QR code », ou cible Custom « Étiquettes QR
 code (page web) » (`build/cible_etiquettes_qr.py`, page démarrée détachée ; `pio run` : jamais pendant un build). Arrêt
 libre : rien n'est écrit sans « Écrire dans le dépôt », après le diff. Spec :
 `docs/superpowers/specs/2026-11-12-etiquettes-qrcode-design.md` ; plan : `tasks/plans/etiquettes-qrcode.md`.
@@ -2335,7 +2335,7 @@ qu'au terminal ; leurs questions deviennent des boutons. Depuis le 2026-10-27, e
 
 ### Lancer la page
 
-- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Maintenance ».
+- **Tuile de l'annuaire** (http://127.0.0.1:7600), groupe « Ateliers ».
 - **Tâche VS Code** : `Ctrl+Maj+P` > Run Task > « Outil : synchro du fork ».
 - **Cible PlatformIO** « Synchro du fork (page web) » dans *Custom* (jamais pendant un build).
 

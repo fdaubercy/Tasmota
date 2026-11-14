@@ -144,7 +144,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             url = urlsplit(self.path)
             if url.path == "/":
                 import tapp_page
-                self._envoie(200, tapp_page.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                self._envoie(200, acces.habille(tapp_page.PAGE).encode("utf-8"), "text/html; charset=utf-8")
             elif url.path == "/extensions":
                 gabarits = [{"id": k, "libelle": g["libelle"], "explication": g["explication"]} for k, g in ts.GABARITS.items()]
                 self._json({**ts.liste(racine), "gabarits": gabarits, "dossier": ts.DOSSIER})

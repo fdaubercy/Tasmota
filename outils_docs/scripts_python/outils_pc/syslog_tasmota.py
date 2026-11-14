@@ -214,7 +214,7 @@ def fabrique_gestionnaire(serveur, acces):
                 return
             chemin = urlsplit(self.path).path
             if chemin == "/":
-                self._envoie(200, syslog_tasmota_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                self._envoie(200, acces.habille(syslog_tasmota_web.PAGE).encode("utf-8"), "text/html; charset=utf-8")
             elif chemin == "/etat":
                 self._envoie(200, json.dumps(serveur.etat()).encode("utf-8"), "application/json")
             elif chemin == "/modules":

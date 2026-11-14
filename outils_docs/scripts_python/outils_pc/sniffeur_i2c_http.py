@@ -111,7 +111,7 @@ def fabrique_gestionnaire(sniffeur, acces=None):
                 return
             url = urlsplit(self.path)
             if url.path == "/":
-                self._envoie(200, sniffeur_i2c_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                self._envoie(200, acces.habille(sniffeur_i2c_web.PAGE).encode("utf-8"), "text/html; charset=utf-8")
             elif url.path == "/ports":
                 self._json([{"port": p.device, "description": p.description, "sniffeur": p.vid in proto.VIDS_SNIFFEUR}
                             for p in list_ports.comports()])

@@ -854,7 +854,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     (onglet « Env par défaut (Platformio override) », modele B + futur fichier dessous ; sonde `test_build_page_defaut_chrome.py` ; maquettes
     `outils_docs/default_envs/` ; plan `tasks/plans/default-envs-page.md` ; case de creation d'env : `fichiers_berry_creation.py::ajoute_default_envs`),
     `build_solidification.py`, `build_drvset.py` (copie `/.drvset003` par le reseau avant un upload ou erase_upload serie, la renvoie apres, `Restart 99` puis relecture du calibrage ; copie dans `drvset/` du dossier de donnees de la page ; banc `test_build_drvset.py`), `build_page_aide.py` (onglet « Aide », texte fixe : fichiers `.drvset`), `build_page_couleurs.py` (codes ANSI du journal -> couleurs du terminal de VS Code dans le panneau « Sortie »), `build_sauvegarde.py` + `build_page_sauvegarde.py` + `build_sauvegarde_mqtt.py` (liaison MQTT : FileDownload/FileUpload ; banc `test_build_sauvegarde_mqtt.py`, avec la purge (case de l'onglet, `reglages.json`), les étapes de restauration et les marques « reposé au démarrage ») (onglet « Sauvegarde configuration », modele B : `/dl` de chaque carte dans `outils_docs/sauvegardes_cartes/<env>/`, ignore par git ; parametres, copie modifiee, comparaison, restauration ; « avant flash » prise par la serie ; banc `test_build_sauvegarde.py`, sonde `test_build_page_sauvegarde_chrome.py` ; plan `tasks/plans/sauvegarde-config-cartes.md`), `decode_config.py` (+ `decode_config_groupes.py` : decode-config 16.0.0.0 dans `%LOCALAPPDATA%\outils_tasmota\decode_config\`, hors depot et hors Python de PlatformIO ; textes ecrits par l'outil, decode-config tronquant la reserve d'un ESP32), et pour les bancs `build_faux_pio.py`, `build_ota_carte_simulee.py`) — page « Build et televersement »
-    http://127.0.0.1:7700 (tuile de l'annuaire, groupe Maintenance, hors job : l'annuaire refuse de l'arreter pendant
+    http://127.0.0.1:7700 (tuile de l'annuaire, groupe Déploiement, hors job : l'annuaire refuse de l'arreter pendant
     un lancement ; tache VS Code « Outil : build et televersement » ; cible Custom « Build et televersement (page web) »
     (`build/cible_build_web.py`, banc `build/test_cible_build_web.py`) qui DEMARRE LA PAGE DETACHEE puis rend la
     main : une cible est un `pio run`, vivante elle serait vue comme un build en cours ; `pio run` : jamais
@@ -908,7 +908,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   - `fichiers_berry_web.py` (+ `fichiers_berry_page.py`, `fichiers_berry_ini.py`, `fichiers_berry_etat.py`,
     `fichiers_berry_ecriture.py`, `fichiers_berry_creation.py`, `fichiers_berry_suppression.py`, `fichiers_berry_renommage.py`,
     `fichiers_berry_sauvegarde.py`, `fichiers_berry_page_envs.py`, `fichiers_berry_coprocesseur.py`) — page « Fichiers Berry par env » http://127.0.0.1:7800
-    (tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Enregistrer » ; tache VS Code
+    (tuile de l'annuaire, groupe Configuration des cartes, arret libre : rien n'est ecrit avant « Enregistrer » ; tache VS Code
     « Outil : fichiers Berry par env » ; cible Custom « Fichiers Berry par env (page web) », `build/cible_fichiers_berry.py`,
     banc `build/test_cible_fichiers_berry.py`, page demarree detachee comme celle du build ; lien « fichiers » sur chaque
     env personnel de la page build, `?env=` dans les deux sens). Par env : chaque `.be` (data/fs, dossier de la carte,
@@ -961,7 +961,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     suppression de ligne). Mode d'emploi : `outils_docs/README.md` § « Onglet « autoexec.bat » » ; spec
     `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` ; plans `tasks/plans/autoexec-bat.md`, `tasks/plans/autoexec-mqtt-tapp.md`.
   - `tapp_web.py` (+ `tapp_page.py`, `tapp_sources.py`, `tapp_envoi.py`, `build/cible_tapp.py`) — page « Fabrique d'extensions »
-    http://127.0.0.1:7980 (2026-11-07 ; tuile de l'annuaire, groupe Maintenance, arret libre ; tache VS Code ; cible Custom detachee,
+    http://127.0.0.1:7980 (2026-11-07 ; tuile de l'annuaire, groupe Ateliers, arret libre ; tache VS Code ; cible Custom detachee,
     `NOM_CIBLE` fabrique_tapp). Sources dans `data/extensions/<nom>/` (gabarits A et B de `outils_docs/EXTENSIONS_TAPP.md`), manifeste,
     controle et fabrication par `berry/gen_tapp.py`, `.tapp` a cote du dossier (ignore par git) ; envoi HTTP ou MQTT vers
     `/.extensions/<nom>.tapp` par `autoexec_envoi.py` (identite, refus pendant un build, geste explicite ; en MQTT, lecture de la
@@ -970,7 +970,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `build/test_cible_tapp.py`. Mode d'emploi : `outils_docs/README.md` § « Fabrique d'extensions (page web) ». Non essaye sur carte (A10).
   - `atelier_graphiques_web.py` (+ `atelier_graphiques_page.py`, `_page_js.py`, `_page_series.py`, `_description.py`, `_series.py`,
     `_conseil.py`, `_ecriture.py`, `build/cible_atelier_graphiques.py`) — page « Atelier des graphiques » http://127.0.0.1:7950 (2026-11-04, palier 1 ;
-    tuile de l'annuaire, groupe Maintenance, arret libre : rien n'est ecrit avant « Ecrire dans le depot » ; tache VS Code « Outil : atelier des
+    tuile de l'annuaire, groupe Ateliers, arret libre : rien n'est ecrit avant « Ecrire dans le depot » ; tache VS Code « Outil : atelier des
     graphiques » ; cible Custom detachee, `NOM_CIBLE` atelier_graphiques ; modele B de `outils_docs/atelier_graphiques/`). Prepare les pages de graphiques d'une carte
     S3/P4 (series de l'historique, du JSON SENSOR ou calculees ; conseil de style ; apercu par le VRAI moteur de la carte, valeurs de la carte en ligne sinon
     persist du depot et valeurs simulees). Ecrit `data/<lieu>/<carte>/pages_graphiques.json` (valide par `_description.py::valide`), la ligne
@@ -994,7 +994,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   - `atelier_ecrans_web.py` (+ `atelier_ecrans_page.py`, `_page_js.py`, `_page_canevas.py`, `_page_remarques.py`, `_page_ecriture.py`,
     `_page_polices.py`, `_catalogue.py`, `_description.py`, `_haspmota.py`, `_lvgl.py`, `_lvgl_moteur.py`, `_ecriture.py`, `_ecran.py`,
     `_remarques.py`, `_polices.py`, `_capture.py`, `build/cible_atelier_ecrans.py`) — page « Atelier des ecrans » http://127.0.0.1:7960
-    (2026-11-12, palier 1 ; tuile de l'annuaire, groupe Maintenance, arret libre ; tache VS Code ; cible Custom detachee, `NOM_CIBLE`
+    (2026-11-12, palier 1 ; tuile de l'annuaire, groupe Ateliers, arret libre ; tache VS Code ; cible Custom detachee, `NOM_CIBLE`
     atelier_ecrans). Ecran tactile d'une carte dessine d'apres une description neutre `outils_docs/atelier_ecrans/cartes/<env>/ecran.json`
     (hors flash, avec `remarques.json`), catalogue `outils_docs/schemas/catalogue_ecran.json` ; deux interfaces generees dans le dossier
     de la carte, `pages.jsonl` (HASPmota) et `ecranLvgl.be` (LVGL pur), choisies par `custom_interface_ecran` (`build/interface_ecran.py`).
@@ -1031,7 +1031,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   - `etiquettes_qr_web.py` (+ `etiquettes_qr_page.py`, `_page_js.py`, `_page_impression.py`, `_modele.py`, `_verdict.py`, `_ecriture.py`,
     `_suivi.py`, `_filtre_public.py`, `_publication.py`, `_page_publication.py`, `build/cible_etiquettes_qr.py`) — page « Etiquettes QR
     code » http://127.0.0.1:7970 (2026-11-12 ; tuile de l'annuaire,
-    groupe Maintenance, arret libre ; tache VS Code ; cible Custom detachee, `NOM_CIBLE` etiquettes_qr). QR code d'identite de
+    groupe Ateliers, arret libre ; tache VS Code ; cible Custom detachee, `NOM_CIBLE` etiquettes_qr). QR code d'identite de
     chaque carte (du TEXTE par defaut ; mode lien, A10 : adresse d'une fiche PUBLIQUE sur GitHub Pages, branche orpheline
     `etiquettes` poussee par la plomberie git sans toucher l'arbre de travail, `etiquettes_qr_publication.py::publie` ; chaque
     ligne passe le filtre des secrets du persist puis `etiquettes_qr_filtre_public.py::controle_public`) : lignes standard (`etiquettes_qr_modele.CHAMPS`), cle du persist (jamais un secret, ni une

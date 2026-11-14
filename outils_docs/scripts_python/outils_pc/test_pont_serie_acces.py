@@ -151,6 +151,10 @@ def cas_local(pont):
     p = pont.port
     statut, _, corps = requete("127.0.0.1", p)
     verifie((statut, b"Pont serie" in corps), (200, True), "ce PC : page sans jeton")
+    verifie((b"barre-outils" in corps, b"manifest.webmanifest" in corps), (True, True), "ce PC : page habillee (barre, manifeste)")
+    st, ent, corps_m = requete("127.0.0.1", p, chemin="/manifest.webmanifest")
+    verifie((st, ent.get("Content-Type"), b"Pont serie" in corps_m), (200, "application/manifest+json", True),
+            "ce PC : /manifest.webmanifest servi par le pont")
     verifie(brut_local(p), True, "ce PC : TCP brut -> port serie (loop://) -> retour")
     verifie(requete("127.0.0.1", p, "POST", "/cmd", corps=b"x")[0], 403, "ce PC : POST sans X-Pont refuse")
     verifie(requete("127.0.0.1", p, "POST", "/cmd", {"X-Pont": "1", "Origin": f"http://evil.example:{p}",

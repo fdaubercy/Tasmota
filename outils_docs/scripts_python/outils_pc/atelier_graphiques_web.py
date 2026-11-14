@@ -272,7 +272,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, get=None, sonde_build=
             try:
                 if url.path == "/":
                     import atelier_graphiques_page
-                    self._envoie(200, atelier_graphiques_page.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                    self._envoie(200, acces.habille(atelier_graphiques_page.PAGE).encode("utf-8"), "text/html; charset=utf-8")
                 elif url.path == "/envs":
                     self._json({"envs": envs(racine), **lieux.pour_page()})
                 elif url.path == "/series":

@@ -352,7 +352,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours, etat_modele):
             chemin = urlsplit(self.path).path
             try:
                 if chemin == "/":
-                    self._envoie(200, page().encode("utf-8"), "text/html; charset=utf-8")
+                    self._envoie(200, acces.habille(page()).encode("utf-8"), "text/html; charset=utf-8")
                 elif chemin == "/execution":
                     self._json({"en_cours": False})
                 elif chemin == "/parc":

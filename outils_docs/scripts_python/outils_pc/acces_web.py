@@ -33,8 +33,10 @@ avec quel PID et quel jeton. La fiche est ecrite de facon atomique et effacee a 
 
 import atexit
 import hmac
+import html as _html
 import json
 import os
+import re
 import secrets
 import socket
 import threading
@@ -42,6 +44,19 @@ import webbrowser
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit
+
+COULEUR = "#1f2937"
+PORT_ANNUAIRE = 7600
+ICONE = ("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' "
+         "fill='" + COULEUR + "'/><path d='M14 22h36M14 32h36M14 42h24' stroke='#fff' stroke-width='6' "
+         "stroke-linecap='round'/></svg>")
+# Barre commune : lien vers l'annuaire (meme machine que la page, port 7600) ; absente sur l'annuaire lui-meme.
+BARRE = ("<nav id='barre-outils' aria-label='Retour a l annuaire' style='flex:none;position:sticky;top:0;z-index:9999;background:" + COULEUR + ";color:#fff;font:13px sans-serif;padding:6px 16px;"
+         "display:flex;gap:12px;align-items:center'><a id='barre-retour' style='color:#fff' href='#'>← Annuaire</a>"
+         "<span style='opacity:.7'>{nom}</span></nav>"
+         "<script>(function(){var a=document.getElementById('barre-retour');"
+         "var h=location.hostname;if(location.port==='" + str(PORT_ANNUAIRE) + "'||!(h==='127.0.0.1'||h==='localhost'||h==='[::1]')){a.parentNode.style.display='none';return}"
+         "a.href=location.protocol+'//'+location.hostname+':" + str(PORT_ANNUAIRE) + "/'})()</script>")
 
 PAGE_REFUSEE = ("<!doctype html><html lang=fr><meta charset=utf-8><title>Acces refuse</title>"
                 "<body style='font-family:sans-serif;margin:2em'><h1>Acces refuse</h1>"
@@ -173,8 +188,41 @@ class Acces:
         donne = dict(parse_qsl(urlsplit(handler.path).query, keep_blank_values=True)).get("jeton")
         return self._jeton_valide(donne) or self._jeton_valide(self._jeton_cookie(handler))
 
+    def manifeste(self):
+        return json.dumps({"name": self.nom, "short_name": self.nom, "start_url": "/", "display": "standalone",
+                           "theme_color": COULEUR, "background_color": COULEUR,
+                           "icons": [{"src": "/icone.svg", "sizes": "any", "type": "image/svg+xml",
+                                      "purpose": "any"}]}, ensure_ascii=False)
+
+    def habille(self, html):
+        """Ajoute a une page HTML le manifeste, l'icone, theme-color et la barre de retour a l'annuaire."""
+        if "id='barre-outils'" in html or "</head>" not in html:
+            return html
+        tete = ("<link rel='manifest' href='/manifest.webmanifest'><link rel='icon' href='/icone.svg'>"
+                f"<meta name='theme-color' content='{COULEUR}'>")
+        html = html.replace("</head>", tete + "</head>", 1)
+        return re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + BARRE.replace("{nom}", _html.escape(self.nom)), html, count=1,
+                      flags=re.I)
+
+    def _statique(self, handler):
+        """Manifeste et icone : publics (le navigateur les demande sans cookie), rien de secret. True si servi."""
+        chemin = urlsplit(handler.path).path
+        if handler.command != "GET" or chemin not in ("/manifest.webmanifest", "/icone.svg"):
+            return False
+        corps, genre = ((self.manifeste(), "application/manifest+json") if chemin.endswith("webmanifest")
+                        else (ICONE, "image/svg+xml"))
+        corps = corps.encode("utf-8")
+        handler.send_response(200)
+        handler.send_header("Content-Type", genre)
+        handler.send_header("Content-Length", str(len(corps)))
+        handler.end_headers()
+        handler.wfile.write(corps)
+        return True
+
     def controle(self, handler):
         """En tete de do_GET / do_POST. True : continuer. False : reponse deja envoyee (403 ou redirection)."""
+        if self._statique(handler):
+            return False
         if est_local(handler.client_address):
             return True
         url = urlsplit(handler.path)

@@ -171,7 +171,7 @@ def fabrique_gestionnaire(lanceur, acces, git=None):
                 return
             url = urlsplit(self.path)
             if url.path == "/":
-                self._envoie(200, PAGE.encode("utf-8"), "text/html")
+                self._envoie(200, acces.habille(PAGE).encode("utf-8"), "text/html")
             elif url.path == "/registre":
                 self._json(reg.en_json(RACINE))
             elif url.path == "/etat":

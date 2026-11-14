@@ -8,7 +8,7 @@ de ligne de commande. Chaque valeur est contrainte (liste fermee ou entier borne
 
 from dataclasses import dataclass
 
-GROUPES = ["Bus et cartes", "Réseau et journaux", "Maintenance"]
+GROUPES = ["Bus et cartes", "Réseau et journaux", "Déploiement", "Configuration des cartes", "Ateliers"]
 DEBITS = [9600, 19200, 38400, 57600, 74880, 115200, 230400, 460800, 921600]
 CONSOLE = "%LOCALAPPDATA%\\outils_tasmota\\consoles\\{}.log"
 DOSSIER = "outils_docs/scripts_python/"
@@ -185,7 +185,7 @@ OUTILS = [
                      "refusé jusqu'à sa fin, pour ne pas couper un téléversement ni laisser un pio orphelin. Pour "
                      "abréger, l'arrêter d'abord depuis sa page (« Arrêter après cet env » ou « Arrêt immédiat »)."),
     Outil(
-        "fichiers_berry", "Fichiers Berry par env", "Fichiers Berry par env", GROUPES[2],
+        "fichiers_berry", "Fichiers Berry par env", "Fichiers Berry par env", GROUPES[3],
         "Choisit, env par env, les fichiers Berry sur le FS, exclus ou solidifiés, et crée un env à partir "
         "d'une carte modèle.",
         "Page web qui lit et écrit platformio_tasmota_cenv.ini : pour chaque fichier Berry (data/fs, dossier de "
@@ -200,7 +200,7 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("fichiers_berry") + ". Copies avant écriture : "
         "platformio_tasmota_cenv.ini.bak et tasmota/user_config_override.h.bak."),
     Outil(
-        "assistant_persist", "Assistant persist", "Assistant persist", GROUPES[2],
+        "assistant_persist", "Assistant persist", "Assistant persist", GROUPES[3],
         "Crée, modifie ou supprime une carte (persist, autoexec, cenv, .h) ; onglet pour éditer et envoyer son autoexec.bat.",
         "Page web en cinq étapes (carte, réseau, fonctions, bloc métier, vérification) : aperçu du _persist.json en "
         "direct, mots de passe recopiés du parc par le serveur (jamais affichés), diff avant écriture, création "
@@ -215,7 +215,7 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("assistant_persist") + ". Sauvegardes horodatées avant création : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
     Outil(
-        "atelier_graphiques", "Atelier des graphiques", "Atelier des graphiques", GROUPES[2],
+        "atelier_graphiques", "Atelier des graphiques", "Atelier des graphiques", GROUPES[4],
         "Compose les pages de graphiques des cartes S3/P4 et écrit leur description dans le dépôt.",
         "Page web qui choisit, carte par carte, les pages de graphiques (séries du SENSOR, formules, couleurs, "
         "unités), les montre avec les valeurs de la carte (simulées si elle est injoignable) et écrit, après "
@@ -227,7 +227,7 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("atelier_graphiques") + ". Sauvegardes horodatées avant écriture : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
     Outil(
-        "etiquettes_qr", "Étiquettes QR code", "Étiquettes QR code", GROUPES[2],
+        "etiquettes_qr", "Étiquettes QR code", "Étiquettes QR code", GROUPES[4],
         "Compose le QR code d'identité de chaque carte (hostname, IP, clés du persist), l'imprime en étiquette ou en planche A4, et prépare la page /qrcode de la carte.",
         "Page web qui compose, carte par carte, le QR code d'identité (hostname, IP, clés choisies du persist), "
         "l'aperçu en étiquette ou en planche A4 pour l'impression, et prépare la page /qrcode de la carte "
@@ -239,7 +239,7 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("etiquettes_qr") + ". Sauvegardes horodatées avant écriture : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
     Outil(
-        "atelier_ecrans", "Atelier des écrans", "Atelier des écrans", GROUPES[2],
+        "atelier_ecrans", "Atelier des écrans", "Atelier des écrans", GROUPES[4],
         "Compose l'écran tactile d'une carte et en génère les interfaces HASPmota et LVGL.",
         "Page web qui montre, carte par carte, la description neutre de son écran (pages, objets, polices du "
         "catalogue), les fichiers générés (pages.jsonl, ecranLvgl.be) et leurs différences avec le dépôt, les valeurs "
@@ -250,7 +250,7 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("atelier_ecrans") + "."),
     Outil(
-        "fabrique_tapp", "Fabrique d'extensions", "Fabrique d'extensions", GROUPES[2],
+        "fabrique_tapp", "Fabrique d'extensions", "Fabrique d'extensions", GROUPES[4],
         "Crée une extension .tapp depuis un modèle, la vérifie, la fabrique et l'envoie à une carte.",
         "Page web qui guide en quatre étapes : un dossier data/extensions/<nom>/ créé depuis un modèle, le manifeste, "
         "le contrôle (noms, manifeste, compilation Berry) et la fabrication du .tapp, puis l'envoi par HTTP ou MQTT vers "

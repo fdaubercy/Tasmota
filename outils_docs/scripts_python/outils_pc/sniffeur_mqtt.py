@@ -316,7 +316,7 @@ def fabrique_gestionnaire(sniffeur, acces):
                 return
             url = urlsplit(self.path)
             if url.path == "/":
-                self._envoie(200, sniffeur_mqtt_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                self._envoie(200, acces.habille(sniffeur_mqtt_web.PAGE).encode("utf-8"), "text/html; charset=utf-8")
             elif url.path == "/panneaux.js":
                 self._envoie(200, sniffeur_mqtt_panneaux.JS.encode("utf-8"), "text/javascript; charset=utf-8")
             elif url.path == "/etat":

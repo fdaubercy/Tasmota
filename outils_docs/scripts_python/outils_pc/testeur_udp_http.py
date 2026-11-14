@@ -124,7 +124,7 @@ def fabrique_gestionnaire(testeur, acces):
                 return
             chemin = urlsplit(self.path).path
             if chemin == "/":
-                self._envoie(200, testeur_udp_web.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                self._envoie(200, acces.habille(testeur_udp_web.PAGE).encode("utf-8"), "text/html; charset=utf-8")
             elif chemin == "/etat":
                 self._json(testeur.etat())
             elif chemin == "/ports":

@@ -102,7 +102,7 @@ def fabrique_gestionnaire(acces, racine, **injections):
             q = {k: v[0] for k, v in parse_qs(url.query, keep_blank_values=True).items()}
             if url.path == "/":
                 import atelier_visuels_page
-                self._envoie(200, atelier_visuels_page.PAGE.encode("utf-8"), "text/html; charset=utf-8")
+                self._envoie(200, acces.habille(atelier_visuels_page.PAGE).encode("utf-8"), "text/html; charset=utf-8")
             elif url.path == "/envs":
                 envs = [{"env": e, "lieu": lieux.lieu(e), "puce": lieux.puce(e)} for e in tapp_envoi.cartes(racine)]
                 self._envoie(200, json.dumps({"envs": envs, **lieux.pour_page()}, ensure_ascii=False).encode("utf-8"), "application/json")
