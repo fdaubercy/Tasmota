@@ -2541,7 +2541,7 @@ commandes git d'écriture sont limitées par `liste_blanche_git_synchro.py`.
 
 >## Modifications du code C++ en dur
 >### Dans 'tasmota/tasmota_xdrv_driver/xdrv_01_9_webserver.ino':
->####   - Modification de la ligne 1228 & 427:
+>####   - Modification des deux appels `WSContentSend_P(HTTP_END, ...)` (pied de page) :
 >####       * Remplacement de: WSContentSend_P(HTTP_END, TasmotaGlobal.version, TasmotaGlobal.image_name);
 >####           par: WSContentSend_P(HTTP_END, TasmotaGlobal.version);
 >####       * Remplacement de: 

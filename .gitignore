@@ -83,6 +83,7 @@ tasmota-qemu
 ## Claude Code : .claude/ EST suivi (hooks + reglages partages entre postes).
 ## Seuls l'etat machine et les reglages locaux restent hors du depot.
 .claude/settings.local.json
+.claude/agent-memory-local/
 .claude/.derniere-verif-synchro
 tasmota/tasmota_defines_for_berry.be
 tasmota/tasmota_defines_for_berry.h

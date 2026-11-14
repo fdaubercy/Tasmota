@@ -80,7 +80,7 @@ Le lancement automatique de `synchronise_fork_tasmota.py` a ete envisage puis
   index a moitie ecrit — exactement l'etat conflictuel que le dispositif est cense
   eviter, et cree sans que personne ne regarde l'ecran ;
 - le script est ecrit **pour un humain devant un terminal** : il demande confirmation
-  avant la synchro distante et avant de pousser (`demander()`, lignes 514 et 443). Dans un
+  avant la synchro distante et avant de pousser (`synchro_fork_question.py::demander`). Dans un
   hook, l'entree standard n'est pas un terminal -> la synchro est abandonnee (EOFError
   lu comme « non ») ;
 - contre les conflits, la vraie prevention est la **frequence** — petits paquets, sur
@@ -147,10 +147,15 @@ Meme decision, meme jour, pour leurs bancs : `outils_docs/scripts_python/berry/b
 +108 le 2026-11-13 : fins de course et camera de la facade) et `banc_inclinaison.be` (**729 lignes**) ; un banc par module,
 chaque groupe lisible seul. Meme decision le 2026-11-13 (plan `tasks/plans/facade-garage-capteurs.md`) pour
 `data/sd/js/volets.js` (**564 lignes** : decors garage et maison, fins de course, rapporteur de la trappe, camera ; le couper
-ajouterait un fichier a `volets_pages` du cenv) et sa sonde `outils_pc/test_volets_chrome.py` (**581 lignes**).
+ajouterait un fichier a `volets_pages` du cenv) et sa sonde `outils_pc/test_volets_chrome.py` (**603 lignes**).
+
+`data/fs/modbusFonctions.be` (**3388 lignes**), `modBus_TasmotaSlaveModBus.be` (**1528**), `udpFonctions.be` (**937**), `globalFonctions.be` (**880**)
+et `discoveryFonctions.be` (**877**) depassent **500 lignes**, et c'est **voulu** (decide le 2026-11-14 : exceptions declarees plutot qu'un
+decoupage). Modules SOLIDIFIES charges ensemble par les autoexec : les scinder ajouterait des entrees de `custom_berry_solidify` et de l'autoexec
+de chaque env. Les copies de `lib/libesp32/berry_custom/src/embedded/` sont GENEREES et ignorees par git : ne pas les compter.
 
 `data/bureau/tasmota32s3-ecran-debits-pac/ecranLvgl.be` depasse **500 lignes**, et c'est **voulu** (decide le 2026-11-13 :
-exception plutot qu'un generateur tasse ; 496 lignes avant la page « Systeme » de l'A19, 600 apres). Fichier GENERE par l'atelier des
+exception plutot qu'un generateur tasse ; 496 lignes avant la page « Systeme » de l'A19, 618 le 2026-11-14). Fichier GENERE par l'atelier des
 ecrans (`atelier_ecrans_lvgl.py`) d'apres `ecran.json` : ne pas le decouper ni l'editer a la main, le regenerer. Meme regle pour
 l'`ecranLvgl.be` genere de toute autre carte a ecran.
 
@@ -169,10 +174,10 @@ unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule c
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 
 Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plutot qu'un decoupage) :
-`build_serie.py` fait **838 lignes** (+20 le 2026-11-13 : publication des fiches QR apres une serie reussie, etiquettes A11 ; +2 le 2026-11-12 : ce qu'un ESP8266 garde hors de sa sauvegarde, dans le journal avant flash ; +9 le 2026-11-03 : sauvegarde « avant flash » de la configuration ; +18 le 2026-11-02 : sauvegarde et retablissement de `/.drvset003` autour d'un flash serie ; +14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
+`build_serie.py` fait **862 lignes** (+24 le 2026-11-14 : reparateur branche dans la serie, build-reparations A3 ; +20 le 2026-11-13 : publication des fiches QR apres une serie reussie, etiquettes A11 ; +2 le 2026-11-12 : ce qu'un ESP8266 garde hors de sa sauvegarde, dans le journal avant flash ; +9 le 2026-11-03 : sauvegarde « avant flash » de la configuration ; +18 le 2026-11-02 : sauvegarde et retablissement de `/.drvset003` autour d'un flash serie ; +14 le 2026-11-01 : table de partitions de l'env ; +19 le 2026-10-25 : total estime d'un env jamais compile ; +17 le 2026-10-26 : arret de pio sur solidification vide ; +8 le meme jour : FS fait par l'envoi serie du firmware ; +11 le 2026-10-27 : data_dir pose avant pio ; +3 le meme jour : identite de l'image du FS ; +7 le meme jour : duree des zones d'envoi memorisee, A13 ; +6 le 2026-10-28 : OTA par le maitre, A11 ; +9 le meme jour : Sleep 0 du maitre pendant l'envoi ; +30 le 2026-10-29 : action « fichiers » de l'onglet Fichiers ; +16 le meme jour : transport MQTT (A16) ; execution en serie des `pio run` : verrous, arret immediat, attente
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
-verrou), et ses bancs `test_build_serie.py` (**1259**, +44 le 2026-11-13 : case « Publier les fiches QR »), `test_build_page_chrome.py` (**1103**),
-`test_build_ota_fs.py` (**925**, +78 le 2026-11-09 : place, fichiers identiques, remplacement, A17), `test_build_web.py` (**797**), `test_atelier_graphiques_page_chrome.py` (**773**, sonde de la page de l'atelier, +28 le 2026-11-11 : arrivee par ?lieu= ; +5 le 2026-11-08 : lien « Envoyer par la page Build » et liste vide,
+verrou), et ses bancs `test_build_serie.py` (**1411**, +152 jusqu'au 2026-11-14 : cas des reparations de build ; +44 le 2026-11-13 : case « Publier les fiches QR »), `test_build_page_chrome.py` (**1103**),
+`test_build_ota_fs.py` (**925**, +78 le 2026-11-09 : place, fichiers identiques, remplacement, A17), `test_build_web.py` (**835**, +38 le 2026-11-14 : routes des reparations), `test_atelier_graphiques_page_chrome.py` (**773**, sonde de la page de l'atelier, +28 le 2026-11-11 : arrivee par ?lieu= ; +5 le 2026-11-08 : lien « Envoyer par la page Build » et liste vide,
 decision du 2026-11-05), `berry/banc_graphiques.py` (**571**, banc de la page /graphiques, decision du 2026-11-06), ainsi que `test_annuaire.py` (**524**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
@@ -302,6 +307,11 @@ Prise en compte a chaud, sans redemarrer VS Code.
 - **Pas** de trailer `Co-Authored-By`.
 - **Ne jamais pousser** sans demande explicite : le push n'est pas auto-autorise sur ce depot.
 - Ne **jamais** commiter le travail en cours de l'utilisateur sans demande explicite.
+- **Avant tout commit ou push** (decide le 2026-11-14) : lancer l'agent `controleur-secrets` (depot public), lire son rapport,
+  puis seulement commiter, dans un appel suivant. Si le commit touche un `.be` de `data/`, lancer aussi `verificateur-solidification`
+  (le vert des bancs ne prouve pas la solidification, panne du 2026-11-13). Un `.py` d'outil : `relecteur-outils-python`
+  est recommande (au jugement). Les autres agents de `outils_docs/SOUS_AGENTS.md` restent au jugement. Un agent qui
+  signale un « bloquant » arrete le commit jusqu'a decision de l'utilisateur.
 
 ## Fichiers a ne jamais toucher sans accord
 
@@ -489,6 +499,18 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - `.claude/agents/relecteur-pages-web.md` — sous-agent de relecture des pages web (pages des outils PC generees par Python,
   pages servies par les cartes `data/sd`) avant commit : securite (XSS, anti-CSRF, SSRF), etat de la page, JS valide, mode sombre,
   sondes Chrome hermetiques. Ne modifie rien.
+- `.claude/agents/` (2026-11-14) — 7 autres sous-agents de lecture seule : `verificateur-solidification` (module `data/fs` solidifiable :
+  builtin masque, `custom_berry_solidify`, `globs`), `controleur-secrets` (avant commit ou push, n'affiche jamais une valeur),
+  `relecteur-outils-python`, `verificateur-plans` (preuves des cases cochees), `analyste-journaux-build`, `diagnostic-synchro-fork`
+  (ne synchronise jamais), `relecteur-docs`, `auditeur-menage` (commande `/menage`, propositions de rangement), plus `relecteur-pcb` et
+  `placeur-pcb`. Six ont `memory: local` (dossier `.claude/agent-memory-local/`, ignore par git). Liste complete, modeles et quand les
+  lancer : `outils_docs/SOUS_AGENTS.md`.
+- `.claude/skills/pcb-tasmota/` — skill PCB KiCad des cartes du fork (schema, placement, routage, fabrication) ; agents `placeur-pcb` et `relecteur-pcb`.
+- `build/cible_pont_serie.py` — cible Custom « Pont serie » (`pont_serie.py`), importee par le pre-script ou posee en `extra_scripts` d'un env ESP8266.
+- Atelier des visuels d'accueil, http://127.0.0.1:7990 (2026-11-13, plan `tasks/plans/atelier-visuels.md`, spec `docs/superpowers/specs/2026-11-13-atelier-visuels-accueil-design.md`) :
+  `outils_pc/atelier_visuels_web.py` (+ `atelier_visuels_web_routes.py`, `_icones_web.py`, `_ia.py`, `_fond.py`, `_description.py`, `_ecriture.py`, `_suivi.py`, `_page*.py`) ;
+  photo ou dessin vectorise en fond, points chauds (voyant, valeur, liaison), ecrits dans `data/<lieu>/<carte>/visuel.json` + fond. Cote carte : `data/fs/visuelFonctions.be`
+  + `controleVisuel.be`, moteur `data/sd/js/visuel.js`. Maquettes `outils_docs/visuels_accueil/`. Bancs `berry/banc_visuel.py`, `test_atelier_visuels_*.py`. Cible Custom pas encore faite (A5).
 - `.claude/commands/commite.md`, `.claude/commands/fin-de-session.md` — commandes `/commite`,
   `/fin-de-session` ; `.claude/skills/logs-cartes/` — skill de lecture des logs.
 - `tasks/export-session-*.md` — mini-exports de passation ecrits par `/fin-de-session`.
@@ -657,7 +679,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - `outils_docs/scripts_python/`, range par usage le 2026-10-12. **Des scripts qui s'importent
   entre eux restent dans le MEME dossier** (import d'un module voisin) : ne pas les separer.
   - `build/` — charges par PlatformIO : `pre_utilitaires_platformio.py` (pre-script ; importe les
-    `cible_*.py` voisins), `post_lto_parallele.py`, les 7 `cible_*.py` (cibles Custom, qui lancent
+    `cible_*.py` voisins), `post_lto_parallele.py`, les 15 `cible_*.py` (cibles Custom, qui lancent
     `outils_pc/`), `ota-files-uploader.py`, `update_idf55_framework.py` (appele par le pre-script),
     `ino_stable.py` (banc `test_ino_stable.py`), `test_scons_cache.py` (banc des reglages SCons du pre-script),
     `cfg_holder.py` (decide si le pre-script incremente `CFG_HOLDER`, banc `test_cfg_holder.py` ; plan
