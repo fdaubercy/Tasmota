@@ -181,6 +181,36 @@
 							"ids": [],
 							"type": "Switch"
 						}
+					},
+					"bouton3": {
+						"activation": "ON",
+						"nom": "Portail simple ouverture",
+						"id": 3,
+						"pin": 1,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch"
+						}
+					},
+					"bouton4": {
+						"activation": "ON",
+						"nom": "Portail double ouverture",
+						"id": 4,
+						"pin": 2,
+						"type": 32,
+						"virtuel": "OFF",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "Switch"
+						}
 					}
 				},
 				"interrupteurs": {
@@ -215,6 +245,22 @@
 							"type": "ON/OFF"
 						},
 						"idModBus": 2
+					},
+					"interrupteur3": {
+						"activation": "OFF",
+						"nom": "Capteur Fermeture Portail",
+						"id": 3,
+						"pin": -1,
+						"type": 160,
+						"virtuel": "ModBus_TasmotaSlaveModBus3",
+						"SwitchMode": 2,
+						"etat": "OFF",
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"idModBus": 1
 					}
 				},
 				"relais": {
@@ -1198,6 +1244,11 @@
 						"activation": "ON",
 						"name": "Rideau Garage ModBus",
 						"id": 3
+					},
+					"TasmotaSlaveModBus3": {
+						"activation": "OFF",
+						"name": "Portail Jardin ModBus",
+						"id": 4
 					}
 				}
 			}
