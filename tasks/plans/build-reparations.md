@@ -5,6 +5,9 @@ objectif: La page Build reconnaît une panne de compilation connue, la corrige, 
 statut: actif
 cree: 2026-11-14
 maj: 2026-11-14
+famille: build
+liens: ecran-cave-vues-commandes, facade-garage-capteurs
+spec: 2026-11-14-build-reparations-design.md
 ---
 # Réparation automatique des pannes de la page Build
 
@@ -50,44 +53,44 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
   proposé à appliquer (A6).
 
 ## A1 — Catalogue et correspondance (`build_reparations.py`)
-- [ ] Écrire d'abord `test_build_reparations.py` (rouge) : `charge_catalogue(base, local)` fusionne règles de base et locales,
+- [x] Écrire d'abord `test_build_reparations.py` (rouge) : `charge_catalogue(base, local)` fusionne règles de base et locales, — preuve : test_build_reparations.py rouge (ModuleNotFoundError) puis vert, commit 48b887f18
   refuse une action hors liste, un motif qui ne compile pas, une action sans paramètre requis (`attendre` sans `secondes`) ;
   `cherche(regles, journal, etape, env)` rend la règle dont le motif correspond à la fin du journal (50 dernières lignes)
   et dont `etapes` contient l'étape ; journal vide -> `None` ; `filtre_secrets(texte)` masque la valeur d'une ligne
   `STA_PASS`, `PASSWORD`, `MQTT_PASS`, `OTA_PASS`, `token` (modèles du filtre de `etiquettes_qr_filtre_public.py`)
-- [ ] Créer `outils_docs/scripts_python/outils_pc/build_reparations.py` : `Regle` (dataclass : id, titre, motif, etapes, actions,
+- [x] Créer `outils_docs/scripts_python/outils_pc/build_reparations.py` : `Regle` (dataclass : id, titre, motif, etapes, actions, — preuve : build_reparations.py (115 lignes), signatures du plan, commits 48b887f18 et 2bf943390
   origine, ajoutee_le), `charge_catalogue(chemin_base: Path, chemin_local: Path) -> list[Regle]`,
   `cherche(regles: list[Regle], journal: str, etape: str, env: str) -> Regle | None`, `filtre_secrets(texte: str) -> str`
-- [ ] Créer `outils_docs/schemas/reparations_build.json` avec la règle de base `verrou_fichier` : motif sur
+- [x] Créer `outils_docs/schemas/reparations_build.json` avec la règle de base `verrou_fichier` : motif sur — preuve : outils_docs/schemas/reparations_build.json, regle verrou_fichier (chemin du depot, pas COM)
   `PermissionError: \[Errno 13\] Permission denied: '[A-Za-z]:\\\\Users\\\\...\\\\Tasmota\\\\` (chemin du dépôt, pas `COM\d+`),
   actions `libere_verrou`, `attendre 5`
-- [ ] Banc vert, avec mutants (action hors liste acceptée, motif non borné à la fin du journal, secrets non filtrés) — preuve : …
+- [x] Banc vert, avec mutants (action hors liste acceptée, motif non borné à la fin du journal, secrets non filtrés) — preuve : banc vert, 3 mutants tues ; correctifs de relecture 2bf943390 (regle locale fautive ignoree, filtre par cle) ; sortie « tout est vert »
 
 ## A2 — Verrou de fichier (`build_reparations_verrou.py`)
-- [ ] Écrire d'abord `test_build_reparations_verrou.py` (rouge) : un processus Python de test ouvre un fichier temporaire en
+- [x] Écrire d'abord `test_build_reparations_verrou.py` (rouge) : un processus Python de test ouvre un fichier temporaire en — preuve : test_build_reparations_verrou.py rouge (module absent) puis vert, commit 883d86260
   partage exclusif ; `processus_du_fichier(chemin)` le retrouve par son pid ; `classe(proc, pid_serie, liste_blanche)` rend
   `"ferme"` (nom en liste blanche), `"attend"` (`pio`/`scons`/`python` d'une autre origine), `"demande"` (autre), `"jamais"`
   (pid de la page ou de la série, `claude`) ; `libere(chemin, liste_blanche, pid_serie, demande)` ferme le processus de la
   liste blanche (liste de test = le processus de test) et rend `{"libre": True, "ferme": [...], "attend": [], "demande": []}` ;
   processus mort entre le repérage et la fermeture : pas d'exception
-- [ ] Créer `outils_docs/scripts_python/outils_pc/build_reparations_verrou.py` : `processus_du_fichier(chemin: str) -> list[dict]`
+- [x] Créer `outils_docs/scripts_python/outils_pc/build_reparations_verrou.py` : `processus_du_fichier(chemin: str) -> list[dict]` — preuve : build_reparations_verrou.py, signatures du plan + cles refuse/erreur, commits 883d86260 et 0335ce9cc (Restart Manager par ctypes, noms par Toolhelp32 : Get-CimInstance trop lent, 15-25 s)
   (clés `pid`, `nom`, `ligne`, par le Restart Manager `RmStartSession`/`RmRegisterResources`/`RmGetList` en `ctypes`, nom et
   ligne de commande par `Win32_Process`), `classe(...)`, `libere(...)` comme ci-dessus ; attente jusqu'à 5 s que `open` exclusif
   réussisse
-- [ ] Banc vert, mutant : retirer la liste blanche ou le garde du pid de la série doit rendre le banc rouge — preuve : …
+- [x] Banc vert, mutant : retirer la liste blanche ou le garde du pid de la série doit rendre le banc rouge — preuve : banc vert (12 s), 4 mutants rouges (liste blanche, garde pid serie, heure de debut, fermeture ratee) ; corrections de relecture 0335ce9cc ; controleur : banc relance, tout vert
 
 ## A3 — Moteur et branchement dans la série
-- [ ] Écrire d'abord les tests dans `test_build_serie.py` (nouveau groupe, faux `pio` qui échoue avec un journal de verrou puis
+- [x] Écrire d'abord les tests dans `test_build_serie.py` (nouveau groupe, faux `pio` qui échoue avec un journal de verrou puis — preuve : tests de la serie (groupe test_reparations) rouges puis verts, commit e796b82eb ; test_build_serie 205 OK, 0 KO
   réussit) : la série relance la même étape, l'env réussit, l'événement `reparation` (états `en_cours` puis `reussie`) est émis
   et une ligne `[réparation] …` entre dans le journal de l'env ; deuxième échec identique : pas de boucle (2 relances au plus) ;
   règle absente : comportement actuel (`echec`, env suivant) ; étape `upload` COM : jamais relancée ; arrêt demandé pendant la
   réparation : env `arrete` ; `choix_reparation` émis pour un processus « demande », `repond_choix(env, choix)` le résout, 409 si
   déjà résolu ou expiré, expiration à 10 min (horloge injectée) = env en échec et série qui continue
-- [ ] Étendre `build_reparations.py` : `Reparateur(serie, regles, horloge=time.monotonic)` avec
+- [x] Étendre `build_reparations.py` : `Reparateur(serie, regles, horloge=time.monotonic)` avec — preuve : Reparateur dans build_reparations.py (traite, repond_choix, ajoute_regle_locale), commits e796b82eb et 710dfae4e
   `traite(ligne, action, cible, etape, journal, extrait) -> bool` (vrai = relancer l'étape) et `repond_choix(env, choix) -> None`
   (`ValueError` choix inconnu, `RuntimeError` aucune demande ouverte) ; exécute les actions de la règle (`attendre` en boucle courte
   sensible à l'arrêt, `libere_verrou` via A2 sur le chemin extrait du motif, `vide_build` = `.pio/build/<env>` de l'env raté seulement)
-- [ ] Brancher dans `build_serie.py::Serie._execute_env` (quelques lignes) : boucle de relance autour de `_lance_pio`
+- [x] Brancher dans `build_serie.py::Serie._execute_env` (quelques lignes) : boucle de relance autour de `_lance_pio` — preuve : build_serie.py +19 lignes (_execute_env, repond_reparation, reparations()), evenements dans la docstring
   pour les genres `pio`, avant l'événement `echec` ; ajouter les événements `reparation` (env, action, regle, etat, message) et
   `choix_reparation` (env, regle, texte, boutons) à la docstring du module ; `Serie.repond_reparation(env, choix)`
 - [x] Bancs `test_build_serie.py` et `test_build_reparations.py` verts, mutants (limite de relances retirée, boucle sans signature, — preuve : mutants (limite de relances, signature, relance d'un envoi) rouges dans les deux bancs ; relecture A3 sans Critical ni Important ; 4 mineurs corriges en 710dfae4e ; controleur : bancs relances verts

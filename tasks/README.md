@@ -13,14 +13,15 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-49 plans : 23 actif, 1 en-pause, 25 clos.
+50 plans : 24 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
 | [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ███████░░░ 66 % (39/68) | 29 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
 | [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ████░░░░░░ 38 % (11/26) | 15 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
+| [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ███░░░░░░░ 34 % (8/24) | 16 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
-| [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █░░░░░░░░░ 14 % (4/26) | 22 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
+| [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | ████████░░ 80 % (22/26) | 4 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 83 % (70/91) | 21 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ██████░░░░ 60 % (35/51) | 16 étapes, 4 améliorations | 2026-11-08 | 2026-11-13 |
 | [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 87 % (34/41) | 7 étapes | 2026-11-12 | 2026-11-13 |
@@ -124,6 +125,28 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
 
+#### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 34 %
+
+- A1 — Inventaire des envs simulables : Liste des envs, dossier `data/<lieu>/<carte>`, IP, hostname, topic, puce (réutiliser `outils_pc/build_envs.py` et `lieux.py::identites`)
+- A1 — Inventaire des envs simulables : Pour chaque env : modules Berry chargés (autoexec) et routes déclarées
+- A2 — Moteur Berry (routes réelles) : Bouchons manquants (`tasmota`, `webserver`, `persist` du dossier de la carte, `path`)
+- A2 — Moteur Berry (routes réelles) : Banc : la sortie du rideau contient `window.VOLETS` avec le décor
+- A3 — Serveur de la carte simulée : Serveur HTTP par carte : fichiers `/sd`, routes Berry (A2), `/cm?cmnd=` de base, 404 net pour le C++ natif non capturé
+- A3 — Serveur de la carte simulée : Valeurs de scénario (ouvert, fermé, maître muet, incohérence) ; position lue par `/rideau?f=position&id=`
+- A3 — Serveur de la carte simulée : Banc avec témoin négatif
+- A4 — Capture et rejeu : Capture d'une carte en ligne (GET uniquement) rangée hors dépôt, secrets masqués
+- A4 — Capture et rejeu : Rejeu des pages natives capturées, avec la date de la capture affichée
+- A4 — Capture et rejeu : Banc sur une carte simulée (jamais le vrai P4 en essai automatique)
+- A6 — Page « Cartes simulées » dans l'annuaire : Sonde Chrome (thème, téléphone)
+- A7 — Vrai firmware ESP32 classique (essai) : Choisir l'env ESP32 de l'essai ; QEMU via WSL2 ou `idf_tools.py`
+- A7 — Vrai firmware ESP32 classique (essai) : Boot du firmware compilé par la page Build (:7700), jamais par `pio` direct
+- A7 — Vrai firmware ESP32 classique (essai) : Documenter les limites (S3/P4 non couverts)
+- A8 — Documentation : Entrée dans la Carte des documents de CLAUDE.md et section de `outils_docs/README.md`
+- A8 — Documentation : Exceptions de longueur déclarées si un fichier dépasse 500 lignes
+- Amélioration [projet] : Wokwi pour S3/P4 si le réseau y devient utilisable
+- Amélioration [projet] : Alias d'IP (`netsh`, administrateur, retrait à l'arrêt, garde ping/ARP/LWT MQTT) pour simuler une carte à IP propre hors ligne
+- Amélioration [projet] : Simuler le NAPT du maître pour joindre le rideau simulé en 192.168.0.43:8082 depuis un autre appareil (le P4 est en ligne : jamais en alias)
+
 #### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 90 %
 
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
@@ -132,26 +155,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
 
-#### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 14 %
+#### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 80 %
 
-- A2 — Lancement de l'audit par la page : `menage_lancement.py::lance` : `claude -p` en lecture seule (outils Read, Grep, Glob, Bash restreint ; hooks coupés ; jamais `bypassPermissions`), paramètres validés contre une liste blanche (dossiers, catégories, entier borné pour l'ancienneté, modèle parmi sonnet/opus/haiku)
-- A2 — Lancement de l'audit par la page : Refus si un build tourne (appel de la vraie détection de `build_serie`, jamais un `builds_en_cours` factice), refus si un audit est déjà en cours, délai maximal avec arrêt propre du processus fils
-- A2 — Lancement de l'audit par la page : Rapport lu, validé (A1), chemins ramenés au dépôt, valeurs ressemblant à des secrets masquées avant d'aller à la page
-- A2 — Lancement de l'audit par la page : Banc `test_menage_lancement.py` avec un faux `claude` (processus qui rend un JSON fixe) : succès, JSON invalide, délai dépassé, build en cours, double lancement
-- A3 — Mémoire « à garder » : `menage_memoire.py` : liste des chemins gardés dans `%LOCALAPPDATA%\outils_tasmota\menage\garde.json` (hors dépôt, écriture atomique, sauvegarde horodatée)
-- A3 — Mémoire « à garder » : L'agent reçoit cette liste en entrée et ne repropose pas ces chemins ; un chemin gardé qui n'existe plus est retiré à la lecture
-- A3 — Mémoire « à garder » : Banc `test_menage_memoire.py` : ajout, retrait, fichier corrompu, écriture interrompue
-- A4 — Serveur et routes : `menage_web.py` : `GET /` (page), `GET /etat`, `POST /lancer`, `GET /rapport`, `POST /garder`, `POST /ignorer` ; règle d'accès de `acces_web.py` (en-tête `X-Menage: 1`, même origine, jeton depuis un autre appareil) ; exception inattendue = 500 avec son message
-- A4 — Serveur et routes : Fiche de présence de l'outil pour l'annuaire, `--sans-navigateur`, `--local`
-- A4 — Serveur et routes : Banc `test_menage_web.py` : refus sans en-tête, mauvaise origine, paramètre hors liste blanche, client distant sans jeton
-- A5 — Page : Paramètres : périmètre (cases par dossier), catégories de contrôles, ancienneté du « en cours », modèle et effort ; valeurs précédentes mémorisées dans le navigateur (`localStorage` gardé par try/catch)
-- A5 — Page : Rapport : tableau trié par risque, une ligne par proposition (chemin, constat, preuve, ce que ça casserait, avantages/inconvénients), filtres par catégorie et par risque, lignes « en cours » repliées
-- A5 — Page : Actions de version 1 : « Garder » (A3), « Ignorer cette fois », « Copier la liste » ; aucun bouton qui écrit dans le dépôt
-- A5 — Page : Textes de la page échappés (aucun `innerHTML` sur une valeur du rapport), mode sombre, avancement et bouton Arrêter pendant l'audit
-- A5 — Page : Sonde Chrome hermétique `test_menage_page_chrome.py` (faux `claude`), Chrome headless `sonde_*` arrêtés après coup (compter les `HasExited` faux 15 s après)
-- A6 — Branchement dans l'annuaire et dans les outils : Tuile de l'annuaire (groupe « Maintenance »), tâche VS Code « Outil : ménage du dépôt », cible Custom détachée `build/cible_menage.py` (`NOM_CIBLE` ajouté à `CIBLES_OUTILS` de `.claude/hooks/garde_build.py`, `garde_build` vérifie la liste)
-- A6 — Branchement dans l'annuaire et dans les outils : Banc `build/test_cible_menage.py`, `test_garde_build.py` vert
-- A6 — Branchement dans l'annuaire et dans les outils : Entrée dans la Carte des documents de `CLAUDE.md`, section dans `outils_docs/README.md`, ligne dans `outils_docs/SOUS_AGENTS.md`
 - A6 — Branchement dans l'annuaire et dans les outils : Relecture par `relecteur-outils-python` et `relecteur-pages-web` avant commit
 - A6 — Branchement dans l'annuaire et dans les outils : Commit (avec `controleur-secrets` puis `preparateur-push` avant le push)
 - A7 — Essais réels et décision sur la version 2 : Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés
