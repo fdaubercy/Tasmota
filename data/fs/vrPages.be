@@ -13,15 +13,16 @@
  *             "finsDeCourse": {"module", "ouverture": <id interrupteur>, "fermeture": <id>}, sinon nil}], "decor": liste
  *             de drivers.voletRoulants.facade.decor (ex. ["chevrefeuille", "porte", "pergola"], ["maison"] ; nil si absente),
  *             "camera": {"nom", "id"} si drivers.voletRoulants.facade.camera = {"module", "id": <id du relais>} designe un relais
- *             ACTIF de modules[module].environnement.relais (id N = Power<N>, controleGeneral.be::set_power_handler), sinon nil}
+ *             ACTIF de modules[module].environnement.relais (id N = Power<N>, controleGeneral.be::set_power_handler), sinon nil ;
+ *             "lampe": meme forme, drivers.voletRoulants.facade.lampe (projecteur du garage)}
  *             trie par place ; nil si la facade est inactive. Seuls les volets actifs qui portent un bloc facade comptent.
  * finsDeCourse() : {id du volet (texte): {"ouverture": "ON"|"OFF", "fermeture": ...}} lu dans le champ "etat" des interrupteurs
  *             de modules[module].environnement.interrupteurs ; une cle absente = etat inconnu. Sans construire la facade.
  * accueil() : ajout a la page d'accueil : <div id='vf'> + window.VOLETS (facade()) + /sd/js/volets.js. Rien sans facade.
  * bouton()  : bouton « Réglage des volets » de la page de configuration. Rien sans facade.
  * route()   : GET /volets (page de reglage ; ?f=etat : vrReglage.etatPage() en JSON ; ?f=capteurs : finsDeCourse() en JSON, plus
- *             "camera": "ON"|"OFF" (tasmota.get_power) si la camera est declaree) ; ordre() : POST /volets
- *             (action = debut | appui | annuler, id ; ou camera, etat = ON | OFF : Power du relais de la camera)
+ *             "camera" et "lampe": "ON"|"OFF" (tasmota.get_power) si declarees) ; ordre() : POST /volets
+ *             (action = debut | appui | annuler, id ; ou camera | lampe, etat = ON | OFF : Power du relais de la camera ou de la lampe)
  *             -> {"ok", "message", "etat"} ; 400 si action inconnue ou camera refusee, 500 JSON sur
  *             exception ; appui : temoin etape = etape affichee par la page, 409 sans appui s'il differe de l'etape courante.
  *             Les deux derriere webserver.check_privileged_access() (Referer qui designe la carte). Facade testee par
@@ -70,8 +71,10 @@ def vrPages_facade()
     var r = tasmota.cmd("WebRefresh", boolMute)
     var ms = (isinstance(r, map) ? r.find("WebRefresh") : nil)
     var cam = vrPages.relaisCamera()
+    var lampe = vrPages.relaisAppareil("lampe")
     return {"toit": f.find("toit", "aucun"), "rafraichissement": (type(ms) == "int" && ms > 0 ? ms : vrPages.RAFRAICHISSEMENT), "ouvertures": ouvertures,
-            "decor": f.find("decor"), "camera": (cam != nil ? {"nom": cam.find("nom"), "id": cam["id"]} : nil)}
+            "decor": f.find("decor"), "camera": (cam != nil ? {"nom": cam.find("nom"), "id": cam["id"]} : nil),
+            "lampe": (lampe != nil ? {"nom": lampe.find("nom"), "id": lampe["id"]} : nil)}
 end
 vrPages.facade = vrPages_facade
 
@@ -125,11 +128,11 @@ def vrPages_finsDeCourse()
 end
 vrPages.finsDeCourse = vrPages_finsDeCourse
 
-# Relais de la camera de facade (drivers.voletRoulants.facade.camera = {"module", "id"}), nil s'il manque ou s'il est inactif
-def vrPages_relaisCamera()
+# Relais d'un appareil de facade (drivers.voletRoulants.facade.<cle> = {"module", "id"}, cle "camera" ou "lampe"), nil s'il manque ou s'il est inactif
+def vrPages_relaisAppareil(cle)
     var volets = drivers.find("voletRoulants")
     var f = (type(volets) == "instance" ? volets.find("facade") : nil)
-    var c = (type(f) == "instance" ? f.find("camera") : nil)
+    var c = (type(f) == "instance" ? f.find(cle) : nil)
     if type(c) != "instance"    return nil    end
     var m = modules.find(c.find("module", ""))
     var liste = (type(m) == "instance" ? m.find("environnement", {}).find("relais") : nil)
@@ -139,29 +142,37 @@ def vrPages_relaisCamera()
     end
     return nil
 end
-vrPages.relaisCamera = vrPages_relaisCamera
+vrPages.relaisAppareil = vrPages_relaisAppareil
 
-# Etat reel de la camera ("ON"/"OFF", bit id - 1 de tasmota.get_power()), nil sans camera ou sans ce relais
-def vrPages_etatCamera()
+# Etat reel d'un appareil ("ON"/"OFF", bit id - 1 de tasmota.get_power()), nil sans appareil ou sans ce relais
+def vrPages_etatAppareil(cle)
     import vrPages
-    var r = vrPages.relaisCamera()
+    var r = vrPages.relaisAppareil(cle)
     var p = (r != nil ? tasmota.get_power() : nil)
     if !isinstance(p, list) || r["id"] > size(p)    return nil    end
     return p[r["id"] - 1] ? "ON" : "OFF"
 end
-vrPages.etatCamera = vrPages_etatCamera
+vrPages.etatAppareil = vrPages_etatAppareil
 
-# Allume ou eteint la camera : [ok, message]
-def vrPages_commandeCamera(etat)
+# Allume ou eteint un appareil de facade : [ok, message] (le message porte le nom du relais)
+def vrPages_commandeAppareil(cle, etat)
     import vrPages
-    var r = vrPages.relaisCamera()
-    if r == nil    return [false, "Caméra de façade non déclarée"]    end
+    var r = vrPages.relaisAppareil(cle)
+    if r == nil    return [false, (cle == "lampe" ? "Lampe" : "Caméra") + " de façade non déclarée"]    end
     if etat != "ON" && etat != "OFF"    return [false, "État attendu : ON ou OFF"]    end
     var p = tasmota.get_power()
     if !isinstance(p, list) || r["id"] > size(p)    return [false, "Power" + str(r["id"]) + " absent : relais non déclaré (tca9554.dat ?)"]    end
     tasmota.set_power(r["id"] - 1, etat == "ON")
-    return [true, "Caméra de façade " + (etat == "ON" ? "allumée" : "éteinte")]
+    return [true, str(r.find("nom", cle)) + (etat == "ON" ? (cle == "lampe" ? " allumé" : " allumée") : (cle == "lampe" ? " éteint" : " éteinte"))]
 end
+vrPages.commandeAppareil = vrPages_commandeAppareil
+
+# Camera de facade : memes fonctions, cle "camera"
+def vrPages_relaisCamera()    import vrPages    return vrPages.relaisAppareil("camera")    end
+vrPages.relaisCamera = vrPages_relaisCamera
+def vrPages_etatCamera()    import vrPages    return vrPages.etatAppareil("camera")    end
+vrPages.etatCamera = vrPages_etatCamera
+def vrPages_commandeCamera(etat)    import vrPages    return vrPages.commandeAppareil("camera", etat)    end
 vrPages.commandeCamera = vrPages_commandeCamera
 
 # Chaine JSON sans aucun « < » (ni fermeture de balise, ni « <!-- » dans un <script>) : echappement unicode u003c, relu « < » par le JS
@@ -231,6 +242,8 @@ def vrPages_route()
             var c = vrPages.finsDeCourse()
             var cam = vrPages.etatCamera()
             if (cam != nil)    c["camera"] = cam    end
+            var lampe = vrPages.etatAppareil("lampe")
+            if (lampe != nil)    c["lampe"] = lampe    end
             vrPages.envoie(200, c)
             return
         end
@@ -290,15 +303,15 @@ def vrPages_ordre()
         elif (action == "annuler")
             vrReglage.annule("annule")
             r = [true, vrReglage.etatPage().find("message", "")]
-        elif (action == "camera")
-            r = vrPages.commandeCamera(webserver.has_arg("etat") ? webserver.arg("etat") : "")
+        elif (action == "camera" || action == "lampe")
+            r = vrPages.commandeAppareil(action, webserver.has_arg("etat") ? webserver.arg("etat") : "")
             code = (r[0] ? 200 : 400)
             vrFonctions.log("VR_PAGES: " + r[1] + " (page d'accueil) !", (r[0] ? LOG_LEVEL_INFO : LOG_LEVEL_ERREUR))
         else
             code = 400
             r = [false, "Action inconnue"]
         end
-        if (action != "camera")    vrFonctions.log("VR_PAGES: Ordre " + action + " du volet " + str(id) + " : " + str(r[0]) + " !", LOG_LEVEL_DEBUG)    end
+        if (action != "camera" && action != "lampe")    vrFonctions.log("VR_PAGES: Ordre " + action + " du volet " + str(id) + " : " + str(r[0]) + " !", LOG_LEVEL_DEBUG)    end
         var reponse = {"ok": r[0], "message": r[1], "etat": vrReglage.etatPage()}     # evaluee AVANT l'ouverture
         ouverte = true
         vrPages.envoie(code, reponse)

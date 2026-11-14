@@ -229,5 +229,18 @@ V.poseCamera(cam, 'OFF');
 verifie([cam.voyant.style.fill, cam.halo.style.display, cam.titre.textContent], ['#777', 'none', 'Caméra de façade : éteinte (clic pour allumer)'], 'camera OFF : voyant gris, sans halo');
 verifie(typeof cam.g.onclick, 'function', 'camera : clic branche');
 
+// Projecteur du garage (2026-11-14) : lanterne sous le toit cote pergola, voyant jaune, clic branche
+const GL = Object.assign({}, FACADES.garage, {decor: ['chevrefeuille', 'porte', 'pergola'], lampe: {nom: 'Projecteur de Garage', id: 5}});
+const [cl, sl] = dessin(GL);
+verifie(!!sl.lampe && tous(cl, n => 'data-lampe' in n.attrs).length === 1, true, 'lampe declaree (garage) : dessinee (data-lampe)');
+verifie(dessin(Object.assign({}, GL, {lampe: null}))[1].lampe, undefined, 'lampe absente du persist : pas de lampe');
+verifie(dessin(Object.assign({}, GL, {toit: 'deuxPans'}))[1].lampe, undefined, 'lampe sans toit unPan : pas de lampe');
+verifie([sl.lampe.globe.style.fill, sl.lampe.halo.style.display], ['#a9adb0', 'none'], 'lampe : etat inconnu au depart, gris');
+V.poseLampe(sl.lampe, 'ON');
+verifie([sl.lampe.globe.style.fill, sl.lampe.halo.style.display, sl.lampe.titre.textContent], ['#ffd54a', '', 'Projecteur de Garage : allumé (clic pour éteindre)'], 'lampe ON : globe jaune, halo, titre');
+V.poseLampe(sl.lampe, 'OFF');
+verifie([sl.lampe.globe.style.fill, sl.lampe.halo.style.display], ['#a9adb0', 'none'], 'lampe OFF : globe gris, sans halo');
+verifie(typeof sl.lampe.g.onclick, 'function', 'lampe : clic branche');
+
 console.log(echecs.length ? echecs.length + ' echec(s) sur ' + nb + ' verification(s)' : '0 echec(s) sur ' + nb + ' verifications');
 process.exit(echecs.length ? 1 : 0);

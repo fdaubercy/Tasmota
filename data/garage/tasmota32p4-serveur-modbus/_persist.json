@@ -288,7 +288,7 @@
 					},
 					"relai4": {
 						"activation": "ON",
-						"nom": "Relai 3",
+						"nom": "Caméra de garage",
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 4,
@@ -309,7 +309,7 @@
 					},
 					"relai5": {
 						"activation": "ON",
-						"nom": "Relai 4",
+						"nom": "Projecteur de Garage",
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 5,
@@ -1282,7 +1282,9 @@
 			"facade": {
 				"activation": "ON",
 				"toit": "unPan",
-				"decor": ["chevrefeuille", "porte", "pergola"]
+				"decor": ["chevrefeuille", "porte", "pergola"],
+				"camera": {"module": "garage", "id": 4},
+				"lampe": {"module": "garage", "id": 5}
 			},
 			"log": "info",
 			"environnement": {

@@ -697,6 +697,7 @@ Plan `tasks/plans/facade-garage-capteurs.md`. Toutes ces clés sont facultatives
 |---|---|---|
 | `facade.decor` | bloc du driver | Liste. Garage (toit `unPan`) : `chevrefeuille`, `porte`, `pergola`. Rez-de-chaussée : `maison` (toit, briques, porte d'entrée, boîte aux lettres... ; `toit` est alors ignoré). |
 | `facade.camera` | bloc du driver | `{"module": "<module>", "id": <id du relais>}` : caméra dessinée sur la maison, avec son voyant. Le relais doit être actif dans son module. |
+| `facade.lampe` | bloc du driver | `{"module": "<module>", "id": <id du relais>}` : projecteur (lanterne sous le toit, côté pergola) de la façade du garage (toit `unPan`), même mécanisme que la caméra (voyant jaune, clic puis `POST /volets` `action=lampe`). P4 du garage : relais 4 « Caméra de garage » et relais 5 « Projecteur de Garage » (`ModBus_Conn16channel1`). |
 | `facade.finsDeCourse` | bloc `facade` d'un VR de type `garage` | `{"module": "<module>", "ouverture": <id>, "fermeture": <id>}` : ids des deux interrupteurs dans `modules.<module>.environnement.interrupteurs`. |
 | `facade.place` | bloc `facade` de chaque VR | Avec `maison`, l'abscisse vient du type (fenêtre, trappe, porte) ; `place` ne fixe plus que l'ordre. |
 

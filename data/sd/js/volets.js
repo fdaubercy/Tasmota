@@ -16,6 +16,8 @@
 // numero, boite aux lettres, compteur, applique, marches ; fenetre, trappe et porte a leur place (POS) ; rapporteur de la trappe
 // (angle de la balise data-vi, « ?° » sans balise) ; 'camera' de la facade : voyant lu a /volets?f=capteurs (cle camera),
 // clic = confirmation puis POST /volets action=camera.
+// Projecteur du garage (2026-11-14) : 'lampe' de la facade (toit unPan), lanterne sous le toit cote pergola, voyant lu a /volets?f=capteurs (cle lampe),
+// clic = confirmation puis POST /volets action=lampe.
 (function () {
   var NS = 'http://www.w3.org/2000/svg';
   var ROUGE = '#e0453a';
@@ -261,8 +263,9 @@
   }
 
   // Camera de facade (a gauche, sous le toit) : boitier, objectif, voyant ; clic = confirmation puis POST /volets action=camera
-  function camera(svg, nom) {
+  function camera(svg, nom, dy) {
     var c = {g: el(svg, 'g', {'data-camera': '', style: 'cursor:pointer'}), nom: nom || 'Caméra de façade'};
+    if (dy) c.g.setAttribute('transform', 'translate(0,' + dy + ')');             // garage : remontee sous le toit en appentis
     el(c.g, 'rect', {x: 24, y: 74, width: 10, height: 8, rx: 2, fill: '#e8e8e8'});
     el(c.g, 'circle', {cx: 29, cy: 84, r: 3, fill: '#333'});
     c.halo = el(c.g, 'circle', {cx: 37, cy: 76, r: 5, fill: 'rgba(60,176,74,0.35)', style: 'display:none'});
@@ -287,6 +290,39 @@
     c.s = s;
     c.voyant.style.fill = etat == 'ON' ? VERT : '#777';
     c.halo.style.display = etat == 'ON' ? '' : 'none';
+    c.titre.textContent = c.nom + ' : ' + s + ' (clic pour ' + (etat == 'ON' ? 'éteindre' : 'allumer') + ')';
+  }
+
+  // Projecteur de facade (garage, sous le toit cote pergola, variante B validee le 2026-11-14) : lanterne suspendue par une tige ;
+  // (x, y) = axe et dessous du toit ; allumee : globe jaune et halo ; clic = confirmation puis POST /volets action=lampe
+  function lampe(svg, nom, x, y) {
+    var c = {g: el(svg, 'g', {'data-lampe': '', style: 'cursor:pointer', transform: 'translate(' + (x - 318) + ',' + (y - 57) + ')'}), nom: nom || 'Projecteur de façade'};
+    c.halo = el(c.g, 'circle', {cx: 318, cy: 75, r: 20, fill: 'rgba(255,213,74,0.30)', style: 'display:none'});
+    el(c.g, 'line', {x1: 318, y1: 57, x2: 318, y2: 64, stroke: '#555', 'stroke-width': 1.5});
+    el(c.g, 'path', {d: 'M311,64 h14 l-2,4 h-10 z', fill: '#3d3d3d'});
+    c.globe = el(c.g, 'rect', {x: 312, y: 68, width: 12, height: 13, rx: 2, fill: '#a9adb0', stroke: '#555', 'stroke-width': 1.2});
+    el(c.g, 'path', {d: 'M311,81 h14 l-2,3 h-10 z', fill: '#3d3d3d'});
+    c.filament = el(c.g, 'circle', {cx: 318, cy: 74.5, r: 2.2, fill: '#fff', style: 'display:none'});
+    c.titre = el(c.g, 'title', {});
+    c.g.onclick = function () {
+      if (c.s != 'allumé' && c.s != 'éteint') { window.alert(c.nom + ' : état inconnu, commande impossible pour le moment'); return; }
+      var allumer = c.s == 'éteint';
+      if (!window.confirm((allumer ? 'Allumer' : 'Éteindre') + ' : ' + c.nom + ' ?')) return;
+      fetch('/volets', {method: 'POST', body: new URLSearchParams({action: 'lampe', etat: allumer ? 'ON' : 'OFF'})})
+        .then(function (r) { return r.json(); }).then(function (j) { if (j && !j.ok && window.alert) window.alert(j.message); },
+          function () { window.alert(c.nom + ' : pas de réponse de la carte, commande non vérifiée'); });
+    };
+    poseLampe(c, null);
+    return c;
+  }
+
+  // Etat du projecteur : 'ON' (globe jaune et halo), 'OFF' (globe gris), autre = inconnu (gris) ; DOM touche au changement
+  function poseLampe(c, etat) {
+    var s = etat == 'ON' ? 'allumé' : (etat == 'OFF' ? 'éteint' : 'état inconnu');
+    if (c.s === s) return;
+    c.s = s;
+    c.globe.style.fill = etat == 'ON' ? '#ffd54a' : '#a9adb0';
+    c.halo.style.display = c.filament.style.display = etat == 'ON' ? '' : 'none';
     c.titre.textContent = c.nom + ' : ' + s + ' (clic pour ' + (etat == 'ON' ? 'éteindre' : 'allumer') + ')';
   }
 
@@ -409,7 +445,11 @@
       el(svg, 'line', {x1: 0, y1: 96, x2: W, y2: marches(W - 1) - 4, stroke: '#6b4429', 'stroke-width': 3});      // rampe
     }
     if (decor.indexOf('chevrefeuille') >= 0) chevrefeuille(svg, alea, 26, 56, 84, 196);
-    if (maisonD && facade.camera) svg.camera = camera(svg, facade.camera.nom);
+    if ((maisonD || toit == 'unPan') && facade.camera) svg.camera = camera(svg, facade.camera.nom, maisonD ? 0 : -24);
+    if (toit == 'unPan' && facade.lampe) {
+      var lx = xMur - 18;
+      svg.lampe = lampe(svg, facade.lampe.nom, lx, 45 + 16 * (lx - 20) / (W - 40));
+    }
     svg.volets = ouv.map(function (o) {
       if (maisonD && POS[o.type] != null) x = POS[o.type];
       var g = el(svg, 'g', {'data-id': o.id, 'data-ouverture': ''});
@@ -541,7 +581,7 @@
     var svg = dessine(vf, facade), avant = null;
     var periode = facade.rafraichissement > 0 ? facade.rafraichissement : 2345, lecture = {j: null};
     svg.volets.forEach(function (v) { if (v.o.source) interroge(v, periode); });
-    if (svg.camera || svg.volets.some(function (v) { return v.capteurs && !v.o.source; })) lisCapteurs(lecture, periode);
+    if (svg.camera || svg.lampe || svg.volets.some(function (v) { return v.capteurs && !v.o.source; })) lisCapteurs(lecture, periode);
     function image() {
       requestAnimationFrame(image);                       // en tete : une exception de lit ou pose n'arrete pas l'animation
       var t = performance.now(), dt = avant == null ? 0 : t - avant;
@@ -554,13 +594,14 @@
         }
       });
       if (svg.camera) poseCamera(svg.camera, lecture.j && lecture.j.camera);
+      if (svg.lampe) poseLampe(svg.lampe, lecture.j && lecture.j.lampe);
     }
     image();
     return svg;
   }
 
   window.Volets = {ouverture: ouverture, ouvertureAngle: ouvertureAngle, poursuit: poursuit, dessine: dessine, demarre: demarre,
-    coherence: coherence, poseCapteurs: poseCapteurs, clignote: clignote, etatsCapteurs: etatsCapteurs, poseAngle: poseAngle, poseCamera: poseCamera};
+    coherence: coherence, poseCapteurs: poseCapteurs, clignote: clignote, etatsCapteurs: etatsCapteurs, poseAngle: poseAngle, poseCamera: poseCamera, poseLampe: poseLampe};
   if (typeof document !== 'undefined' && window.VOLETS) {
     try { demarre(window.VOLETS); } catch (e) { if (window.console) console.error('volets.js : ' + e.message); }
   }
