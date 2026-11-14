@@ -39,3 +39,20 @@ def regenere(racine, env):
         return f"QR code de {env} : régénéré ({dossier}/{ecriture.FICHIER_CARTE}), étiquette à réimprimer"
     except Exception as e:                           # noqa: BLE001 - jamais d'arret du build pour une etiquette
         return f"⚠ QR code de {env} : non vérifié ({type(e).__name__} : {e})"
+
+
+def fiche(racine, env):
+    """A11 : ligne « fiche QR a republier » si la fiche en ligne de la carte ne correspond plus a son reglage (sans
+    reseau : derniere pointe connue de la branche etiquettes), None sinon. Rien n'est envoye ; une erreur = avertissement."""
+    try:
+        if not (Path(racine) / "outils_docs/etiquettes_qr/cartes" / f"{env}.json").is_file():
+            return None
+        if str(OUTILS_PC) not in sys.path:
+            sys.path.insert(0, str(OUTILS_PC))
+        import etiquettes_qr_publication as publication
+        if not publication.fiche_a_republier(Path(racine), env):
+            return None
+        return (f"Fiche QR de {env} : à republier (page 7970, « Publier les fiches… », "
+                "ou case « Publier les fiches QR » de la page Build)")
+    except Exception as e:                           # noqa: BLE001
+        return f"⚠ Fiche QR de {env} : non vérifiée ({type(e).__name__} : {e})"

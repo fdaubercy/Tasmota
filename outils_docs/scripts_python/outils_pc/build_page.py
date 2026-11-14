@@ -214,6 +214,8 @@ PAGE = r"""<!doctype html>
           <input type="checkbox" name="action" value="erase_upload"> Effacer puis téléverser</label>
         <label class="action"><input type="checkbox" name="action" value="buildfs"> Construire le file system</label>
         <label class="action"><input type="checkbox" name="action" value="uploadfs"> Téléverser le file system</label>
+        <label class="action" title="Étiquettes QR (page 7970) : après une série réussie, fiches des cartes en mode lien poussées sur GitHub Pages, sans diff">
+          <input type="checkbox" id="publier-fiches"> Publier les fiches QR à la fin (public)</label>
         <p class="discret" style="margin:6px 0 0">Ordre dans un env : compiler → téléverser le firmware (ou effacer puis
           téléverser) → construire le FS → téléverser le FS. Un échec arrête cet env ; les suivants continuent.</p>
         <p class="discret" style="margin:4px 0 0">Plusieurs cartes sur le même port COM : la série compile, puis s'arrête
@@ -639,8 +641,15 @@ $("lancer").onclick = async function () {
         (sansFs.length ? "\n\nSans file system dans le dépôt (la carte repartira sans persist) : " + sansFs.join(", ") : "") +
         "\n\nContinuer ?")) return;
   }
+  var publier = $("publier-fiches").checked;
+  if (publier && !confirm("Publier les fiches QR à la fin : si TOUTE la série réussit, les fiches de toutes les cartes en " +
+      "mode lien du dépôt (y compris hors de cette série, d'après leurs réglages et persist au dépôt ; liste dans la page " +
+      "7970) partent sur GitHub Pages, lisibles par tous, sans diff à relire.\n\nOK = publier ; Annuler = lancer sans publier.")) {
+    publier = false;
+    $("publier-fiches").checked = false;
+  }
   $("lancer").disabled = true;
-  var r = await appel("/lancer", {lignes: lignes, actions: acts});
+  var r = await appel("/lancer", {lignes: lignes, actions: acts, publier_fiches: publier});
   if (r.ok) enCours = true;
   if (!r.ok) {
     var ul = h("ul", {});
@@ -820,6 +829,8 @@ function traiteEvenement(e, rejeu) {
   } else if (e.type === "reprise_carte") {
     if (L && L.carte && L.carte.env === e.env) L.carte = null;
     planifie(e.env);
+  } else if (e.type === "publication") {         // case « Publier les fiches QR » : envoi en cours
+    $("recap").textContent = e.message || "";
   } else if (e.type === "fin") {
     if (!rejeu) mResumes();
     assureL();
@@ -1092,6 +1103,8 @@ function dessineRecap() {
   zone.appendChild(h("div", {"class": ko.length ? "erreur" : "", style: "font-size:13px", texte: t}));
   if (f.fichiers_modifies && f.fichiers_modifies.length)
     zone.appendChild(h("div", {"class": "fichiers", texte: "Fichiers réécrits par le build, à commiter : " + f.fichiers_modifies.join(", ")}));
+  if (f.publication)                                 // case « Publier les fiches QR » (etiquettes A11)
+    zone.appendChild(h("div", {"class": /non publiées/.test(f.publication) ? "erreur" : "fichiers", texte: f.publication}));
   var immediat = Object.keys(L.blocs).some(function (k) { return /^arrêt immédiat/.test(L.blocs[k].motif); });
   if (immediat)
     zone.appendChild(h("div", {"class": "avert", texte: "Arrêt immédiat : vérifier la carte (peut-être à moitié flashée) et les copies " +

@@ -771,11 +771,12 @@ if not is_safeboot and not hors_build:
     # (qrcode_build.py ; jamais d'arret du build, une ligne seulement s'il y a quelque chose a dire)
     try:
         import qrcode_build
-        ligne = qrcode_build.regenere(env.subst("$PROJECT_DIR"), env["PIOENV"])
+        lignes = [qrcode_build.regenere(env.subst("$PROJECT_DIR"), env["PIOENV"]),
+                  qrcode_build.fiche(env.subst("$PROJECT_DIR"), env["PIOENV"])]   # fiche en ligne a republier (A11)
     except Exception as e:                           # noqa: BLE001
-        ligne = f"⚠ QR code : contrôle indisponible ({e})"
-    if ligne:
-        print((Fore.YELLOW if ligne.startswith("⚠") else Fore.GREEN) + ligne + Style.RESET_ALL)
+        lignes = [f"⚠ QR code : contrôle indisponible ({e})"]
+    for ligne in filter(None, lignes):
+        print((Fore.YELLOW if ligne.startswith("⚠") or "à republier" in ligne else Fore.GREEN) + ligne + Style.RESET_ALL)
 
     if ("32p4" in Global.environnement) and (any("UPDATE_IDF55_PLATFORM" in f for f in env.get("BUILD_FLAGS", []))):
         print(Fore.CYAN + "⚠ Synchronisation IDF55 en cours... (ESP32-P4 détecté et flag 'UPDATE_IDF55_PLATFORM' présent)")

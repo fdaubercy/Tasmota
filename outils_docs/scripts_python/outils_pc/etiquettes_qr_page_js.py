@@ -14,7 +14,8 @@ const ETAT = {env: null, cartes: [], lieux: [], reglage: null, page: false, esp3
               suivi: {}, etatCarte: null};
 // A7 : badges du suivi (GET /suivi, local) et etat de la page de la carte ouverte (GET /etat, lit la carte)
 const SUIVI = [['a_reimprimer', 'à réimprimer', "Le texte du QR code a changé depuis l'impression de l'étiquette"],
-               ['a_regenerer', 'à régénérer', 'Le qrcode.json de la carte ne correspond plus au réglage : réécrire']];
+               ['a_regenerer', 'à régénérer', 'Le qrcode.json de la carte ne correspond plus au réglage : réécrire'],
+               ['a_republier_fiche', 'fiche à republier', 'La fiche en ligne ne correspond plus au réglage : « Publier les fiches… »']];
 const CARTE = {a_jour: ['ok', 'carte à jour'], a_mettre_a_jour: ['or', 'carte à mettre à jour'], inconnu: ['', 'carte injoignable']};
 const $ = id => document.getElementById(id);
 const LIBELLES = {hostname: 'Hostname', ip: 'IP', topic: 'Topic', env: 'Env', puce: 'Puce', lieu: 'Lieu',
@@ -94,7 +95,7 @@ async function chargeEtatCarte(env) {
   try { e = await api('/etat?env=' + encodeURIComponent(env)); } catch (x) { return; }
   if (ETAT.env !== env) return;                        // une autre carte a ete ouverte entre-temps
   ETAT.etatCarte = Object.assign({env: env}, e);
-  ETAT.suivi[env] = {a_reimprimer: e.a_reimprimer, a_regenerer: e.a_regenerer};
+  ETAT.suivi[env] = Object.assign(ETAT.suivi[env] || {}, {a_reimprimer: e.a_reimprimer, a_regenerer: e.a_regenerer});
   dessineListe();
   majPastilles();
 }
@@ -349,12 +350,12 @@ async function apercu() {
 }
 
 // ---------------------------------------------------------------- ecriture
-function montreDiff(prevu, titre, surConfirme, libelle) {
+function montreDiff(prevu, titre, surConfirme, libelle, rien) {
   const z = $('ecriture');
   z.replaceChildren();
   z.appendChild(el('h3', {}, titre));
   (prevu.signaux || []).forEach(m => avert(z, m));
-  if (!prevu.fichiers.length) { avert(z, 'Rien à écrire : le dépôt est déjà à jour.', 'vert'); return; }
+  if (!prevu.fichiers.length) { avert(z, rien || 'Rien à écrire : le dépôt est déjà à jour.', 'vert'); return; }
   prevu.fichiers.forEach(f => {
     z.appendChild(el('div', {class: 'petit'}, f.chemin + ' (+' + f.ajouts + ' −' + f.retraits + ')'));
     const pre = el('pre', {class: 'diff'});
@@ -384,6 +385,7 @@ async function relitApres(env, succes) {
   z.replaceChildren();
   avert(z, succes, 'vert');
   if (probleme) avert(z, 'Relecture impossible : ' + probleme + '. Recharger la page.');
+  return probleme;
 }
 
 async function prepareEcriture() {
@@ -392,7 +394,10 @@ async function prepareEcriture() {
     const prevu = await api('/diff', corps);
     montreDiff(prevu, 'Écriture pour ' + env, async empreinte => {
       const r = await api('/ecrire', Object.assign(corps, {empreinte: empreinte}));
-      await relitApres(env, r.ecrits.length + ' fichier(s) écrit(s) : ' + r.ecrits.join(', '));
+      const message = r.ecrits.length + ' fichier(s) écrit(s) : ' + r.ecrits.join(', ');
+      const probleme = await relitApres(env, message);
+      if (corps.reglage.contenu === 'lien')                // A11 : diff des fiches enchaine, message garde au-dessus
+        preparePublication(message + (probleme ? ' (relecture impossible : ' + probleme + ')' : '') + '. Fiche en ligne de ' + env + ' :');
     });
   } catch (e) {
     $('ecriture').replaceChildren();

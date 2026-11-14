@@ -25,6 +25,9 @@ Routes (les POST exigent l'en-tete X-Etiquettes-QR: 1 et la meme origine ; JSON)
     POST /publication/diff {} -> {fichiers (avec diffs), refus: [{env, raison}], publies, url, empreinte} : fiches des
                            cartes reglees en mode lien, d'apres les reglages ECRITS (A10 ; lit origin, ne pousse rien)
     POST /publier          {empreinte} -> {sha (None si rien ne change), publies, url} ; pousse la branche etiquettes
+    GET  /pages            {actif, url, branche} : GitHub Pages du depot, lu par gh (A11) ; actif None (+ erreur) si
+                           gh ne repond pas ou si le depot n'est pas sur GitHub
+    POST /pages/activer    {} -> {actif, url, branche} : active Pages sur la branche etiquettes (une fois)
 Refus : 400 (saisie), 403 (anti-CSRF), 404 (env inconnu), 409 (build, empreinte), 500 (inattendu, avec le message).
 """
 
@@ -144,9 +147,18 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 except (LookupError, ValueError, OSError):
                     continue                         # carte illisible : pas de badge, la liste reste utilisable
                 suivi[e.nom] = {k: s[k] for k in ("a_reimprimer", "a_regenerer")}
+                try:                                 # A11 : sans reseau (derniere pointe connue de la branche)
+                    suivi[e.nom]["a_republier_fiche"] = publication.fiche_a_republier(racine, e.nom, envs())
+                except (LookupError, ValueError, OSError, RuntimeError):
+                    pass
             return {"suivi": suivi}
         if chemin == "/etat":                        # une carte : lit sa page /qrcode (2 s au plus)
             return suivi_qr.etats(racine, env_ok(un("env")), envs=envs())
+        if chemin == "/pages":                       # chargee a l'ouverture : un etat inconnu, jamais une erreur HTTP
+            try:
+                return publication.etat_pages(racine)
+            except RuntimeError as e:
+                return {"actif": None, "url": None, "branche": None, "erreur": str(e)}
         if chemin == "/persist":
             return {"arbre": modele.arbre_persist(modele.persist_de(racine, env_ok(un("env"))))}
         if chemin == "/images":
@@ -206,6 +218,13 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
             with verrou_pub:
                 sha = publication.publie(racine, [e.nom for e in cartes()], demande["empreinte"], builds_en_cours, envs())
             return {"sha": sha, "url": modele.url_depot(racine)}
+        if chemin == "/pages/activer":
+            with verrou_pub:
+                publication.active_pages(racine)
+            try:
+                return publication.etat_pages(racine)
+            except RuntimeError:                     # activee, mais relecture lente : ne pas la dire refusee
+                return {"actif": True, "url": publication.modele.url_depot(racine), "branche": publication.BRANCHE}
         raise LookupError(chemin)
 
     class Gestionnaire(BaseHTTPRequestHandler):

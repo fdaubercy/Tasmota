@@ -1191,6 +1191,61 @@ def test_garde_build_importable():
             "garde_build : builds_en_cours importe sans lancer main()")
 
 
+def test_publication_fiches():
+    """Etiquettes QR A11 : case « Publier les fiches QR » ; publication apres une serie reussie seulement, son resultat
+    dans `fin`, jamais d'echec de la serie a cause d'elle."""
+    def montage(t, scenario=None, reponse="618123e55c71", classe=None):
+        m = Montage(t, scenario, classe=classe)
+        m.appels_pub = []
+
+        def faux(racine, builds_en_cours):
+            m.appels_pub.append(racine)
+            if isinstance(reponse, Exception):
+                raise reponse
+            return reponse
+        m.serie.publie_fiches = faux
+        return m
+
+    def fin(m, lignes, actions, publier):
+        m.serie.lance(lignes, set(actions), publier=publier)
+        return du_type(m.attend("fin"), "fin")[0]
+
+    with tempfile.TemporaryDirectory() as t:
+        m = montage(t)
+        f = fin(m, [com(A)], {"compiler"}, False)
+        verifie((m.appels_pub, "publication" in f), ([], False), "publication_fiches : case decochee, rien de publie")
+        m.serie.lance([com(A)], {"compiler"}, publier=True)
+        ev = m.attend("fin")
+        f = du_type(ev, "fin")[0]
+        verifie((len(m.appels_pub), "618123e55" in f.get("publication", ""), len(du_type(ev, "publication"))), (1, True, 1),
+                "publication_fiches : serie reussie, evenement « publication » avant l'envoi, sha dans fin")
+    with tempfile.TemporaryDirectory() as t:
+        m = montage(t, reponse=None)
+        verifie("à jour" in fin(m, [com(A)], {"compiler"}, True).get("publication", ""), True,
+                "publication_fiches : rien a publier, dit tel quel")
+    with tempfile.TemporaryDirectory() as t:
+        echec = {"upload": {"code": 1, "lignes": ["src/a.cpp:3:1: error: 'x' was not declared", "[FAILED] Took 0.20 seconds"]}}
+        m = montage(t, {A: echec})
+        f = fin(m, [com(A)], {"compiler", "upload"}, True)
+        verifie((m.appels_pub, f.get("publication", "").startswith("Fiches QR non publiées")), ([], True),
+                "publication_fiches : serie en echec, rien de publie, raison dans fin")
+    class SerieExplose(bs.Serie):                     # erreur inattendue au 2e env : garde-fou, echecs reste vide
+        def _execute_env(self, ligne, actions, precedent=None):
+            if ligne.env == B:
+                raise ValueError("panne simulee")
+            return super()._execute_env(ligne, actions, precedent)
+    with tempfile.TemporaryDirectory() as t:
+        m = montage(t, classe=SerieExplose)
+        f = fin(m, [com(A, "COM1"), com(B, "COM2")], {"compiler"}, True)
+        verifie((f["succes"], m.appels_pub, f.get("publication", "").startswith("Fiches QR non publiées")), ([A], [], True),
+                "publication_fiches : erreur inattendue apres un env reussi, rien de publie (pas tous les envs reussis)")
+    with tempfile.TemporaryDirectory() as t:
+        m = montage(t, reponse=RuntimeError("publication refusée : Ligne 1"))
+        f = fin(m, [com(A)], {"compiler"}, True)
+        verifie((f["succes"], f.get("publication", "").startswith("Fiches QR non publiées"), "Ligne 1" in f.get("publication", "")),
+                ([A], True, True), "publication_fiches : refus rendu dans fin, la serie reste reussie")
+
+
 def principal():
     garde_fou()
     for test in (test_commandes, test_serie_upload_ota_par_page, test_ota_par_maitre, test_ordre_actions, test_serie_un_par_un,
@@ -1205,7 +1260,8 @@ def principal():
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
                  test_solidification_vide, test_fs_par_firmware, test_pause_fs_par_firmware, test_data_dir_avant_pio,
-                 test_uploadfs_ota_identite, test_fichiers_ota, test_fichiers_mqtt, test_pourcent_global_envoi):
+                 test_uploadfs_ota_identite, test_fichiers_ota, test_fichiers_mqtt, test_pourcent_global_envoi,
+                 test_publication_fiches):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

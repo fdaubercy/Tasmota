@@ -237,15 +237,24 @@ def sonde_publication(cdp, url, banc, nu_dossier):
     s.verifie(s.attend(cdp, "[...document.querySelectorAll('#ecriture button')].some(b => b.textContent.indexOf('Confirmer') === 0)", 60),
               True, "contenu « lien » : diff affiche")
     cdp.js("[...document.querySelectorAll('#ecriture button')].find(b => b.textContent.indexOf('Confirmer') === 0).click()")
-    s.attend(cdp, "document.querySelectorAll('#ecriture .avert.vert, #ecriture .avert.rouge').length > 0", 60)
-    cdp.js("document.getElementById('btn-publier').click()")
-    pret = s.attend(cdp, "[...document.querySelectorAll('#ecriture button')].some(b => b.textContent === 'Publier')", 60)
+    # A11 : l'ecriture d'une carte en lien enchaine d'elle-meme sur le diff des fiches (un clic « Publier » reste a faire)
+    pret = s.attend(cdp, "[...document.querySelectorAll('#ecriture button')].some(b => b.textContent === 'Publier')", 90)
     texte = cdp.js("document.getElementById('ecriture').textContent")
-    s.verifie((pret, "PUBLIQUES" in texte, CUVE + ".html" in texte), (True, True, True), "Publier… : diff des fiches, avertissement public")
+    if "écrit(s)" not in texte:
+        print("     zone #ecriture :", texte[:400], flush=True)
+    s.verifie((pret, "écrit(s)" in texte, "PUBLIQUES" in texte, CUVE + ".html" in texte), (True, True, True, True),
+              "Ecrire en mode lien : diff des fiches enchaine, ecriture confirmee au-dessus, avertissement public")
+    s.verifie(s.attend(cdp, "document.getElementById('liste-cartes').textContent.indexOf('fiche à republier') >= 0", 30), True,
+              "badge « fiche à republier » sur la cuve avant publication (A11)")
     cdp.js("[...document.querySelectorAll('#ecriture button')].find(b => b.textContent === 'Publier').click()")
-    s.attend(cdp, "document.querySelectorAll('#ecriture .avert.vert, #ecriture .avert.rouge').length > 0", 60)
+    # le message vert de l'ecriture est deja la : attendre le resultat de l'envoi lui-meme
+    s.attend(cdp, "/Fiches publiées|Refusé/.test(document.getElementById('ecriture').textContent)", 120)
+    s.verifie(s.attend(cdp, "!document.getElementById('btn-pages').classList.contains('cache')", 30), True,
+              "Pages inactif (faux gh) : bouton « Activer GitHub Pages » affiche (A11)")
     s.verifie((cdp.js("document.getElementById('ecriture').textContent").startswith("Fiches publiées"), tpub.arbre(nu)),
               (True, [".nojekyll", CUVE + ".html"]), "Publier : fiche poussee sur la branche etiquettes de l'origin nu")
+    s.verifie(s.attend(cdp, "document.getElementById('liste-cartes').textContent.indexOf('fiche à republier') < 0", 60), True,
+              "apres publication : badge « fiche à republier » retire")
     s.verifie(cdp.erreurs(), [], "publication : aucune erreur JS")
 
 

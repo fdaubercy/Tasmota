@@ -141,12 +141,16 @@ def prevoit_publication(racine, envs, cartes=None):
             "url": modele.url_depot(racine), "empreinte": empreinte}
 
 
-def publie(racine, envs, empreinte, builds_en_cours, cartes=None):
-    """Pousse les fiches sur `etiquettes` ; sha du commit, ou None si rien ne change. RuntimeError : build en cours,
-    ligne refusee, empreinte perimee, push refuse (la branche a bouge ailleurs)."""
-    if builds_en_cours():
+def publie(racine, envs, empreinte, builds_en_cours, cartes=None, prevu=None):
+    """Pousse les fiches sur `etiquettes` ; sha du commit, ou None si rien ne change. RuntimeError : build en cours (ou
+    detection impossible), ligne refusee, empreinte perimee, push refuse (la branche a bouge ailleurs). `prevu` : une
+    prevision deja faite (publie_tout), sans second fetch."""
+    builds = builds_en_cours()
+    if builds is None:
+        raise RuntimeError("détection des builds en cours impossible : publication refusée, réessayer")
+    if builds:
         raise RuntimeError("un build est en cours : publication refusée")
-    p = prevoit_publication(racine, envs, cartes)
+    p = prevu or prevoit_publication(racine, envs, cartes)
     if p["refus"]:
         raise RuntimeError("publication refusée : " + " ; ".join(f"{r['env']} : {r['raison']}" for r in p["refus"]))
     if p["empreinte"] != empreinte:
@@ -164,3 +168,70 @@ def publie(racine, envs, empreinte, builds_en_cours, cartes=None):
     except RuntimeError:
         pass                                     # fiches en ligne : la ref locale sera relue au prochain fetch
     return sha
+
+
+# --- A11 : publication automatisee (page 7970, page Build, sortie du build) -------------------------------------------
+
+def fiche_a_republier(racine, env, cartes=None):
+    """Vrai si la fiche en ligne de `env` ne correspond plus a son reglage, SANS reseau : compare a la derniere pointe
+    connue (`refs/remotes/origin/etiquettes`, mise a jour par chaque publication), date ignoree. Carte en texte : vrai
+    seulement si une fiche est encore en ligne (a retirer)."""
+    try:
+        publiee = _git(racine, "cat-file", "blob", f"{REF_DISTANTE}:{modele._env_valide(env)}.html", brut=True)
+    except RuntimeError:
+        publiee = None                           # pas de branche connue, ou pas de fiche pour cette carte
+    reglage = modele.charge_reglage(racine, env)
+    if reglage.get("contenu") != "lien":
+        return publiee is not None
+    return publiee is None or DATE.sub("", publiee) != DATE.sub("", fiche_html(racine, env, reglage, cartes))
+
+
+def publie_tout(racine, builds_en_cours):
+    """Publie les fiches de toutes les cartes du depot (page Build, fin de serie) : sha, ou None si rien ne change.
+    RuntimeError : ligne refusee, build en cours, reseau. Pas de diff montre : l'utilisateur l'a choisi par sa case."""
+    import build_envs
+    cartes = build_envs.liste_envs(racine)
+    envs = [e.nom for e in cartes if e.famille == "cartes"]
+    p = prevoit_publication(racine, envs, cartes)
+    return publie(racine, envs, p["empreinte"], builds_en_cours, cartes, prevu=p)
+
+
+GH = ["gh"]                                      # remplace par un faux gh dans le banc
+
+
+def _gh(racine, *args):
+    """(code, sortie, erreur) d'un appel a gh pour le depot GitHub de `racine` ; jamais d'invite."""
+    base = modele.url_depot(racine)
+    if not base:
+        raise RuntimeError("le remote origin du dépôt n'est pas sur GitHub")
+    m = re.match(r"https://([^.]+)\.github\.io/([^/]+)/", base)
+    if not m:
+        raise RuntimeError(f"adresse GitHub Pages inattendue : {base}")
+    proprio, depot = m.groups()
+    args = [a.replace("{depot}", f"repos/{proprio}/{depot}") for a in args]
+    try:
+        r = subprocess.run([*GH, *args], capture_output=True, stdin=subprocess.DEVNULL, timeout=60,
+                           env={**os.environ, "GH_PROMPT_DISABLED": "1", "NO_COLOR": "1"})
+    except FileNotFoundError:
+        raise RuntimeError("gh (GitHub CLI) introuvable : activer Pages à la main sur github.com") from None
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("gh : pas de réponse en 60 s") from None
+    return r.returncode, r.stdout.decode("utf-8", "replace"), r.stderr.decode("utf-8", "replace").strip()
+
+
+def etat_pages(racine):
+    """{"actif": bool, "url", "branche"} de GitHub Pages du depot ; RuntimeError si gh ne repond pas (non connecte...)."""
+    code, sortie, erreur = _gh(racine, "api", "{depot}/pages")
+    if code == 0:
+        d = json.loads(sortie or "{}")
+        return {"actif": True, "url": d.get("html_url"), "branche": (d.get("source") or {}).get("branch")}
+    if "HTTP 404" in erreur:
+        return {"actif": False, "url": None, "branche": None}
+    raise RuntimeError(f"gh : {erreur or code}")
+
+
+def active_pages(racine):
+    """Active GitHub Pages sur la branche `etiquettes`, dossier racine (une fois). RuntimeError avec le message de gh."""
+    code, _, erreur = _gh(racine, "api", "-X", "POST", "{depot}/pages", "-f", f"source[branch]={BRANCHE}", "-f", "source[path]=/")
+    if code:
+        raise RuntimeError(f"activation de GitHub Pages refusée : {erreur or code}")

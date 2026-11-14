@@ -152,7 +152,8 @@ HTML = """<main>
     <div class="ligne" style="margin-top:10px"><button class="btn prim" type="button" id="btn-ecrire">Écrire dans le dépôt…</button>
       <button class="btn" type="button" id="btn-imprimer" disabled>Imprimer</button><button class="btn" type="button" id="btn-png" disabled>PNG</button>
       <button class="btn" type="button" id="btn-svg" disabled>SVG</button>
-      <button class="btn" type="button" id="btn-publier" title="Fiches des cartes en mode lien, branche etiquettes (GitHub Pages)">Publier les fiches…</button></div>
+      <button class="btn" type="button" id="btn-publier" title="Fiches des cartes en mode lien, branche etiquettes (GitHub Pages)">Publier les fiches…</button>
+      <button class="btn cache" type="button" id="btn-pages" title="GitHub Pages n'est pas activé sur le dépôt">Activer GitHub Pages…</button></div>
     <div class="ligne petit"><label><input type="checkbox" id="petit-nom"> petit nom sous le code</label>
       <button class="btn mini" type="button" id="btn-essai" disabled title="Carte affichée à 15, 20, 25 et 30 mm, texte court et long">Planche d'essai</button></div>
     <p class="doux petit">Dans la fenêtre d'impression : échelle 100 % (« Taille réelle »), marges par défaut ; la règle de

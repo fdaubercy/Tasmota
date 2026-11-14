@@ -190,6 +190,8 @@ class Serie:
         self._pause = None                               # pause « rebranchez la carte » : {env, port, precedent, choix}
         self._fs_par_firmware = set()                    # envs dont l'envoi serie du firmware ecrit aussi le FS (controle)
         self._choix = {}                                 # action « fichiers » : liste, recharger_berry, redemarrer
+        self._publier = False                            # case « Publier les fiches QR » (etiquettes A11)
+        self.publie_fiches = _publie_fiches              # remplace par un faux dans le banc
 
     # -- evenements -------------------------------------------------------------------------------------
 
@@ -335,7 +337,7 @@ class Serie:
 
     # -- lancement et arret -----------------------------------------------------------------------------
 
-    def lance(self, lignes, actions, fichiers=None):
+    def lance(self, lignes, actions, fichiers=None, publier=False):
         lignes, actions = list(lignes), set(actions)
         motifs = self.controle(lignes, actions, fichiers)
         with self.verrou:
@@ -344,6 +346,7 @@ class Serie:
             if motifs:
                 raise RuntimeError(" ; ".join(motifs))
             self._actif, self._arret, self._arret_immediat = True, False, False
+            self._publier = bool(publier)
             self._choix = {"fichiers": list(fichiers["liste"]), "recharger_berry": bool(fichiers.get("recharger_berry")),
                            "redemarrer": bool(fichiers.get("redemarrer")), "transport": fichiers.get("transport", "http"),
                            "effacer": bool(fichiers.get("effacer"))} if fichiers else {}
@@ -396,12 +399,28 @@ class Serie:
             champs = {"fichiers_modifies": FICHIERS_MODIFIES,
                       "message": "Fichiers réécrits par le build, à commiter : " + ", ".join(FICHIERS_MODIFIES)
                       } if pio_lance else {"fichiers_modifies": []}
+            if self._publier:                            # etiquettes A11 : jamais un echec de la serie a cause d'elle
+                # tous les envs reussis, rien de passe, d'arrete ni de non lance, aucune erreur inattendue
+                champs["publication"] = self._publication(arrete or len(succes) != len(lignes))
             # `fin` puis liberation sous le meme verrou (RLock de la Condition) : personne ne voit une serie
             # libre sans son `fin`, et un nouveau lancement ne peut pas s'intercaler avant lui.
             with self.verrou:
                 self._ajoute("fin", None, resultat="arrete" if arrete else "termine", succes=succes,
                              echecs=echecs, passes=passes, arretes=arretes, non_lances=non_lances, **champs)
                 self._actif, self._proc, self._pause = False, None, None
+
+    def _publication(self, serie_ratee):
+        """Texte du resultat de la case « Publier les fiches QR » (publication des fiches en mode lien)."""
+        if serie_ratee:
+            return "Fiches QR non publiées : la série n'a pas réussi en entier."
+        self._ajoute("publication", None, message="Publication des fiches QR (GitHub Pages)…")
+        if self._arrete_demande():
+            return "Fiches QR non publiées : arrêt demandé."
+        try:
+            sha = self.publie_fiches(self.racine, self.builds_en_cours)
+        except Exception as erreur:                  # noqa: BLE001 - refus, reseau : dit dans le recapitulatif
+            return f"Fiches QR non publiées : {erreur}"
+        return f"Fiches QR publiées ({sha[:9]})." if sha else "Fiches QR en ligne déjà à jour."
 
     def _attend_builds(self, env):
         """Attend qu'aucun build externe ne tourne ; False si l'arret est demande pendant l'attente.
@@ -793,6 +812,11 @@ class Serie:
         provisoire = self.dossier / "references.json.tmp"
         provisoire.write_text(json.dumps(references, indent=1, sort_keys=True), encoding="utf-8")
         os.replace(provisoire, self.dossier / "references.json")
+
+
+def _publie_fiches(racine, builds_en_cours):
+    import etiquettes_qr_publication                 # a la demande : la page Build s'en passe sans la case
+    return etiquettes_qr_publication.publie_tout(racine, builds_en_cours)   # None (detection impossible) = refus
 
 
 def _total_estime(env, references):

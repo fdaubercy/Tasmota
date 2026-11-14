@@ -64,6 +64,17 @@ def principal():
         qr.unlink()                                      # reglage present mais carte sans page : rien n'est cree
         persist.write_text(json.dumps({"serveur": {"hostname": "X"}}), encoding="utf-8")
         verifie((qrcode_build.regenere(racine, CUVE), qr.exists()), (None, False), "carte sans qrcode.json (pas de page) : rien de cree")
+
+        # A11 : fiche en ligne a republier, signalee dans la sortie de pio (sans reseau, rien n'est envoye)
+        verifie(qrcode_build.fiche(racine, tqe.PORTE), None, "fiche : env sans reglage d'etiquette, rien")
+        verifie(qrcode_build.fiche(racine, CUVE), None, "fiche : carte en texte sans fiche en ligne, rien")
+        surcharge = modele.chemin_surcharge(racine, CUVE)
+        surcharge.write_text(json.dumps({**json.loads(surcharge.read_text(encoding="utf-8")), "contenu": "lien"}), encoding="utf-8")
+        message = qrcode_build.fiche(racine, CUVE)
+        verifie(("à republier" in (message or ""), "7970" in (message or "")), (True, True),
+                "fiche : carte en lien sans fiche en ligne, ligne « à republier » qui renvoie a la page 7970")
+        surcharge.write_text("{ casse", encoding="utf-8")
+        verifie((qrcode_build.fiche(racine, CUVE) or "").startswith("⚠"), True, "fiche : reglage illisible, avertissement sans exception")
     print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")
     return 0 if not ECHECS else 1
 

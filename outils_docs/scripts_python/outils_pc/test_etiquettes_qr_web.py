@@ -32,6 +32,8 @@ class Banc:
         (self.racine / lib).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(tqe.DEPOT / lib, self.racine / lib)
         self.builds = []
+        # jamais le vrai gh (reseau) : un faux qui repond « Pages inactif » (404)
+        eqw.publication.GH = [sys.executable, "-c", "import sys; sys.stderr.write('gh: Not Found (HTTP 404)'); sys.exit(1)"]
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             self.port = s.getsockname()[1]
@@ -191,7 +193,7 @@ def test_gabarit_impression(b):
 def test_suivi(b):
     """A7 : badges de la liste (GET /suivi, local) et etat d'une carte (GET /etat, interroge la carte)."""
     statut, s = b.requete("GET", "/suivi")
-    verifie((statut, s["suivi"].get(CUVE)), (200, {"a_reimprimer": False, "a_regenerer": False}),
+    verifie((statut, s["suivi"].get(CUVE)), (200, {"a_reimprimer": False, "a_regenerer": False, "a_republier_fiche": False}),
             "GET /suivi : cuve imprimee avec le reglage actuel, rien a refaire")
     verifie(TV in s["suivi"], True, "GET /suivi : carte sans Berry suivie aussi (etiquette papier)")
     g = dict(gabarit(b), separateur=" - ")
@@ -220,6 +222,13 @@ def test_publication(b, dossier):
     statut, p = b.requete("POST", "/publication/diff", {})
     verifie((statut, p["publies"], p["refus"], p["url"]), (200, [CUVE], [], "https://proprio.github.io/Depot/"),
             "POST /publication/diff : cuve ecrite en lien, sa fiche prevue")
+    verifie(b.requete("GET", "/suivi")[1]["suivi"][CUVE].get("a_republier_fiche"), True, "GET /suivi : fiche a republier (A11)")
+    verifie(b.requete("GET", "/pages"), (200, {"actif": False, "url": None, "branche": None}), "GET /pages : Pages inactif (faux gh)")
+    tqe_gh, eqw.publication.GH = eqw.publication.GH, [sys.executable, "-c", "import sys; sys.stderr.write('HTTP 401'); sys.exit(1)"]
+    statut, pg = b.requete("GET", "/pages")
+    eqw.publication.GH = tqe_gh
+    verifie((statut, pg["actif"], "401" in pg.get("erreur", "")), (200, None, True), "GET /pages : gh en erreur, etat inconnu (pas de 409)")
+    verifie(b.requete("POST", "/pages/activer", {})[0], 409, "POST /pages/activer : refus de gh rendu en 409")
     verifie(b.requete("POST", "/publier", {})[0], 400, "POST /publier sans empreinte : 400")
     b.builds = ["pio"]
     verifie(b.requete("POST", "/publier", {"empreinte": p["empreinte"]})[0], 409, "POST /publier pendant un build : 409")
@@ -227,6 +236,7 @@ def test_publication(b, dossier):
     statut, r = b.requete("POST", "/publier", {"empreinte": p["empreinte"]})
     verifie((statut, r["sha"], tpub.arbre(nu)), (200, tpub.git(nu, "rev-parse", "refs/heads/etiquettes"), [".nojekyll", f"{CUVE}.html"]),
             "POST /publier : fiche poussee sur la branche etiquettes")
+    verifie(b.requete("GET", "/suivi")[1]["suivi"][CUVE].get("a_republier_fiche"), False, "GET /suivi apres publication : a jour")
 
 
 def main():

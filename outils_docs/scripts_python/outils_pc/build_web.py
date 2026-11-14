@@ -238,7 +238,7 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 raise ValueError("fichiers attendu sous forme d'objet")
             ancien, etat["debut"] = etat["debut"], time.time()
             try:
-                serie.lance(objets, actions, fichiers)    # RuntimeError (409) : motifs de controle
+                serie.lance(objets, actions, fichiers, publier=demande.get("publier_fiches") is True)   # 409 : motifs
             except RuntimeError:
                 etat["debut"] = ancien                    # un refus ne change pas le lancement en cours
                 raise

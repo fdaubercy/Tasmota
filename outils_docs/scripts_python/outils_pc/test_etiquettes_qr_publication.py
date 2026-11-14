@@ -7,6 +7,7 @@ https://github.com/Proprio/Depot.git, reecrite vers le depot nu par `url.<nu>.in
 """
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -23,6 +24,7 @@ GITHUB = "https://github.com/Proprio/Depot.git"
 URL = f"https://proprio.github.io/Depot/{CUVE}.html"
 verifie, refuse, ECHECS = banc_ecr.verifie, banc_ecr.refuse, banc_ecr.ECHECS
 SANS_BUILD = lambda: []
+GITHUB_RACINE = None                                  # depot de test dont l'origin se lit https://github.com/Proprio/Depot.git
 
 
 def git(depot, *args):
@@ -101,6 +103,8 @@ def test_publication(racine, nu):
 
     refuse(lambda: pub.publie(racine, [CUVE], p["empreinte"], lambda: ["pio"]), RuntimeError, "build en cours : refus", "build")
     refuse(lambda: pub.publie(racine, [CUVE], "perimee", SANS_BUILD), RuntimeError, "empreinte perimee : refus", "changé")
+    refuse(lambda: pub.publie(racine, [CUVE], p["empreinte"], lambda: None), RuntimeError,
+           "detection des builds impossible : refus (comme la serie, qui attend)", "détection")
     avant = temoin(racine, nu)
     sha = pub.publie(racine, [CUVE], p["empreinte"], SANS_BUILD)
     verifie(git(nu, "rev-parse", "refs/heads/etiquettes"), sha, "branche etiquettes poussee sur origin")
@@ -168,13 +172,81 @@ def test_publication(racine, nu):
     refuse(lambda: pub.prevoit_publication(racine, [CUVE]), RuntimeError, "origin injoignable : erreur de lecture", "impossible")
 
 
+FAUX_GH = r'''import json, os, sys
+open(os.environ["FAUX_GH_TRACE"], "a", encoding="utf-8").write(json.dumps(sys.argv[1:]) + "\n")
+sys.stdout.write(os.environ.get("FAUX_GH_SORTIE", ""))
+sys.stderr.write(os.environ.get("FAUX_GH_ERREUR", ""))
+sys.exit(int(os.environ.get("FAUX_GH_CODE", "0")))
+'''
+
+
+def test_suivi_et_tout(racine, nu):
+    """A11 : fiche a republier (sans reseau), publication de toutes les fiches (page Build)."""
+    verifie(pub.fiche_a_republier(racine, CUVE), False, "carte en texte, rien en ligne : rien a republier")
+    regle(racine, {"contenu": "lien", "lignes": [{"source": "libre", "texte": "Garage"}]})
+    verifie(pub.fiche_a_republier(racine, CUVE), True, "carte en lien sans fiche en ligne : a republier")
+    sha = pub.publie_tout(racine, SANS_BUILD)
+    verifie((bool(sha), pub.fiche_a_republier(racine, CUVE)), (True, False), "publie_tout : fiche en ligne, plus rien a republier")
+    verifie(pub.publie_tout(racine, SANS_BUILD), None, "publie_tout sans changement : aucun commit")
+    vrai = pub.fiche_html
+    pub.fiche_html = lambda *a, **k: vrai(*a, **{**k, "date": "2099-01-01"})
+    try:
+        verifie(pub.fiche_a_republier(racine, CUVE), False, "autre jour, meme contenu : rien a republier")
+    finally:
+        pub.fiche_html = vrai
+    regle(racine, {"contenu": "lien", "lignes": [{"source": "libre", "texte": "Garage nord"}]})
+    verifie(pub.fiche_a_republier(racine, CUVE), True, "contenu change : a republier")
+    regle(racine, {"contenu": "lien", "lignes": [{"source": "libre", "texte": "http://x/?token=abc"}]})
+    refuse(lambda: pub.publie_tout(racine, SANS_BUILD), RuntimeError, "publie_tout : ligne refusee, rien d'envoye", "refusée")
+    verifie(git(nu, "rev-parse", "refs/heads/etiquettes"), sha, "publie_tout refuse : branche inchangee")
+    regle(racine, {"contenu": "texte"})
+    verifie(pub.fiche_a_republier(racine, CUVE), True, "carte repassee en texte, fiche encore en ligne : a republier (retrait)")
+
+
+def test_pages(dossier):
+    """A11 : etat et activation de GitHub Pages par gh (faux gh : arguments notes, reponse imposee)."""
+    script = Path(dossier) / "faux_gh.py"
+    script.write_text(FAUX_GH, encoding="utf-8")
+    trace = Path(dossier) / "trace_gh.txt"
+    vrai_gh, env = pub.GH, dict(os.environ)
+    pub.GH = [sys.executable, str(script)]
+    os.environ["FAUX_GH_TRACE"] = str(trace)
+    try:
+        os.environ.update(FAUX_GH_SORTIE=json.dumps({"html_url": "https://proprio.github.io/Depot/", "source": {"branch": "etiquettes"}}),
+                          FAUX_GH_CODE="0")
+        verifie(pub.etat_pages(GITHUB_RACINE), {"actif": True, "url": "https://proprio.github.io/Depot/", "branche": "etiquettes"},
+                "etat_pages : Pages actif, adresse et branche")
+        os.environ.update(FAUX_GH_SORTIE='{"message":"Not Found"}', FAUX_GH_ERREUR="gh: Not Found (HTTP 404)", FAUX_GH_CODE="1")
+        verifie(pub.etat_pages(GITHUB_RACINE)["actif"], False, "etat_pages : 404 = Pages inactif")
+        os.environ.update(FAUX_GH_SORTIE="", FAUX_GH_ERREUR="gh: Bad credentials (HTTP 401)", FAUX_GH_CODE="1")
+        refuse(lambda: pub.etat_pages(GITHUB_RACINE), RuntimeError, "etat_pages : autre erreur de gh rendue", "401")
+        os.environ.update(FAUX_GH_SORTIE="{}", FAUX_GH_ERREUR="", FAUX_GH_CODE="0")
+        pub.active_pages(GITHUB_RACINE)
+        dernier = json.loads(trace.read_text(encoding="utf-8").splitlines()[-1])
+        verifie(dernier, ["api", "-X", "POST", "repos/proprio/Depot/pages", "-f", "source[branch]=etiquettes", "-f", "source[path]=/"],
+                "active_pages : POST repos/<proprietaire>/<depot>/pages, branche etiquettes, racine")
+    finally:
+        pub.GH = vrai_gh
+        os.environ.clear()
+        os.environ.update(env)
+
+
 def principal():
+    global GITHUB_RACINE
     with tempfile.TemporaryDirectory(prefix="etiquettes_qr_pub_") as d:
         racine, nu = prepare(d)
+        GITHUB_RACINE = racine
         print("--- test_adresse")
         test_adresse(racine)
         print("--- test_publication")
         test_publication(racine, nu)
+    with tempfile.TemporaryDirectory(prefix="etiquettes_qr_pub_") as d:
+        racine, nu = prepare(d)
+        GITHUB_RACINE = racine
+        print("--- test_suivi_et_tout")
+        test_suivi_et_tout(racine, nu)
+        print("--- test_pages")
+        test_pages(d)
     print("BANC_ETIQUETTES_QR_PUBLICATION:", f"ECHEC {len(ECHECS)} : " + " ; ".join(ECHECS) if ECHECS else "OK")
     return 1 if ECHECS else 0
 

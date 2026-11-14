@@ -2289,9 +2289,21 @@ publication. Faux positifs connus : un numéro de version à quatre nombres (15.
 forcer. Seuls les réglages ÉCRITS comptent. Toutes les cartes en mode lien sont publiées ; une carte repassée en texte voit
 sa fiche retirée. L'arbre de travail, l'index et `development` ne sont jamais touchés (plomberie git). Refus pendant un
 build, si la branche a bougé ailleurs depuis le diff, ou sans réponse de GitHub en 120 s. Une fiche dont seul le jour
-change n'est pas renvoyée. Mise en service, une fois : sur GitHub, Settings > Pages, source « Deploy from a branch »,
-branche `etiquettes`, dossier `/ (root)`. Jusqu'à la première publication, le QR code d'une carte en mode lien mène à
-une page introuvable.
+change n'est pas renvoyée. Mise en service, une fois : bouton « Activer GitHub Pages… » de la page (affiché tant que
+Pages est inactif ; il passe par `gh`, connecté au compte), ou sur GitHub, Settings > Pages, source « Deploy from a
+branch », branche `etiquettes`, dossier `/ (root)`. Jusqu'à la première publication, le QR code d'une carte en mode
+lien mène à une page introuvable.
+
+Trois aides à ne pas oublier de republier :
+- après « Écrire » d'une carte en mode lien, la page enchaîne sur le diff des fiches : un clic « Publier » suffit ;
+- le badge « fiche à republier » de la liste compare chaque fiche à la dernière version connue de la branche, sans
+  réseau ;
+- chaque `pio run` d'une carte en mode lien dont la fiche a changé écrit « Fiche QR de … : à republier » dans sa sortie
+  (`build/qrcode_build.py::fiche`, rien n'est envoyé).
+
+Enfin, la case « Publier les fiches QR à la fin (public) » de la page Build publie toutes les fiches après une série
+réussie, sans diff (confirmation au lancement) ; le résultat, ou la raison d'un refus, s'affiche dans le récapitulatif
+de la série, qui reste réussie même si la publication échoue.
 
 ### Bancs
 
