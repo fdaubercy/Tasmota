@@ -4,7 +4,7 @@ titre: Étiquettes QR code des cartes (page 7970) : impression, page de la carte
 objectif: Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé
 statut: actif
 cree: 2026-11-12
-maj: 2026-11-13
+maj: 2026-11-14
 ---
 # Étiquettes QR code des cartes
 

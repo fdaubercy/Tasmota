@@ -1003,6 +1003,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     LECTURE SEULE (outils de lecture, hooks coupes, jamais bypassPermissions ; depuis ce PC seulement) ; import d'une police `.ttf`
     (licence confirmee, Latin-1 complet, licence dans `outils_docs/atelier_ecrans/polices/`) ; images `.png/.jpg/.bmp` rangees sous
     `/sd/images/PNG|JPG|BMP/` par `gestionFileFolder.be::listeEtRepartitLesFichiers`. Capture `lv.screenshot()` pas encore essayee sur carte.
+    Dossiers `outils_docs/atelier_ecrans/display/`, `polices/` et `images/<env>/` : CREES A L'USAGE (premiere bibliotheque `.ini`, premiere police, premier PNG), absents d'un depot neuf, c'est normal.
     Onglet « display.ini » (A12, 2026-11-13) : `_display.py` (analyse comme `uDisplay.cpp::uDisplay::uDisplay`, insertion par rang ;
     reference `outils_docs/schemas/display_ini_parametres.json`, banc de concordance rouge si une synchro ajoute une section),
     `_display_fichiers.py` (cartes et `tasmota/displaydesc` en lecture ; bibliotheque `outils_docs/atelier_ecrans/display/<nom>.ini`

@@ -143,7 +143,7 @@ une `liaison` est active si `t - horodatage < seuil_s * 1000` (ModBus, UDP), si 
   tas lu avant et après (`Status 0` ou journal `BRY: GC`) ; résultats notés ici
 - [ ] Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
   partout, `banc_demarrage.py` vert
-- [ ] Commit `feat(visuel): moteur visuel.js des calques de l'accueil (A4)`
+- [x] Commit `feat(visuel): moteur visuel.js des calques de l'accueil (A4)` — preuve : commit f49537fae
 
 ## A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids
 Fichiers : créer `outils_pc/atelier_visuels_web.py`, `atelier_visuels_page.py`, `atelier_visuels_page_js.py`,

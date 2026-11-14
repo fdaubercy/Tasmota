@@ -90,8 +90,8 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
 - [ ] Brancher dans `build_serie.py::Serie._execute_env` (quelques lignes) : boucle de relance autour de `_lance_pio`
   pour les genres `pio`, avant l'événement `echec` ; ajouter les événements `reparation` (env, action, regle, etat, message) et
   `choix_reparation` (env, regle, texte, boutons) à la docstring du module ; `Serie.repond_reparation(env, choix)`
-- [ ] Bancs `test_build_serie.py` et `test_build_reparations.py` verts, mutants (limite de relances retirée, boucle sans signature,
-  relance d'un upload) rouges — preuve : …
+- [x] Bancs `test_build_serie.py` et `test_build_reparations.py` verts, mutants (limite de relances retirée, boucle sans signature, — preuve : mutants (limite de relances, signature, relance d'un envoi) rouges dans les deux bancs ; relecture A3 sans Critical ni Important ; 4 mineurs corriges en 710dfae4e ; controleur : bancs relances verts
+  relance d'un upload) rouges
 
 ## A4 — Routes de la page (`build_web.py`)
 - [ ] Écrire d'abord les tests dans `test_build_web.py` : `GET /reparations` rend règles (base + locales) et historique de la
