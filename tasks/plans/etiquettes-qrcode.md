@@ -339,12 +339,12 @@ Produit : `etiquettes_qr_publication.py::fiche_a_republier(racine, env, cartes=N
 `::etat_pages(racine) -> {"actif", "url"}` et `::active_pages(racine)` (par `gh api`, jamais d'invite),
 `::publie_tout(racine, builds_en_cours) -> sha | None` (prévoit puis publie, refus = RuntimeError).
 - [x] Bancs d'abord (rouge) : `fiche_a_republier` (fiche absente, identique, autre jour, contenu changé, carte repassée en texte), `publie_tout` (refus, rien à faire), `etat_pages`/`active_pages` avec un faux `gh` — preuve : `test_etiquettes_qr_publication.py` (`test_suivi_et_tout`, `test_pages`) rouge (fonctions absentes) puis VERT
-- [ ] Page 7970 : bouton « Activer GitHub Pages » tant que Pages est inactif ; après « Écrire » d'une carte en mode lien,
-  enchaînement sur le diff des fiches ; badge « fiche à republier » (route `/suivi`) ; banc serveur et sonde Chrome
+- [x] Page 7970 : bouton « Activer GitHub Pages » tant que Pages est inactif ; après « Écrire » d'une carte en mode lien,
+  enchaînement sur le diff des fiches ; badge « fiche à republier » (route `/suivi`) ; banc serveur et sonde Chrome — preuve : `test_etiquettes_qr_web.py` (`test_publication`) et `test_etiquettes_qr_page_chrome.py` (`sonde_publication`) VERTS le 2026-11-14, commit 9920699e9
 - [x] Signal après build : `build/qrcode_build.py` écrit « Fiche QR de <env> à republier » dans la sortie de pio — preuve : `build/qrcode_build.py::fiche`, branché dans le pré-script (édité hors build, vérifié) ; `build/test_qrcode_build.py` VERT (4 cas fiche)
-- [ ] Envoi après build : case « Publier les fiches QR à la fin » de la page Build, publication après une série réussie,
-  résultat dans le journal ; refus et erreurs n'échouent pas la série ; bancs de la page Build et sonde
-- [ ] Relecture (agent) puis commit
+- [x] Envoi après build : case « Publier les fiches QR à la fin » de la page Build, publication après une série réussie,
+  résultat dans le journal ; refus et erreurs n'échouent pas la série ; bancs de la page Build et sonde — preuve : `test_build_serie.py::test_publication_fiches` et `test_build_page_chrome.py` VERTS, commit 9920699e9
+- [x] Relecture (agent) puis commit — preuve : relecture faite (correctifs : série non réussie, un seul fetch, builds indétectables = refus), commit 9920699e9
 
 ## Améliorations restantes
 
