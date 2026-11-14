@@ -131,12 +131,12 @@ et, si `window.VISUEL` existe, monte dans `#vz`, lit `/visuel?f=fond&v=<empreint
 une `liaison` est active si `t - horodatage < seuil_s * 1000` (ModBus, UDP), si `etat == "ok"` (rgx), si `up` (wifi) ;
 `stroke-dashoffset` animé par CSS inliné dans le SVG. Icônes : une dizaine de chemins MDI dans une table du fichier
 (choisis dans `ICONES_IMAGES_SOURCES.md`, licence notée en tête).
-- [ ] `test_visuel_js.mjs` écrit (`node`, faux `document` minimal ou `jsdom` absent : le test construit le SVG par
+- [x] `test_visuel_js.mjs` écrit (`node`, faux `document` minimal ou `jsdom` absent : le test construit le SVG par
   `monte` sur un faux DOM maison et lit les attributs) : voyant ON/OFF par relais et par mesure, valeur formatée,
   liaison active puis muette au passage du seuil, rgx `ok`/`muet`, wifi `up`, élément de type inconnu ignoré, aucun
-  `</` dans le texte du fichier
+  `</` dans le texte du fichier — preuve : test_visuel_js.mjs : 26 controles, 12 mutants rouges (VERT, rc 0) ; DOM minimal maison
 - [ ] Test lancé : rouge
-- [ ] `visuel.js` écrit ; test vert ; `node --check` vert
+- [x] `visuel.js` écrit ; test vert ; `node --check` vert — preuve : node test_visuel_js.mjs VERT ; node --check data/sd/js/visuel.js ok ; 9472 octets, aucune balise fermante
 - [ ] Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
   cuve et `visuelFonctions.be`/`controleVisuel.be` dans son `custom_berry_solidify`, compilation et envoi par la page
   Build, accueil chargé, capture Chrome de la vraie page avec largeur mesurée avant et après (leçon du 2026-10-31),
