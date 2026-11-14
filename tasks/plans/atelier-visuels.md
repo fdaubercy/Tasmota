@@ -252,10 +252,10 @@ Page : bouton « Écrire dans le dépôt » (diff montré, confirmation), puis l
   - [x] Routes `POST /ecriture/prevoit`, `POST /ecriture/ecrit` (409 si build en cours) et `GET /suivi?env=` (lecteur HTTP 3 s) branchées — preuve : `test_atelier_visuels_web.py` VERT (écriture pendant un build = 409 sans trace Python, lecteur sur carte muette en échec < 3,5 s) ; `prevoit` sur le vrai dépôt = 400 motivé tant que les fichiers de la page (A3/A4) manquent
 - [ ] Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
   (reste : `banc_demarrage.py` sur la copie après écriture, à lancer APRÈS le build en cours ; écriture et suivi : rouges puis verts le 2026-11-13)
-- [ ] `AT_ORIGINES` : entrée `visuel` ; `sonde_atelier` étendue ; sonde Chrome de l'outil : « Écrire » puis lien Build
-  présent avec les bons fichiers
+- [x] `AT_ORIGINES` : entrée `visuel` ; `sonde_atelier` étendue ; sonde Chrome de l'outil : « Écrire » puis lien Build
+  présent avec les bons fichiers — preuve : commit eeed51559, `test_build_page_fichiers_chrome.py` OK « visuel : carte choisie… » et « visuel : image prete… » (les 2 KO restants de ce banc, « ordre » et « aucune erreur JS », existent aussi sans ma modification)
   - [x] Page : « Écrire dans le dépôt » (diff, confirmation, refus pendant un build, motif de validation affiché), badge de suivi, lien « Téléverser » vers la page Build (`?env=&depuis=visuel&fichiers=visuel.json,visuel.<type>&redemarrer=1`) — preuve : sonde_ecriture VERT sur dépôt copié, commit 3f37b3948 (reste : `AT_ORIGINES` et `sonde_atelier` côté page Build)
-- [ ] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert
+- [x] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert — preuve : commit ee7bde47c, 0 défaut
 - [ ] `relecteur-pages-web` lancé, remarques traitées
 - [x] Export (spec § 2.5) : boutons « Télécharger le SVG », « Copier le code SVG », « Copier le code HTML »
   (fragment autonome : SVG + calques + script d'animation de `visuel.js` en ligne, aucune requête), « Télécharger le
