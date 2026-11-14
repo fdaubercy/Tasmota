@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 CATEGORIES = ("orphelin", "reste", "hors_dossier", "doublon", "taille", "poids", "vide")
 ACTIONS = ("supprimer", "archiver", "deplacer", "garder")
 RISQUES = ("faible", "moyen", "eleve")
+TEXTE_LIBRE = re.compile(r"[<>;()\"*?|]")     # ce qui trahit un commentaire ou un marqueur au lieu d'un chemin exact
 MAX_PROPOSITIONS = 500
 MAX_TEXTE = 2000
 # Valeurs ressemblant a un secret : masquees avant d'aller a la page (le rapport ne doit pas en porter, mais on ne s'y fie pas).
@@ -129,13 +130,17 @@ def valide(rapport, racine):
         vers = p.get("vers")
         if vers == "":
             vers = None                    # l'agent met "" quand il n'y a pas de destination : pas une erreur
+        note_vers = ""
+        if isinstance(vers, str) and TEXTE_LIBRE.search(vers):
+            note_vers = f" [destination non exacte, proposee par l'agent : {vers[:200]}]"   # on garde le rapport, on ne garde pas ce « chemin »
+            vers = None
         if vers is not None and chemin_sur(vers, racine) is None:
             erreurs.append(f"{nom}.vers : chemin refuse ({str(vers)[:60]!r})")
         propres.append({
             "id": ident, "categorie": p.get("categorie"), "chemin": chemin, "action": p.get("action"),
             "risque": p.get("risque"), "en_cours": bool(p.get("en_cours", False)),
             "vers": chemin_sur(vers, racine) if vers else None,
-            "constat": _texte(p.get("constat"), f"{nom}.constat", erreurs),
+            "constat": _texte(p.get("constat"), f"{nom}.constat", erreurs) + masque(note_vers),
             "preuve": _texte(p.get("preuve"), f"{nom}.preuve", erreurs),
             "casserait": _texte(p.get("casserait"), f"{nom}.casserait", erreurs),
         })

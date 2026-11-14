@@ -41,6 +41,11 @@ verifie(propre["propositions"][0]["chemin"], "tasks/README.md", "chemin conserve
 verifie(propre["propositions"][0]["en_cours"], False, "en_cours conserve")
 propre, err = mr.valide(rapport(prop(vers="")), RACINE)
 verifie((err, propre and propre["propositions"][0]["vers"]), ([], None), "vers vide : pas de destination, pas une erreur")
+for libelle, texte in [("avec commentaire", "outils_docs/analyses/ (dossier à créer ; les 7 fichiers)"), ("avec marqueur", "outils_docs/maquettes/<nom du dossier>")]:
+    propre, err = mr.valide(rapport(prop(action="deplacer", vers=texte, constat="raison")), RACINE)
+    p0 = propre and propre["propositions"][0]
+    verifie((err, p0 and p0["vers"], p0 and "destination non exacte" in p0["constat"] and texte[:20] in p0["constat"]), ([], None, True),
+            f"vers en texte libre ({libelle}) : rapport garde, destination ecartee et recopiee dans constat")
 propre, err = mr.valide(rapport(prop(action="deplacer", vers="outils_docs/archive")), RACINE)
 verifie((err, propre and propre["propositions"][0]["vers"]), ([], "outils_docs/archive"), "deplacement vers un dossier a creer")
 
