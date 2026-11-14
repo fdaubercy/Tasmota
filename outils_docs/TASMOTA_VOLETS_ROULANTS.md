@@ -218,86 +218,60 @@ Configuration actuelle de VR1 sur le P4 (`relais1: 2`, persist non modifié) :
 
 ---
 
-# Application au portail (décision : voie A)
+# Application au portail (architecture du 2026-11-14, version finale)
 
-## Décision et répartition
+## Abandonné
 
-Décision de l'utilisateur : portail en Shutter mode 1 sur l'esclave ModBus id 4, rideau en mode 3 sur le P4. Comme `ShutterMode` est unique par carte (écart 3), c'est la seule lecture cohérente : le moteur Shutter du portail tourne sur l'esclave 4, dans sa propre pile Tasmota.
+Les versions précédentes de cette section sont abandonnées : « voie A » (Shutter mode 1 sur l'esclave 4), « 4 relais » (haut et bas par vantail), VR droit et VR gauche, « un seul moteur » (un Shutter à 2 relais sur l'esclave). Raison : le portail réel est un ensemble de 2 moteurs géré par une carte électronique qui choisit la manoeuvre selon l'entrée activée, et l'utilisateur veut sur l'interface web du P4 le comportement d'un Shutter (curseur, position, barre de progression), comme le rideau. Aucun Shutter ne tourne sur l'esclave 4 ; le P4 reste en mode 3 pour tout (rideau ET portail).
 
-| Élément | Où | Détail |
-|---|---|---|
-| Moteur Shutter, mode 1, Interlock | esclave 4 | `drivers.voletRoulants.mode: 1`, un VR par vantail (`relais1` 1 et 3), `Interlock 1,2 3,4` posé par `vrFonctions_configVRByJson` ; le pilote Berry fonctionne tel quel sur toute carte Tasmota |
-| 4 relais moteurs (2 par vantail) | esclave 4 | relais RÉELS de l'esclave, possédés par le Shutter |
-| Capteur de fermeture | esclave 4 | interrupteur réel `Switch1`, désigné par `capteurFerme: "Switch1"` : recalage local (`controleVoletRoulants.be`, règle `Switch1#Action`) |
-| 2 boutons poussoirs « simple » et « double » | P4 | entrées réelles `Button<n>` ; AUCUN `ShutterButton`, aucun VR du portail dans le persist du P4 |
-| Logique simple/double, décalage, arrêt et reprise | esclave 4 (commande Berry) | voir plus bas ; le maître n'envoie qu'un ordre |
-| Rideau VR1 | P4 | inchangé, mode 3 |
+## Chaîne de commande (6 maillons)
 
-Le maître ne déclare pas les relais de l'esclave 4 comme relais virtuels : écrire dessus par ModBus serait une commande directe de relais, qui contourne `ShutterMotorStop` et les positions. S'il doit seulement lire leur état, déclarer l'esclave comme les autres (clé `TasmotaSlaveModBus3`, `id: 4`, `virtuel` = `"ModBus_TasmotaSlaveModBus3"` : la clé est rapprochée de l'esclave par son `id` dans `modBus_TasmotaSlaveModBus.be`).
+1. Poussoir 1 (entrée réelle du P4, `bouton3`, GPIO 1) : ouverture d'UN vantail. Poussoir 2 (`bouton4`, GPIO 2) : ouverture des DEUX vantaux.
+2. `ShutterButton` du VR concerné (VR2 pour le poussoir 1, VR3 pour le poussoir 2), fonction `toggle`.
+3. Shutter 2 ou 3 du P4, mode 3 (un relais impulsionnel), qui pulse son relais virtuel.
+4. Relais virtuel du P4 : 20 (« Portail 1 vantail ») ou 22 (« Portail 2 vantaux »), de l'esclave ModBus id 4 (`ModBus_TasmotaSlaveModBus3`).
+5. Relais réel 1 ou 2 de l'esclave 4 (GPIO 41 et 42), à auto-extinction de 1 s (`timer: 1`).
+6. Entrée 1 ou 2 de la carte électronique du portail.
 
-## Comment le maître peut commander un Shutter vivant sur l'esclave (vérifié dans le code)
+Persists écrits : `data/garage/tasmota32s3-portail-jardin-modbus/_persist.json` (esclave sans Shutter : `drivers.voletRoulants.activation` OFF, aucun VR, relais 1 et 2 réels avec `timer: 1`, interrupteur de fermeture `Switch1`, template GPIO identique à celui du rideau) et `data/garage/tasmota32p4-serveur-modbus/_persist.json` (166 lignes ajoutées, 0 retirée).
 
-| Canal | Existe | Ce qu'il permet | Limites |
+## Numérotation retenue des relais virtuels du P4
+
+| Relais | Rôle | `idModBus` | Pourquoi |
 |---|---|---|---|
-| ModBus 0x05 / 0x06 sur un relais | OUI (`modbusFonctions.be::modbusFonctions_executeCmdModbus`, `::modbusFonctions_idRelai`) | exécute `Power<n>` sur l'esclave ; sur un relais de volet, le pilote le traite comme une commande manuelle de relais (suit le mouvement, Interlock local) | pas de `ShutterPosition`, pas de position partielle ni de position rendue au maître, `ShutterMotorStop` contourné |
-| UDP `cmnd/<topic>/<commande>` | RÉCEPTION oui (`controleUDP.be` exécute `tasmota.cmd` ; filtre dans `udpFonctions.be::udpFonctions_lireUDP`), ÉMISSION d'une commande non | toute commande Tasmota ou commande Berry de l'esclave (`ShutterPosition1 100`, `Portail simple`) | le maître a `udpFonctions_envoiUDP` et `udpFonctions_emet`, mais aucune fonction « commande vers l'esclave X » ni résolution esclave vers IP ; pas d'accusé ; pas d'authentification ; le sujet `tasmotas/garage` (groupTopic1) toucherait toutes les cartes : n'utiliser que le topic propre de l'esclave |
-| MQTT `cmnd/<topic>/...` | côté esclave oui (MQTT actif sur les esclaves actuels) ; émission par le maître : rien d'existant dans `data/fs` | idem UDP, avec retour `stat/<topic>/RESULT` et `tele` (position du Shutter) | dépend du broker ; abonnement et publication Berry à écrire |
-| HTTP `/cm?cmnd=...` | `webclient()` existe (`controleCoprocesseur.be`), jamais utilisé vers un esclave | commande avec réponse (accusé) | appel bloquant ; IP de l'esclave derrière le NAPT du maître (192.168.4.x) à résoudre ; joignabilité non vérifiée |
-| Retour de position | NON | | le push esclave vers maître (`ModbusPushUDP`) ne porte que les appareils déclarés au persist (relais, interrupteurs, analogiques...), pas un Shutter ; seule la lecture 0x01 d'un relais dit si un moteur tourne ; la façade du P4 lit des curseurs `s27<n>` locaux (`vrPages.be`) |
+| 20 | ordre « 1 vantail » (`relais1` du VR2) | 1 | relais réel 1 de l'esclave |
+| 21 | bouche-trou : réservé par le Shutter du VR2 (`relais1 + 1`) | aucun | jamais commandé |
+| 22 | ordre « 2 vantaux » (`relais1` du VR3) | 2 | relais réel 2 de l'esclave |
+| 23 | bouche-trou : réservé par le Shutter du VR3 | aucun | jamais commandé |
 
-Aucun firmware d'esclave séparé n'existe dans le dépôt : un esclave est un env Tasmota avec son persist (`data/garage/<carte>`).
+- Le firmware réserve `relais1 + 1` (`RelayShutterMask |= 3 << (relais - 1)`) et, en mode 3, éteint ce relais à l'arrêt (`ShutterPowerOff`, branche pulsée). Un relais de ce rang doit donc exister.
+- Le comptage (`configDevices.be`, `tasmota.global.devices_present = nombre de relais actifs`) ne dépend pas des id mais du nombre : relais 1 à 19 existants + 4 = 23 une fois l'esclave ON. Rien n'est réservé de plus : 2 ordres et 2 bouche-trous, c'est le minimum avec deux Shutters distincts.
+- Ce que fait le rideau : son relais 3 (« Relai 2 ») est le relais réel 2 de l'esclave rideau, jamais commandé, qui sert de bouche-trou. Il reste en place (retrait impossible : le nombre de relais passerait de 19 à 18 et `Power19` disparaîtrait).
+- Les bouche-trous n'ont PAS de `idModBus` : `modBus_TasmotaSlaveModBus.be` ignore les relais sans `idModBus` à l'envoi comme à la lecture, donc aucune trame vers un registre inexistant. Ils comptent quand même, parce que le comptage ne regarde que le champ `virtuel` et l'état de l'esclave.
+- Variante écartée : `relais1` 20 et 21 (le « relais1 + 1 » du VR2 serait l'ordre du VR3) économise un relais, mais les masques se recouvrent et le firmware éteindrait l'ordre du VR3 à l'arrêt du VR2. Non essayé, non retenu.
 
-Ce qui manque, à créer (rien n'est créé ici) :
-1. L'env de l'esclave 4 et son persist (mode 1, VR, relais et interrupteur réels, `ModBus.id: 4`, topic propre).
-2. Sur l'esclave, une commande Berry (module du dossier de la carte, à la manière de `ReglageVolets`) qui porte le comportement de `outils_docs/volets_visuels/maquette_portail_g.html::bt` : appui en mouvement = arrêt des deux vantaux ; appui suivant = reprise vers la MÊME cible ; fermé : « simple » ouvre le droit, « double » ouvre le droit puis le gauche après le décalage ; ouvert : ferme, le gauche d'abord. Le séquencement reste local : le maître n'envoie qu'un ordre (`simple` ou `double`), sans retour d'état ni ordre en deux temps sur un lien sans accusé.
-3. Sur le P4, quelques dizaines de lignes de Berry : règle sur `Button<n>#Action` des deux entrées réelles, qui envoie `cmnd/<topic esclave>/Portail simple|double` par le canal retenu (HTTP si l'accusé compte, UDP ou MQTT sinon).
-4. Facultatif : retour de position vers la façade du P4 (abonnement MQTT ou lecture HTTP) ; la façade actuelle ne sait pas afficher un Shutter distant.
+## Boutons : ce qui est lié automatiquement
 
-Jugement : réalisable proprement pour un code modeste, car seul un ordre simple franchit le lien. Ce qui n'existe pas : le canal d'émission maître vers esclave pour une commande nommée, et le retour de position. Alternative si l'on refuse ce canal : voie B (automate Berry sur le P4 pilotant des relais virtuels par ModBus 0x05, qui existe), au prix d'un Interlock logiciel sur RS485 et donc d'un verrou câblé indispensable.
+- Lié par le code existant, sans rien écrire : `vrFonctions.be::vrFonctions_configBoutons` envoie `ShutterButton<id> <bouton> toggle 0` pour chaque bouton de VR actif. VR2 : `bouton1` → id 3 ; VR3 : `bouton1` → id 4. Les deux boutons sont déjà déclarés dans les modules du P4 (`SetOption73 ON` posé par `configDevices.be` : ils ne basculent donc aucun `Power<n>`).
+- Comportement de `toggle` (firmware) : appui simple = bascule selon la position (plus de 50 % : ferme, sinon ouvre) ; appui double = 50 % ; tout appui pendant un mouvement arrête le volet ; l'appui suivant repart selon la position, pas dans le même sens.
+- Non lié, donc manquant : poussoir 2 n'ouvre pas « aussi » le vantail du poussoir 1 (aucun couplage entre VR2 et VR3). Les deux Shutters ont chacun sa position ; rien ne les synchronise si l'on actionne l'un puis l'autre.
+- Limite du mode 3 : si le sens demandé est celui du dernier mouvement, le firmware envoie deux impulsions de mise en phase avant l'impulsion de départ (trois pulsations, voir la section du rideau). Pour un portail dont l'entrée n'a qu'un sens (ouverture), c'est inadapté : à vérifier avec la carte électronique (une même entrée sert-elle aussi à fermer ?).
 
-## Boutons du P4 (appliqué dans le persist du P4)
+## PulseTime : 1 s n'est pas configurable par VR
 
-- `bouton3` « Portail simple ouverture » sur GPIO 1 et `bouton4` « Portail double ouverture » sur GPIO 2, entrées réelles (`virtuel: OFF`, type 32, id 3 et 4). Pas de `ShutterButton`, pas de VR du portail sur le P4.
-- Choix des broches (connecteur 40 broches, `ESP32-P4-Module-DEV-KIT-40broches.png`) : GPIO 1 et 2 sont sur la même rangée du connecteur, absentes du persist, hors console (37, 38), strapping (34 à 38), RS485 (4, 5), I2C (7, 8), Ethernet, SD, C6 hosted et codec audio ; les broches voisines 0, 3, 6, 20 à 23 sont déjà citées dans le persist (écran, compteur, boutons, SD) et 24, 25, 26, 27 sont des broches USB.
-- Piège `Button<n>` qui bascule `Power<n>` : neutralisé par le dépôt, pas par une règle nouvelle. `configDevices.be` pose `SetOption73 ON` dès qu'un bouton est actif dans les modules (c'est déjà le cas de `bouton1` et `bouton2`), ce qui détache TOUS les boutons des relais ; `Button3` ne touche donc pas `Power3`. Chaque bouton actif reçoit seulement la règle `Button<n>#Action` de `globalFonctions.changementEtatCapteur` (met à jour `etat`, relais liés vides).
-- Effet attendu au prochain démarrage : le modèle GPIO du P4 change (deux boutons de plus), `controleGeneral` le réécrit puis applique `Template` ; à contrôler sur la carte.
+`vrFonctions.be::vrFonctions_configVRByJson` envoie `PulseTime<relais1> 5` (5 = 0,5 s) : la valeur 5 est écrite en dur dans le code, aucune clé du persist ni du VR ne la change. Pour 1 s (`PulseTime 10`) il faut modifier `data/fs/vrFonctions.be` (par exemple une clé `impulsion` du VR, non existante) ; non fait ici, `data/fs` est intact. En attendant, le P4 coupe le relais virtuel à 0,5 s ; le `timer: 1` de l'esclave est un filet : un OFF reçu à temps annule ce timer (`controleGeneral.be`, arrêt du timer à OFF).
 
-## Relais 3 du rideau : on ne peut PAS le retirer
+## Mise en service : tout est OFF ensemble
 
-`configDevices.be` règle `tasmota.global.devices_present` sur le NOMBRE de relais actifs déclarés. Retirer le relais 3 ramène 19 à 18 : `Power19` (dernier relais de la carte 16 relais) n'existe plus, sauf à renuméroter les relais 4 à 19 (indices Power, `relais1` des VR, références par id). Désactiver (OFF) a le même effet. Il est inutile pour la logique mais indispensable au comptage ; le firmware le réserve de toute façon (`RelayShutterMask`). Persist du P4 : relais 3 conservé.
+`TasmotaSlaveModBus3`, les relais 20 à 23, `interrupteur3`, VR2 et VR3 sont en activation OFF dans le persist du P4 tant que l'esclave n'existe pas (sinon relevés sans réponse sur le bus, relais comptés pour rien, Shutters sur des relais absents). À passer à ON ensemble une fois l'esclave en ligne. `tempsMontee` et `tempsDescente` valent 30 s, provisoires. VR2 et VR3 n'ont pas de bloc `facade` (le type `portail` de `volets.js` sera écrit plus tard). Le capteur de fermeture (`Interrupteur3`, virtuel, relais d'entrée de l'esclave) est désigné `capteurFerme` sur les deux VR : il recale les deux à « fermé » (hypothèse : contact fermé = portail entièrement fermé).
 
-## Architecture finale (persists écrits)
+## Ce qui reste à faire
 
-- `data/garage/tasmota32s3-portail-jardin-modbus/_persist.json` : esclave id 4 « Portail de Jardin » (hostname `PORTAIL-JARDIN`, topic `jardin/portail`, client MQTT `PORTAIL-JARDIN`, point d'accès `PORTAIL-JARDIN-GATEWAY`, `ModBus` / `udp` / `tcp` / `rangeExtender` en id 4 ; aucune collision avec les autres persist du dépôt). Réglages réseau recopiés du rideau.
-- Shutter mode 1 : VR1 vantail droit (`relais1` 1), VR2 vantail gauche (`relais1` 3), durées 15 s provisoires ; `Interlock 1,2 3,4` posé par `vrFonctions.be`. 4 relais réels (GPIO 41, 42 recopiés du rideau ; 40 et 2 choisis ici), interrupteur de fermeture `Switch1` (GPIO 47, comme le rideau), `afficheWeb` OFF sur les relais. Facade OFF : le type `portail` n'existe pas dans `volets.js`.
-- Contrairement au rideau, le Shutter tourne SUR l'esclave. Le squelette de `controleRideau.be` (Shutter sur le P4, esclave réduit à la façade qui lit la position chez le P4 par `Status 10`) ne se reprend pas tel quel.
-- Persist du P4 : `bouton3`, `bouton4` actifs ; `TasmotaSlaveModBus3` (id 4) et `interrupteur3` (capteur de fermeture virtuel) déclarés en OFF tant que l'esclave n'existe pas, car chaque relevé d'un esclave absent coûte un délai de réponse (5 s) sur le bus ; les relais de l'esclave 4 ne sont PAS déclarés côté P4 (commande directe qui contournerait le Shutter, et un relais de plus déplacerait `devices_present`).
-- Canal P4 vers esclave : ModBus UDP comme pour le rideau, non conçu ici.
-
-## Ce qui reste à écrire
-
-1. Env PlatformIO de l'esclave, autoexec, `user_config_override.h` (section `#elif`), liste `custom_files_*` : `vrFonctions` et `controleVoletRoulants` doivent être dans son FS (ils sont exclus de celui du rideau).
-2. Commande du P4 vers l'esclave par ModBus UDP : ordre « simple » ou « double » sur appui de `Button3` ou `Button4` (règle Berry côté P4), réception et exécution côté esclave.
-3. Logique « simple / double » avec décalage du second vantail, arrêt par appui, reprise vers la même cible, fermeture du gauche d'abord (comportement de `maquette_portail_g.html::bt`) : côté esclave de préférence (le maître n'envoie qu'un ordre).
-4. Lecture de la position du portail par le P4 (aucun canal : le push ModBus ne porte pas de Shutter).
-5. Façade de type `portail` dans `data/sd/js/volets.js` (`LARG` ne connaît que fenetre, porte, garage, trappe, trappeEchelle), puis activation de la façade.
-6. Mesure des durées par vantail et par sens, choix définitif des broches de l'esclave, passage de `TasmotaSlaveModBus3` et `interrupteur3` à ON une fois l'esclave en ligne.
+1. Env PlatformIO, autoexec et `user_config_override.h` de l'esclave (à la charge de l'utilisateur).
+2. `PulseTime 10` configurable par VR dans `vrFonctions.be`.
+3. Façade `portail` dans `volets.js` ; lecture de la position inutile (les Shutters sont sur le P4).
+4. Mesure des durées et vérification sur la carte électronique du portail : sens de chaque entrée, effet des impulsions multiples, fermeture.
 
 ## Non vérifié sur carte
 
-Tout : démarrage de l'esclave avec ce persist, `Interlock 1,2 3,4` effectif, sens des relais haut/bas, durées, polarité du capteur de fermeture (`SwitchMode 2` recopié), impulsion d'arrêt du rideau en fin de course, réécriture du modèle GPIO du P4 avec `bouton3`/`bouton4`, absence de gêne de `GPIO 1` et `GPIO 2` sur le P4, effet de la déclaration de l'esclave 4 en OFF sur le relevé, joignabilité de l'esclave par ModBus UDP. Les broches 40 et 2 de l'esclave et les LED 38 et 39 recopiées du rideau sont des hypothèses (cle `_incertain` du persist du portail).
-
-## Durées et capteur
-
-- `tempsMontee` et `tempsDescente` : entiers en secondes, 15 s provisoires, à mesurer par vantail et par sens. Le décalage du second vantail (3 s dans la maquette) n'a pas de commande Tasmota : paramètre de la commande Berry de l'esclave.
-- Capteur de fermeture sur `Switch1` de l'esclave : doit valoir ON portail fermé (`SwitchMode 2` recopié du rideau, polarité non vérifiée). Désigné sur le vantail droit seulement ; si le contact signifie « les deux vantaux fermés », le désigner aussi sur le gauche, sinon l'autre serait faussement recalé.
-
-## Sécurité électrique
-
-L'Interlock logiciel de l'esclave agit dans la même pile que les relais : pas de lien RS485 entre le haut et le bas d'un même moteur, ce qui est l'intérêt de la voie A. Un verrouillage câblé reste conseillé (deux relais haut/bas alimentés ensemble détruisent le moteur). `ShutterMotorStop` (500 ms) laisse le moteur s'arrêter avant de repartir, mais ne protège pas une commande directe de relais.
-
-## Alternatives écartées
-
-- P4 en mode 1 : casse le rideau (mode unique par carte).
-- Mode 3 par vantail : suppose des moteurs à impulsion, pas des relais haut/bas.
-- Mode 2 (alimentation + sens) : plus sûr, mais un autre câblage et la même contrainte de mode.
+Tout : démarrage de l'esclave avec ce persist, ordre des relais par ModBus UDP, impulsion de 0,5 s comprise par la carte électronique, `timer: 1` effectif, comptage à 23 relais, comportement de Shutters dont `relais1 + 1` est un relais virtuel sans `idModBus`, `ShutterButton` sur `bouton3` et `bouton4`, polarité du capteur de fermeture, modèle GPIO du P4 avec les deux boutons.

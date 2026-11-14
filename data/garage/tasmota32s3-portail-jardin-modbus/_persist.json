@@ -1,13 +1,12 @@
 {
 	"_incertain": [
-		"GPIO : relais 1 et 2 = 41 et 42, interrupteur de fermeture = 47, RX 4 / TX 5, LED 38 et 39 recopies du persist du rideau (meme dev-kit ESP32-S3) ; relais 3 = 40 et relais 4 = 2 CHOISIS ici (libres dans le persist du rideau, ni strapping 0 3 45 46, ni USB 19 20, ni PSRAM 33 a 37) : a confirmer avec le cablage reel.",
-		"led_temoin des VR : OFF, pin -1. Les LED 38 et 39 (ledLink, led1) sont recopiees du rideau : a confirmer si la carte du portail les porte.",
-		"afficheWeb OFF pour les 4 relais (les relais appartiennent au Shutter, pas de bouton web direct) : choix a confirmer.",
-		"Facade OFF : le type de facade portail n'existe pas dans data/sd/js/volets.js, donc aucun bloc facade par VR.",
-		"Capteur de fermeture Switch1 designe sur le vantail droit seulement ; a etendre au gauche si le contact signifie les deux vantaux fermes. Doit valoir ON quand ferme (SwitchMode 2 recopie du rideau, polarite non verifiee).",
+		"Architecture : l'esclave 4 n'a AUCUN Shutter. Deux relais reels (1 = ouverture d'un vantail, 2 = ouverture des deux) commandent les entrees 1 et 2 de la carte electronique du portail ; les Shutters (mode 3) tournent sur le P4.",
+		"Relais 1 et 2 : timer 1 = auto-OFF apres 1 s (controleGeneral.be, secondes, filet de securite si le OFF du P4 se perd). Si le P4 coupe a 0,5 s (PulseTime 5 de vrFonctions.be) le OFF arrive avant et annule ce timer.",
+		"GPIO : relais 41 et 42, interrupteur de fermeture 47, RX 4 / TX 5, LED 38 et 39 recopies du persist du rideau (meme dev-kit ESP32-S3) ; template GPIO identique a celui du rideau. LED 38 et 39 : a confirmer si la carte du portail les porte.",
+		"afficheWeb OFF pour les 2 relais : choix a confirmer.",
+		"Capteur de fermeture Switch1 : polarite non verifiee (doit valoir ON portail ferme, SwitchMode 2 recopie du rideau).",
 		"groupTopic1 tasmotas/garage recopie du rideau : une commande de groupe atteindrait aussi le portail.",
-		"Env PlatformIO, autoexec, user_config_override, controleXxx du portail : non crees. vrFonctions et controleVoletRoulants doivent etre dans le FS de cet env (exclus de celui du rideau).",
-		"Durees 15 s provisoires, a mesurer par vantail et par sens. Rien n'est essaye sur carte."
+		"Env PlatformIO, autoexec, user_config_override du portail : a creer par l'utilisateur. Rien n'est essaye sur carte."
 	],
 	"diverses": {
 		"historique": {
@@ -136,7 +135,7 @@
 	},
 	"template": {
 		"BASE": 1,
-		"GPIO": [1,1,227,1,3232,3200,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,544,288,226,224,225,1,1,1,1,1,1],
+		"GPIO": [1,1,1,1,3232,3200,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,544,288,1,224,225,1,1,1,1,1,1],
 		"NAME": "ESP32S3 Portail Jardin Modbus",
 		"FLAG": 0
 	},
@@ -189,7 +188,7 @@
 				"relais": {
 					"relai1": {
 						"activation": "ON",
-						"nom": "Portail droit ouvre",
+						"nom": "Portail 1 vantail",
 						"afficheWeb": "OFF",
 						"pin": 41,
 						"id": 1,
@@ -197,7 +196,7 @@
 						"virtuel": "OFF",
 						"value": 0,
 						"etat": "OFF",
-						"timer": 0,
+						"timer": 1,
 						"publishMQTT": {
 							"topic": []
 						},
@@ -209,7 +208,7 @@
 					},
 					"relai2": {
 						"activation": "ON",
-						"nom": "Portail droit ferme",
+						"nom": "Portail 2 vantaux",
 						"afficheWeb": "OFF",
 						"pin": 42,
 						"id": 2,
@@ -217,47 +216,7 @@
 						"virtuel": "OFF",
 						"value": 0,
 						"etat": "OFF",
-						"timer": 0,
-						"publishMQTT": {
-							"topic": []
-						},
-						"timestamp": {
-							"ON": 0,
-							"OFF": 0,
-							"delai": 0
-						}
-					},
-					"relai3": {
-						"activation": "ON",
-						"nom": "Portail gauche ouvre",
-						"afficheWeb": "OFF",
-						"pin": 40,
-						"id": 3,
-						"type": 224,
-						"virtuel": "OFF",
-						"value": 0,
-						"etat": "OFF",
-						"timer": 0,
-						"publishMQTT": {
-							"topic": []
-						},
-						"timestamp": {
-							"ON": 0,
-							"OFF": 0,
-							"delai": 0
-						}
-					},
-					"relai4": {
-						"activation": "ON",
-						"nom": "Portail gauche ferme",
-						"afficheWeb": "OFF",
-						"pin": 2,
-						"id": 4,
-						"type": 224,
-						"virtuel": "OFF",
-						"value": 0,
-						"etat": "OFF",
-						"timer": 0,
+						"timer": 1,
 						"publishMQTT": {
 							"topic": []
 						},
@@ -716,101 +675,16 @@
 			"environnement": {}
 		},
 		"voletRoulants": {
-			"activation": "ON",
-			"name": "Driver Volet Roulant Portail",
-			"mode": 1,
+			"activation": "OFF",
+			"name": "Driver Volet Roulant (inutilise : le portail est pilote par le P4)",
+			"mode": 3,
 			"facade": {
 				"activation": "OFF",
 				"toit": "aucun"
 			},
 			"log": "info",
 			"environnement": {
-				"VRs": {
-				"VR1": {
-					"activation": "ON",
-					"nom": "Portail vantail droit",
-					"id": 1,
-					"etat": "STOPPED",
-					"position": 0,
-					"relais1": 1,
-					"boutons": {
-							"bouton1": {"activation": "OFF", "id": -1, "function": "toggle", "mqtt": "OFF"},
-							"bouton2": {"activation": "OFF", "id": -1, "function": "up", "mqtt": "OFF"},
-							"bouton3": {"activation": "OFF", "id": -1, "function": "down", "mqtt": "OFF"},
-							"bouton4": {"activation": "OFF", "id": -1, "function": "updown", "mqtt": "OFF"}
-					},
-					"capteursPosition": {
-						"activation": "ON",
-						"capteurOuvert": "",
-						"capteurFerme": "Switch1",
-						"inclinaison": {
-							"activation": "OFF",
-							"adresse": 104,
-							"axes": "YZ",
-							"angleOuvert": 85.0,
-							"angleFerme": 3.0,
-							"marge": 3,
-							"blocage": 5,
-							"blocageDegres": 1,
-							"sensInverse": 3,
-							"surveillance": 0,
-							"positionReelle": "OFF"
-						}
-					},
-					"activationSiOuvert": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
-					"activationSiFerme": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
-					"tempsMontee": 15,
-					"tempsDescente": 15,
-					"led_temoin": {
-						"activation": "OFF",
-						"nom": "LED etat portail",
-						"pin": -1,
-						"intervalle": 500
-					}
-				},
-				"VR2": {
-					"activation": "ON",
-					"nom": "Portail vantail gauche",
-					"id": 2,
-					"etat": "STOPPED",
-					"position": 0,
-					"relais1": 3,
-					"boutons": {
-							"bouton1": {"activation": "OFF", "id": -1, "function": "toggle", "mqtt": "OFF"},
-							"bouton2": {"activation": "OFF", "id": -1, "function": "up", "mqtt": "OFF"},
-							"bouton3": {"activation": "OFF", "id": -1, "function": "down", "mqtt": "OFF"},
-							"bouton4": {"activation": "OFF", "id": -1, "function": "updown", "mqtt": "OFF"}
-					},
-					"capteursPosition": {
-						"activation": "OFF",
-						"capteurOuvert": "",
-						"capteurFerme": "",
-						"inclinaison": {
-							"activation": "OFF",
-							"adresse": 104,
-							"axes": "YZ",
-							"angleOuvert": 85.0,
-							"angleFerme": 3.0,
-							"marge": 3,
-							"blocage": 5,
-							"blocageDegres": 1,
-							"sensInverse": 3,
-							"surveillance": 0,
-							"positionReelle": "OFF"
-						}
-					},
-					"activationSiOuvert": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
-					"activationSiFerme": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
-					"tempsMontee": 15,
-					"tempsDescente": 15,
-					"led_temoin": {
-						"activation": "OFF",
-						"nom": "LED etat portail",
-						"pin": -1,
-						"intervalle": 500
-					}
-				}
-				}
+				"VRs": {}
 			}
 		}
 	}

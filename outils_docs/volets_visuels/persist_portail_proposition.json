@@ -1,10 +1,3 @@
 {
-  "_statut": "APPLIQUE dans les persists le 2026-11-14 ; ce fichier n'est plus une proposition, il garde seulement la trace des decisions. Voir outils_docs/TASMOTA_VOLETS_ROULANTS.md, section Application au portail.",
-  "applique": {
-    "data/garage/tasmota32s3-portail-jardin-modbus/_persist.json": "cree : esclave id 4 « Portail de Jardin », Shutter mode 1 (VR1 droit relais1 1, VR2 gauche relais1 3), 4 relais (GPIO 41, 42, 40, 2), interrupteur de fermeture Switch1 (GPIO 47), facade OFF ; cle racine _incertain a lire puis supprimer",
-    "data/garage/tasmota32p4-serveur-modbus/_persist.json": "ajouts seuls (51 lignes, 0 retrait) : bouton3 (GPIO 1, simple ouverture) et bouton4 (GPIO 2, double ouverture) actifs ; interrupteur3 (capteur de fermeture, virtuel) et TasmotaSlaveModBus3 (id 4) declares en activation OFF tant que l'esclave n'existe pas ; aucun VR du portail, aucun ShutterButton"
-  },
-  "_rideau_proposition": {
-    "relais3_du_rideau": "NON RETIRE : tasmota.global.devices_present = nombre de relais actifs declares (configDevices.be), donc retirer le relais 3 ramene 19 a 18 et rend Power19 inexistant, sauf a renumeroter les relais 4 a 19 de la carte 16 relais (indices Power, relais1 des VR, references par id) ; le laisser."
-  }
+  "_statut": "OBSOLETE : applique puis remplace par l'architecture du 2026-11-14 (deux Shutters mode 3 sur le P4, VR2 et VR3, relais virtuels 20 a 23 de l'esclave 4 ; esclave 4 sans Shutter). Voir les persists data/garage/tasmota32p4-serveur-modbus et tasmota32s3-portail-jardin-modbus, et outils_docs/TASMOTA_VOLETS_ROULANTS.md. Fichier a supprimer quand l'utilisateur le decide."
 }

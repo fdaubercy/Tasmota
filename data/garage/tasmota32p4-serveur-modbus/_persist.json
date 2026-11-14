@@ -667,6 +667,88 @@
 							"delai": 0
 						},
 						"idModBus": 16
+					},
+					"relai20": {
+						"activation": "OFF",
+						"nom": "Portail 1 vantail",
+						"afficheWeb": "ON",
+						"pin": -1,
+						"id": 20,
+						"type": 224,
+						"virtuel": "ModBus_TasmotaSlaveModBus3",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 1
+					},
+					"relai21": {
+						"activation": "OFF",
+						"nom": "Reserve portail 1 vantail (relais1+1 du Shutter 2)",
+						"afficheWeb": "OFF",
+						"pin": -1,
+						"id": 21,
+						"type": 224,
+						"virtuel": "ModBus_TasmotaSlaveModBus3",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						}
+					},
+					"relai22": {
+						"activation": "OFF",
+						"nom": "Portail 2 vantaux",
+						"afficheWeb": "ON",
+						"pin": -1,
+						"id": 22,
+						"type": 224,
+						"virtuel": "ModBus_TasmotaSlaveModBus3",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						},
+						"idModBus": 2
+					},
+					"relai23": {
+						"activation": "OFF",
+						"nom": "Reserve portail 2 vantaux (relais1+1 du Shutter 3)",
+						"afficheWeb": "OFF",
+						"pin": -1,
+						"id": 23,
+						"type": 224,
+						"virtuel": "ModBus_TasmotaSlaveModBus3",
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						}
 					}
 				},
 				"analogiques": {
@@ -1408,6 +1490,90 @@
 							"activation": "OFF",
 							"nom": "LED état Trappe",
 							"pin": 39,
+							"intervalle": 500
+						}
+					},
+					"VR2": {
+						"activation": "OFF",
+						"nom": "Portail 1 vantail",
+						"id": 2,
+						"etat": "STOPPED",
+						"position": 0,
+						"relais1": 20,
+						"boutons": {
+							"bouton1": {"activation": "ON", "id": 3, "function": "toggle", "mqtt": "OFF"},
+							"bouton2": {"activation": "OFF", "id": -1, "function": "up", "mqtt": "OFF"},
+							"bouton3": {"activation": "OFF", "id": -1, "function": "down", "mqtt": "OFF"},
+							"bouton4": {"activation": "OFF", "id": -1, "function": "updown", "mqtt": "OFF"}
+						},
+						"capteursPosition": {
+							"activation": "ON",
+							"capteurOuvert": "",
+							"capteurFerme": "Interrupteur3",
+							"inclinaison": {
+								"activation": "OFF",
+								"adresse": 104,
+								"axes": "YZ",
+								"angleOuvert": 85.0,
+								"angleFerme": 3.0,
+								"marge": 3,
+								"blocage": 5,
+								"blocageDegres": 1,
+								"sensInverse": 3,
+								"surveillance": 0,
+								"positionReelle": "OFF"
+							}
+						},
+						"activationSiOuvert": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
+						"activationSiFerme": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
+						"tempsMontee": 30,
+						"tempsDescente": 30,
+						"led_temoin": {
+							"activation": "OFF",
+							"nom": "LED etat portail",
+							"pin": -1,
+							"intervalle": 500
+						}
+					},
+					"VR3": {
+						"activation": "OFF",
+						"nom": "Portail 2 vantaux",
+						"id": 3,
+						"etat": "STOPPED",
+						"position": 0,
+						"relais1": 22,
+						"boutons": {
+							"bouton1": {"activation": "ON", "id": 4, "function": "toggle", "mqtt": "OFF"},
+							"bouton2": {"activation": "OFF", "id": -1, "function": "up", "mqtt": "OFF"},
+							"bouton3": {"activation": "OFF", "id": -1, "function": "down", "mqtt": "OFF"},
+							"bouton4": {"activation": "OFF", "id": -1, "function": "updown", "mqtt": "OFF"}
+						},
+						"capteursPosition": {
+							"activation": "ON",
+							"capteurOuvert": "",
+							"capteurFerme": "Interrupteur3",
+							"inclinaison": {
+								"activation": "OFF",
+								"adresse": 104,
+								"axes": "YZ",
+								"angleOuvert": 85.0,
+								"angleFerme": 3.0,
+								"marge": 3,
+								"blocage": 5,
+								"blocageDegres": 1,
+								"sensInverse": 3,
+								"surveillance": 0,
+								"positionReelle": "OFF"
+							}
+						},
+						"activationSiOuvert": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
+						"activationSiFerme": {"activation": "OFF", "tabRelais": [], "tabEtatRelais": []},
+						"tempsMontee": 30,
+						"tempsDescente": 30,
+						"led_temoin": {
+							"activation": "OFF",
+							"nom": "LED etat portail",
+							"pin": -1,
 							"intervalle": 500
 						}
 					}
