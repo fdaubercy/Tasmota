@@ -873,10 +873,14 @@ verifie(f["lampe"] != nil && f["lampe"]["id"] == 5 && f["lampe"]["nom"] == "Proj
 webserver.raz({"f": "capteurs"})
 vrPages.route()
 verifie(json.load(webserver.texte())["lampe"] == "ON", "?f=capteurs : lampe ON (bit 4 de get_power)")
+# Renommer le relais ne casse pas le lien (module + id) : meme appareil, nouveau nom partout
+modules["garage"]["environnement"]["relais"]["relai5"]["nom"] = "Eclairage pergola"
+f = vrPages.facade()
+verifie(f["lampe"] != nil && f["lampe"]["id"] == 5 && f["lampe"]["nom"] == "Eclairage pergola", "lampe : relais renomme, toujours trouve par son id, nouveau nom repris")
 webserver.raz({"action": "lampe", "etat": "OFF"})
 vrPages.ordre()
 rc = json.load(webserver.texte())
-verifie(webserver.code == 200 && rc["ok"] && tasmota.power[4] == false && rc["message"] == "Projecteur de Garage éteint", "POST lampe OFF : set_power(4, false), 200")
+verifie(webserver.code == 200 && rc["ok"] && tasmota.power[4] == false && rc["message"] == "Eclairage pergola éteint", "POST lampe OFF (nom repris) : set_power(4, false), 200")
 voletsMoteur["facade"].remove("lampe")
 webserver.raz({"action": "lampe", "etat": "ON"})
 vrPages.ordre()
