@@ -1,6 +1,6 @@
 ---
 name: analyste-journaux-build
-description: Lit les journaux d'un build PlatformIO (pio run) de ce dépôt et rend la cause d'un échec avec la ligne utile, sans que les milliers de lignes de sortie n'entrent dans la conversation. À lancer avec l'env et, si connu, le chemin du journal ; à défaut il prend le plus récent. Lecture seule : ne lance JAMAIS de build, ne touche à aucun fichier.
+description: "Lit les journaux d'un build PlatformIO (pio run) de ce dépôt et rend la cause d'un échec avec la ligne utile, sans que les milliers de lignes de sortie n'entrent dans la conversation. À lancer avec l'env et, si connu, le chemin du journal ; à défaut il prend le plus récent. Lecture seule : ne lance JAMAIS de build, ne touche à aucun fichier."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

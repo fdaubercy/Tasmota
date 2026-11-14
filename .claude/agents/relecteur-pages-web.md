@@ -1,6 +1,6 @@
 ---
 name: relecteur-pages-web
-description: Relecture des pages web du fork Tasmota APRÈS modification et AVANT commit. Couvre les pages des outils PC générées par Python (atelier des graphiques, page Build, fichiers Berry, assistant persist, synchro du fork… : HTML+CSS+JS dans des constantes ou des modules `*_page*.py`) et les pages servies par les cartes (`data/sd/html|css|js`, routes Berry). Contrôle sécurité (XSS, anti-CSRF, SSRF), état de la page, JS valide, mode sombre, sondes Chrome hermétiques et bancs. À lancer avec la liste des fichiers modifiés ou une plage de commits. Ne modifie aucun fichier.
+description: "Relecture des pages web du fork Tasmota APRÈS modification et AVANT commit. Couvre les pages des outils PC générées par Python (atelier des graphiques, page Build, fichiers Berry, assistant persist, synchro du fork… : HTML+CSS+JS dans des constantes ou des modules `*_page*.py`) et les pages servies par les cartes (`data/sd/html|css|js`, routes Berry). Contrôle sécurité (XSS, anti-CSRF, SSRF), état de la page, JS valide, mode sombre, sondes Chrome hermétiques et bancs. À lancer avec la liste des fichiers modifiés ou une plage de commits. Ne modifie aucun fichier."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

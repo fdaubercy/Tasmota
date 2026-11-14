@@ -69,6 +69,9 @@ def consigne(params, gardes):
         "Chemins a GARDER (ne jamais les proposer) : " + (", ".join(gardes) if gardes else "aucun") + ".\n"
         "Rappel : tout fichier modifie ou non suivi par git, ou touche depuis moins de anciennete_jours jours, est « en cours » "
         "(en_cours: true, jamais propose) ; un plan de statut actif n'est jamais propose a l'archivage.\n"
+        "Bash : UNE seule commande simple par appel (git status --porcelain, git ls-files, git log, git diff, git hash-object, "
+        "git check-ignore, ls, wc, du), sans cd, sans pipe, sans ; ni &&, sans redirection : le depot est deja le dossier courant, "
+        "toute commande composee est refusee. Filtre avec Grep/Glob, pas avec grep/head.\n"
         "Reponds par le rapport JSON demande par ton format de sortie (schema outils_docs/schemas/menage_rapport.schema.json), "
         "sans rien deplacer, supprimer ni ecrire."
     )

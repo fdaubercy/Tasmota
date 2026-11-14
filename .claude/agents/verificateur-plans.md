@@ -1,6 +1,6 @@
 ---
 name: verificateur-plans
-description: Vérifie que les étapes cochées d'un plan tasks/plans/*.md ont une vraie preuve (commit existant, fichier présent, banc relançable) et que tasks/README.md est à jour. À lancer avec le nom d'un plan, « tous les plans actifs », ou après une série de cases cochées. Ne modifie aucun fichier : il propose les corrections.
+description: "Vérifie que les étapes cochées d'un plan tasks/plans/*.md ont une vraie preuve (commit existant, fichier présent, banc relançable) et que tasks/README.md est à jour. À lancer avec le nom d'un plan, « tous les plans actifs », ou après une série de cases cochées. Ne modifie aucun fichier : il propose les corrections."
 tools: Read, Grep, Glob, Bash
 model: haiku
 effort: low

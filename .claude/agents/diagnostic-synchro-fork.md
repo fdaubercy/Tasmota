@@ -1,6 +1,6 @@
 ---
 name: diagnostic-synchro-fork
-description: Prépare la synchro du fork avec arendst/Tasmota quand le hook signale du retard : liste ce que l'amont a changé, prévoit les conflits avec les fichiers que le fork modifie, recommande la voie (script de merge ou merge local guidé). Lecture seule : ne lance JAMAIS la synchro, ni merge, rebase, stash, reset, checkout ou push. À lancer avec « diagnostic de la synchro » ou le nombre de commits de retard.
+description: "Prépare la synchro du fork avec arendst/Tasmota quand le hook signale du retard : liste ce que l'amont a changé, prévoit les conflits avec les fichiers que le fork modifie, recommande la voie (script de merge ou merge local guidé). Lecture seule : ne lance JAMAIS la synchro, ni merge, rebase, stash, reset, checkout ou push. À lancer avec « diagnostic de la synchro » ou le nombre de commits de retard."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

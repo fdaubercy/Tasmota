@@ -1,6 +1,6 @@
 ---
 name: auditeur-menage
-description: Audit périodique du dépôt Tasmota pour repérer ce qui peut être rangé, reclassé ou supprimé : fichiers orphelins, restes (.bak, dossiers -sauvegarde, anciens exports), maquettes d'un choix déjà tranché, plans clos, doublons, fichiers hors de leur dossier, fichiers proches de 500 lignes. À lancer par /menage, une fois par mois ou après un gros chantier. Ne déplace ni ne supprime rien : il rend des propositions avec ce que chacune casserait.
+description: "Audit périodique du dépôt Tasmota pour repérer ce qui peut être rangé, reclassé ou supprimé : fichiers orphelins, restes (.bak, dossiers -sauvegarde, anciens exports), maquettes d'un choix déjà tranché, plans clos, doublons, fichiers hors de leur dossier, fichiers proches de 500 lignes. À lancer par /menage, une fois par mois ou après un gros chantier. Ne déplace ni ne supprime rien : il rend des propositions avec ce que chacune casserait."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium
@@ -51,7 +51,10 @@ Contrôles :
 4. **Doublons** : fichiers identiques (`git hash-object`) ou presque, copies de `data/fs` ailleurs.
 5. **Taille** : fichiers du fork proches de 500 lignes (> 450) ou au-delà et absents de la liste d'exceptions de `CLAUDE.md`.
 6. **Dossiers vides, `.keep` inutiles, images volumineuses** (> 1 Mo) non référencées.
-7. **Poids du dépôt** : les 10 plus gros fichiers suivis (`git ls-files -z | xargs -0 du`), s'ils sont inutiles.
+7. **Poids du dépôt** : les 10 plus gros fichiers suivis (un `du` par dossier suspect, sans pipe), s'ils sont inutiles.
+
+COMMANDES BASH : une seule commande simple par appel, sans `cd` (le dépôt est le dossier courant), sans pipe, sans `;`, `&&` ni redirection ;
+une commande composée est refusée par la page. Filtre avec Grep et Glob.
 
 Pour CHAQUE proposition : chemin, constat avec la preuve (commande et sortie), action suggérée (supprimer / archiver /
 déplacer vers / garder), **ce que ça casserait** (renvois `fichier::fonction` des docs, imports d'un module voisin,

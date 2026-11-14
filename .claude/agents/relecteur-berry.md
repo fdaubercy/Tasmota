@@ -1,6 +1,6 @@
 ---
 name: relecteur-berry
-description: Relecture d'un ou plusieurs modules Berry (.be) du fork Tasmota APRÈS modification et AVANT commit ou téléversement : charte des logs, RAM/heap, règles du dépôt, bancs concernés. À lancer avec la liste des fichiers .be modifiés (ou « le diff en cours »). Ne modifie aucun fichier.
+description: "Relecture d'un ou plusieurs modules Berry (.be) du fork Tasmota APRÈS modification et AVANT commit ou téléversement : charte des logs, RAM/heap, règles du dépôt, bancs concernés. À lancer avec la liste des fichiers .be modifiés (ou « le diff en cours »). Ne modifie aucun fichier."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

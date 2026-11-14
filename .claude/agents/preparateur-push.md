@@ -1,6 +1,6 @@
 ---
 name: preparateur-push
-description: Contrôle de pré-push du fork Tasmota : liste les commits qui partiraient sur origin, relance le contrôle de secrets sur toute la plage, vérifie la branche, l'état de origin et les commits d'autres sessions embarqués. Rend « on peut pousser » ou « stop ». À lancer par /commite pousse, ou avant tout push demandé. Lecture seule : ne pousse JAMAIS.
+description: "Contrôle de pré-push du fork Tasmota : liste les commits qui partiraient sur origin, relance le contrôle de secrets sur toute la plage, vérifie la branche, l'état de origin et les commits d'autres sessions embarqués. Rend « on peut pousser » ou « stop ». À lancer par /commite pousse, ou avant tout push demandé. Lecture seule : ne pousse JAMAIS."
 tools: Read, Grep, Glob, Bash
 model: opus
 effort: high

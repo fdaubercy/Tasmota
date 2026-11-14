@@ -1,6 +1,6 @@
 ---
 name: relecteur-outils-python
-description: Relecture des outils Python du fork Tasmota (outils_docs/scripts_python/ : outils_pc, build, maintenance, berry, sauvegarde) APRÈS modification et AVANT commit, hors partie page web (HTML/CSS/JS : voir relecteur-pages-web) : écriture atomique, refus pendant un build, secrets masqués, garde de build réelle, sous-processus, encodage, exceptions des 500 lignes, banc correspondant lancé. À lancer avec la liste des .py modifiés ou « le diff en cours ». Ne modifie aucun fichier.
+description: "Relecture des outils Python du fork Tasmota (outils_docs/scripts_python/ : outils_pc, build, maintenance, berry, sauvegarde) APRÈS modification et AVANT commit, hors partie page web (HTML/CSS/JS : voir relecteur-pages-web) : écriture atomique, refus pendant un build, secrets masqués, garde de build réelle, sous-processus, encodage, exceptions des 500 lignes, banc correspondant lancé. À lancer avec la liste des .py modifiés ou « le diff en cours ». Ne modifie aucun fichier."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

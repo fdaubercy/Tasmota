@@ -1,6 +1,6 @@
 ---
 name: verificateur-solidification
-description: Contrôle qu'un module Berry de data/fs modifié ou ajouté se solidifie vraiment, AVANT commit ou build : variable qui masque un builtin (panne du 2026-11-13), module absent de custom_berry_solidify, globale absente de globs, import mal ordonné dans l'autoexec, appels non préfixés. À lancer avec la liste des .be modifiés (ou « le diff en cours »). Ne modifie aucun fichier.
+description: "Contrôle qu'un module Berry de data/fs modifié ou ajouté se solidifie vraiment, AVANT commit ou build : variable qui masque un builtin (panne du 2026-11-13), module absent de custom_berry_solidify, globale absente de globs, import mal ordonné dans l'autoexec, appels non préfixés. À lancer avec la liste des .be modifiés (ou « le diff en cours »). Ne modifie aucun fichier."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

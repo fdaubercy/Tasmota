@@ -1,6 +1,6 @@
 ---
 name: controleur-secrets
-description: Contrôle de secrets AVANT un commit ou un push sur ce dépôt public : mots de passe, jetons, clés dans le diff ou les fichiers indexés (_persist.json, user_config_override.h, defines Berry, sorties de bancs, journaux, sauvegardes de cartes). N'affiche JAMAIS une valeur secrète. À lancer avec « le diff en cours », « l'index », ou une plage de commits. Ne modifie aucun fichier.
+description: "Contrôle de secrets AVANT un commit ou un push sur ce dépôt public : mots de passe, jetons, clés dans le diff ou les fichiers indexés (_persist.json, user_config_override.h, defines Berry, sorties de bancs, journaux, sauvegardes de cartes). N'affiche JAMAIS une valeur secrète. À lancer avec « le diff en cours », « l'index », ou une plage de commits. Ne modifie aucun fichier."
 tools: Read, Grep, Glob, Bash
 model: opus
 effort: high

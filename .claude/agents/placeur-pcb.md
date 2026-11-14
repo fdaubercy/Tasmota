@@ -1,6 +1,6 @@
 ---
 name: placeur-pcb
-description: Premier jet de placement d'une carte porteuse KiCad du fork Tasmota, selon les préférences de l'utilisateur. À lancer APRÈS les réponses de l'utilisateur à la question groupée de la skill pcb-tasmota, avec : le dossier data/<lieu>/<carte>, les décisions matérielles (modules, tensions, entrées/sorties, boîtier) et le dossier du projet PCB. Produit le générateur, la carte NON routée et les rendus ; ne route pas, n'exporte pas, ne commite pas.
+description: "Premier jet de placement d'une carte porteuse KiCad du fork Tasmota, selon les préférences de l'utilisateur. À lancer APRÈS les réponses de l'utilisateur à la question groupée de la skill pcb-tasmota, avec : le dossier data/<lieu>/<carte>, les décisions matérielles (modules, tensions, entrées/sorties, boîtier) et le dossier du projet PCB. Produit le générateur, la carte NON routée et les rendus ; ne route pas, n'exporte pas, ne commite pas."
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: opus
 ---

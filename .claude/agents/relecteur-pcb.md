@@ -1,6 +1,6 @@
 ---
 name: relecteur-pcb
-description: Relecture adversariale d'un PCB KiCad du fork Tasmota AVANT commande ou après une modification importante (schéma, placement, routage, sérigraphie, fabrication). À lancer avec le chemin du .kicad_pcb et du _persist.json de la carte. Ne modifie aucun fichier.
+description: "Relecture adversariale d'un PCB KiCad du fork Tasmota AVANT commande ou après une modification importante (schéma, placement, routage, sérigraphie, fabrication). À lancer avec le chemin du .kicad_pcb et du _persist.json de la carte. Ne modifie aucun fichier."
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

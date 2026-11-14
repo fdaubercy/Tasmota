@@ -1,6 +1,6 @@
 ---
 name: relecteur-docs
-description: Vérifie que la documentation durable du dépôt (CLAUDE.md, outils_docs/README.md, PROTOCOLE_MODBUS.md, SOLIDIFICATION_BERRY.md, CARTE_MODULES_BERRY.md, .claude/skills, agents, commands) colle au code : renvois fichier::fonction, chemins cités, entrées de la carte des documents, exceptions des 500 lignes, bancs cités. À lancer après un chantier ou avant un commit de docs. Ne modifie aucun fichier : il liste les corrections.
+description: "Vérifie que la documentation durable du dépôt (CLAUDE.md, outils_docs/README.md, PROTOCOLE_MODBUS.md, SOLIDIFICATION_BERRY.md, CARTE_MODULES_BERRY.md, .claude/skills, agents, commands) colle au code : renvois fichier::fonction, chemins cités, entrées de la carte des documents, exceptions des 500 lignes, bancs cités. À lancer après un chantier ou avant un commit de docs. Ne modifie aucun fichier : il liste les corrections."
 tools: Read, Grep, Glob, Bash
 model: haiku
 effort: low
