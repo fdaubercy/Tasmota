@@ -49,9 +49,9 @@ secrets), `menage_memoire.py` (liste « à garder »), `build/cible_menage.py`.
 - [x] Banc `test_menage_lancement.py` avec un faux `claude` (processus qui rend un JSON fixe) : succès, JSON invalide, délai dépassé, build en cours, double lancement — preuve : test_menage_lancement.py VERT (code 0) ; mutants : sans garde de build et sans liste blanche acceptent le cas hostile
 
 ## A3 — Mémoire « à garder »
-- [ ] `menage_memoire.py` : liste des chemins gardés dans `%LOCALAPPDATA%\outils_tasmota\menage\garde.json` (hors dépôt, écriture atomique, sauvegarde horodatée)
-- [ ] L'agent reçoit cette liste en entrée et ne repropose pas ces chemins ; un chemin gardé qui n'existe plus est retiré à la lecture
-- [ ] Banc `test_menage_memoire.py` : ajout, retrait, fichier corrompu, écriture interrompue
+- [x] `menage_memoire.py` : liste des chemins gardés dans `%LOCALAPPDATA%\outils_tasmota\menage\garde.json` (hors dépôt, écriture atomique, sauvegarde horodatée) — preuve : outils_pc/menage_memoire.py::Memoire (garde.json hors depot, ecriture atomique par fichier temporaire + os.replace, copie garde-<date>.json, 20 au plus, fichier illisible mis de cote)
+- [x] L'agent reçoit cette liste en entrée et ne repropose pas ces chemins ; un chemin gardé qui n'existe plus est retiré à la lecture — preuve : menage_memoire.py::charge retire les chemins disparus et reecrit le fichier ; menage_lancement.py::Audit(gardes=...) les met dans la consigne (test_menage_lancement.py : « data/vieux.txt » present dans l'entree du faux claude) ; branchement sur Memoire.charge fait en A4
+- [x] Banc `test_menage_memoire.py` : ajout, retrait, fichier corrompu, écriture interrompue — preuve : test_menage_memoire.py VERT (code 0) : ajout, doublon, anti-slash, .. et absolu refuses, retrait, disparu retire, fichier corrompu, forme inattendue, ecriture interrompue (ancien contenu intact, aucun .tmp), liste pleine ; mutant sans controle de chemin vu
 
 ## A4 — Serveur et routes
 - [ ] `menage_web.py` : `GET /` (page), `GET /etat`, `POST /lancer`, `GET /rapport`, `POST /garder`, `POST /ignorer` ; règle d'accès de `acces_web.py` (en-tête `X-Menage: 1`, même origine, jeton depuis un autre appareil) ; exception inattendue = 500 avec son message
