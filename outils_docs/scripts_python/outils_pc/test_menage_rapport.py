@@ -39,6 +39,10 @@ propre, err = mr.valide(rapport(prop()), RACINE)
 verifie(err, [], "rapport valide : aucune erreur")
 verifie(propre["propositions"][0]["chemin"], "tasks/README.md", "chemin conserve")
 verifie(propre["propositions"][0]["en_cours"], False, "en_cours conserve")
+propre, err = mr.valide(rapport(prop(vers="")), RACINE)
+verifie((err, propre and propre["propositions"][0]["vers"]), ([], None), "vers vide : pas de destination, pas une erreur")
+propre, err = mr.valide(rapport(prop(action="deplacer", vers="outils_docs/archive")), RACINE)
+verifie((err, propre and propre["propositions"][0]["vers"]), ([], "outils_docs/archive"), "deplacement vers un dossier a creer")
 
 # 2. JSON entoure de texte libre, accolades dans une chaine
 sortie = 'Voici le rapport :\n' + json.dumps(rapport(prop(constat="a } b { c"))) + '\nfin'

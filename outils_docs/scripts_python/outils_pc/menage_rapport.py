@@ -127,8 +127,10 @@ def valide(rapport, racine):
         if not isinstance(p.get("en_cours", False), bool):
             erreurs.append(f"{nom}.en_cours : booleen attendu")
         vers = p.get("vers")
+        if vers == "":
+            vers = None                    # l'agent met "" quand il n'y a pas de destination : pas une erreur
         if vers is not None and chemin_sur(vers, racine) is None:
-            erreurs.append(f"{nom}.vers : chemin refuse")
+            erreurs.append(f"{nom}.vers : chemin refuse ({str(vers)[:60]!r})")
         propres.append({
             "id": ident, "categorie": p.get("categorie"), "chemin": chemin, "action": p.get("action"),
             "risque": p.get("risque"), "en_cours": bool(p.get("en_cours", False)),
