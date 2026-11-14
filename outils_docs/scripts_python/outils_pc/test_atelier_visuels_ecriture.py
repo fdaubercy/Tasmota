@@ -51,11 +51,23 @@ def description(type_fond="svg", **autres):
     return {"version": 1, "fond": {"type": type_fond, "largeur": 480, "hauteur": 360}, "elements": [], **autres}
 
 
+def sans_visuel(texte):
+    """Cenv du depot sans la trace du visuel (liste, exclusions, solidification) : le banc part d'un depot ou aucune carte n'en a,
+    meme quand une carte du depot reel en porte un (cuve, 2026-11-14)."""
+    debuts = ("; Visuel d'accueil", "; exclue de tous les envs (regle du 2026-10-31)", "visuel_accueil =", "${berry_commun.visuel_accueil}",
+              "data/fs/visuelFonctions.be", "data/fs/controleVisuel.be", "data/sd/js/visuel.js", "; atelier des visuels")
+    return "\n".join(l for l in texte.split("\n") if not l.strip().startswith(debuts))
+
+
 def copie(dossier, avec_liste, avec_page=True):
     racine = Path(dossier)
     for f in INIS + ("tasmota/user_config_override.h",):
         (racine / f).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(DEPOT / f, racine / f)
+    cenv = racine / fbi.FICHIER_CENV
+    texte = cenv.read_bytes().decode("utf-8", errors="surrogateescape")
+    eol = "\r\n" if "\r\n" in texte else "\n"
+    cenv.write_bytes(eol.join(sans_visuel(texte.replace("\r\n", "\n")).split("\n")).encode("utf-8", errors="surrogateescape"))
     d = racine / fbe.dossier_carte(CUVE)
     d.mkdir(parents=True)
     (d / "autoexec.be").write_text(AUTOEXEC, encoding="utf-8")
