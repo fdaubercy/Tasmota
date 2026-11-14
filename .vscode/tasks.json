@@ -277,6 +277,16 @@
             "args": ["-u", "outils_docs/scripts_python/outils_pc/menage_web.py", "--http", "7995"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Cartes simulees : cartes hors ligne (le rideau du garage) rejouees par leurs vrais modules Berry.
+            // Aussi cible Custom « Cartes simulees (page web) ».
+            "label": "Outil : cartes simulees (http://127.0.0.1:7940)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/cartes_simulees_web.py", "--http", "7940"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

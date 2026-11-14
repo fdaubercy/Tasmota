@@ -282,6 +282,17 @@ OUTILS = [
         [_port("http", 7995)],
         "http",
         "Console capturée : " + CONSOLE.format("menage") + "."),
+    Outil(
+        "cartes_simulees", "Cartes simulees", "Cartes simulées", GROUPES[4],
+        "Simule hors ligne une carte du parc (le rideau du garage) : ses pages et ses modules Berry réels, l'identité réseau de son persist.",
+        "Page web qui lance et arrête la simulation d'une carte hors ligne : accueil et routes rejoués par les vrais modules Berry du dépôt "
+        "(berry.exe), nom d'hôte, passerelle, MQTT et port lus dans son _persist.json. Le rideau peut lire la vraie position du P4 en ligne "
+        "(un GET Status 10, lecture seule). Une carte qui répond sur le réseau n'est pas simulée. MQTT n'est jamais connecté. Seul paramètre ici : "
+        "le port de la page (7940). Rien n'est écrit dans le dépôt ; l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/cartes_simulees_web.py",
+        [_port("http", 7940)],
+        "http",
+        "Console capturée : " + CONSOLE.format("cartes_simulees") + "."),
 ]
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.
