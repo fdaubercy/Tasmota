@@ -41,6 +41,16 @@ def regenere(racine, env):
         return f"⚠ QR code de {env} : non vérifié ({type(e).__name__} : {e})"
 
 
+_CARTES = {}      # liste des envs lue UNE fois par processus pio (4,5 s a chaque lecture), pas a chaque env
+
+
+def _cartes(racine):
+    if str(racine) not in _CARTES:
+        import build_envs
+        _CARTES[str(racine)] = build_envs.liste_envs(racine)
+    return _CARTES[str(racine)]
+
+
 def fiche(racine, env):
     """A11 : ligne « fiche QR a republier » si la fiche en ligne de la carte ne correspond plus a son reglage (sans
     reseau : derniere pointe connue de la branche etiquettes), None sinon. Rien n'est envoye ; une erreur = avertissement."""
@@ -50,7 +60,7 @@ def fiche(racine, env):
         if str(OUTILS_PC) not in sys.path:
             sys.path.insert(0, str(OUTILS_PC))
         import etiquettes_qr_publication as publication
-        if not publication.fiche_a_republier(Path(racine), env):
+        if not publication.fiche_a_republier(Path(racine), env, _cartes(racine)):
             return None
         return (f"Fiche QR de {env} : à republier (page 7970, « Publier les fiches… », "
                 "ou case « Publier les fiches QR » de la page Build)")

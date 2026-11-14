@@ -73,6 +73,14 @@ def principal():
         message = qrcode_build.fiche(racine, CUVE)
         verifie(("à republier" in (message or ""), "7970" in (message or "")), (True, True),
                 "fiche : carte en lien sans fiche en ligne, ligne « à republier » qui renvoie a la page 7970")
+        import build_envs                                # la liste des envs n'est lue qu'une fois par processus (4,5 s)
+        vrai, appels = build_envs.liste_envs, []
+        build_envs.liste_envs = lambda r: appels.append(r) or vrai(r)
+        qrcode_build._CARTES.clear()
+        qrcode_build.fiche(racine, CUVE)
+        qrcode_build.fiche(racine, CUVE)
+        build_envs.liste_envs = vrai
+        verifie(len(appels), 1, "fiche : liste des envs lue une seule fois pour deux appels")
         surcharge.write_text("{ casse", encoding="utf-8")
         verifie((qrcode_build.fiche(racine, CUVE) or "").startswith("⚠"), True, "fiche : reglage illisible, avertissement sans exception")
     print("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s)")
