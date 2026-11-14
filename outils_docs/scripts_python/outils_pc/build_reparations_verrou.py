@@ -1,9 +1,11 @@
 """Verrou de fichier de la page Build (plan build-reparations A2) : qui tient un fichier, et ne fermer que la liste blanche.
 
 Repérage par le Restart Manager de Windows (RmStartSession, RmRegisterResources, RmGetList) ; nom et parent par Toolhelp32,
-ligne de commande par NtQueryInformationProcess (les memes champs que Win32_Process, sans ses 15 a 25 s). Jamais fermes : la page, la serie en cours (et ses descendants), `claude*`. Un pio/scons/python d'une autre
-origine : on attend sa fin, on ne le ferme jamais. Seule la liste blanche est fermee ; tout autre processus est rendu en
-`demande` (la page pose la question). Spec : docs/superpowers/specs/2026-11-14-build-reparations-design.md.
+ligne de commande par NtQueryInformationProcess (les memes champs que Win32_Process, sans ses 15 a 25 s).
+Jamais fermes : la page et ses descendants, la serie en cours et ses descendants, `claude*` (et un `node` lance par claude).
+Un pio/scons/python/py d'une autre origine : on attend sa fin, on ne le ferme jamais. Seule la liste blanche est fermee ;
+tout autre processus est rendu en `demande` (la page pose la question). Une fermeture qui echoue va dans `refuse`.
+Spec : docs/superpowers/specs/2026-11-14-build-reparations-design.md.
 """
 
 import ctypes
@@ -14,7 +16,11 @@ from ctypes import wintypes
 
 LISTE_BLANCHE = ("cpptools-srv.exe", "cpptools.exe")
 ATTENTE_LIBRE_S = 5
-_BUILD = re.compile(r"^(pio|platformio|scons|python[\d.]*w?)(\.exe)?$", re.I)
+_BUILD = re.compile(r"^(pio|platformio|scons|python[\d.]*w?|pyw?)(\.exe)?$", re.I)
+
+
+class ErreurVerrou(RuntimeError):
+    """Le Restart Manager n'a pas pu dire qui tient le fichier (a ne pas confondre avec « personne »)."""
 
 _k32 = ctypes.WinDLL("kernel32", use_last_error=True)
 _H = wintypes.HANDLE
@@ -28,6 +34,7 @@ _k32.TerminateProcess.argtypes = [_H, wintypes.UINT]
 _k32.QueryFullProcessImageNameW.argtypes = [_H, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
 _k32.CreateToolhelp32Snapshot.restype = _H
 _k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+_k32.GetProcessTimes.argtypes = [_H] + [ctypes.POINTER(wintypes.FILETIME)] * 4
 _INVALIDE = _H(-1).value
 
 
@@ -45,27 +52,34 @@ class _INFO(ctypes.Structure):
                 ("AppStatus", wintypes.ULONG), ("TSSessionId", wintypes.DWORD), ("bRestartable", wintypes.BOOL)]
 
 
+def _filetime(ft):
+    return (ft.dwHighDateTime << 32) | ft.dwLowDateTime
+
+
 def _pids_rm(chemin):
-    """Pids des processus qui tiennent `chemin`, selon le Restart Manager."""
+    """[(pid, heure de debut)] des processus qui tiennent `chemin`, selon le Restart Manager ; ErreurVerrou sinon."""
     rm = ctypes.WinDLL("rstrtmgr")
     session = wintypes.DWORD()
     cle = ctypes.create_unicode_buffer(33)
-    if rm.RmStartSession(ctypes.byref(session), 0, cle):
-        return []
+    err = rm.RmStartSession(ctypes.byref(session), 0, cle)
+    if err:
+        raise ErreurVerrou("RmStartSession : code %d" % err)
     try:
         fichiers = (wintypes.LPCWSTR * 1)(os.path.abspath(chemin))
-        if rm.RmRegisterResources(session, 1, fichiers, 0, None, 0, None):
-            return []
+        err = rm.RmRegisterResources(session, 1, fichiers, 0, None, 0, None)
+        if err:
+            raise ErreurVerrou("RmRegisterResources : code %d" % err)
         besoin, n, raison = wintypes.UINT(0), wintypes.UINT(0), wintypes.DWORD()
         for _ in range(5):  # la liste peut grandir entre deux appels (ERROR_MORE_DATA = 234)
             infos = (_INFO * max(besoin.value, 1))()
             n.value = len(infos)
             err = rm.RmGetList(session, ctypes.byref(besoin), ctypes.byref(n), infos, ctypes.byref(raison))
             if err == 0:
-                return [infos[i].Process.dwProcessId for i in range(n.value)]
+                return [(infos[i].Process.dwProcessId, _filetime(infos[i].Process.ProcessStartTime))
+                        for i in range(n.value)]
             if err != 234:
-                return []
-        return []
+                break
+        raise ErreurVerrou("RmGetList : code %d" % err)
     finally:
         rm.RmEndSession(session)
 
@@ -128,21 +142,25 @@ def processus_du_fichier(chemin: str) -> list:
         return []
     table = _table_processus()
     rendu = []
-    for pid in pids:
+    for pid, debut in pids:
         if pid not in table:
             continue
         ancetres, courant = [], table[pid][0]
         while courant in table and courant not in ancetres and len(ancetres) < 32:
             ancetres.append(courant)
             courant = table[courant][0]
-        rendu.append({"pid": pid, "nom": table[pid][1], "ligne": _ligne_commande(pid), "ancetres": ancetres})
+        rendu.append({"pid": pid, "nom": table[pid][1], "ligne": _ligne_commande(pid), "debut": debut,
+                      "ancetres": ancetres, "ancetres_noms": [table[a][1] for a in ancetres]})
     return rendu
 
 
 def classe(proc, pid_serie, liste_blanche) -> str:
     """"jamais" (page, serie, claude), "attend" (autre build), "ferme" (liste blanche) ou "demande" (le reste)."""
     pid, nom = proc.get("pid"), (proc.get("nom") or "").lower()
-    if pid == os.getpid() or nom.startswith("claude"):
+    if pid == os.getpid() or os.getpid() in proc.get("ancetres", ()) or nom.startswith("claude"):
+        return "jamais"
+    sous_claude = any(a.lower().startswith("claude") for a in proc.get("ancetres_noms", ()))
+    if nom in ("node", "node.exe") and sous_claude:
         return "jamais"
     if pid_serie is not None and (pid == pid_serie or pid_serie in proc.get("ancetres", ())):
         return "jamais"
@@ -164,35 +182,47 @@ def est_libre(chemin) -> bool:
     return True
 
 
-def _termine(pid, nom):
-    """Ferme `pid` s'il porte toujours le nom `nom` (pid reutilise entre-temps : on n'y touche pas)."""
+def _termine(pid, nom, debut=None) -> bool:
+    """Ferme `pid` s'il porte toujours le nom `nom` et, si `debut` est connu, la meme heure de debut (pid reutilise :
+    on n'y touche pas). Vrai seulement si TerminateProcess a reussi ; faux si absent, acces refuse ou autre processus."""
     h = _k32.OpenProcess(0x1001, False, pid)  # PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION
     if not h:
-        return  # deja mort
+        return False  # deja mort ou acces refuse
     try:
         tampon, taille = ctypes.create_unicode_buffer(1024), wintypes.DWORD(1024)
         if not _k32.QueryFullProcessImageNameW(h, 0, tampon, ctypes.byref(taille)):
-            return
+            return False
         if os.path.basename(tampon.value).lower() != (nom or "").lower():
-            return
-        _k32.TerminateProcess(h, 1)
+            return False
+        if debut:
+            t = [wintypes.FILETIME() for _ in range(4)]
+            if not _k32.GetProcessTimes(h, *[ctypes.byref(x) for x in t]) or _filetime(t[0]) != debut:
+                return False
+        return bool(_k32.TerminateProcess(h, 1))
     finally:
         _k32.CloseHandle(h)
 
 
 def libere(chemin, liste_blanche, pid_serie, demande, *, processus_du_fichier=processus_du_fichier, terminer=None):
     """Ferme les processus de la liste blanche qui tiennent `chemin` (et ceux que `demande(proc)` accepte), attend
-    jusqu'a 5 s que le fichier soit libre. Rend {"libre", "ferme", "attend", "demande"} ; "jamais" n'est pas rendu."""
-    rendu = {"libre": False, "ferme": [], "attend": [], "demande": []}
-    for p in processus_du_fichier(chemin):
+    jusqu'a 5 s que le fichier soit libre. Rend {"libre", "ferme", "attend", "demande", "refuse"} (fermeture echouee),
+    plus "erreur" si le Restart Manager n'a pas repondu ; "jamais" n'est pas rendu."""
+    rendu = {"libre": False, "ferme": [], "attend": [], "demande": [], "refuse": []}
+    try:
+        procs = processus_du_fichier(chemin)
+    except ErreurVerrou as e:
+        rendu["erreur"] = str(e)
+        return rendu
+    for p in procs:
         c = classe(p, pid_serie, liste_blanche)
         if c == "demande" and demande is not None and demande(p):
             c = "ferme"
         if c == "ferme":
             try:
-                terminer(p["pid"]) if terminer else _termine(p["pid"], p.get("nom"))
+                ok = terminer(p["pid"]) if terminer else _termine(p["pid"], p.get("nom"), p.get("debut"))
             except OSError:
-                pass  # mort entre le reperage et la fermeture : rien a faire
+                ok = False  # mort entre le reperage et la fermeture
+            c = "ferme" if ok else "refuse"
         if c != "jamais":
             rendu[c].append(p)
     fin = time.monotonic() + (ATTENTE_LIBRE_S if rendu["ferme"] else 0)
