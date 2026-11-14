@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Rapport de l'agent auditeur-menage",
+  "description": "Document de reference. La validation reelle est outils_pc/menage_rapport.py::valide (chemins sans .., dans le depot ; textes masques des secrets).",
+  "type": "object",
+  "required": ["resume", "propositions"],
+  "properties": {
+    "resume": { "type": "string", "maxLength": 2000 },
+    "non_verifie": { "type": "string", "maxLength": 2000 },
+    "propositions": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "required": ["id", "categorie", "chemin", "constat", "preuve", "action", "casserait", "risque"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,40}$" },
+          "categorie": { "enum": ["orphelin", "reste", "hors_dossier", "doublon", "taille", "poids", "vide"] },
+          "chemin": { "type": "string", "description": "relatif au depot, sans .. ni lecteur" },
+          "constat": { "type": "string", "maxLength": 2000 },
+          "preuve": { "type": "string", "maxLength": 2000, "description": "commande lancee et sortie, valeurs sensibles masquees" },
+          "action": { "enum": ["supprimer", "archiver", "deplacer", "garder"] },
+          "vers": { "type": "string", "description": "destination si action = deplacer ou archiver" },
+          "casserait": { "type": "string", "maxLength": 2000, "description": "renvois fichier::fonction, imports, listes du cenv, bancs" },
+          "risque": { "enum": ["faible", "moyen", "eleve"] },
+          "en_cours": { "type": "boolean", "description": "vrai = modifie, non suivi ou touche depuis moins de N jours : a ne pas toucher" }
+        }
+      }
+    }
+  }
+}

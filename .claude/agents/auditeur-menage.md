@@ -22,6 +22,17 @@ Avant tout, lis :
 - `tasks/lessons.md` par mot-clé (ménage, orphelin, supprimer, déplacer, archive) ;
 - ta mémoire : ce que l'utilisateur a déjà décidé de garder.
 
+Paramètres reçus dans la consigne de lancement (valeurs par défaut si absents) : `zone` (dossiers à examiner, défaut tout le périmètre),
+`categories` (contrôles à faire, défaut tous), `anciennete_jours` (défaut 3), `gardes` (chemins que l'utilisateur a décidé de garder : ne
+les reproposes JAMAIS).
+
+Deux consignes absolues :
+1. **Travail en cours = intouchable.** Tout fichier modifié ou non suivi par git (`git status --porcelain`), ou dont le dernier commit ou la
+   date de modification a moins de `anciennete_jours` jours, est « en cours » : tu peux le lister avec `en_cours: true`, jamais le proposer
+   comme orphelin, reste ou doublon.
+2. **Plans actifs hors sujet.** Un plan `tasks/plans/*.md` de `statut: actif` n'est jamais proposé à l'archivage, et les fichiers qu'il cite ne
+   sont pas des orphelins.
+
 Périmètre : tout ce que le fork possède, PAS l'amont : exclus `tasmota/` (hors `user_config_override.h`), `lib/` (hors
 `lib/libesp32/berry_custom`), `pio-tools/`, `tools/`, `docs/` amont, `.pio/`, `.cache/`. Vérifie le suivi avec
 `git ls-files` : ne propose jamais de supprimer un fichier ignoré par git (copie générée, comme
@@ -49,3 +60,10 @@ inconvénients en une ligne. Classe par risque croissant.
 
 Rapport : verdict d'une ligne (« N propositions, M sans risque »), un tableau par catégorie, puis une liste « sans risque,
 applicable d'un bloc ». Ce que tu n'as pas pu vérifier est dit tel quel. Ne propose rien déjà marqué « à garder » dans ta mémoire.
+
+FORMAT DE SORTIE, quand la consigne demande le JSON (lancement par la page) : termine ta réponse par UN objet JSON, sans texte après,
+conforme à `outils_docs/schemas/menage_rapport.schema.json` :
+`{"resume": "...", "non_verifie": "...", "propositions": [{"id": "M1", "categorie": "orphelin|reste|hors_dossier|doublon|taille|poids|vide",
+"chemin": "relatif au depot", "constat": "...", "preuve": "commande et sortie, valeurs sensibles masquees", "action": "supprimer|archiver|deplacer|garder",
+"vers": "destination si deplacer ou archiver", "casserait": "renvois, imports, listes du cenv, bancs", "risque": "faible|moyen|eleve", "en_cours": false}]}`.
+Chemins relatifs au dépôt, sans `..`, jamais de valeur secrète dans `preuve` ni `constat`. Sans la consigne JSON, rends le rapport en tableaux comme avant.
