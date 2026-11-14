@@ -8,6 +8,7 @@ Le dict rendu par `lit` porte `_chemin` (le fichier lu) : les compteurs et le jo
 """
 import json
 import os
+import urllib.parse
 from pathlib import Path
 
 
@@ -50,10 +51,19 @@ def regle(config, fournisseur_id, **champs):
 
 def masque(cle):
     cle = cle if isinstance(cle, str) else ""
-    return {"presente": bool(cle), "fin": cle[-4:] if len(cle) >= 8 else ""}
+    return {"presente": bool(cle), "fin": cle[-4:] if len(cle) >= 16 else ""}
+
+
+def _sans_requete(url):
+    """L'adresse sans sa requete ni ses identifiants (une cle peut s'y glisser : ?key=...)."""
+    if not isinstance(url, str):
+        return url
+    u = urllib.parse.urlsplit(url)
+    hote = u.netloc.rpartition("@")[2]
+    return urllib.parse.urlunsplit((u.scheme, hote, u.path, "", "")) + ("?..." if u.query else "")
 
 
 def pour_page(config):
     """Reglages montres a la page : tout sauf la cle, rendue par `masque`."""
-    return {i: {**{k: v for k, v in f.items() if k != "cle"}, "cle": masque(f.get("cle"))}
+    return {i: {**{k: (_sans_requete(v) if k == "url" else v) for k, v in f.items() if k != "cle"}, "cle": masque(f.get("cle"))}
             for i, f in config.get("fournisseurs", {}).items() if isinstance(f, dict)}

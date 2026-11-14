@@ -20,6 +20,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -29,6 +30,8 @@ import atelier_visuels_ia_config as cfg
 
 CONSIGNE_MAX = 2000
 IMAGE_MAX = 10 * 1024 * 1024
+REPONSE_MAX = 2 * 1024 * 1024        # reponse HTTP d'un service ou sortie de `claude -p`
+HOTES_LOCAUX = ("localhost", "127.0.0.1", "::1")
 DELAI = 600
 VERROU = threading.Lock()
 LIMITE = re.compile(r"rate.?limit|usage limit|limit reached|too many requests", re.I)
@@ -52,11 +55,19 @@ def _reprise(texte):
     return m.group(1).strip() if m else None
 
 
+class _SansRedirection(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):          # une redirection renverrait la photo et la cle ailleurs
+        return None
+
+
 def _post(url, corps, entetes, delai):
     req = urllib.request.Request(url, json.dumps(corps).encode("utf-8"), {"Content-Type": "application/json", **entetes})
     try:
-        with urllib.request.urlopen(req, timeout=delai) as r:
-            return json.loads(r.read().decode("utf-8"))
+        with urllib.request.build_opener(_SansRedirection).open(req, timeout=delai) as r:
+            brut = r.read(REPONSE_MAX + 1)
+        if len(brut) > REPONSE_MAX:
+            raise RuntimeError("reponse du service trop grosse : refusee")
+        return json.loads(brut.decode("utf-8"))
     except urllib.error.HTTPError as e:          # le corps n'est pas relu : il pourrait citer la cle
         if e.code == 429:
             attente = e.headers.get("Retry-After")
@@ -118,6 +129,8 @@ class ClaudeLocal(Fournisseur):
             except subprocess.TimeoutExpired:
                 pass
             raise RuntimeError(f"delai de {delai} s depasse") from None
+        if len(sortie) > REPONSE_MAX:            # shortcut: controle apres coup (communicate lit tout), a plafonner a la lecture si ca pese
+            raise RuntimeError("sortie de claude trop grosse : refusee")
         message, resultat = "", ""
         try:
             resultat = ear._resultat(sortie)
@@ -151,6 +164,9 @@ class ApiExterne(Fournisseur):
     def demande(self, consigne, chemin_image, delai=DELAI):
         if not self.disponible():
             raise RuntimeError("API externe non configuree (url, modele et cle)")
+        u = urllib.parse.urlsplit(str(self.reglages["url"]))
+        if u.scheme != "https" and not (u.scheme == "http" and u.hostname in HOTES_LOCAUX):
+            raise RuntimeError("API externe : l'adresse doit commencer par https:// (http:// seulement vers ce PC)")
         b64, mime = _image(chemin_image)
         r = _post(self.reglages["url"], {"model": self.reglages["modele"], "messages": [{"role": "user", "content": [
             {"type": "text", "text": f"{consigne}\n{CADRE}"},

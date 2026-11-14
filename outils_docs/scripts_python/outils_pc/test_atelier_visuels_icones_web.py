@@ -112,6 +112,13 @@ def main():
         verifie(not (p.parent / "fa6-solid-camera.svg").exists(), "garde : rien ecrit sans confirmation")
         ico.garde(racine, "fa6-solid", "camera", fa, confirme_attribution=True)
         verifie((p.parent / "fa6-solid-camera.svg").is_file(), "garde : attribution confirmee")
+        ico.garde(racine, "mdi", "tiret", {"svg": "<svg/>", "licence": "MIT", "auteur": "A|B\nC", "origine": "http://x\r\ny"})
+        ligne = next(l for l in registre.read_text(encoding="utf-8").splitlines() if "mdi-tiret.svg" in l)
+        verifie(ligne.count("|") == 5, "LICENCES.md : | et retours a la ligne nettoyes dans auteur et origine")
+        class Bizarre(Faux):
+            def __call__(self, url, delai, maxi):
+                return b'{"mdi": "pas un objet"}' if "/collections" in url else super().__call__(url, delai, maxi)
+        leve(ico.HorsLigne, lambda: ico.svg("mdi", "camera", Bizarre()), "svg : info d'un jeu non dict = HorsLigne (503), pas 500")
         leve(ValueError, lambda: ico.garde(racine, "gpl", "x", {"svg": "<svg/>", "licence": "GPL-3.0"}), "garde : licence masquee refusee")
     print("VERT" if not ECHECS else f"ROUGE : {ECHECS}")
     return 1 if ECHECS else 0

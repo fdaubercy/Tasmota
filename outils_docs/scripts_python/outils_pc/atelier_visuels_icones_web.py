@@ -119,6 +119,8 @@ def svg(jeu, nom, ouvre=None, cache=None):
     _id(jeu, "jeu")
     _id(nom, "nom")
     info = _json(f"{BASE}/collections?" + urllib.parse.urlencode({"prefix": jeu}), ouvre, cache).get(jeu) or {}
+    if not isinstance(info, dict):
+        raise HorsLigne("reponse d'Iconify inattendue")
     spdx = (info.get("license") or {}).get("spdx", "")
     if licences_ok(spdx) == "masquee":
         raise ValueError(f"licence {spdx or 'inconnue'} non permise pour le jeu {jeu}")
@@ -148,6 +150,7 @@ def garde(racine, jeu, nom, info, confirme_attribution=False):
     registre = dossier / "LICENCES.md"
     entete = "" if registre.is_file() else ("# Licences des icones gardees\n\n"
                                            "| Fichier | Licence | Auteur | Origine |\n|---|---|---|---|\n")
+    propre = lambda v: re.sub(r"[|\r\n]+", " ", str(v or "")).strip()          # une cellule de tableau Markdown
     with open(registre, "a", encoding="utf-8") as f:
-        f.write(f"{entete}| {chemin.name} | {info['licence']} | {info.get('auteur', '')} | {info.get('origine', '')} |\n")
+        f.write(f"{entete}| {chemin.name} | {propre(info['licence'])} | {propre(info.get('auteur'))} | {propre(info.get('origine'))} |\n")
     return chemin
