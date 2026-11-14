@@ -47,6 +47,10 @@ Evenements numerotes (modele maintenance/synchro_fork_session.Session, rejoues p
   attente_carte  env, port, precedent (env precedent sur ce port), fait (actions deja reussies), erreur ("" ou
            port absent / tenu apres Continuer) : pause, la page demande de brancher la carte
   reprise_carte  env, port, choix (continuer | passer | arret) : fin de la pause
+  reparation  env, action, regle, etat (en_cours | reussie | echouee), message : un fils pio rate est repare puis la meme
+           etape relancee (build_reparations.Reparateur ; jamais un envoi, 2 relances au plus ; arret = env « arrete »)
+  choix_reparation  env, regle, texte, boutons (fermer | attendre | annuler) : un processus hors liste blanche tient le
+           fichier ; reponse par repond_reparation, la reparation abandonnee sans reponse en 10 min
   fin      env=None, resultat (termine | arrete), succes, echecs, passes, arretes, non_lances, fichiers_modifies
 
 Journal complet de chaque fils (AVEC les couleurs ANSI, lues par le panneau « Sortie ») dans <dossier>/journaux/ ; par env, dans
@@ -69,6 +73,7 @@ from pathlib import Path
 import build_envs
 import build_memoire
 import build_partitions
+import build_reparations
 import build_drvset
 import build_sauvegarde
 import build_ota_firmware
@@ -192,6 +197,8 @@ class Serie:
         self._choix = {}                                 # action « fichiers » : liste, recharger_berry, redemarrer
         self._publier = False                            # case « Publier les fiches QR » (etiquettes A11)
         self.publie_fiches = _publie_fiches              # remplace par un faux dans le banc
+        self.fabrique_reparateur = build_reparations.pour_serie   # un Reparateur par lancement (faux dans le banc)
+        self.reparateur = None
 
     # -- evenements -------------------------------------------------------------------------------------
 
@@ -247,6 +254,17 @@ class Serie:
                 raise RuntimeError("cette pause a déjà reçu une réponse")
             self._pause["choix"] = choix
             self.verrou.notify_all()
+
+    def repond_reparation(self, env, choix):
+        """Reponse au choix_reparation ouvert ; ValueError choix inconnu, RuntimeError aucune demande ouverte."""
+        if self.reparateur is None:
+            raise RuntimeError("aucune demande de réparation ouverte")
+        self.reparateur.repond_choix(env, choix)
+
+    def reparations(self):
+        """Reparations de la serie en cours (ou de la derniere) : [{env, action, regle, titre, etat, message}]."""
+        with self.verrou:
+            return [dict(h) for h in self.reparateur.historique] if self.reparateur else []
 
     # -- controle avant lancement ---------------------------------------------------------------------
 
@@ -347,6 +365,7 @@ class Serie:
                 raise RuntimeError(" ; ".join(motifs))
             self._actif, self._arret, self._arret_immediat = True, False, False
             self._publier = bool(publier)
+            self.reparateur = self.fabrique_reparateur(self)
             self._choix = {"fichiers": list(fichiers["liste"]), "recharger_berry": bool(fichiers.get("recharger_berry")),
                            "redemarrer": bool(fichiers.get("redemarrer")), "transport": fichiers.get("transport", "http"),
                            "effacer": bool(fichiers.get("effacer"))} if fichiers else {}
@@ -520,7 +539,7 @@ class Serie:
                 lance_pio = True
                 if ligne.methode == "com" and action in TELEVERSEMENTS and cible.split()[-1:] == [action]:
                     drvset = self._sauve_drvset(ligne)   # le flash serie va remplacer le FS
-                ok, motif, extrait, etape = self._lance_pio(ligne, action, cible)
+                ok, motif, extrait, etape = self.reparateur.execute(ligne, action, cible, self._lance_pio)
             else:
                 ok, motif, extrait, etape = self._lance_ota(ligne, genre)
             if ok is None:                               # arret immediat avant le lancement du fils
@@ -537,7 +556,7 @@ class Serie:
             else:
                 statuts.update({a: "echec" for a in couvre})
             self._ajoute("echec", env, action=action, motif=motif, extrait=extrait)
-            resultat = "arrete" if self._arrete_demande(immediat=True) else "echec"
+            resultat = "arrete" if self._arrete_demande(immediat=True) or self.reparateur.interrompue else "echec"
             break
         if drvset and resultat == "succes":
             try:

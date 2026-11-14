@@ -22,6 +22,7 @@ os.environ["PLATFORMIO_UPLOAD_PORT"] = "COM99"    # aucun fils pio (les deux der
 os.environ["PLATFORMIO_EXTRA_SCRIPTS"] = "post:x.py"   # l'empreinte du projet -> purge de .pio/build)
 
 import build_faux_pio as faux                    # noqa: E402
+import build_reparations as br                   # noqa: E402
 import build_serie as bs                         # noqa: E402  (apres BUILD_WEB_PIO)
 from build_serie import Ligne                    # noqa: E402
 from test_build_ota_fs import FICHIERS_IMAGE, arbre, fabrique_image   # noqa: E402  (vraie image LittleFS)
@@ -69,6 +70,11 @@ def firmware_ok(env, ip, dossier_build, rapporte):
     """Envoi du firmware simule : jamais la vraie fonction (elle contacterait une carte)."""
 
 
+def _libere_interdit(*args, **kw):
+    ECHECS.append("libere_verrou appele sans faux")
+    raise RuntimeError("libere_verrou interdit dans le banc")
+
+
 class Montage:
     """Depot d'essai + dossier de donnees + scenario et journal du faux pio."""
 
@@ -90,6 +96,9 @@ class Montage:
         self.serie = (classe or bs.Serie)(self.racine, self.dossier, builds_en_cours=self._builds,
                               port_libre=lambda p: self.ports.get(p, "libre"), ota_fs=ota_fs,
                               ota_firmware=ota_firmware, sondage=0.05)
+        # catalogue de base, local absent ; jamais le vrai Restart Manager (il pourrait fermer un vrai cpptools)
+        self.serie.fabrique_reparateur = lambda s: br.Reparateur(s, br.charge_catalogue(br.BASE, self.t / "absent.json"),
+                                                                 libere=_libere_interdit)
         self.n = 0
 
     def _builds(self):
@@ -1246,6 +1255,120 @@ def test_publication_fiches():
                 ([A], True, True), "publication_fiches : refus rendu dans fin, la serie reste reussie")
 
 
+VERROU = ("PermissionError: [Errno 13] Permission denied: "
+          "'C:\\\\Users\\\\x\\\\Documents\\\\Github\\\\Tasmota\\\\lib\\\\libesp32\\\\berry_custom\\\\src\\\\modules.h'")
+ECHEC_VERROU = {"code": 1, "lignes": ["Compiling .pio/build/{env}/src/a.cpp.o", VERROU, "[FAILED] Took 0.10 seconds"]}
+
+
+def reparateur(m, libere=None, horloge=time.monotonic, secondes=0.05):
+    """Catalogue de base du depot (attente raccourcie) et faux libere_verrou : jamais le vrai Restart Manager."""
+    regles = br.charge_catalogue(br.BASE, m.t / "absent.json")
+    for r in regles:
+        r.actions = [dict(a, parametres={"secondes": secondes}) if a["action"] == "attendre" else a for a in r.actions]
+    m.liberes = []
+
+    def faux(chemin, liste, pid, demande):
+        m.liberes.append(chemin)
+        return {"libre": True, "ferme": [], "attend": [], "demande": [], "refuse": []}
+    m.serie.fabrique_reparateur = lambda s: br.Reparateur(s, regles, horloge=horloge, libere=libere or faux)
+
+
+def test_reparations():
+    """Plan build-reparations A3 : panne de verrou reparee et etape relancee ; pas de boucle ; envoi jamais relance."""
+    with tempfile.TemporaryDirectory() as t:              # echoue une fois, puis reussit
+        m = Montage(t, {A: {"build": ECHEC_VERROU}})
+        reparateur(m, libere=lambda c, l, p, d: (m.scenario.write_text("{}", encoding="utf-8"),
+                                                {"libre": True, "ferme": [], "attend": [], "demande": [], "refuse": []})[1])
+        ev = m.lance([com(A)], {"compiler"})
+        verifie((len(m.appels()), du_type(ev, "fin_env")[0]["resultat"]), (2, "succes"),
+                "reparations : verrou -> meme etape relancee, env reussi")
+        verifie([e["etat"] for e in du_type(ev, "reparation", env=A)], ["en_cours", "reussie"],
+                "reparations : evenements reparation en_cours puis reussie")
+        verifie((du_type(ev, "echec"), m.serie.reparations()[0]["etat"]), ([], "reussie"),
+                "reparations : pas d'echec, historique de la serie")
+        textes = "".join(p.read_text(encoding="utf-8") for p in (m.dossier / "journaux").glob("*.log"))
+        verifie("[réparation]" in textes, True, "reparations : ligne [réparation] dans le journal de l'env")
+    with tempfile.TemporaryDirectory() as t:              # meme panne a chaque fois : une relance, pas de boucle
+        m = Montage(t, {A: {"build": ECHEC_VERROU}})
+        reparateur(m)
+        ev = m.lance([com(A), com(B)], {"compiler"})
+        verifie(([a["env"] for a in m.appels()], [e["resultat"] for e in du_type(ev, "fin_env")]),
+                ([A, A, B], ["echec", "succes"]), "reparations : panne identique, une relance puis echec, env suivant")
+        verifie([e["etat"] for e in du_type(ev, "reparation")], ["en_cours", "echouee"],
+                "reparations : reparation echouee annoncee")
+    with tempfile.TemporaryDirectory() as t:              # panne differente a chaque fois : 2 relances au plus
+        m = Montage(t, {A: {"build": ECHEC_VERROU}})
+
+        def autre_fichier(chemin, liste, pid, demande):
+            k = len(m.liberes) + 1                        # 5 fichiers differents, puis le meme (fin garantie)
+            m.liberes.append(chemin)
+            cas = dict(ECHEC_VERROU, lignes=[l.replace("modules.h", f"f{min(k, 5)}.h") for l in ECHEC_VERROU["lignes"]])
+            m.scenario.write_text(json.dumps({A: {"build": cas}}), encoding="utf-8")
+            return {"libre": True, "ferme": [], "attend": [], "demande": [], "refuse": []}
+        reparateur(m, libere=autre_fichier)
+        ev = m.lance([com(A)], {"compiler"})
+        verifie((len(m.appels()), du_type(ev, "fin_env")[0]["resultat"]), (3, "echec"),
+                "reparations : pannes differentes, 2 relances au plus puis echec")
+    with tempfile.TemporaryDirectory() as t:              # aucune regle : comportement d'avant
+        m = Montage(t, {A: {"build": {"code": 1, "lignes": ["src/a.cpp:3:1: error: 'x' was not declared", "[FAILED]"]}}})
+        reparateur(m)
+        ev = m.lance([com(A), com(B)], {"compiler"})
+        verifie((len(m.appels()), len(du_type(ev, "echec", env=A)), du_type(ev, "reparation"), m.liberes),
+                (2, 1, [], []), "reparations : sans regle, echec et env suivant, rien tente")
+    with tempfile.TemporaryDirectory() as t:              # upload COM : jamais relance
+        m = Montage(t, {A: {"upload": ECHEC_VERROU}})
+        reparateur(m)
+        ev = m.lance([com(A)], {"compiler", "upload"})
+        verifie((len(m.appels()), du_type(ev, "reparation"), m.liberes), (1, [], []),
+                "reparations : upload COM jamais relance")
+    with tempfile.TemporaryDirectory() as t:              # arret pendant la reparation
+        m = Montage(t, {A: {"build": ECHEC_VERROU}})
+        reparateur(m, secondes=30)
+        m.serie.lance([com(A), com(B)], {"compiler"})
+        m.attend("reparation", etat="en_cours")
+        debut = time.monotonic()
+        m.serie.arrete(False)
+        ev = m.attend("fin")
+        verifie((du_type(ev, "fin_env")[0]["resultat"], len(m.appels()), time.monotonic() - debut < 5),
+                ("arrete", 1, True), "reparations : arret pendant la reparation -> env arrete, pas de relance")
+    with tempfile.TemporaryDirectory() as t:              # processus « demande » : choix ouvert puis resolu
+        m = Montage(t, {A: {"build": ECHEC_VERROU}})
+
+        def libere_demande(chemin, liste, pid, demande):
+            if demande({"pid": 77, "nom": "outil.exe", "ligne": "outil.exe -token=abc987"}):
+                m.scenario.write_text("{}", encoding="utf-8")
+            return {"libre": True, "ferme": [], "attend": [], "demande": [], "refuse": []}
+        reparateur(m, libere=libere_demande)
+        m.serie.lance([com(A)], {"compiler"})
+        ch = du_type(m.attend("choix_reparation"), "choix_reparation")
+        verifie(bool(ch) and (ch[0]["boutons"], "abc987" in ch[0]["texte"]) == (["fermer", "attendre", "annuler"], False),
+                True, "reparations : choix_reparation emis (boutons, secret filtre)")
+        m.serie.repond_reparation(A, "fermer")
+        try:
+            m.serie.repond_reparation(A, "fermer")
+            verifie(True, False, "reparations : 2e reponse refusee")
+        except RuntimeError:
+            pass
+        ev = m.attend("fin")
+        verifie((len(m.appels()), du_type(ev, "fin_env")[0]["resultat"]), (2, "succes"),
+                "reparations : Fermer -> relance reussie")
+    with tempfile.TemporaryDirectory() as t:              # sans reponse en 10 min : env en echec, la serie continue
+        m = Montage(t, {A: {"build": ECHEC_VERROU}})
+        horloge = [0.0]
+        reparateur(m, libere=libere_demande, horloge=lambda: horloge[0])
+        m.serie.lance([com(A), com(B)], {"compiler"})
+        m.attend("choix_reparation")
+        horloge[0] = 601
+        ev = m.attend("fin")
+        verifie([e["resultat"] for e in du_type(ev, "fin_env")], ["echec", "succes"],
+                "reparations : choix expire -> env en echec, env suivant")
+        try:
+            m.serie.repond_reparation(A, "fermer")
+            verifie(True, False, "reparations : reponse apres expiration refusee")
+        except RuntimeError:
+            pass
+
+
 def principal():
     garde_fou()
     for test in (test_commandes, test_serie_upload_ota_par_page, test_ota_par_maitre, test_ordre_actions, test_serie_un_par_un,
@@ -1261,7 +1384,7 @@ def principal():
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
                  test_solidification_vide, test_fs_par_firmware, test_pause_fs_par_firmware, test_data_dir_avant_pio,
                  test_uploadfs_ota_identite, test_fichiers_ota, test_fichiers_mqtt, test_pourcent_global_envoi,
-                 test_publication_fiches):
+                 test_publication_fiches, test_reparations):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

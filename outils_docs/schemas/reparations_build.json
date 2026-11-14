@@ -4,7 +4,7 @@
       "id": "verrou_fichier",
       "titre": "Fichier du depot tenu par un autre processus",
       "motif": "PermissionError: \\[Errno 13\\] Permission denied: '[A-Za-z]:\\\\\\\\Users\\\\\\\\[^']*\\\\\\\\Tasmota\\\\\\\\",
-      "etapes": ["compilation", "liens", "buildfs"],
+      "etapes": ["prebuild", "compilation", "liens", "buildfs"],
       "actions": [
         {"action": "libere_verrou", "parametres": {}},
         {"action": "attendre", "parametres": {"secondes": 5}}
