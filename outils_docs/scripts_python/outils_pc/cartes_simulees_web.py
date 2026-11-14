@@ -10,7 +10,7 @@ la simulation sert les cartes hors ligne. MQTT n'est jamais connecte (cartes_sim
 
 Routes (les POST exigent l'en-tete X-Cartes-Simulees: 1 et la meme origine) :
     GET  /          la page (cartes_simulees_page.PAGE)
-    GET  /etat      {cartes: [{env, nom, adresse, berry, lancee, port, url}]}
+    GET  /etat      {cartes: [{env, nom, adresse, berry, puce, modules, lancee, port, url}]}
     POST /lance     {env}   -> {message, url}
     POST /arrete    {env}
 Refus : 400 (saisie), 403 (acces), 404 (carte inconnue), 409 (deja lancee, carte en ligne, port occupe), 500 (inattendu).
@@ -67,7 +67,7 @@ class Etat:
             p = cs.profil_reseau(c["env"])
             srv = self.lances.get(c["env"])
             port = srv.server_address[1] if srv else p["port_web"]
-            sortie.append({"env": c["env"], "nom": p["nom"] or c["env"], "adresse": c["adresse"], "berry": c["berry"],
+            sortie.append({"env": c["env"], "nom": p["nom"] or c["env"], "adresse": c["adresse"], "berry": c["berry"], "puce": c["puce"], "modules": c["modules"],
                            "lancee": srv is not None, "port": port, "url": f"http://127.0.0.1:{port}/" if srv else None})
         return sortie
 

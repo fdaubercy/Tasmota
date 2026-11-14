@@ -2527,6 +2527,14 @@ Tuile « Ménage du dépôt » de l'annuaire (groupe Ateliers), page http://127.
 
 Rien n'est déplacé ni supprimé dans le dépôt. « Garder » mémorise un chemin hors dépôt (`%LOCALAPPDATA%\outils_tasmota\menage\garde.json`) pour qu'il ne soit plus proposé ; « Ignorer » ne vaut que pour la session de l'outil. Lancement refusé pendant un build. Bancs : `test_menage_rapport.py`, `test_menage_lancement.py`, `test_menage_memoire.py`, `test_menage_web.py`, sonde `test_menage_page_chrome.py`, `build/test_cible_menage.py`.
 
+## Cartes simulées (page web)
+
+Tuile « Cartes simulées » de l'annuaire (groupe Ateliers), page http://127.0.0.1:7940 ; tâche VS Code « Outil : cartes simulees » ou cible Custom détachée. Elle simule hors ligne une carte du parc : « Lancer » démarre un serveur local sur `127.0.0.1`, au port web de la vraie carte (8082 pour le rideau du garage, 8080 + id − 1 derrière un maître), « Ouvrir » affiche sa page d'accueil, « Arrêter » la coupe.
+
+Le rideau rejoue ses vrais modules Berry (`controleRideau.be`) par `berry.exe` sur les bouchons de `scripts_python/berry/bouchons_berry/` et lit sa position chez le P4 par un seul `GET /cm?cmnd=Status 10` (lecture seule). Les 12 autres cartes n'ont que leur identité réseau et un accueil générique. Nom d'hôte, passerelle, masque, DNS, MQTT et port viennent du `_persist.json`.
+
+Limites : une carte qui répond sur le réseau n'est jamais simulée (refus 409), le P4 en 192.168.0.43 en fait partie ; MQTT n'est jamais connecté (un second client du même nom ferait tomber la vraie carte) ; pas d'alias d'IP ; les pages natives du C++ (Configuration, Console) sont en 404. Rien n'est écrit dans le dépôt. Pour que « Arrêter » apparaisse dans l'annuaire, lancer l'outil depuis sa tuile ou la cible Custom, pas à la main. Bancs : `test_cartes_simulees.py`, `test_cartes_simulees_web.py`, sonde `test_cartes_simulees_page_chrome.py`, `build/test_cible_cartes_simulees.py`.
+
 <hr></hr>
 
 ## Les devices Tasmota développées :

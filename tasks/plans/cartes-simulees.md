@@ -22,8 +22,8 @@ Décisions de l'utilisateur (2026-11-14) :
 - Détails à confirmer après le rapport de l'agent d'exploration (réutilisations exactes).
 
 ## A1 — Inventaire des envs simulables
-- [ ] Liste des envs, dossier `data/<lieu>/<carte>`, IP, hostname, topic, puce (réutiliser `outils_pc/build_envs.py` et `lieux.py::identites`)
-- [ ] Pour chaque env : modules Berry chargés (autoexec) et routes déclarées
+- [x] Liste des envs, dossier `data/<lieu>/<carte>`, IP, hostname, topic, puce (réutiliser `outils_pc/build_envs.py` et `lieux.py::identites`) — preuve : `cartes_simulees.py --liste` (13 cartes, puce par `lieux.puce`), outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles), sections 4 et 6
+- [ ] Pour chaque env : modules Berry chargés (autoexec) et routes déclarées — FAIT pour les modules : `cartes_simulees.py::modules_autoexec`, relus en brut par la section 6 (outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles)) ; 2 cartes sans module (cave-serveur-rly, garage-serveur-modbus : autoexec d'ancien format, à vérifier) ; RESTE les routes, déclarées pour le rideau seulement (`MODULES_BERRY`)
 - [x] Banc de l'inventaire — preuve : outils_pc/test_cartes_simulees.py section 4 VERT (13 cartes avec persist, hote et topic relus en brut, accueil générique ; 45 contrôles)
 
 ## A2 — Moteur Berry (routes réelles)
@@ -32,11 +32,11 @@ Décisions de l'utilisateur (2026-11-14) :
 - [ ] Banc : la sortie du rideau contient `window.VOLETS` avec le décor
 
 ## A3 — Serveur de la carte simulée
-- [ ] Serveur HTTP par carte : fichiers `/sd`, routes Berry (A2), `/cm?cmnd=` de base, 404 net pour le C++ natif non capturé
+- [x] Serveur HTTP par carte : fichiers `/sd`, routes Berry (A2), `/cm?cmnd=` de base, 404 net pour le C++ natif non capturé — preuve : outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles), section 2 (accueil, /rideau, /cm Status 5 et 6, Restart refusé, /sd/.. et /up en 404)
 - [x] Identité réseau identique au persist : hôte, IP, passerelle, masque, DNS, MQTT (affiché, jamais connecté), port web = 8080 + id - 1 derrière un maître, répondus par `/cm Status 5` et `Status 6` — preuve : outils_pc/test_cartes_simulees.py VERT (valeurs relues en lecture brute du persist, témoin négatif)
 - [x] Le rideau simulé lit la vraie position du P4 en ligne (Status 10, GET en lecture seule) ou un scénario au choix — preuve : outils_pc/test_cartes_simulees.py section 5 VERT (faux P4 local : 20 -> 80 %, une seule requête, P4 coupé -> maître muet)
 - [ ] Valeurs de scénario (ouvert, fermé, maître muet, incohérence) ; position lue par `/rideau?f=position&id=`
-- [ ] Banc avec témoin négatif
+- [x] Banc avec témoin négatif — preuve : outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles), section 7 : copie de la carte dont l'inversion de `controleRideau.be` est retirée -> le rejeu rend 30 au lieu de 70 ; nom de la porte changé dans le persist -> l'accueil le reprend ; section 3 : hôte du persist changé
 
 ## A4 — Capture et rejeu
 - [ ] Capture d'une carte en ligne (GET uniquement) rangée hors dépôt, secrets masqués
@@ -51,7 +51,7 @@ Plus d'alias d'IP : le rideau, seule carte simulée, n'a pas d'IP propre sur le 
 ## A6 — Page « Cartes simulées » dans l'annuaire
 - [x] Page : liste des envs, source (scénario/capture), IP, simuler/arrêter, lien vers la page simulée — preuve : outils_pc/test_cartes_simulees_web.py VERT (19 contrôles : lancer et arrêter le rideau pour de vrai, carte en ligne refusée, anti-CSRF, Host) ; capture de la page lue
 - [x] Tuile (groupe Ateliers, comme le ménage : l'annuaire n'a pas de groupe Maintenance), tâche VS Code, cible Custom détachée, `garde_build` (`CIBLES_OUTILS`) — preuve : build/test_cible_cartes_simulees.py VERT, build/test_garde_build.py VERT, registre chargé (annuaire_registre.par_id). Pas de refus pendant un build : l'outil ne lit que le dépôt
-- [ ] Sonde Chrome (thème, téléphone)
+- [x] Sonde Chrome (thème, téléphone) — preuve : outils_docs/scripts_python/outils_pc/test_cartes_simulees_page_chrome.py, VERT le 2026-11-14 (20 contrôles : liste, lancer, arrêter, carte en ligne refusée, texte hostile, thème clair/sombre, téléphone) ; 3 témoins détectés (innerHTML, bouton Arrêter, message rouge) ; aucun Chrome orphelin. Limite : fausses simulations (pas de berry.exe)
 
 ## A7 — Vrai firmware ESP32 classique (essai)
 - [ ] Choisir l'env ESP32 de l'essai ; QEMU via WSL2 ou `idf_tools.py`
@@ -59,7 +59,7 @@ Plus d'alias d'IP : le rideau, seule carte simulée, n'a pas d'IP propre sur le 
 - [ ] Documenter les limites (S3/P4 non couverts)
 
 ## A8 — Documentation
-- [ ] Entrée dans la Carte des documents de CLAUDE.md et section de `outils_docs/README.md`
+- [x] Entrée dans la Carte des documents de CLAUDE.md et section de `outils_docs/README.md` — preuve : CLAUDE.md (entrée `cartes_simulees_web.py`) et README.md § « Cartes simulées (page web) » ; `verifie_references_docs.py` : 0 défaut
 - [ ] Exceptions de longueur déclarées si un fichier dépasse 500 lignes
 
 ## Améliorations restantes

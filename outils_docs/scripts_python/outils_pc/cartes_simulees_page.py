@@ -33,7 +33,7 @@ function msg(t,ko){var m=document.getElementById('msg');m.textContent=t||'';m.cl
 function ligne(c){
   var d=document.createElement('div');d.className='carte';
   var n=document.createElement('div');n.className='nom';var b=document.createElement('b');b.textContent=c.nom;n.appendChild(b);
-  var s=document.createElement('span');s.className='doux';s.textContent=c.env+' · '+(c.adresse||'adresse inconnue')+' · port '+c.port;n.appendChild(s);d.appendChild(n);
+  var s=document.createElement('span');s.className='doux';s.textContent=c.env+' · '+c.puce+' · '+(c.adresse||'adresse inconnue')+' · port '+c.port+' · '+c.modules.length+' modules Berry';s.title=c.modules.join(', ');n.appendChild(s);d.appendChild(n);
   var g=document.createElement('span');g.className='badge '+(c.berry?'berry':'');g.textContent=c.berry?'modules Berry rejoués':'identité réseau seule';d.appendChild(g);
   if(c.lancee){var e=document.createElement('span');e.className='badge on';e.textContent='simulée';d.appendChild(e);
     var a=document.createElement('a');a.className='btn';a.target='_blank';a.rel='noopener';a.href=c.url;a.textContent='Ouvrir';d.appendChild(a)}

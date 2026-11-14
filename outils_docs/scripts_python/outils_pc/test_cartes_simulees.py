@@ -132,6 +132,37 @@ def main():
         srv.shutdown()
         cs.SCENARIO["source_p4"] = "simule"
         cs.URL_MAITRE = None
+    print("6. Inventaire : puce et modules Berry lus dans l'autoexec de chaque carte")
+    verifie([cs.inventaire()[ENV]["puce"], "controleRideau" in cs.inventaire()[ENV]["modules"]], ["ESP32-S3", True], "rideau : puce et module controleRideau")
+    modele = re.compile(r"demarrage\.(?:importe|compile|charge)\(\[([^\]]*)\]")
+    for c in inv:
+        a = cs.RACINE / c["dossier"] / "autoexec.be"
+        attendus = set(re.findall(r'"([^"]+)"', " ".join(modele.findall(a.read_text(encoding="utf-8"))))) if a.is_file() else set()
+        verifie(set(c["modules"]), attendus, f"{c['env']} : modules de l'autoexec ({len(attendus)})")
+    verifie(cs.modules_autoexec("dossier/inexistant"), [], "temoin : sans autoexec, aucun module")
+    print("7. Temoin negatif des routes Berry : le rejeu suit le VRAI code et le VRAI persist de la carte")
+    cs.SCENARIO["source_p4"] = "simule"
+    origine = cs.fichiers_berry_etat.dossier_carte
+    with tempfile.TemporaryDirectory() as tmp:
+        copie = Path(tmp) / "carte"
+        shutil.copytree(DOSSIER, copie)
+        cs.fichiers_berry_etat.dossier_carte = lambda env: str(copie)
+        try:
+            av = cs.requete_berry(ENV, "route", "/rideau", "1")
+            verifie(json.loads(av["corps"]).get("ouverture"), 70, "copie intacte : curseur 30 -> 70 %")
+            code = (copie / "controleRideau.be").read_text(encoding="utf-8")
+            mute = code.replace('(vr.find("inverse", 1) == 1 ? 100 - p : p)', "p", 1)
+            verifie(mute != code, True, "temoin : la ligne d'inversion existe dans le module")
+            (copie / "controleRideau.be").write_text(mute, encoding="utf-8")
+            ap = cs.requete_berry(ENV, "route", "/rideau", "1")
+            verifie(json.loads(ap["corps"]).get("ouverture"), 30, "module modifie (sans inversion) : le rejeu rend 30, il suit le code de la carte")
+            (copie / "controleRideau.be").write_text(code, encoding="utf-8")
+            pj = (copie / "_persist.json").read_text(encoding="utf-8")
+            (copie / "_persist.json").write_text(pj.replace("Volet Roulant Garage", "AUTRE-PORTE"), encoding="utf-8")
+            verifie(["AUTRE-PORTE" in cs.requete_berry(ENV, "accueil")["corps"], "Volet Roulant Garage" in cs.requete_berry(ENV, "accueil")["corps"]], [True, False],
+                   "persist modifie : l'accueil rejoue le nouveau nom de la porte")
+        finally:
+            cs.fichiers_berry_etat.dossier_carte = origine
     print("\n" + ("VERT" if not ECHECS else "ROUGE : " + "; ".join(ECHECS)))
     return 1 if ECHECS else 0
 

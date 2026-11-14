@@ -1073,3 +1073,9 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     Custom détachée, `NOM_CIBLE` menage). Lance `claude -p --agent auditeur-menage` (outils de lecture, jamais d'écriture), valide le rapport JSON
     (`outils_docs/schemas/menage_rapport.schema.json`) et montre les propositions triées par risque ; refus pendant un build. Seule écriture : la liste « à garder »
     hors dépôt (`%LOCALAPPDATA%\outils_tasmota\menage\garde.json`). Bancs `test_menage_*.py`, sonde `test_menage_page_chrome.py`, `build/test_cible_menage.py`.
+  - `cartes_simulees_web.py` (+ `cartes_simulees.py`, `cartes_simulees_reseau.py`, `cartes_simulees_page.py`, `berry/simule_carte_rideau.be`, `build/cible_cartes_simulees.py`) — page
+    « Cartes simulées » http://127.0.0.1:7940 (2026-11-14, plan `tasks/plans/cartes-simulees.md` ; tuile de l'annuaire, groupe Ateliers, arrêt libre ; tâche VS Code ; cible
+    Custom détachée, `NOM_CIBLE` cartes_simulees). Simule hors ligne une carte du parc : serveur local au port web de la vraie carte, identité réseau lue dans son persist,
+    rideau du garage rejoué par les vrais modules Berry (`berry.exe`, bouchons) avec la position du P4 lue en lecture seule (`Status 10`). Une carte qui répond (le P4)
+    n'est JAMAIS simulée (409) ; MQTT jamais connecté ; pas d'alias d'IP. Rien n'est écrit dans le dépôt. Bancs `test_cartes_simulees.py`, `test_cartes_simulees_web.py`,
+    sonde `test_cartes_simulees_page_chrome.py`, `build/test_cible_cartes_simulees.py`. Mode d'emploi : `outils_docs/README.md` § « Cartes simulées (page web) ».

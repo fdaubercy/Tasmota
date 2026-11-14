@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cartes_simulees_reseau as reseau  # noqa: E402  (module voisin : identite reseau lue dans le persist)
 import build_envs  # noqa: E402  (module voisin : liste des envs et leur adresse)
 import fichiers_berry_etat  # noqa: E402  (module voisin : dossier data/ d'un env)
+import lieux  # noqa: E402  (module voisin : puce d'un env)
+import re  # noqa: E402
 
 RACINE = next(p for p in Path(__file__).resolve().parents if (p / ".git").exists())
 BERRY = RACINE / "lib" / "libesp32" / "berry" / "berry.exe"
@@ -48,8 +50,19 @@ PIED = "<p></p><button>Configuration</button></div></body></html>"
 _INVENTAIRE = {}
 
 
+def modules_autoexec(dossier):
+    """Modules Berry que l'autoexec.be d'une carte importe, compile ou charge (noms entre guillemets des appels demarrage.*([...])), sans doublon."""
+    f = RACINE / dossier / "autoexec.be"
+    if not f.is_file():
+        return []
+    vus = []
+    for liste_ in re.findall(r"demarrage\.(?:importe|compile|charge)\(\[([^\]]*)\]", f.read_text(encoding="utf-8", errors="replace")):
+        vus += [n for n in re.findall(r'"([^"]+)"', liste_) if n not in vus]
+    return vus
+
+
 def inventaire():
-    """{env: {"env", "dossier", "adresse", "berry"}} des cartes du parc (famille « cartes ») dont le dossier porte un _persist.json."""
+    """{env: {"env", "dossier", "adresse", "berry", "puce", "modules"}} des cartes du parc (famille « cartes ») dont le dossier porte un _persist.json."""
     if not _INVENTAIRE:
         for e in build_envs.liste_envs(RACINE):
             if e.famille != "cartes":
@@ -59,7 +72,8 @@ def inventaire():
             except ValueError:
                 continue
             if d and (RACINE / d / "_persist.json").is_file():
-                _INVENTAIRE[e.nom] = {"env": e.nom, "dossier": d, "adresse": e.ip or "", "berry": e.nom in MODULES_BERRY}
+                _INVENTAIRE[e.nom] = {"env": e.nom, "dossier": d, "adresse": e.ip or "", "berry": e.nom in MODULES_BERRY,
+                                     "puce": lieux.puce(e.nom), "modules": modules_autoexec(d)}
     return _INVENTAIRE
 
 
@@ -209,7 +223,8 @@ def main():
     a = ap.parse_args()
     if a.liste or not a.env:
         for c in liste():
-            print(f"{c['env']}  {c['adresse'] or '(pas d adresse)'}  {'modules Berry rejoues' if c['berry'] else 'identite reseau seule'}")
+            print(f"{c['env']}  {c['puce']}  {c['adresse'] or '(pas d adresse)'}  {len(c['modules'])} modules Berry charges  "
+                  f"{'modules rejoues' if c['berry'] else 'identite reseau seule'}")
         return 0
     if a.env not in inventaire():
         print(f"ERREUR : {a.env} n'est pas une carte simulable ; voir --liste", file=sys.stderr)
