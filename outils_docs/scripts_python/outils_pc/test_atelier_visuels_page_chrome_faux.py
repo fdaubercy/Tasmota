@@ -94,7 +94,7 @@ def mode_faux(port, depot):
         return f.read_bytes() if f.is_file() else None
 
     acces = acces_web.Acces(port, True, "Atelier des visuels")
-    srv = ThreadingHTTPServer(("127.0.0.1", port), avw.fabrique_gestionnaire(
+    srv = avw.Serveur(("127.0.0.1", port), avw.fabrique_gestionnaire(
         acces, racine, builds_en_cours=lambda: [x for x in [(tmp / "build").exists() and "pio"] if x], ouvre=ouvre, cache_icones=tmp / "cache",
         config_fichier=tmp / "config.json", fabrique_ia=lambda c, r: faux, lecteur=lecteur))
     srv.daemon_threads = True
