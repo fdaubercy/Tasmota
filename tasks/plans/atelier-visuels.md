@@ -221,7 +221,7 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   `outils_docs/visuels_accueil/icones/` avec sa licence) ; taille réglable ; `icone_on` / `icone_off` / `icone_inconnu` et
   couleur par état ; import d'un `.svg` nettoyé ; test : l'icône change avec l'état simulé (caméra ON/OFF) dans l'aperçu
   - [x] Recherche en ligne dans la page (licence sur chaque résultat, NC masquée, hors ligne = message, attribution confirmée avant conservation), icône posée comme voyant, `icone_on` / `icone_off` / `icone_inconnu`, taille réglable, import d'un `.svg` du PC nettoyé par le serveur — preuve : sonde_icones VERT (faux Iconify, dépôt copié), commit 52a4d672e
-  - [ ] Banque locale du firmware (`icones_firmware.json`) dans le sélecteur : aucune route ne la sert (police de glyphes, pas de tracé) ; à décider avec l'utilisateur
+  - [x] Banque locale du firmware (`icones_firmware.json`) dans le sélecteur : tracés SVG générés par fontTools, route GET /icones/firmware — preuve : commit ffc9adc14, sonde Chrome VERT (120 icônes, filtre, pose en tracé inline), test_atelier_visuels_icones_traces.py VERT, test_atelier_visuels_web.py VERT. Annuler/rétablir des points chauds : 7516a8c2c. Zones « garder en photo » (UNE image data: bornée) : e4f80ad79, test_atelier_visuels_fond.py VERT
 - [x] Sonde Chrome étendue : un élément de chaque type posé et déplacé, source choisie, aperçu simulé bascule ON/OFF
   (classe `on` lue dans le SVG), liaison active puis muette — preuve : test_atelier_visuels_page_chrome_faux.py::sonde_points VERT (voyant, valeur, liaison posés, source, déplacés, aperçu ON/OFF lu dans la classe du SVG, liaison active/muette), commit 2e1c0e438
 - [ ] `relecteur-pages-web` lancé, remarques traitées
