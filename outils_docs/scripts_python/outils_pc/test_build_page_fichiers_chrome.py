@@ -236,6 +236,8 @@ BANDEAU_SEUL = ("Image du FS reconstruite à la demande de l'Atelier des graphiq
                 "puis cliquez sur « Envoyer ».")
 BANDEAU_QR = ("Réglage du QR code sélectionné automatiquement par la page des étiquettes QR, pour mettre à jour la page "
               "/qrcode de la carte. Vérifiez puis cliquez sur « Envoyer ».")
+BANDEAU_VISUEL = ("Visuel d'accueil sélectionné automatiquement par l'atelier des visuels (visuel.json et son fond), pour mettre à jour "
+                  "la page d'accueil de la carte. Vérifiez puis cliquez sur « Envoyer ».")
 ENROBE = """(() => { window.__corps = []; window.__enVol = 0; const cfg = CFG, vrai = window.fetch.bind(window);
   window.fetch = async (url, o) => { window.__enVol++; try { return await repond(url, o || {}); } finally { window.__enVol--; } };
   const repond = async (url, o) => {
@@ -380,6 +382,15 @@ def sonde_atelier(m):
     e = etat_at(cdp)
     s.verifie((e["panier"], e["restart"], envois(e)), (["autoexec.be"], False, []),
               "qrcode : image prete -> fichier coche, Redemarrer non coche, aucun envoi")
+    # depuis=visuel (atelier des visuels, A5) : meme deroule, bandeau propre
+    e = arrive(m, lien("autoexec.be", redemarrer="1", depuis="visuel"))
+    s.verifie(([c["corps"] for c in e["corps"]], e["carte"], e["texte"]), ([ATTENDU_LANCER], True, BANDEAU_VISUEL),
+              "visuel : carte choisie, un buildfs lance, bandeau de l'atelier des visuels")
+    s.injecte(cdp, BUILDFS)
+    attend(cdp, "document.querySelectorAll('#f-panier li').length > 0", 5)
+    e = etat_at(cdp)
+    s.verifie((e["panier"], e["restart"], envois(e)), (["autoexec.be"], True, []),
+              "visuel : image prete -> fichier coche, Redemarrer coche, aucun envoi")
     for depuis in ("constructor", "inconnu"):
         e = arrive(m, lien("autoexec.be", depuis=depuis))
         s.verifie((e["corps"], e["texte"]), ([], ""), f"origine {depuis!r} inconnue : rien de lance, pas de bandeau")

@@ -1,6 +1,6 @@
 """Arrivee sur la page Build par le bouton « Televerser » de l'Atelier des graphiques (A7, plan atelier-destinations,
 spec 2026-11-04-atelier-destinations-televersement-design.md §5 et §7.1, §7.7, §7.8), ou de la page des etiquettes QR
-(`depuis=qrcode`, plan etiquettes-qrcode A7) : meme deroule, textes de `AT_ORIGINES`.
+(`depuis=qrcode`, plan etiquettes-qrcode A7) ou de l'atelier des visuels (`depuis=visuel`) : meme deroule, textes de `AT_ORIGINES`.
 
 Lien : `/?env=<env>&depuis=atelier&fichiers=<chemins de l'image, separes par des virgules>&redemarrer=<0|1>`. Les
 parametres ne font que preremplir : la page choisit la carte dans l'onglet « Fichiers », affiche le bandeau, lance
@@ -32,7 +32,10 @@ var AT_ORIGINES = {
             seul: "Image du FS reconstruite à la demande de l'Atelier des graphiques : cochez les fichiers à envoyer, puis cliquez sur « Envoyer »."},
   qrcode: {nom: "la page des étiquettes QR",
            bandeau: "Réglage du QR code sélectionné automatiquement par la page des étiquettes QR, pour mettre à jour la page /qrcode de la carte. Vérifiez puis cliquez sur « Envoyer ».",
-           seul: "Image du FS reconstruite à la demande de la page des étiquettes QR : cochez les fichiers à envoyer, puis cliquez sur « Envoyer »."}
+           seul: "Image du FS reconstruite à la demande de la page des étiquettes QR : cochez les fichiers à envoyer, puis cliquez sur « Envoyer »."},
+  visuel: {nom: "l'atelier des visuels",
+           bandeau: "Visuel d'accueil sélectionné automatiquement par l'atelier des visuels (visuel.json et son fond), pour mettre à jour la page d'accueil de la carte. Vérifiez puis cliquez sur « Envoyer ».",
+           seul: "Image du FS reconstruite à la demande de l'atelier des visuels : cochez les fichiers à envoyer, puis cliquez sur « Envoyer »."}
 };
 
 function atNote(t) { $("f-atelier").hidden = false; $("f-atelier-notes").appendChild(h("li", {texte: t})); }
