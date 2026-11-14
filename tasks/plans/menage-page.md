@@ -66,9 +66,9 @@ secrets), `menage_memoire.py` (liste « à garder »), `build/cible_menage.py`.
 - [x] Sonde Chrome hermétique `test_menage_page_chrome.py` (faux `claude`), Chrome headless `sonde_*` arrêtés après coup (compter les `HasExited` faux 15 s après) — preuve : test_menage_page_chrome.py VERT (code 0), 3 témoins détectés chacun par son test, Chrome orphelins 0 apres 15 s (nettoyage par profil dans Montage.ferme) ; un timeout DevTools isolé au 1er essai après la modification du nettoyage, non reproduit au 2e
 
 ## A6 — Branchement dans l'annuaire et dans les outils
-- [ ] Tuile de l'annuaire (groupe « Maintenance »), tâche VS Code « Outil : ménage du dépôt », cible Custom détachée `build/cible_menage.py` (`NOM_CIBLE` ajouté à `CIBLES_OUTILS` de `.claude/hooks/garde_build.py`, `garde_build` vérifie la liste)
-- [ ] Banc `build/test_cible_menage.py`, `test_garde_build.py` vert
-- [ ] Entrée dans la Carte des documents de `CLAUDE.md`, section dans `outils_docs/README.md`, ligne dans `outils_docs/SOUS_AGENTS.md`
+- [x] Tuile de l'annuaire (groupe « Ateliers »), tâche VS Code « Outil : menage du depot », cible Custom détachée `build/cible_menage.py` (`NOM_CIBLE` ajouté à `CIBLES_OUTILS` de `.claude/hooks/garde_build.py`, `garde_build` vérifie la liste) — preuve : annuaire_registre.py entrée « menage » (7995), tâche .vscode/tasks.json, build/cible_menage.py, 'menage' dans CIBLES_OUTILS ; test_annuaire.py VERT (16 outils, 2 passes) ; garde_build vérifié par test_garde_build.py
+- [x] Banc `build/test_cible_menage.py`, `test_garde_build.py` vert — preuve : test_cible_menage.py VERT (4 cas : autre service, déjà lancée, démarrage détaché, démarrage raté), test_garde_build.py VERT
+- [x] Entrée dans la Carte des documents de `CLAUDE.md`, section dans `outils_docs/README.md`, ligne dans `outils_docs/SOUS_AGENTS.md` — preuve : CLAUDE.md (menage_web.py), outils_docs/README.md § Ménage du dépôt, SOUS_AGENTS.md ; verifie_references_docs.py : 0 défaut
 - [ ] Relecture par `relecteur-outils-python` et `relecteur-pages-web` avant commit
 - [ ] Commit (avec `controleur-secrets` puis `preparateur-push` avant le push)
 

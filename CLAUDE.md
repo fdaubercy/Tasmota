@@ -1059,3 +1059,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `--verifier` (code 1 si en retard), `--publier` (GitHub Pages : `https://fdaubercy.github.io/Tasmota/organigramme.html`, branche
     `etiquettes`, IPv4 masquées, jamais de force ; la publication des étiquettes QR garde ce fichier). Tuile « Organigramme des plans »
     de l'annuaire, page http://127.0.0.1:7990 en lecture seule, banc `outils_pc/test_organigramme_plans_web.py`.
+  - `menage_web.py` (+ `menage_page.py`, `menage_lancement.py`, `menage_memoire.py`, `menage_rapport.py`, `build/cible_menage.py`) — page « Ménage du dépôt »
+    http://127.0.0.1:7995 (2026-11-14, plan `tasks/plans/menage-page.md`, v1 lecture seule ; tuile de l'annuaire, groupe Ateliers, arrêt libre ; tâche VS Code ; cible
+    Custom détachée, `NOM_CIBLE` menage). Lance `claude -p --agent auditeur-menage` (outils de lecture, jamais d'écriture), valide le rapport JSON
+    (`outils_docs/schemas/menage_rapport.schema.json`) et montre les propositions triées par risque ; refus pendant un build. Seule écriture : la liste « à garder »
+    hors dépôt (`%LOCALAPPDATA%\outils_tasmota\menage\garde.json`). Bancs `test_menage_*.py`, sonde `test_menage_page_chrome.py`, `build/test_cible_menage.py`.

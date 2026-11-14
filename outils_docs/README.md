@@ -2441,6 +2441,12 @@ LibreOffice sur le poste) : à ouvrir avant de le présenter.
 
 `outils_pc/test_organigramme_plans_web.py` (page de la tuile, routes, publication refusée sans l'en-tête de sécurité ; ne publie jamais pour de vrai).
 
+## Ménage du dépôt (page web)
+
+Tuile « Ménage du dépôt » de l'annuaire (groupe Ateliers), page http://127.0.0.1:7995 ; tâche VS Code « Outil : menage du depot » ou cible Custom « Menage du depot (page web) ». Elle lance l'agent `auditeur-menage` en lecture seule (équivalent de `/menage`) avec les paramètres choisis : dossiers, catégories de contrôle, ancienneté du travail en cours, modèle. Résultat : propositions triées par risque (orphelins, restes, doublons, reclassements), chacune avec sa preuve et ce qu'elle casserait. Le travail en cours et les plans actifs ne sont jamais proposés.
+
+Rien n'est déplacé ni supprimé dans le dépôt. « Garder » mémorise un chemin hors dépôt (`%LOCALAPPDATA%\outils_tasmota\menage\garde.json`) pour qu'il ne soit plus proposé ; « Ignorer » ne vaut que pour la session de l'outil. Lancement refusé pendant un build. Bancs : `test_menage_rapport.py`, `test_menage_lancement.py`, `test_menage_memoire.py`, `test_menage_web.py`, sonde `test_menage_page_chrome.py`, `build/test_cible_menage.py`.
+
 <hr></hr>
 
 ## Les devices Tasmota développées :

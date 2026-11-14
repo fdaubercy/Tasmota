@@ -271,6 +271,17 @@ OUTILS = [
         [_port("http", 7990)],
         "http",
         "Console capturée : " + CONSOLE.format("organigramme_plans") + "."),
+    Outil(
+        "menage", "Menage du depot", "Ménage du dépôt", GROUPES[4],
+        "Lance l'audit de rangement du dépôt (agent auditeur-menage) et montre ses propositions : orphelins, restes, doublons, reclassements.",
+        "Page web qui lance l'agent auditeur-menage en lecture seule avec les paramètres choisis (dossiers, contrôles, ancienneté du travail "
+        "en cours, modèle) et montre ses propositions triées par risque, avec la preuve et ce que chacune casserait. Le travail en cours et les "
+        "plans actifs ne sont jamais proposés. Seul paramètre ici : le port de la page (7995). Rien n'est déplacé ni supprimé dans le dépôt : "
+        "seul « Garder » écrit, dans la liste mémorisée hors dépôt. Refusé pendant un build ; l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/menage_web.py",
+        [_port("http", 7995)],
+        "http",
+        "Console capturée : " + CONSOLE.format("menage") + "."),
 ]
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.

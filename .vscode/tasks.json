@@ -267,6 +267,16 @@
             "args": ["-u", "outils_docs/scripts_python/outils_pc/tapp_web.py", "--http", "7980"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Menage du depot : audit de rangement (agent auditeur-menage, lecture seule) et ses propositions.
+            // Aussi cible Custom « Menage du depot (page web) ».
+            "label": "Outil : menage du depot (http://127.0.0.1:7995)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/menage_web.py", "--http", "7995"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

@@ -20,7 +20,7 @@ Aucun agent personnel dans `~/.claude/agents/`.
 | `relecteur-docs` | haiku (effort low) | Read, Grep, Glob, Bash | Après un chantier ou avant un commit de docs : renvois `fichier::fonction`, chemins, exceptions des 500 lignes, carte des documents | Non |
 
 | `preparateur-push` | opus (effort high) | Read, Grep, Glob, Bash | Avant tout push (appele par `/commite pousse`) : plage des commits, secrets sur toute la plage, branche, retard d'origin, commits d'autres sessions ; verdict et commande de push, ne pousse jamais | Non (mémoire locale seulement) |
-| `auditeur-menage` | sonnet (effort medium) | Read, Grep, Glob, Bash | Par `/menage`, une fois par mois ou après un gros chantier : orphelins, restes, doublons, reclassements, en proposition avec ce que chacune casserait | Non (mémoire locale seulement) |
+| `auditeur-menage` | sonnet (effort medium) | Read, Grep, Glob, Bash | Par `/menage` ou la page « Ménage du dépôt » (:7995), une fois par mois ou après un gros chantier : orphelins, restes, doublons, reclassements, en proposition avec ce que chacune casserait | Non (mémoire locale seulement) |
 
 ## Mémoire des agents (2026-11-14)
 
