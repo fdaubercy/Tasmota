@@ -6,6 +6,7 @@ Securite : valide() est la seule porte par ou des valeurs venues de la page devi
 de ligne de commande. Chaque valeur est contrainte (liste fermee ou entier borne), jamais un texte libre.
 """
 
+import threading
 from dataclasses import dataclass
 
 GROUPES = ["Bus et cartes", "Réseau et journaux", "Déploiement", "Configuration des cartes", "Ateliers"]
@@ -342,17 +343,49 @@ def valide(outil, valeurs, ports_detectes, ponts):
     return args
 
 
+_CACHE = {}                    # racine -> (cle, nombres) : la lecture de tout le parc coute 0,7 a 4 s
+_VERROU = threading.Lock()
+
+
+def _cle_parc(racine):
+    """Dates et tailles des fichiers que lieux.identites lit (cenv, .ini, user_config_override.h, persist) : change
+    des qu'un seul bouge. Un fichier ajoute, retire ou modifie change la cle."""
+    fichiers = [racine / n for n in ("platformio.ini", "platformio_override.ini", "platformio_tasmota_cenv.ini",
+                                     "tasmota/user_config_override.h")]
+    fichiers += sorted((racine / "data").glob("*/*/_persist.json"))
+    cle = []
+    for f in fichiers:
+        try:
+            st = f.stat()
+            cle.append((str(f), st.st_mtime_ns, st.st_size))
+        except OSError:
+            cle.append((str(f), None, None))
+    return tuple(cle)
+
+
+def _nombres_par_lieu(racine):
+    import lieux                                      # ici : lieux importe fichiers_berry_etat (cycle)
+    cle = _cle_parc(racine)
+    with _VERROU:                                     # une seule lecture a la fois : les autres attendent son resultat
+        memo = _CACHE.get(racine)
+        if memo and memo[0] == cle:
+            return memo[1]
+        nombres = {}
+        try:
+            for c in (x for x in lieux.identites(racine) if not x.get("sauvegarde")):
+                nombres[c["lieu"]] = nombres.get(c["lieu"], 0) + 1
+        except Exception:                             # cenv illisible : compteurs a 0, l'annuaire reste utilisable
+            return {}                                 # et rien n'est garde : la lecture suivante reessaie
+        _CACHE[racine] = (cle, nombres)
+        return nombres
+
+
 def en_json(racine=None):
     """Registre pour la page ; `lieux` = [code, libelle, nombre d'envs de cartes] d'apres les persist du depot."""
     from pathlib import Path
-    import lieux                                      # ici : lieux importe fichiers_berry_etat (cycle)
+    import lieux
     racine = Path(racine) if racine else Path(__file__).resolve().parents[3]
-    nombres = {}
-    try:
-        for c in (x for x in lieux.identites(racine) if not x.get("sauvegarde")):
-            nombres[c["lieu"]] = nombres.get(c["lieu"], 0) + 1
-    except Exception:                                 # cenv illisible : compteurs a 0, l'annuaire reste utilisable
-        nombres = {}
+    nombres = _nombres_par_lieu(racine)
     outils = []
     for o in OUTILS:
         outils.append({"id": o.id, "nom_acces": o.nom_acces, "nom": o.nom, "groupe": o.groupe,
