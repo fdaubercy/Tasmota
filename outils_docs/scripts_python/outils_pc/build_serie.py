@@ -687,12 +687,16 @@ class Serie:
             except OSError as erreur:
                 return False, f"pio introuvable ou non lançable : {erreur}", [], suivi.etape
             self._proc = proc
-        refus, controle = "", action in COMPILENT   # solidification controlee une fois, si le firmware est lie
+        refus, controle, avant = "", action in COMPILENT, ""   # solidification controlee une fois, si le firmware est lie
         with proc, self._journal(env, action, commande) as journal:
             if note:
                 journal.write(note + "\n")
             for brut in proc.stdout:
                 texte = retire_ansi(brut).rstrip("\r\n")
+                if "Aborting build process" in texte and not refus:
+                    # solidify-from-url.py fait quit() (code 0) : pio dirait « SUCCESS » sans rien avoir construit
+                    refus = f"pré-build interrompu : {avant or texte}"
+                avant = texte
                 journal.write(brut.rstrip("\r\n") + "\n")
                 self._ajoute("ligne", env, action=action, texte=texte)
                 ev = suivi.ligne(brut)

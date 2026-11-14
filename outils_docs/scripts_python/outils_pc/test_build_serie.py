@@ -307,6 +307,23 @@ def test_serie_continue_apres_echec():
         verifie(du_type(ev, "fin")[0]["echecs"], [B], "serie_continue_apres_echec : fin cite l'env en echec")
 
 
+def test_prebuild_interrompu_code_zero():
+    """solidify-from-url.py fait quit() : pio sort en 0 et dit SUCCESS sans avoir rien construit (2026-11-14)."""
+    with tempfile.TemporaryDirectory() as t:
+        coupe = {"build": {"code": 0, "lignes": ["Will solidify  controleVisuel.be",
+                                                  "Could not find class name - is '#@ solidify:' used in Berry file??",
+                                                  "Aborting build process!!",
+                                                  "[SUCCESS] Took 12.14 seconds"]}}
+        m = Montage(t, {B: coupe})
+        ev = m.lance([com(A, "COM1"), com(B, "COM2")], {"compiler"})
+        statuts = {e["env"]: e["statuts"] for e in du_type(ev, "fin_env")}
+        verifie(statuts.get(B), {"compiler": "echec"}, "prebuild_interrompu : code 0 mais compilation en echec")
+        verifie(statuts.get(A), {"compiler": "succes"}, "prebuild_interrompu : un env sain reste en succes (temoin)")
+        e = du_type(ev, "echec", env=B)
+        verifie(bool(e) and "Could not find class name" in e[0]["motif"], True,
+                "prebuild_interrompu : le motif donne la cause (ligne avant « Aborting »)")
+
+
 def test_duree_des_la_fin():
     with tempfile.TemporaryDirectory() as t:
         lignes = [f"Compiling .pio/build/{{env}}/src/x{i}.o" for i in range(5)]
@@ -1389,7 +1406,7 @@ def test_reparations():
 def principal():
     garde_fou()
     for test in (test_commandes, test_serie_upload_ota_par_page, test_ota_par_maitre, test_ordre_actions, test_serie_un_par_un,
-                 test_serie_continue_apres_echec, test_duree_des_la_fin, test_refus_build_en_cours,
+                 test_serie_continue_apres_echec, test_prebuild_interrompu_code_zero, test_duree_des_la_fin, test_refus_build_en_cours,
                  test_refus_port_tenu, test_meme_port_accepte, test_refus_ip_vide,
                  test_pause_avant_envoi, test_pause_place, test_pause_passer, test_pause_port_perdu,
                  test_pause_reprend_refus, test_pause_arrets,
