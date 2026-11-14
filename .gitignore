@@ -89,3 +89,5 @@ tasmota/tasmota_defines_for_berry.be
 tasmota/tasmota_defines_for_berry.h
 ## Sauvegardes de configuration des cartes (page build) : mots de passe en clair, depot public.
 outils_docs/sauvegardes_cartes/
+.env
+.env.*
