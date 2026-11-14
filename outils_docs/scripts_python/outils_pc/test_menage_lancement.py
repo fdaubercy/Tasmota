@@ -149,6 +149,22 @@ e = attend(a)
 verifie((e["etat"], [x["outil"] for x in e["activite"]], e["progression"], e["rapport"] and len(e["rapport"]["propositions"])),
         ("fini", ["Grep", "Bash"], 100, 1), "flux : fini, 2 actions, progression 100, rapport lu dans l'evenement result")
 
+# 7c. contre-verification : le rapport fini porte `verif` ; si elle plante, l'audit n'est pas perdu
+a = audit("ok")
+a.lance({})
+e = attend(a)
+verifie(("verif" in e["rapport"]["propositions"][0], e["rapport"]["propositions"][0]["verif"].get("disponible")), (True, True), "rapport enrichi de la contre-verification")
+vrai = ml.menage_verification.enrichit
+ml.menage_verification.enrichit = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("git en panne"))
+try:
+    a = audit("ok")
+    a.lance({})
+    e = attend(a)
+finally:
+    ml.menage_verification.enrichit = vrai
+verifie((e["etat"], e["rapport"]["propositions"][0]["verif"]["disponible"], "RuntimeError" in e["rapport"]["propositions"][0]["verif"]["erreur"]),
+        ("fini", False, True), "contre-verification en panne : l'audit reste valide, la page dira « indisponible »")
+
 # 8. mutants : la garde de build et la liste blanche doivent compter
 a = ml.Audit(RACINE, lambda: [], programme=PROG)       # mutant : detection de build neutralisee
 os.environ["FAUX_MODE"] = "ok"

@@ -23,6 +23,7 @@ from pathlib import Path
 
 import acces_web
 import menage_rapport
+import menage_verification
 
 DELAI = 900
 BUDGET_USD = "3"
@@ -230,5 +231,11 @@ class Audit:
         rapport, erreurs = menage_rapport.valide(texte, self.racine)
         if rapport is None:
             return "echec", "rapport refuse : " + " ; ".join(erreurs[:5]), None
+        self._pose(message="contre-verification des propositions par git...")
+        try:
+            rapport["propositions"] = menage_verification.enrichit(rapport["propositions"], self.racine)
+        except Exception as e:                 # la contre-verification est un plus : un echec ne doit pas perdre l'audit
+            for p in rapport["propositions"]:
+                p["verif"] = {"disponible": False, "erreur": f"erreur interne : {type(e).__name__}"}
         n = len(rapport["propositions"])
         return "fini", f"{n} proposition(s)", rapport

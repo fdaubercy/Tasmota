@@ -36,6 +36,7 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
     "en-cours-actions": ("if (!p.en_cours) {", "if (true) {", "en cours : aucun bouton Garder ni Ignorer"),
     "journal-html": ("l.appendChild(document.createTextNode(a.detail));", "l.insertAdjacentHTML('beforeend', a.detail);",
                      "journal : l'action hostile reste du texte"),
+    "verif-sans-code": ("if (v.n_code) vb.appendChild", "if (false) vb.appendChild", "verif : badge code/config sur le fichier cite par config.ini"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -83,6 +84,9 @@ class Montage:
         (racine / "tasks").mkdir(parents=True)
         for n in ("README.md", "autre.md", "encours.md"):
             (racine / "tasks" / n).write_text("x", encoding="utf-8")
+        (racine / "config.ini").write_text("liste = tasks/encours.md\n", encoding="utf-8")     # un vrai renvoi, trouve par la contre-verification
+        for args in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "x"]):
+            subprocess.run(["git"] + args, cwd=racine, capture_output=True, check=True)
         menage_page.PAGE = page
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
@@ -173,6 +177,13 @@ def scenario(m, temoin):
     verifie(cdp.js("document.querySelectorAll('#props img, #props b').length === 0 && window.__pwn === undefined"), True,
             "hostile : le texte reste du texte, aucune balise creee")
     verifie(cdp.js("document.querySelector('#props .prop p').textContent"), HOSTILE, "hostile : affiche tel quel")
+
+    # contre-verification par git : badges (M1 sans renvoi) et renvoi reel (M3, cite par config.ini)
+    verifie(cdp.js("document.querySelector('#props .prop .verif').textContent.indexOf('aucun renvoi trouvé') >= 0"), True, "verif : aucun renvoi, badge vert")
+    verifie(cdp.js("document.querySelector('#props-encours .prop .verif').textContent.indexOf('référencé par 1 fichier(s) de code ou de config') >= 0"), True,
+            "verif : badge code/config sur le fichier cite par config.ini")
+    verifie(cdp.js("document.querySelector('#props-encours .prop .renvois pre').textContent.indexOf('config.ini') >= 0"), True,
+            "verif : la liste des renvois nomme config.ini")
 
     # en cours : replie, sans boutons
     verifie(cdp.js("document.getElementById('encours').hidden"), False, "bloc « en cours » visible")

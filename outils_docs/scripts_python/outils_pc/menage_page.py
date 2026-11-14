@@ -171,7 +171,28 @@ function propositionVue(p) {
   d.appendChild(el("div", "chemin", p.chemin));
   var b = el("div"); b.appendChild(el("span", "badge", p.categorie)); b.appendChild(el("span", "badge " + p.risque, "risque " + p.risque));
   b.appendChild(el("span", "badge", "→ " + p.action + (p.vers ? " vers " + p.vers : ""))); d.appendChild(b);
+  var v = p.verif;
+  if (v && v.disponible) {
+    var vb = el("div", "verif");
+    vb.appendChild(el("span", "doux petit", "Vérifié par git : "));
+    if (v.perimee) vb.appendChild(el("span", "badge eleve", "périmée : le chemin n'existe plus"));
+    if (v.modifie) vb.appendChild(el("span", "badge moyen", v.suivi ? "modifié : en cours" : "non suivi : en cours"));
+    if (v.n_code) vb.appendChild(el("span", "badge eleve", "référencé par " + v.n_code + " fichier(s) de code ou de config"));
+    if (v.n_docs) vb.appendChild(el("span", "badge moyen", v.n_docs + " document(s) le citent"));
+    if (v.destination_existe) vb.appendChild(el("span", "badge eleve", "la destination existe déjà"));
+    if (p.risque_agent) vb.appendChild(el("span", "badge", "risque relevé (agent : " + p.risque_agent + ")"));
+    if (!v.perimee && !v.n_code && !v.n_docs) vb.appendChild(el("span", "badge faible", "aucun renvoi trouvé"));
+    d.appendChild(vb);
+  } else if (v) {
+    d.appendChild(el("div", "doux petit", "Contre-vérification par git indisponible : " + (v.erreur || "")));
+  }
   d.appendChild(el("p", null, p.constat));
+  if (v && v.disponible && (v.n_code || v.n_docs)) {
+    var rv = el("details", "renvois"); rv.appendChild(el("summary", null, "Renvois trouvés par la page"));
+    rv.appendChild(el("pre", null, v.renvois_code.map(function (f) { return "code/config  " + f; }).concat(
+      v.renvois_docs.map(function (f) { return "document     " + f; })).join("\n")));
+    d.appendChild(rv);
+  }
   var c = el("details"); c.appendChild(el("summary", null, "Ce que ça casserait")); c.appendChild(el("pre", null, p.casserait)); d.appendChild(c);
   var pr = el("details"); pr.appendChild(el("summary", null, "Preuve")); pr.appendChild(el("pre", null, p.preuve)); d.appendChild(pr);
   if (!p.en_cours) {
