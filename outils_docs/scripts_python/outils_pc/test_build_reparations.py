@@ -60,11 +60,22 @@ def passe_catalogue(d):
                          ("attendre sans secondes", regle(actions=[{"action": "attendre", "parametres": {}}])),
                          ("secondes negatives", regle(actions=[{"action": "attendre", "parametres": {"secondes": -1}}])),
                          ("sans actions", regle(actions=[])),
+                         ("secondes trop grandes", regle(actions=[{"action": "attendre", "parametres": {"secondes": 3601}}])),
+                         ("etape upload", regle(etapes=["upload"])),
+                         ("etape erase_upload", regle(etapes=["compilation", "erase_upload"])),
                          ("etapes vide", regle(etapes=[]))]:
         p = ecrit(d, "mauvais.json", {"regles": [mauvais]})
         verifie("refus : " + nom, leve(br.charge_catalogue, p, Path(d) / "nexiste.pas"))
-    verifie("refus : json casse", leve(br.charge_catalogue, Path(d) / "casse.json", Path(d) / "x")
-            if (Path(d) / "casse.json").write_text("{", encoding="utf-8") else True)
+    casse = Path(d) / "casse.json"
+    casse.write_text("{", encoding="utf-8")
+    verifie("refus : json de base casse", leve(br.charge_catalogue, casse, Path(d) / "x"))
+    # local fautif : ignore et signale, la base reste
+    loc = ecrit(d, "loc2.json", {"regles": [regle(id="mauvaise", motif="("), regle(id="bonne")], "supprimees": "a"})
+    rs, av = br.charge_catalogue_avec_avertissements(base, loc)
+    verifie("local : regle fautive ignoree", sorted(r.id for r in rs) == ["a", "b", "bonne"] and len(av) == 2)
+    rs, av = br.charge_catalogue_avec_avertissements(base, casse)
+    verifie("local casse : base seule + avertissement", sorted(r.id for r in rs) == ["a", "b"] and len(av) == 1)
+    verifie("charge_catalogue rend la liste seule", isinstance(br.charge_catalogue(base, casse), list))
 
 
 def passe_catalogue_depot():
@@ -103,12 +114,17 @@ def passe_secrets():
     cas = [('#define STA_PASS1 "motdepasse1"', "motdepasse1"), ("-DSTA_PASS=abc123def", "abc123def"),
            ('#define MQTT_PASS "m-q-t-t"', "m-q-t-t"), ('OTA_PASS = "ota secret"', "ota secret"),
            ('"password": "pw-json"', "pw-json"), ("PASSWORD=azerty", "azerty"), ("token: ghp_abcdef123456", "ghp_abcdef123456"),
-           ("Token=XyZ", "XyZ")]
+           ("Token=XyZ", "XyZ"),
+           ('-DSTA_PASS=\\"abc def\\"', "abc def"), ("Authorization: Bearer eyJabc.def", "eyJabc.def"),
+           ("-DWIFI_PW=zz99", "zz99"), ("PW=qq88", "qq88"), ("_PW: ww77", "ww77")]
     for texte, valeur in cas:
         sortie = br.filtre_secrets("avant\n" + texte + "\napres")
         verifie("masque : " + texte, valeur not in sortie and "avant" in sortie and "apres" in sortie)
+    t = time.time()
+    br.filtre_secrets("PASS" * 50000 + " " + "a" * 100000)
+    verifie("filtre non quadratique", time.time() - t < 2)
     verifie("nom de la cle gardee", "STA_PASS1" in br.filtre_secrets('#define STA_PASS1 "x1y2"'))
-    neutre = "Permission denied: 'C:\\x\\modules.h'\nbypassed passed\nSTA_SSID \"maison\""
+    neutre = "pass through now\ntoken bucket full\nPermission denied: 'C:\\x\\modules.h'\nbypassed passed\nSTA_SSID \"maison\""
     verifie("texte sans secret intact", br.filtre_secrets(neutre) == neutre)
 
 

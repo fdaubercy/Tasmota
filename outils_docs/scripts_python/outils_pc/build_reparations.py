@@ -20,6 +20,9 @@ LIGNES_FIN = 50                       # la correspondance ne regarde que la fin 
 # action -> parametres requis (nom -> type) ; toute autre action est refusee
 ACTIONS = {"attendre": {"secondes": (int, float)}, "libere_verrou": {}, "vide_build": {}}
 ETAPES_TOUTES = "toutes"
+# jamais upload / erase_upload : un envoi n'est pas relance (spec, « Ce qu'une reparation relance »)
+ETAPES_VALIDES = {"compilation", "liens", "prebuild", "buildfs", ETAPES_TOUTES}
+SECONDES_MAX = 3600
 
 
 @dataclass
@@ -43,8 +46,8 @@ def _valide(d):
             raise ValueError(f"regle : « {cle} » manquant")
     id_ = d["id"]
     etapes = d.get("etapes")
-    if not isinstance(etapes, list) or not etapes or not all(isinstance(e, str) and e for e in etapes):
-        raise ValueError(f"regle {id_} : « etapes » doit etre une liste non vide")
+    if not isinstance(etapes, list) or not etapes or not all(e in ETAPES_VALIDES for e in etapes):
+        raise ValueError(f"regle {id_} : « etapes » doit etre une liste non vide parmi {sorted(ETAPES_VALIDES)}")
     actions = d.get("actions")
     if not isinstance(actions, list) or not actions:
         raise ValueError(f"regle {id_} : « actions » doit etre une liste non vide")
@@ -57,7 +60,7 @@ def _valide(d):
             raise ValueError(f"regle {id_} : « parametres » doit etre un objet")
         for p, types in ACTIONS[nom].items():
             v = params.get(p)
-            if isinstance(v, bool) or not isinstance(v, types) or v < 0:
+            if isinstance(v, bool) or not isinstance(v, types) or not 0 <= v <= SECONDES_MAX:
                 raise ValueError(f"regle {id_} : action {nom}, parametre « {p} » manquant ou invalide")
     try:
         motif = re.compile(d["motif"], re.MULTILINE)
@@ -81,16 +84,36 @@ def _lit(chemin, obligatoire):
     return data
 
 
-def charge_catalogue(chemin_base, chemin_local):
-    """Regles de base puis locales (une regle locale de meme id remplace celle de base), moins les « supprimees »."""
-    base, local = _lit(chemin_base, True), _lit(chemin_local, False)
-    regles = {}
-    for d in base.get("regles", []) + local.get("regles", []):
+def charge_catalogue_avec_avertissements(chemin_base, chemin_local):
+    """(regles, avertissements). Base invalide = ValueError (bug du depot) ; local fautif = ignore et signale."""
+    base = _lit(chemin_base, True)
+    regles, avertissements = {}, []
+    for d in base.get("regles", []):
         r = _valide(d)
         regles[r.id] = r
-    for id_ in local.get("supprimees", []):
+    try:
+        local = _lit(chemin_local, False)
+    except ValueError as e:
+        return list(regles.values()), [str(e)]
+    for d in local.get("regles", []):
+        try:
+            r = _valide(d)
+        except ValueError as e:
+            avertissements.append(f"regle locale ignoree : {e}")
+            continue
+        regles[r.id] = r
+    sup = local.get("supprimees", [])
+    if not isinstance(sup, list) or not all(isinstance(i, str) for i in sup):
+        avertissements.append("« supprimees » du catalogue local ignore : liste de textes attendue")
+        sup = []
+    for id_ in sup:
         regles.pop(id_, None)
-    return list(regles.values())
+    return list(regles.values()), avertissements
+
+
+def charge_catalogue(chemin_base, chemin_local):
+    """Regles de base puis locales (une regle locale de meme id remplace celle de base), moins les « supprimees »."""
+    return charge_catalogue_avec_avertissements(chemin_base, chemin_local)[0]
 
 
 def cherche(regles, journal, etape, env):
@@ -105,11 +128,15 @@ def cherche(regles, journal, etape, env):
     return None
 
 
-# nom de cle (STA_PASS1, MQTT_PASS, PASSWORD, "token"...) puis separateur eventuel, puis la valeur (entre guillemets ou mot)
-_SECRET = re.compile(r"""(\b\w*(?:PASS(?:WORD|WD)?|PWD|TOKEN|SECRET)[0-9_]*["']?(?:\s*[:=]\s*|\s+))("[^"\n]*"|'[^'\n]*'|[^\s,;]+)""",
-                     re.IGNORECASE)
+# Un secret = une CLE (STA_PASS1, MQTT_PASS, PASSWORD, WIFI_PW, token...) suivie de = ou : (ou d'un espace puis un guillemet,
+# comme `#define STA_PASS1 "x"`), puis sa valeur ; ou le mot apres « Bearer ». Un mot libre (« pass through ») ne compte pas.
+# Longueurs bornees : pas de retour arriere quadratique sur une ligne geante.
+_SECRET = re.compile(r"""(\b\w{0,60}(?:PASS(?:WORD|WD)?|PWD|TOKEN|SECRET|(?<![A-Za-z0-9])PW|_PW)[0-9_]{0,10}["']?"""
+                     r"""(?:\s{0,5}[:=]\s{0,5}|\s{1,5}(?=["'])))"""
+                     r"""(\\"[^\n]{0,200}?\\"|"[^"\n]{0,200}"|'[^'\n]{0,200}'|[^\s,;]{1,200})""", re.IGNORECASE)
+_BEARER = re.compile(r"(\bBearer\s+)[^\s,;]{1,200}", re.IGNORECASE)
 
 
 def filtre_secrets(texte):
     """Masque la valeur qui suit un nom de mot de passe ou de jeton ; le nom reste lisible."""
-    return _SECRET.sub(lambda m: m.group(1) + "***", texte)
+    return _SECRET.sub(lambda m: m.group(1) + "***", _BEARER.sub(r"\1***", texte))
