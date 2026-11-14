@@ -29,10 +29,13 @@ from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre  
 
 ECHECS = []
 HOSTILE = "<img src=x onerror=window.__pwn=1> & <b>gras</b>"
+HOSTILE_ACTION = "git status <img src=x onerror=window.__pwn2=1> & <b>x</b>"
 PAGE_ORIGINALE = menage_page.PAGE
 TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doit echouer)
     "innerHTML": ("if (texte != null) e.textContent = texte;", "if (texte != null) e.innerHTML = texte;", "hostile : le texte reste du texte, aucune balise creee"),
     "en-cours-actions": ("if (!p.en_cours) {", "if (true) {", "en cours : aucun bouton Garder ni Ignorer"),
+    "journal-html": ("l.appendChild(document.createTextNode(a.detail));", "l.insertAdjacentHTML('beforeend', a.detail);",
+                     "journal : l'action hostile reste du texte"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -66,7 +69,9 @@ def faux_claude(dossier):
          "action": "supprimer", "casserait": "tout", "risque": "moyen", "en_cours": True},
     ]
     rapport = json.dumps({"resume": "3 propositions", "non_verifie": "rien de grave", "propositions": props})
-    f.write_text("import json, sys\nsys.stdin.buffer.read()\nprint(json.dumps({'is_error': False, 'result': " + repr(rapport) + "}))\n", encoding="utf-8")
+    action = {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": HOSTILE_ACTION}}]}}
+    f.write_text("import json, sys, time\nsys.stdin.buffer.read()\nprint(json.dumps(" + repr(action) + "), flush=True)\ntime.sleep(4)\n"
+                 "print(json.dumps({'type': 'result', 'is_error': False, 'result': " + repr(rapport) + "}))\n", encoding="utf-8")
     return f
 
 
@@ -145,7 +150,18 @@ def scenario(m, temoin):
     cdp.js("document.querySelectorAll('#p-zone input').forEach(function(c){c.checked=true})")
 
     clic(cdp, "b-lance")
+    # en direct : pendant l'audit, l'action de l'agent et une progression sont deja a l'ecran
+    verifie(bool(attend(cdp, "document.querySelectorAll('#journal div').length > 0", 15)), True, "journal : une action apparait pendant l'audit")
+    verifie(cdp.js("document.getElementById('etat').className.indexOf('en') >= 0 && document.getElementById('b-stop').disabled === false"), True,
+            "journal : l'audit est encore en cours quand l'action s'affiche")
+    verifie(cdp.js("document.querySelector('#journal div').textContent.indexOf('Bash') >= 0"), True, "journal : l'outil est nomme")
+    verifie(cdp.js("document.querySelectorAll('#journal img, #journal b').length === 0 && window.__pwn2 === undefined"), True,
+            "journal : l'action hostile reste du texte")
+    verifie(cdp.js("document.getElementById('journal').textContent.indexOf(" + json.dumps(HOSTILE_ACTION) + ") >= 0"), True, "journal : action affichee telle quelle")
+    verifie(cdp.js("document.getElementById('avance').hidden === false && parseInt(document.getElementById('rempli').style.width) > 0"), True,
+            "progression : barre visible et non vide pendant l'audit")
     verifie(bool(attend(cdp, "document.getElementById('etat').textContent.indexOf('terminé') >= 0", 40)), True, "audit termine")
+    verifie(cdp.js("document.getElementById('rempli').style.width"), "100%", "progression : 100 % a la fin")
     verifie(bool(attend(cdp, "document.querySelectorAll('#props .prop').length > 0", 15)), True, "rapport affiche apres l'audit")
     verifie(cdp.js("document.querySelectorAll('#props .prop').length"), 2, "2 propositions actives")
     verifie(cdp.js("document.getElementById('n-props').textContent"), "(2)", "compteur des propositions")

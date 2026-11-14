@@ -10,7 +10,8 @@ dans le dossier de donnees de l'outil, HORS depot (menage_memoire.py). L'audit l
 Routes (les POST exigent l'en-tete X-Menage: 1 et la meme origine ; client de ce PC : Host local, parade au DNS rebinding) :
     GET  /          la page (menage_page.PAGE)
     GET  /options   {zones, categories, modeles, efforts, defauts}  : les valeurs admises, pour la page
-    GET  /etat      {etat: repos|en_cours|fini|echec, message, debut, fin, propositions}
+    GET  /etat[?depuis=n]  {etat: repos|en_cours|fini|echec, message, debut, fin, propositions, appels, progression (approximative, 0-100),
+                    activite: actions de l'agent depuis la n-ieme (secrets masques)}
     GET  /rapport   le rapport valide, sans les propositions « ignorees cette fois » ni les chemins « a garder » ; 404 s'il n'y en a pas
     GET  /gardes    {gardes: [chemins]}
     POST /lancer    {zone, categories, anciennete_jours, modele, effort}  -> {message}
@@ -28,7 +29,7 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import acces_web
 from annuaire_outils import hote_autorise
@@ -163,8 +164,15 @@ def fabrique_gestionnaire(acces, etat):
             elif chemin == "/etat":
                 e = etat.audit.etat()
                 r = etat.rapport()
+                try:
+                    depuis = int(parse_qs(urlsplit(self.path).query).get("depuis", ["0"])[0])
+                except ValueError:
+                    depuis = 0
+                debut_liste = e["appels"] - len(e["activite"])          # rang absolu de la 1re entree gardee
                 self._json({"etat": e["etat"], "message": e["message"], "debut": e["debut"], "fin": e["fin"],
-                            "propositions": None if r is None else len(r["propositions"])})
+                            "propositions": None if r is None else len(r["propositions"]),
+                            "appels": e["appels"], "progression": e["progression"],
+                            "activite": e["activite"][max(0, depuis - debut_liste):]})
             elif chemin == "/rapport":
                 r = etat.rapport()
                 if r is None:

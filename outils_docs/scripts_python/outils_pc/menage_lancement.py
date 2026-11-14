@@ -27,13 +27,14 @@ import menage_rapport
 DELAI = 900
 BUDGET_USD = "3"
 ZONES = ("data", "outils_docs", "tasks", ".claude", "docs", "lib/libesp32/berry_custom")
+MAX_ACTIVITE = 300
 MODELES = ("sonnet", "opus", "haiku")
 EFFORTS = ("low", "medium", "high")
 AGENT = "auditeur-menage"
 BASH_LECTURE = ["Bash(git status:*)", "Bash(git log:*)", "Bash(git ls-files:*)", "Bash(git diff:*)", "Bash(git hash-object:*)",
                 "Bash(git check-ignore:*)", "Bash(ls:*)", "Bash(wc:*)", "Bash(du:*)"]
 OPTIONS = ["-p", "--agent", AGENT, "--tools", "Read,Grep,Glob,Bash", "--permission-mode", "dontAsk", "--strict-mcp-config",
-           "--no-session-persistence", "--disable-slash-commands", "--output-format", "json", "--max-budget-usd", BUDGET_USD,
+           "--no-session-persistence", "--disable-slash-commands", "--output-format", "stream-json", "--verbose", "--max-budget-usd", BUDGET_USD,
            "--disallowed-tools", "Write", "Edit", "NotebookEdit", "--allowed-tools"] + BASH_LECTURE
 
 
@@ -69,6 +70,8 @@ def consigne(params, gardes):
         "Chemins a GARDER (ne jamais les proposer) : " + (", ".join(gardes) if gardes else "aucun") + ".\n"
         "Rappel : tout fichier modifie ou non suivi par git, ou touche depuis moins de anciennete_jours jours, est « en cours » "
         "(en_cours: true, jamais propose) ; un plan de statut actif n'est jamais propose a l'archivage.\n"
+        "Si la categorie hors_dossier est demandee, propose aussi des DEPLACEMENTS pour mieux classer (action deplacer, vers), pas "
+        "seulement des suppressions.\n"
         "Bash : UNE seule commande simple par appel (git status --porcelain, git ls-files, git log, git diff, git hash-object, "
         "git check-ignore, ls, wc, du), sans cd, sans pipe, sans ; ni &&, sans redirection : le depot est deja le dossier courant, "
         "toute commande composee est refusee. Filtre avec Grep/Glob, pas avec grep/head.\n"
@@ -77,16 +80,29 @@ def consigne(params, gardes):
     )
 
 
-def _resultat(stdout):
-    try:
-        d = json.loads(stdout.decode("utf-8", "replace"))
-    except ValueError:
-        raise ValueError("sortie de claude illisible (JSON attendu)")
+def _resultat(d):
+    """Texte de l'evenement final de claude (dict deja decode)."""
     if not isinstance(d, dict):
-        raise ValueError("sortie de claude inattendue")
+        raise ValueError("sortie de claude illisible (evenement final absent)")
     if d.get("is_error"):
         raise ValueError("claude a rendu une erreur : " + str(d.get("result") or d.get("subtype"))[:300])
     return d.get("result") or ""
+
+
+def _detail(nom, entree):
+    """Une ligne lisible pour une action de l'agent, secrets masques."""
+    if not isinstance(entree, dict):
+        return ""
+    cle = {"Bash": "command", "Grep": "pattern", "Glob": "pattern", "Read": "file_path"}.get(nom)
+    texte = str(entree.get(cle) if cle else entree)
+    if nom == "Grep" and entree.get("path"):
+        texte += "  dans " + str(entree["path"])
+    return menage_rapport.masque(texte)[:160]
+
+
+def progression_estimee(appels):
+    """Approximation : on ne connait pas le nombre d'actions d'avance ; monte vite puis ralentit, jamais 100 avant la fin."""
+    return min(95, round(100 * appels / (appels + 30)))
 
 
 def reglages_sans_hooks():
@@ -108,13 +124,13 @@ class Audit:
     def __init__(self, racine, builds_en_cours, programme=None, delai=DELAI, gardes=lambda: []):
         self.racine, self.builds_en_cours, self.programme, self.delai, self.gardes = Path(racine), builds_en_cours, programme, delai, gardes
         self._verrou = threading.Lock()
-        self._etat = {"etat": "repos", "message": "", "rapport": None, "debut": None, "fin": None}
+        self._etat = {"etat": "repos", "message": "", "rapport": None, "debut": None, "fin": None, "activite": [], "appels": 0, "progression": 0}
         self._proc = None
         self._arret = False
 
     def etat(self):
         with self._verrou:
-            return dict(self._etat)
+            return dict(self._etat, activite=list(self._etat["activite"]))
 
     def _pose(self, **kw):
         with self._verrou:
@@ -130,7 +146,8 @@ class Audit:
         with self._verrou:
             if self._etat["etat"] == "en_cours":
                 return False, "un audit est deja en cours"
-            self._etat = {"etat": "en_cours", "message": "audit en cours", "rapport": None, "debut": time.time(), "fin": None}
+            self._etat = {"etat": "en_cours", "message": "audit en cours", "rapport": None, "debut": time.time(), "fin": None,
+                           "activite": [], "appels": 0, "progression": 0}
             self._arret = False
         threading.Thread(target=self._fil, args=(params,), daemon=True).start()
         return True, "audit lance"
@@ -147,6 +164,30 @@ class Audit:
         except Exception as e:      # le fil ne doit jamais mourir sans dire pourquoi
             etat, message, rapport = "echec", f"erreur inattendue : {type(e).__name__} : {e}"[:300], None
         self._pose(etat=etat, message=message, rapport=rapport, fin=time.time())
+        if etat == "fini":
+            self._pose(progression=100)
+
+    def _lit_flux(self, p, finale):
+        """Lit le flux stream-json de claude : chaque appel d'outil devient une ligne d'activite, l'evenement final est garde."""
+        for brut in p.stdout:
+            try:
+                d = json.loads(brut.decode("utf-8", "replace"))
+            except ValueError:
+                continue
+            if not isinstance(d, dict):
+                continue
+            if d.get("type") == "assistant":
+                contenu = (d.get("message") or {}).get("content")
+                for c in contenu if isinstance(contenu, list) else []:
+                    if isinstance(c, dict) and c.get("type") == "tool_use":
+                        with self._verrou:
+                            debut = self._etat["debut"] or time.time()
+                            self._etat["appels"] += 1
+                            self._etat["progression"] = progression_estimee(self._etat["appels"])
+                            self._etat["activite"] = (self._etat["activite"] + [{"t": round(time.time() - debut, 1), "outil": str(c.get("name"))[:30],
+                                                      "detail": _detail(c.get("name"), c.get("input"))}])[-MAX_ACTIVITE:]
+            elif "result" in d and d.get("type") in (None, "result"):
+                finale.append(d)
 
     def _traite(self, params):
         programme = self.programme or ([shutil.which("claude")] if shutil.which("claude") else None)
@@ -159,23 +200,31 @@ class Audit:
         except OSError as e:
             return "echec", f"lancement de claude impossible : {e}", None
         self._proc = p
+        finale, erreur = [], []
+        lecteurs = [threading.Thread(target=self._lit_flux, args=(p, finale), daemon=True),
+                    threading.Thread(target=lambda: erreur.append(p.stderr.read()), daemon=True)]
+        for t in lecteurs:
+            t.start()
         try:
-            sortie, erreur = p.communicate(consigne(params, self.gardes()).encode("utf-8"), timeout=self.delai)
+            p.stdin.write(consigne(params, self.gardes()).encode("utf-8"))
+            p.stdin.close()
+        except OSError:
+            pass                                  # claude mort avant d'avoir lu : le code de sortie le dira
+        try:
+            p.wait(timeout=self.delai)
         except subprocess.TimeoutExpired:
             _arrete_processus(p)
-            try:
-                p.communicate(timeout=10)
-            except subprocess.TimeoutExpired:
-                pass
             return "echec", f"delai de {self.delai} s depasse : audit abandonne", None
         finally:
             self._proc = None
+            for t in lecteurs:
+                t.join(10)
         if self._arret:
             return "echec", "audit arrete par l'utilisateur", None
         if p.returncode != 0:
-            return "echec", f"claude a echoue (code {p.returncode}) : " + erreur.decode("utf-8", "replace")[-300:], None
+            return "echec", f"claude a echoue (code {p.returncode}) : " + (erreur[0] if erreur else b"").decode("utf-8", "replace")[-300:], None
         try:
-            texte = _resultat(sortie)
+            texte = _resultat(finale[-1] if finale else None)
         except ValueError as e:
             return "echec", str(e), None
         rapport, erreurs = menage_rapport.valide(texte, self.racine)

@@ -115,6 +115,15 @@ try:
 finally:
     acces_web.est_local = vrai
 
+# etat : activite et progression (curseur ?depuis=)
+e0 = json.loads(s.req("GET", "/etat")[1])
+verifie((e0["appels"], e0["progression"], e0["activite"]), (0, 0, []), "etat : pas d'activite au repos")
+s.etat.audit._etat.update(appels=7, progression=19, activite=[{"t": i, "outil": "Grep", "detail": f"a{i}"} for i in (5, 6, 7)])   # 3 gardees sur 7 : les 3 dernieres, rangs 4 a 6 (base 0)
+verifie([x["t"] for x in json.loads(s.req("GET", "/etat")[1])["activite"]], [5, 6, 7], "etat : tout le journal sans curseur")
+verifie([x["t"] for x in json.loads(s.req("GET", "/etat?depuis=6")[1])["activite"]], [7], "etat : curseur depuis=6 (6 deja recues), seulement la 7e")
+verifie(json.loads(s.req("GET", "/etat?depuis=abc")[1])["progression"], 19, "etat : curseur illisible ignore")
+s.etat.audit._etat.update(appels=0, progression=0, activite=[])
+
 # audit complet
 st, t = s.req("POST", "/lancer", {"zone": ["tasks"], "anciennete_jours": 2})
 verifie(st, 200, "lancer")

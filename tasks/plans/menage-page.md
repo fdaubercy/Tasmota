@@ -76,6 +76,13 @@ secrets), `menage_memoire.py` (liste « à garder »), `build/cible_menage.py`.
 - [ ] Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés
 - [ ] Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan
 
+## A8 — Progression en direct et vrais reclassements (demandes de l'utilisateur, 2026-11-14)
+- [x] Le premier audit réel ne proposait que des suppressions : élargir le contrôle « hors de leur dossier » de `auditeur-menage.md` en CLASSEMENT (déplacements `deplacer` + `vers`, renvois à mettre à jour dans `casserait`, limites : scripts qui s'importent restent ensemble, modules `data/fs` solidifiés) et le rappeler dans la consigne de la page — preuve : .claude/agents/auditeur-menage.md contrôle 3, menage_lancement.py::consigne ; test_menage_lancement.py VERT ; efficacité à constater au prochain audit réel
+- [x] Flux `stream-json` : chaque action de l'agent (outil + détail, secrets masqués) remonte pendant l'audit, progression approximative (monte vite, jamais 100 avant la fin) — preuve : menage_lancement.py::_lit_flux, ::progression_estimee ; test_menage_lancement.py § 7b VERT (action visible avant la fin, secret masqué, 100 à la fin)
+- [x] `/etat?depuis=n` (curseur, seulement la suite du journal) — preuve : test_menage_web.py VERT (3 cas du curseur)
+- [x] Page : barre de progression, journal défilant en `textContent`, chronomètre mm:ss — preuve : test_menage_page_chrome.py VERT (journal pendant l'audit, action hostile en texte, barre non vide puis 100 %, témoin « journal-html » détecté), 0 Chrome `sonde_` à +15 s
+- [x] Commit (avec `controleur-secrets`) — preuve : controleur-secrets sans rien de bloquant (faux jeton `ghp_` des tests = témoin de masquage construit par concaténation) ; le nouvel audit réel qui jugera les déplacements est suivi en A7
+
 ## Améliorations restantes
 - [ ] [projet] Version 2 : application d'un lot depuis la page (selon A7)
 - [ ] [projet] Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles

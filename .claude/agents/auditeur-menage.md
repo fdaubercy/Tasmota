@@ -46,8 +46,19 @@ Contrôles :
 2. **Restes** : `*.bak`, `*.orig`, dossiers `*-sauvegarde`, copies `* - Copie`, exports `tasks/export-session-*.md` de plus
    de 30 jours, fichiers `.diff` historiques, dossiers de maquettes dont le choix est tranché (README du dossier : « Choix
    retenu »), plans `statut: clos` ou `termine` encore dans `tasks/plans/` sans archivage voulu.
-3. **Hors de leur dossier** : fichiers à la racine du dépôt (règle « rien à la racine »), scripts qui s'importent entre eux
-   mais séparés, fichiers de `data/<lieu>/<carte>/` qui n'ont rien à y faire (`data/<lieu>/<carte>/` part en flash).
+3. **Classement (hors de leur dossier)** : c'est ici que tu proposes des DÉPLACEMENTS (`action: "deplacer"`, `vers` rempli),
+   pas seulement des suppressions. Regarde l'arborescence (Glob sur `*` puis sur chaque dossier du fork) et juge si chaque
+   fichier est rangé avec ses semblables : fichiers à la racine du dépôt (règle « rien à la racine » : `.bak`, notes,
+   scripts, sorties), documents de `outils_docs/` qui se regroupent par nature (analyses et audits datés `ANALYSE_*`,
+   `AUDIT_*`, `DIAGNOSTIC_*` ; fiches de référence ; maquettes de choix tranchés), dossiers de maquettes ou d'images
+   éparpillés, fichiers de `data/<lieu>/<carte>/` qui n'ont rien à y faire (`data/<lieu>/<carte>/` part en flash), exports
+   et notes de `tasks/`. Une proposition de déplacement donne le dossier cible existant ou à créer, et dans `casserait` la
+   liste des renvois à mettre à jour (cherche le nom du fichier avec Grep dans `CLAUDE.md`, `outils_docs/README.md`,
+   les plans, les `.ini`). Limites : des scripts Python qui s'importent entre eux restent dans le MÊME dossier (ne propose
+   jamais de les séparer) ; ne déplace pas un module Berry de `data/fs/` (solidifié, listé dans le cenv) ni un fichier
+   cité par un chemin dans une configuration sans le dire en risque « moyen » ou « élevé ». Vise des regroupements utiles :
+   un déplacement sert à classer, pas à déplacer pour déplacer ; 5 à 15 propositions de classement bien étayées valent
+   mieux que 40 vagues.
 4. **Doublons** : fichiers identiques (`git hash-object`) ou presque, copies de `data/fs` ailleurs.
 5. **Taille** : fichiers du fork proches de 500 lignes (> 450) ou au-delà et absents de la liste d'exceptions de `CLAUDE.md`.
 6. **Dossiers vides, `.keep` inutiles, images volumineuses** (> 1 Mo) non référencées.

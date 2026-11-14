@@ -34,6 +34,15 @@ elif mode == "code1":
     sys.stderr.write("boum"); sys.exit(1)
 elif mode == "lent":
     time.sleep(60)
+elif mode == "flux":
+    def evt(o):
+        print(json.dumps(o), flush=True)
+    evt({"type": "system", "subtype": "init"})
+    evt({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Grep", "input": {"pattern": "ghp_" + "a" * 36, "path": "data"}}]}})
+    time.sleep(2)
+    evt({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "git status --porcelain"}}]}})
+    time.sleep(1)
+    evt({"type": "result", "subtype": "success", "is_error": False, "result": json.dumps(rapport)})
 ''', encoding="utf-8")
 PROG = [sys.executable, str(FAUX)]
 
@@ -125,6 +134,20 @@ try:
 finally:
     ml.shutil.which = a_shutil
 verifie((e["etat"], "introuvable" in e["message"]), ("echec", True), "claude introuvable")
+
+# 7b. flux : activite et progression visibles PENDANT l'audit, secrets masques
+a = audit("flux")
+a.lance({})
+t0 = time.time()
+while time.time() - t0 < 15 and not a.etat().get("activite"):
+    time.sleep(0.1)
+e = a.etat()
+verifie((e["etat"], [x["outil"] for x in e["activite"]], e["appels"]), ("en_cours", ["Grep"], 1), "flux : l'action en cours est visible avant la fin")
+verifie(0 < e["progression"] < 100, True, "flux : progression approximative entre 0 et 100 pendant l'audit")
+verifie("ghp_" + "a" * 36 in json.dumps(e["activite"]), False, "flux : un secret dans une action est masque")
+e = attend(a)
+verifie((e["etat"], [x["outil"] for x in e["activite"]], e["progression"], e["rapport"] and len(e["rapport"]["propositions"])),
+        ("fini", ["Grep", "Bash"], 100, 1), "flux : fini, 2 actions, progression 100, rapport lu dans l'evenement result")
 
 # 8. mutants : la garde de build et la liste blanche doivent compter
 a = ml.Audit(RACINE, lambda: [], programme=PROG)       # mutant : detection de build neutralisee

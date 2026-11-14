@@ -38,6 +38,11 @@ label.ch input{margin-top:3px;flex:none}
 .champ{display:block;margin:8px 0} .champ span{display:block;font-size:12px;color:var(--doux);margin-bottom:2px}
 input[type=number],select{font:inherit;padding:5px 7px;border:1px solid var(--bord);border-radius:5px;background:var(--champ);color:var(--texte);width:100%}
 .etat{padding:8px 10px;border-radius:6px;background:var(--piste);margin-top:8px;overflow-wrap:anywhere}
+.avance{margin-top:8px} .barre{height:8px;border-radius:4px;background:var(--piste);overflow:hidden}
+.rempli{height:100%;width:0;background:var(--bleu);transition:width .6s ease}
+.journal{margin-top:8px;max-height:240px;overflow:auto;padding:6px 8px;border:1px solid var(--bord);border-radius:6px;background:var(--champ);
+  font:12px/1.45 ui-monospace,Consolas,monospace}
+.journal div{overflow-wrap:anywhere} .journal .t{color:var(--doux)} .journal .o{color:var(--bleu);font-weight:600}
 .etat.ok{background:var(--vert-fond);color:var(--vert)} .etat.ko{background:var(--rouge-fond);color:var(--rouge)} .etat.en{background:var(--orange-fond);color:var(--orange)}
 .prop{border:1px solid var(--bord);border-radius:6px;padding:8px 10px;margin:8px 0;background:var(--carte)}
 .prop.encours{opacity:.75}
@@ -64,6 +69,9 @@ HTML = """
   <label class="champ"><span>Effort</span><select id="p-effort"></select></label>
   <div class="ligne"><button class="btn prim" id="b-lance">Lancer l'audit</button><button class="btn" id="b-stop" disabled>Arrêter</button></div>
   <div class="etat" id="etat" role="status">Prêt.</div>
+  <div class="avance" id="avance" hidden><div class="barre" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="barre"><div class="rempli" id="rempli"></div></div>
+   <div class="doux petit" id="pct"></div></div>
+  <div class="journal" id="journal" hidden tabindex="0" aria-label="Actions de l'agent en direct"></div>
  </section>
  <section class="carte"><h2>Gardés <span class="doux petit" id="n-gardes"></span></h2>
   <p class="doux petit">Chemins à ne plus se voir proposer (mémorisés hors du dépôt).</p><div id="gardes"></div></section>
@@ -85,7 +93,7 @@ HTML = """
 
 JS = r"""
 "use strict";
-var S = {gen: 0, rapport: null, options: null, scrute: null};
+var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0};
 function $(id) { return document.getElementById(id); }
 function vide(n) { while (n.firstChild) n.removeChild(n.firstChild); }
 function el(tag, classe, texte) { var e = document.createElement(tag); if (classe) e.className = classe; if (texte != null) e.textContent = texte; return e; }
@@ -203,14 +211,34 @@ function chargeRapport() {
   });
 }
 
+function duree(s) { return Math.floor(s / 60) + ":" + ("0" + Math.floor(s % 60)).slice(-2); }
+function journalise(e) {
+  var j = $("journal");
+  if (e.appels < S.recu) { vide(j); S.recu = 0; }          // nouvel audit : on repart de zero
+  var bas = j.scrollHeight - j.scrollTop - j.clientHeight < 30;
+  (e.activite || []).forEach(function (a) {
+    var l = el("div"); l.appendChild(el("span", "t", duree(a.t) + "  ")); l.appendChild(el("span", "o", a.outil + "  ")); l.appendChild(document.createTextNode(a.detail));
+    j.appendChild(l);
+  });
+  S.recu = e.appels;
+  var visible = e.etat === "en_cours" || j.childNodes.length > 0;
+  j.hidden = !visible; $("avance").hidden = !(e.etat === "en_cours" || e.etat === "fini");
+  if (bas) j.scrollTop = j.scrollHeight;
+  var pct = e.etat === "fini" ? 100 : e.progression || 0;
+  $("rempli").style.width = pct + "%"; $("barre").setAttribute("aria-valuenow", pct);
+  $("pct").textContent = e.etat === "en_cours" ? "≈ " + pct + " % (estimation : le nombre d'actions n'est pas connu d'avance) · " + e.appels + " actions"
+                                               : pct + " % · " + e.appels + " actions";
+}
+
 function etat() {
-  return api("GET", "/etat").then(function (r) {
+  return api("GET", "/etat?depuis=" + S.recu).then(function (r) {
     if (!r.ok) { message("ko", r.texte); return; }
     var e = r.donnees, enCours = e.etat === "en_cours";
+    journalise(e);
     $("b-lance").disabled = enCours; $("b-stop").disabled = !enCours;
     if (enCours) {
       var s = e.debut ? Math.max(0, Math.round(Date.now() / 1000 - e.debut)) : 0;
-      message("en", "Audit en cours depuis " + s + " s… (jusqu'à quelques minutes)");
+      message("en", "Audit en cours depuis " + duree(s) + "… (jusqu'à quelques minutes)");
       if (!S.scrute) S.scrute = setInterval(etat, 1500);
     } else {
       if (S.scrute) { clearInterval(S.scrute); S.scrute = null; }
@@ -228,6 +256,7 @@ function lance() {
   api("POST", "/lancer", p).then(function (r) {
     if (!r.ok) { message("ko", r.texte); return; }
     S.gen++; S.rapport = null; rend();
+    vide($("journal")); S.recu = 0;
     etat();
   });
 }
