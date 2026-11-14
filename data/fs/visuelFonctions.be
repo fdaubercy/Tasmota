@@ -11,7 +11,7 @@
  * Accueil : html() = <div id='vz'>, window.VISUEL = description (< echappe), puis /sd/js/visuel.js inline (comme vrPages_accueil).
  *
  * SOLIDIFIABLE : l'etat (description lue une fois, cache du bloc reseau) vit dans la globale _etatVisuel, pas dans le module.
- * Les chemins FICHIER, JS et RACINE_FOND sont des constantes (un banc les redirige). Logs : cible visuel, prefixe VISUEL:.
+ * Les chemins FICHIER, JS et RACINE_FOND sont des constantes (un banc les redirige). Logs : cible serveurWeb, prefixe VISUEL:.
  * Limite connue : modbus.esclaves ne vient que de modbusFonctions.etat().ipsApprises (voie UDP) ; un esclave de la voie serie
  * n'a pas d'horodatage propre cote maitre (modbus_serie, lui, a derniereReponseSerie).
 ********************************************************************************************* -#
@@ -26,7 +26,7 @@ visuelFonctions.MORCEAU = 2048             # octets lus et envoyes a la fois
 visuelFonctions.CACHE_RESEAU = 30000       # ms entre deux RgxClients (commande lourde : chaque reponse part aussi en MQTT)
 
 def visuelFonctions_log(msg, niveau)
-    logFonctions.log(msg, niveau, "visuel")
+    logFonctions.log(msg, niveau, "serveurWeb")
 end
 visuelFonctions.log = visuelFonctions_log
 
