@@ -91,7 +91,9 @@ class Montage:
             if serveur and self.serveur.poll() is not None:
                 raise RuntimeError("serveur arrete : " + self.serveur.stdout.read().decode("utf-8", "replace"))
             try:
-                with urllib.request.urlopen(url, timeout=2) as r:
+                # 15 s et non 2 : le 1er /registre prend 1,5 a 4,5 s a froid ; abandonner puis relancer toutes les 0,2 s
+                # empilait des calculs concurrents qui se ralentissaient entre eux (mesure du 2026-11-14).
+                with urllib.request.urlopen(url, timeout=15) as r:
                     return r.read().decode("utf-8")
             except OSError:
                 time.sleep(0.2)
