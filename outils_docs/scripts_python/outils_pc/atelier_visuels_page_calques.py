@@ -15,7 +15,7 @@ var AV_CALQUES = (function () {
     '.av-l.active line{stroke:#3ddc84;stroke-dasharray:8 6;animation:avd 1s linear infinite}' +
     '.av-l.muette line{stroke:#8a8f98;stroke-dasharray:2 6;opacity:.6}@keyframes avd{to{stroke-dashoffset:-14}}';
   var SCRIPT = "(function(){var r=document.currentScript.parentNode;r.addEventListener('click',function(e){var t=e.target.closest?e.target:null,g=t&&t.closest('.av-v'),l=t&&t.closest('.av-l');" +
-    "if(g){g.classList.toggle('on');g.classList.toggle('off');g.classList.remove('inc');}else if(l){l.classList.toggle('active');l.classList.toggle('muette');}});})();";
+    "if(g){var o=g.classList.contains('on');g.classList.remove('on','off','inc');g.classList.add(o?'off':'on');}else if(l){l.classList.toggle('active');l.classList.toggle('muette');}});})();";
   function num(v, d, a, b) { return typeof v === 'number' && isFinite(v) ? Math.min(b, Math.max(a, v)) : d; }
   function r1(v) { return Math.round(v * 10) / 10; }
   function coul(v, d) { return COUL.test(v) ? v : d; }

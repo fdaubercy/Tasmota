@@ -262,6 +262,12 @@ ZONE = ("(function(){var g=AV.photo.getContext('2d');g.fillStyle='#0000ff';g.fil
         "o=AV.photo.getContext('2d').getImageData(110,110,1,1).data;AV.formes.pop();return [c[0]>180&&c[2]<80,o[2]>180&&o[0]<80];})()")
 
 
+INCONNU = ("(async function(){AV.elements=[{id:'v1',type:'voyant',x:60,y:60,source:{type:'relais',n:1},style:{}}];AV.sim={v1:'inc'};"
+           "var h=AV.fragmentHtml(),f=document.createElement('iframe');f.srcdoc='<!doctype html><body>'+h;document.body.appendChild(f);"
+           "await new Promise(function(ok){f.onload=ok;});var d=f.contentDocument,g=d.querySelector('.av-v'),r=[g.getAttribute('class')];"
+           "for(var i=0;i<2;i++){g.querySelector('circle').dispatchEvent(new MouseEvent('click',{bubbles:true}));r.push(g.getAttribute('class'));}f.remove();return r;})()")
+
+
 def sonde_export(cdp):
     js = cdp.js
     js(EXPORT_PREP)
@@ -280,6 +286,7 @@ def sonde_export(cdp):
     js("document.getElementById('avx-png').click()")
     verifie(condition(cdp, "__tel.length === 2 && __tel[1].t === 'image/png' && __tel[1].s > 100 && /\.png$/.test(__tel[1].n)", 15), True, "export : PNG telecharge")
     verifie(js("(async function(){var u=new Uint8Array(await __tel[1].b.slice(0,4).arrayBuffer());return [u[0],u[1],u[2],u[3]];})()"), [137, 80, 78, 71], "export : signature PNG")
+    verifie(js(INCONNU), ["av-v inc", "av-v on", "av-v off"], "export : un voyant inconnu bascule proprement vers ON puis OFF (un seul etat)")
     verifie(js(ZONE), [True, True], "photo : zone a effacer = aplat de la couleur du bord (la photo d'origine intacte)")
     js("AV.elements=[];AV.sim={};AV.change();document.getElementById('av-export').click()")
 
