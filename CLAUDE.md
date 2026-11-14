@@ -451,6 +451,9 @@ Issus de l'audit des conversations du 2026-10-17. Les utiliser plutot que refair
   `tasks/plans/_FORMAT.md` (`## A<n> — titre` + sous-etapes `- [ ]`), recopie dans `tasks/plans/` a la
   validation par le mod `suivi-plan`, affiche a droite par l'extension. Cocher une etape seulement apres
   verification, avec `— preuve : …`. Commande `/suivi` (`/plan` est une commande integree).
+  **Nouveau plan (2026-11-14)** : lui donner dans son en-tete `objectif:` et `famille:` (et `parent:`, `liens:`, `spec:` si
+  utile), sinon il n'est pas range dans l'arbre de l'organigramme (`maintenance/organigramme_plans.py`, regenere par le hook a
+  chaque edition d'un plan ; publication en ligne : bouton de la tuile ou `--publier`). Format : `tasks/plans/_FORMAT.md`.
 
 ## Carte des documents de ce depot
 
