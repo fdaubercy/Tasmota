@@ -135,7 +135,7 @@ une `liaison` est active si `t - horodatage < seuil_s * 1000` (ModBus, UDP), si 
   `monte` sur un faux DOM maison et lit les attributs) : voyant ON/OFF par relais et par mesure, valeur formatée,
   liaison active puis muette au passage du seuil, rgx `ok`/`muet`, wifi `up`, élément de type inconnu ignoré, aucun
   `</` dans le texte du fichier — preuve : test_visuel_js.mjs : 26 controles, 12 mutants rouges (VERT, rc 0) ; DOM minimal maison
-- [ ] Test lancé : rouge
+- [x] Test lancé : rouge — preuve : `node test_visuel_js.mjs --js /inexistant/visuel.js` : ENOENT, code de sortie 1 (2026-11-14) ; vert sur le vrai fichier, 26 controles, 12 mutants rouges
 - [x] `visuel.js` écrit ; test vert ; `node --check` vert — preuve : node test_visuel_js.mjs VERT ; node --check data/sd/js/visuel.js ok ; 9472 octets, aucune balise fermante
 - [ ] Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
   cuve et `visuelFonctions.be`/`controleVisuel.be` dans son `custom_berry_solidify`, compilation et envoi par la page
