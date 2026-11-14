@@ -61,7 +61,7 @@ PAGE = r"""<!doctype html>
   .btn:disabled{opacity:.5;cursor:default}
   .btn svg{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
   .btn.ic{padding:5px;font-size:16px;line-height:0}.btn:not(.p):hover{border-color:var(--bleu);color:var(--bleu)}
-  .ligne-sw{display:flex;align-items:center;gap:10px;margin-top:auto}.ligne-sw .et{font-size:12px;color:var(--doux);flex:1}
+  .ligne-sw{display:flex;align-items:center;gap:8px;margin-top:auto;min-height:32px}.ligne-sw .actions{margin:0}.ligne-sw .et{font-size:12px;color:var(--doux);flex:1;text-align:right}
   .sw{position:relative;width:46px;height:28px;border-radius:14px;border:0;background:var(--gris);padding:0;flex:none;cursor:pointer;transition:background .2s}
   .sw::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0005;transition:transform .2s}
   .sw[aria-checked=true]{background:var(--vert)}.sw[aria-checked=true]::after{transform:translateX(18px)}
@@ -208,7 +208,6 @@ function tuile(o) {
   interrupteur.disabled = !!attente || (marche && !e.peut_arreter);
   interrupteur.onclick = function () { if (marche) arrete(o); else ouvreLancement(o); };
   var texte = attente || (marche ? (e.peut_arreter ? "En cours" : "En cours (non arrêtable ici)") : "Arrêté");
-  var ligne = h("div", {"class": "ligne-sw"}, interrupteur, h("span", {"class": "et", texte: texte}));
   if (!attente) {
     if (marche && e.lien)
       actions.appendChild(h("a", {"class": "btn", href: lienLieu(o, e.lien), title: "Ouvrir", "aria-label": "Ouvrir " + o.nom}, icone(ICO_ECRAN), " Ouvrir"));
@@ -226,8 +225,7 @@ function tuile(o) {
     e.raison ? h("div", {"class": "raison", texte: e.raison}) : null,
     e.lie ? h("div", {"class": "erreur lie", texte: "liée à l'annuaire : s'arrêtera avec VS Code"}) : null,
     erreurs[o.id] ? h("div", {"class": "erreur", texte: erreurs[o.id]}) : null,
-    ligne,
-    actions);
+    h("div", {"class": "ligne-sw"}, actions, h("span", {"class": "et", texte: texte}), interrupteur));
 }
 
 function dessine() {
