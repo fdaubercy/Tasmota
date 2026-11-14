@@ -4,9 +4,10 @@
     GET  /icones/recherche?q=     GET /icones/svg?jeu=&nom=     POST /icones/garde {jeu, nom, confirme_attribution}
     GET  /ia/fournisseurs         GET /ia/quota?fournisseur=
     POST /ia/demande {env, fournisseur, consigne, confirme, empreinte | photo (base64)}   POST /ia/cle {fournisseur, cle}
-    POST /ecriture/prevoit {env, description, empreinte_fond?}
+    GET  /sources?env=  -> {relais: [{n, nom}], mesures: [{chemin: [..], nom}], esclaves: [{id, nom}], esclaves_reseau, periodeReleve, telePeriod}
+    POST /ecriture/prevoit {env, description (objet obligatoire), empreinte_fond? | type_fond? (fond du depot garde ; defaut description.fond.type)}
          -> {diff: [{chemin, avant, apres}] (avant/apres null = absent), empreinte, avertissements}
-    POST /ecriture/ecrit {env, description, empreinte_fond?, empreinte (celle du diff)} -> {ecrits: [chemin]}
+    POST /ecriture/ecrit {env, description, empreinte_fond? | type_fond?, empreinte (celle du diff)} -> {ecrits: [chemin]}
     POST /ecriture/prevoit_retire {env}  -> meme forme que prevoit (visuel decoche)
     POST /ecriture/retire {env, empreinte (celle de prevoit_retire)} -> {ecrits: [chemin]}
     GET  /suivi?env=              -> {carte: identique | differente | absente | inconnue}
@@ -23,6 +24,7 @@ import urllib.request
 
 import atelier_visuels_ecriture as ave
 import atelier_visuels_ia as ia
+import atelier_visuels_description as avd
 import atelier_visuels_ia_config as cfg
 import atelier_visuels_icones_web as ico
 import atelier_visuels_suivi as avs
@@ -32,7 +34,7 @@ import tapp_envoi
 DELAI_CARTE = 3
 MAX_CORPS_IA = 10 * 1024 * 1024        # corps JSON de /ia/demande, photo en base64 comprise ; 1 Mo pour les autres routes
 CHEMINS_IA = {"/ia/demande"}
-ROUTES_GET = {"/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
+ROUTES_GET = {"/sources", "/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
 ROUTES_POST = {"/icones/garde", "/ia/demande", "/ia/cle", "/ecriture/prevoit", "/ecriture/ecrit",
                "/ecriture/prevoit_retire", "/ecriture/retire"}
 HorsLigne = ico.HorsLigne
@@ -106,6 +108,8 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
         if chemin == "/ia/quota":
             c = config()
             return ia.quota(c, fournisseur_valide(c, q.get("fournisseur")))
+        if chemin == "/sources":
+            return avd.sources(racine, env_valide(q.get("env")))
         if chemin == "/suivi":
             return avs.etat(racine, env_valide(q.get("env")), lecteur)
         raise LookupError("introuvable")
@@ -151,8 +155,16 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
                 raise ValueError("empreinte du diff absente")
             return {"ecrits": ave.retire(racine, env, d["empreinte"], builds)}
         if chemin in ("/ecriture/prevoit", "/ecriture/ecrit"):
+            desc = d.get("description")
+            if not isinstance(desc, dict):
+                raise ValueError("description attendue (le retrait passe par prevoit_retire et retire)")
             fond, type_fond = fond_garde(d.get("empreinte_fond"))
-            args = (racine, env, d.get("description"), fond, type_fond)
+            if fond is None:                      # fond du depot garde : le type vient du corps, sinon de la description
+                f = desc.get("fond")
+                type_fond = d.get("type_fond") or (f.get("type") if isinstance(f, dict) else None)
+                if type_fond not in ave.TYPES_FOND:
+                    raise ValueError("type_fond attendu (svg, webp ou jpg) sans empreinte_fond")
+            args = (racine, env, desc, fond, type_fond)
             if chemin == "/ecriture/prevoit":
                 return ave.prevoit(*args)
             if not isinstance(d.get("empreinte"), str):

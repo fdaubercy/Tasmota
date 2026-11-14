@@ -10,7 +10,7 @@ Routes (le POST exige l'en-tete X-Atelier-Visuels: 1 et la meme origine ; client
     POST /fond?env=&type=svg|webp|jpg   corps binaire brut, 1 Mo au plus -> {empreinte, octets, avertissement}
     GET  /fond?env=&empreinte=          le fond garde (20 au plus, le plus ancien evince)
 Routes des modules autonomes : atelier_visuels_web_routes.py (icones, IA, ecriture, suivi).
-Refus : 400 (saisie, SVG dangereux, fond trop lourd), 403, 404, 409 (build, depot change), 413 (corps), 500, 503 (Iconify injoignable). Banc : test_atelier_visuels_web.py.
+Refus : 400 (saisie, SVG dangereux, fond trop lourd), 403, 404, 408 (corps POST trop lent, 10 s), 409 (build, depot change), 413 (corps), 500, 503 (Iconify injoignable). Banc : test_atelier_visuels_web.py.
 """
 
 import argparse

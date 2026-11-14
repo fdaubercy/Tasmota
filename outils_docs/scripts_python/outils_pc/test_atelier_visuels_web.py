@@ -23,6 +23,7 @@ import atelier_visuels_ia as ia
 import atelier_visuels_icones_web as ico
 import atelier_visuels_web as avw
 import atelier_visuels_web_routes as avr
+import fichiers_berry_etat as fbe
 import lieux
 import tapp_envoi
 
@@ -159,6 +160,9 @@ def routes_modules(racine, env):
         verifie((st, b"build" in corps, b"Traceback" in corps), (409, True, False), "ecriture pendant un build : 409, aucune trace Python")
         verifie(jpost(port, "/ecriture/ecrit", {"env": env, "description": desc})[0], 400, "ecrit sans empreinte du diff : 400")
 
+        st, corps = requete(port, "GET", f"/sources?env={env}")
+        verifie((st, sorted(json.loads(corps))[:2]), (200, ["esclaves", "esclaves_reseau"]), "GET /sources : sources de la carte")
+        verifie(requete(port, "GET", "/sources?env=nulle")[0], 404, "sources d'une carte inconnue : 404")
         st, corps = requete(port, "GET", f"/suivi?env={env}")
         verifie((st, json.loads(corps)["carte"] in ("inconnue", "absente")), (200, True), "GET /suivi : carte muette ou sans visuel.json, jamais d'echec")
         verifie(requete(port, "GET", "/suivi?env=nulle")[0], 404, "suivi d'une carte inconnue : 404")
@@ -234,14 +238,33 @@ def retrait(racine, env):
         for f in ("platformio_tasmota_cenv.ini", "platformio_override.ini"):
             if (racine / f).is_file():
                 shutil.copy2(racine / f, tmp / f)
+        for f in ave.FICHIERS_PAGE:                          # stubs : la ligne d'autoexec chargerait ces fichiers
+            (tmp / f).parent.mkdir(parents=True, exist_ok=True)
+            (tmp / f).write_text("// stub", encoding="utf-8")
+        desc = {"version": 1, "fond": {"type": "svg", "largeur": 10, "hauteur": 10}, "elements": []}
         srv, port = serveur_sur(tmp, builds_en_cours=lambda: [])
         try:
+            st, corps = requete(port, "POST", f"/fond?env={env}&type=svg", f'<svg xmlns="{NS}" viewBox="0 0 10 10"><path d="M0 0L9 9"/></svg>'.encode(), ENT)
+            emp_fond = json.loads(corps)["empreinte"]
+            verifie(jpost(port, "/ecriture/prevoit", {"env": env})[0], 400, "prevoit sans description : 400, pas un retrait")
+            verifie(jpost(port, "/ecriture/ecrit", {"env": env, "empreinte": "x"})[0], 400, "ecrit sans description : 400, pas un retrait")
+            st, corps = jpost(port, "/ecriture/prevoit", {"env": env, "description": desc, "empreinte_fond": emp_fond})
+            verifie(st, 200, f"installation sur copie : prevoit 200 ({corps[:120]!r})")
+            if st != 200:
+                return
+            st, corps = jpost(port, "/ecriture/ecrit", {"env": env, "description": desc, "empreinte_fond": emp_fond, "empreinte": json.loads(corps)["empreinte"]})
+            ecrits = json.loads(corps).get("ecrits") if st == 200 else None
+            dossier = fbe.dossier_carte(env)
+            verifie((st, bool(ecrits), (tmp / dossier / "visuel.json").is_file()), (200, True, True), "installation sur copie : visuel.json ecrit")
+            st, corps = jpost(port, "/ecriture/prevoit", {"env": env, "description": desc, "type_fond": "svg"})
+            verifie((st, json.loads(corps)["diff"] if st == 200 else corps), (200, []), "fond du depot garde (type_fond, sans empreinte_fond) : diff vide")
+            verifie(jpost(port, "/ecriture/prevoit", {"env": env, "description": desc, "type_fond": "bmp"})[0], 400, "type_fond inconnu : 400")
             st, corps = jpost(port, "/ecriture/prevoit_retire", {"env": env})
-            ok = st == 200 and "empreinte" in json.loads(corps)
-            verifie(st, 200, "prevoit_retire sur copie : 200")
-            if ok:
-                st, corps = jpost(port, "/ecriture/retire", {"env": env, "empreinte": json.loads(corps)["empreinte"]})
-                verifie((st, "ecrits" in json.loads(corps)), (200, True), "retire sur copie : ecrits rendus")
+            verifie((st, bool(json.loads(corps)["diff"]) if st == 200 else corps), (200, True), "prevoit_retire sur copie : diff non vide")
+            st, corps = jpost(port, "/ecriture/retire", {"env": env, "empreinte": json.loads(corps)["empreinte"]})
+            ecrits = json.loads(corps).get("ecrits") if st == 200 else None
+            verifie((st, bool(ecrits), (tmp / dossier / "visuel.json").exists(), (tmp / dossier / "visuel.svg").exists()),
+                    (200, True, False, False), "retire sur copie : ecrits non vide, visuel.json et fond disparus")
         finally:
             srv.shutdown()
             srv.server_close()
