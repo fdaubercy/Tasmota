@@ -197,8 +197,8 @@ def test_fichier(c):
         verifie(set(pj) == set(ec), "ecran.json : memes objets que pages.jsonl", sorted(set(pj) ^ set(ec)))
         ecarts = [k for k in pj if k in ec and (pj[k]["x"], pj[k]["y"], pj[k]["w"], pj[k]["h"]) != (ec[k]["x"], ec[k]["y"], ec[k]["l"], ec[k]["h"])]
         verifie(not ecarts, "ecran.json : memes coordonnees que pages.jsonl", ecarts)
-        verifie(sum(o["page"] == 0 for o in d["objets"]) == 8 and {p["n"] for p in d["pages"]} == {0, 1, 2, 3, 4},
-                "ecran.json : pages Commun, Debits, Courbes, Reglages, Systeme (construite, A19)")
+        verifie(sum(o["page"] == 0 for o in d["objets"]) == 9 and {p["n"] for p in d["pages"]} == {0, 1, 2, 3, 4, 5},
+                "ecran.json : pages Commun, Debits, Courbes, Reglages, Systeme (construite, A19), QR code (A16)")
 
 
 def main():

@@ -1,6 +1,6 @@
 # Interface LVGL pur de l'ecran (module ecranLvgl), GENEREE par outils_docs/scripts_python/outils_pc/atelier_ecrans_lvgl.py
 # depuis la description ecran.json de l'atelier des ecrans (outils_docs/atelier_ecrans/cartes/<env>/) : NE PAS EDITER, modifier
-# la description puis regenerer. Ecran ST7262_1024x600, 5 pages, 182 objets. Interchangeable avec ecranHaspmota.be +
+# la description puis regenerer. Ecran ST7262_1024x600, 6 pages, 192 objets. Interchangeable avec ecranHaspmota.be +
 # pages.jsonl (custom_interface_ecran du cenv). API (en tete du module metier) : demarre() -> true si l'ecran est
 # pret ; affiche(modele) chaque seconde, n'ecrit que ce qui a change (cache par objet et attribut). Objets nommes p<page>b<id>
 # comme HASPmota ; page 0 sur lv.layer_top() (toutes les pages), une page n >= 1 = un ecran lv.obj(0) charge par lv.screen_load.
@@ -20,6 +20,7 @@ def ecranLvgl_p0b201()    import ecranLvgl    ecranLvgl.montre(1)    end
 def ecranLvgl_p0b202()    import ecranLvgl    ecranLvgl.montre(2)    end
 def ecranLvgl_p0b203()    import ecranLvgl    ecranLvgl.montre(3)    end
 def ecranLvgl_p0b204()    import ecranLvgl    ecranLvgl.montre(4)    end
+def ecranLvgl_p0b205()    import ecranLvgl    ecranLvgl.montre(5)    end
 
 # ---- Tables tirees de la description ----
 ecranLvgl.DEPART = 1
@@ -28,7 +29,8 @@ ecranLvgl.PAGES = [[0, []],
     [1, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]],
     [2, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]],
     [3, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]],
-    [4, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]]]
+    [4, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]],
+    [5, [["bg_color", 0x10161E], ["bg_grad_color", 0x10161E], ["text_color", 0xE8EDF2]]]]
 # [page, id, type, x, y, l, h, [[attribut, valeur]], fonction du toucher]
 ecranLvgl.OBJETS = [
     [0, 1, "label", 24, 14, 210, 40, [["text", "Débits nourrice"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-32"], ["text_color", 0xE8EDF2]], nil],
@@ -110,6 +112,15 @@ ecranLvgl.OBJETS = [
     [3, 42, "btn", 520, 372, 96, 72, [["radius", 36], ["border_width", 0], ["text", "-"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p3b42],
     [3, 43, "label", 626, 386, 200, 44, [["text", "80 %"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["text_color", 0xE8EDF2], ["align", 1]], nil],
     [3, 44, "btn", 836, 372, 96, 72, [["radius", 36], ["border_width", 0], ["text", "+"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2]], ecranLvgl_p3b44],
+    [5, 51, "qrcode", 60, 100, 380, 380, [["qr_dark_color", 0x000000], ["qr_light_color", 0xFFFFFF], ["qr_text", "Aucun réglage"]], nil],
+    [5, 52, "label", 470, 104, 500, 26, [["text", "Adresse IP réelle"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["text_color", 0x9FB3C8]], nil],
+    [5, 53, "label", 470, 132, 500, 44, [["text", "inconnue"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["text_color", 0xE8EDF2]], nil],
+    [5, 54, "label", 470, 200, 500, 26, [["text", "IP inscrite sur l'étiquette"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["text_color", 0x9FB3C8]], nil],
+    [5, 55, "label", 470, 228, 500, 44, [["text", "non réglée"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["text_color", 0xE8EDF2]], nil],
+    [5, 56, "label", 470, 296, 500, 26, [["text", "Nom d'hôte"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["text_color", 0x9FB3C8]], nil],
+    [5, 57, "label", 470, 324, 500, 44, [["text", ""], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-36"], ["text_color", 0xE8EDF2]], nil],
+    [5, 58, "obj", 470, 410, 16, 16, [["radius", 8], ["border_width", 0], ["bg_color", 0x5B6B7C]], nil],
+    [5, 59, "label", 470, 402, 460, 32, [["text", "Pas de réglage QR code (outil des étiquettes)"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-24"], ["text_color", 0xE8EDF2]], nil],
     [4, 180, "label", 24, 64, 314, 19, [["text", "Mémoire"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x3FA7FF]], nil],
     [4, 130, "label", 24, 83, 157, 19, [["text", "RAM interne libre"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0x9FB3C8]], nil],
     [4, 1, "label", 181, 83, 157, 19, [["text", "--"], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-14"], ["text_color", 0xE8EDF2], ["align", 2]], nil],
@@ -212,7 +223,8 @@ ecranLvgl.OBJETS = [
     [0, 201, "btn", 24, 540, 112, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Débits"]], ecranLvgl_p0b201],
     [0, 202, "btn", 148, 540, 123, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Courbes"]], ecranLvgl_p0b202],
     [0, 203, "btn", 283, 540, 134, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Réglages"]], ecranLvgl_p0b203],
-    [0, 204, "btn", 429, 540, 123, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Système"]], ecranLvgl_p0b204]]
+    [0, 204, "btn", 429, 540, 123, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "Système"]], ecranLvgl_p0b204],
+    [0, 205, "btn", 564, 540, 123, 46, [["radius", 23], ["border_width", 0], ["text_font", "A:sd/polices/RobotoCondensed-Regular.ttf-20"], ["bg_color", 0x1F2B38], ["text_color", 0xE8EDF2], ["text", "QR code"]], ecranLvgl_p0b205]]
 # [objet, chemin dans le modele, attribut, table de couleurs, couleurs si / sauf, sinon, format, echelle] ; une ligne par objet
 ecranLvgl.LIAISONS = [
     ["p0b2", ["liaison"], "bg_color", "etat", nil, nil, nil, nil],
@@ -270,9 +282,15 @@ ecranLvgl.LIAISONS = [
     ["p2b71", ["courbeMax"], "text", nil, nil, nil, "%d L/min", 100],
     ["p3b23", ["reglages", "fenetre"], "text", nil, nil, nil, nil, nil],
     ["p3b33", ["reglages", "veille"], "text", nil, nil, nil, nil, nil],
-    ["p3b43", ["reglages", "luminosite"], "text", nil, nil, nil, nil, nil]]
+    ["p3b43", ["reglages", "luminosite"], "text", nil, nil, nil, nil, nil],
+    ["p5b51", ["qr", "texte"], "qr_text", nil, nil, nil, nil, nil],
+    ["p5b53", ["qr", "ip"], "text", nil, nil, nil, nil, nil],
+    ["p5b55", ["qr", "ipInscrite"], "text", nil, nil, nil, nil, nil],
+    ["p5b57", ["qr", "hostname"], "text", nil, nil, nil, nil, nil],
+    ["p5b58", ["qr", "etat"], "bg_color", "etat", nil, nil, nil, nil],
+    ["p5b59", ["qr", "accord"], "text", nil, nil, nil, nil, nil]]
 # [bouton, page menee, {attribut: [couleur page courante, couleur sinon]}]
-ecranLvgl.ACTIFS = [["p0b201", 1, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b202", 2, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b203", 3, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b204", 4, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}]]
+ecranLvgl.ACTIFS = [["p0b201", 1, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b202", 2, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b203", 3, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b204", 4, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}], ["p0b205", 5, {"bg_color": [0x3FA7FF, 0x1F2B38], "text_color": [0x06121F, 0xE8EDF2]}]]
 # [chart, chemin des series, chemin du compteur de points, couleurs des series]
 ecranLvgl.COURBE = ["p2b70", ["historique"], ["points"], [0x3FA7FF, 0x3FD08A, 0xFFA53F, 0xC084FC, 0xFF5A5A, 0xF5D04A]]
 

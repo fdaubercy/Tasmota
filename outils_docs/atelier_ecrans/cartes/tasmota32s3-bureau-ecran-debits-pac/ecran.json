@@ -18,7 +18,13 @@
  {"cle":"courbeMax","type":"entier","exemple":1000},
  {"cle":"reglages.fenetre","type":"texte","exemple":"10 s"},
  {"cle":"reglages.veille","type":"texte","exemple":"5 min"},
- {"cle":"reglages.luminosite","type":"texte","exemple":"80 %"}
+ {"cle":"reglages.luminosite","type":"texte","exemple":"80 %"},
+ {"cle":"qr.texte","type":"texte","exemple":"https://exemple.fr/fiche/ecran-debits"},
+ {"cle":"qr.hostname","type":"texte","exemple":"ECRAN-DEBITS-PAC"},
+ {"cle":"qr.ip","type":"texte","exemple":"192.168.0.51"},
+ {"cle":"qr.ipInscrite","type":"texte","exemple":"192.168.0.51"},
+ {"cle":"qr.accord","type":"texte","exemple":"IP conforme à l'étiquette"},
+ {"cle":"qr.etat","type":"texte","exemple":"vert"}
 ],
 "couleurs":{"etat":{"normal":"#E8EDF2","imprecis":"#FFA53F","muet":"#FF5A5A","inconnu":"#5B6B7C","arret":"#9FB3C8","bleu":"#3FA7FF","vert":"#3FD08A"}},
 "pages":[
@@ -26,7 +32,8 @@
  {"n":1,"titre":"Débits","commentaire":"Debits (modele A) : six lignes nom, barre, debit, unite, part du total","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}},
  {"n":2,"titre":"Courbes","commentaire":"Courbes (modele D) : valeurs a gauche, courbe des 30 dernieres minutes a droite (6 series ajoutees par ecranHaspmota)","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}},
  {"n":3,"titre":"Réglages","commentaire":"Reglages : fenetre de mesure, veille, luminosite ; boutons - / + -> ecranDebitsFonctions.ajuste (regles hasp#p3bNN#event)","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}},
- {"n":4,"titre":"Système","modele":"systeme","commentaire":"Systeme : page CONSTRUITE par l'atelier (atelier_ecrans_systeme) d'apres ecranSysteme.CHAMPS ; valeurs ecrites par data/fs/ecranSysteme.be","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}}
+ {"n":4,"titre":"Système","modele":"systeme","commentaire":"Systeme : page CONSTRUITE par l'atelier (atelier_ecrans_systeme) d'apres ecranSysteme.CHAMPS ; valeurs ecrites par data/fs/ecranSysteme.be","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}},
+ {"n":5,"titre":"QR code","commentaire":"QR code : etiquette de la carte (texte reglé par la page /qrcode de la carte, outil des etiquettes), IP reelle, IP inscrite, nom d'hote et accord ; valeurs lues au demarrage (ecranDebitsFonctions.qr)","attributs":{"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}}
 ],
 "objets":[
  {"id":1,"page":0,"type":"label","x":24,"y":14,"l":210,"h":40,"attributs":{"text":"Débits nourrice","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-32","text_color":"#E8EDF2"}},
@@ -107,7 +114,16 @@
  {"id":45,"page":3,"type":"label","x":60,"y":416,"l":420,"h":26,"attributs":{"text":"en service, réveil au toucher","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}},
  {"id":42,"page":3,"type":"btn","x":520,"y":372,"l":96,"h":72,"attributs":{"radius":36,"border_width":0,"text":"-","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","bg_color":"#1F2B38","text_color":"#E8EDF2"},"toucher":{"fonction":"ecranDebitsFonctions.ajuste","args":["luminosite",-10]}},
  {"id":43,"page":3,"type":"label","x":626,"y":386,"l":200,"h":44,"attributs":{"text":"80 %","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2","align":1},"liaison":{"cle":"reglages.luminosite","attribut":"text"}},
- {"id":44,"page":3,"type":"btn","x":836,"y":372,"l":96,"h":72,"attributs":{"radius":36,"border_width":0,"text":"+","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","bg_color":"#1F2B38","text_color":"#E8EDF2"},"toucher":{"fonction":"ecranDebitsFonctions.ajuste","args":["luminosite",10]}}
+ {"id":44,"page":3,"type":"btn","x":836,"y":372,"l":96,"h":72,"attributs":{"radius":36,"border_width":0,"text":"+","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","bg_color":"#1F2B38","text_color":"#E8EDF2"},"toucher":{"fonction":"ecranDebitsFonctions.ajuste","args":["luminosite",10]}},
+ {"id":51,"page":5,"type":"qrcode","x":60,"y":100,"l":380,"h":380,"attributs":{"qr_dark_color":"#000000","qr_light_color":"#FFFFFF","qr_text":"Aucun réglage"},"liaison":{"cle":"qr.texte","attribut":"qr_text"}},
+ {"id":52,"page":5,"type":"label","x":470,"y":104,"l":500,"h":26,"attributs":{"text":"Adresse IP réelle","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}},
+ {"id":53,"page":5,"type":"label","x":470,"y":132,"l":500,"h":44,"attributs":{"text":"inconnue","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2"},"liaison":{"cle":"qr.ip","attribut":"text"}},
+ {"id":54,"page":5,"type":"label","x":470,"y":200,"l":500,"h":26,"attributs":{"text":"IP inscrite sur l'étiquette","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}},
+ {"id":55,"page":5,"type":"label","x":470,"y":228,"l":500,"h":44,"attributs":{"text":"non réglée","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2"},"liaison":{"cle":"qr.ipInscrite","attribut":"text"}},
+ {"id":56,"page":5,"type":"label","x":470,"y":296,"l":500,"h":26,"attributs":{"text":"Nom d'hôte","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}},
+ {"id":57,"page":5,"type":"label","x":470,"y":324,"l":500,"h":44,"attributs":{"text":"","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2"},"liaison":{"cle":"qr.hostname","attribut":"text"}},
+ {"id":58,"page":5,"type":"obj","x":470,"y":410,"l":16,"h":16,"attributs":{"radius":8,"border_width":0,"bg_color":"#5B6B7C"},"liaison":{"cle":"qr.etat","attribut":"bg_color","table":"etat"}},
+ {"id":59,"page":5,"type":"label","x":470,"y":402,"l":460,"h":32,"attributs":{"text":"Pas de réglage QR code (outil des étiquettes)","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-24","text_color":"#E8EDF2"},"liaison":{"cle":"qr.accord","attribut":"text"}}
 ],
 "navigation":{"x":24,"y":540,"h":46,"ecart":12,"attributs":{"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2"},"actif":{"bg_color":"#3FA7FF","text_color":"#06121F"}}
 }

@@ -1,0 +1,15 @@
+{
+ "version": 1,
+ "texte": "Hostname : ECRAN-DEBITS-PAC · IP : 192.168.0.51",
+ "style": {
+  "points": "rounded",
+  "coins": "extra-rounded",
+  "couleur": "#000000",
+  "fond": "#ffffff"
+ },
+ "image": null,
+ "correction": "M",
+ "modules": 33,
+ "ip_inscrite": "192.168.0.51",
+ "entre_lignes": " · "
+}

@@ -7,6 +7,7 @@
 {"page":0,"id":202,"obj":"btn","x":148,"y":540,"w":123,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Courbes","action":"p2"}
 {"page":0,"id":203,"obj":"btn","x":283,"y":540,"w":134,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Réglages","action":"p3"}
 {"page":0,"id":204,"obj":"btn","x":429,"y":540,"w":123,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"Système","action":"p4"}
+{"page":0,"id":205,"obj":"btn","x":564,"y":540,"w":123,"h":46,"radius":23,"border_width":0,"text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","bg_color":"#1F2B38","text_color":"#E8EDF2","text":"QR code","action":"p5"}
 {"page":1,"comment":"Debits (modele A) : six lignes nom, barre, debit, unite, part du total"}
 {"page":1,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
 {"page":1,"id":11,"obj":"label","x":24,"y":84,"w":180,"h":36,"text":"Débit 1","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-28","text_color":"#E8EDF2"}
@@ -189,3 +190,14 @@
 {"page":4,"id":105,"obj":"label","x":181,"y":500,"w":819,"h":19,"text":"--","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","text_color":"#E8EDF2"}
 {"page":4,"id":120,"obj":"btn","x":684,"y":355,"w":149,"h":44,"radius":22,"border_width":0,"text":"Lancer le GC","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","bg_color":"#1F2B38","text_color":"#E8EDF2"}
 {"page":4,"id":121,"obj":"btn","x":849,"y":355,"w":149,"h":44,"radius":22,"border_width":0,"text":"Redémarrer","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-14","bg_color":"#1F2B38","text_color":"#E8EDF2"}
+{"page":5,"comment":"QR code : etiquette de la carte (texte reglé par la page /qrcode de la carte, outil des etiquettes), IP reelle, IP inscrite, nom d'hote et accord ; valeurs lues au demarrage (ecranDebitsFonctions.qr)"}
+{"page":5,"id":0,"bg_color":"#10161E","bg_grad_color":"#10161E","text_color":"#E8EDF2"}
+{"page":5,"id":51,"obj":"qrcode","x":60,"y":100,"w":380,"h":380,"qr_dark_color":"#000000","qr_light_color":"#FFFFFF","qr_text":"Aucun réglage","qr_size":380}
+{"page":5,"id":52,"obj":"label","x":470,"y":104,"w":500,"h":26,"text":"Adresse IP réelle","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
+{"page":5,"id":53,"obj":"label","x":470,"y":132,"w":500,"h":44,"text":"inconnue","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2"}
+{"page":5,"id":54,"obj":"label","x":470,"y":200,"w":500,"h":26,"text":"IP inscrite sur l'étiquette","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
+{"page":5,"id":55,"obj":"label","x":470,"y":228,"w":500,"h":44,"text":"non réglée","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2"}
+{"page":5,"id":56,"obj":"label","x":470,"y":296,"w":500,"h":26,"text":"Nom d'hôte","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-20","text_color":"#9FB3C8"}
+{"page":5,"id":57,"obj":"label","x":470,"y":324,"w":500,"h":44,"text":"","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-36","text_color":"#E8EDF2"}
+{"page":5,"id":58,"obj":"obj","x":470,"y":410,"w":16,"h":16,"radius":8,"border_width":0,"bg_color":"#5B6B7C"}
+{"page":5,"id":59,"obj":"label","x":470,"y":402,"w":460,"h":32,"text":"Pas de réglage QR code (outil des étiquettes)","text_font":"A:sd/polices/RobotoCondensed-Regular.ttf-24","text_color":"#E8EDF2"}

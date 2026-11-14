@@ -242,10 +242,75 @@ def ecranDebitsFonctions_modele(now)
     var veille = ecranDebitsFonctions.reglage("veille")
     return {"voies": voies, "total": total, "age": age, "releve": releve, "liaison": liaison,
             "historique": ecranFonctions.histo, "points": ecranFonctions.points, "courbeMax": ecranDebitsFonctions.courbeMax,
+            "qr": ecranDebitsFonctions.qr(now),
             "reglages": {"fenetre": str(ecranDebitsFonctions.reglage("fenetre")) + " s", "veille": veille == 0 ? "jamais" : str(veille) + " min",
                          "luminosite": str(ecranDebitsFonctions.reglage("luminosite")) + " %"}}
 end
 ecranDebitsFonctions.modele = ecranDebitsFonctions_modele
+
+# ===== Page « QR code » : meme contenu que la page web /qrcode (qrcodePage.be) =====
+# Texte et IP inscrite : /json/qrcode.json, ecrit par l'outil des etiquettes (7970). IP reelle : diversFonctions.ipLAN. Lu une fois,
+# puis relu toutes les 60 s tant que l'IP est inconnue (Wi-Fi pas monte) et toutes les 10 min ensuite : jamais a chaque seconde.
+# Un reglage de plus de QR_MAX octets (image en data URI) n'est pas lu : la RAM de la carte compte plus que ce QR code.
+ecranDebitsFonctions.QR_FICHIER = "/json/qrcode.json"
+ecranDebitsFonctions.QR_MAX = 8192
+ecranDebitsFonctions.qrCache = nil
+
+# {"texte", "ipInscrite"} du fichier ; chaines vides si absent, trop gros ou illisible (erreur journalisee sauf absence)
+def ecranDebitsFonctions_qrFichier()
+    import json
+    import path
+    import ecranDebitsFonctions
+    var r = {"texte": "", "ipInscrite": ""}
+    if (!path.exists(ecranDebitsFonctions.QR_FICHIER))    return r    end
+    try
+        var f = open(ecranDebitsFonctions.QR_FICHIER, "r")
+        var taille = f.size()
+        var brut = taille <= ecranDebitsFonctions.QR_MAX ? f.read() : ""
+        f.close()
+        if (brut == "")
+            ecranDebitsFonctions.log("ECRAN_DEBITS_ERREUR: qrcode.json de " + str(taille) + " octets : trop gros pour l'ecran !", LOG_LEVEL_ERREUR)
+            return r
+        end
+        var d = json.load(brut)
+        if (isinstance(d, map))
+            r["texte"] = str(d.find("texte", ""))
+            r["ipInscrite"] = str(d.find("ip_inscrite", ""))
+        else
+            ecranDebitsFonctions.log("ECRAN_DEBITS_ERREUR: qrcode.json n'est pas un objet JSON !", LOG_LEVEL_ERREUR)
+        end
+    except .. as erreur, message
+        ecranDebitsFonctions.log("ECRAN_DEBITS_ERREUR: qrcode.json illisible : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
+    end
+    return r
+end
+ecranDebitsFonctions.qrFichier = ecranDebitsFonctions_qrFichier
+
+# Sous-map "qr" du modele : {"texte", "hostname", "ip", "ipInscrite", "accord", "etat"} ; etat = cle de COULEURS de la pastille
+def ecranDebitsFonctions_qr(now)
+    import diversFonctions
+    import ecranDebitsFonctions
+    var c = ecranDebitsFonctions.qrCache
+    if (c != nil && now >= c["lu"] && now - c["lu"] < (c["ip"] == "" ? 60 : 600))    return c["modele"]    end
+    var fic = ecranDebitsFonctions.qrFichier()
+    var ip = diversFonctions.ipLAN()
+    var status = tasmota.cmd("Status 5", true)
+    var reseau = (isinstance(status, map) ? status.find("StatusNET", {}) : {})
+    var accord = "Pas de réglage QR code (outil des étiquettes)"
+    var etat = "inconnu"
+    if (fic["ipInscrite"] != "" && ip != "")
+        etat = fic["ipInscrite"] == ip ? "vert" : "imprecis"
+        accord = etat == "vert" ? "IP conforme à l'étiquette" : "IP différente de l'étiquette"
+    elif (fic["texte"] != "")
+        accord = "IP inconnue ou non inscrite"
+    end
+    var m = {"texte": fic["texte"] == "" ? "Aucun réglage" : fic["texte"], "hostname": str(reseau.find("Hostname", "")),
+             "ip": ip == "" ? "inconnue" : ip, "ipInscrite": fic["ipInscrite"] == "" ? "non réglée" : fic["ipInscrite"],
+             "accord": accord, "etat": etat}
+    ecranDebitsFonctions.qrCache = {"lu": now, "ip": ip, "modele": m}
+    return m
+end
+ecranDebitsFonctions.qr = ecranDebitsFonctions_qr
 
 # Appelee chaque seconde par le driver : modele calcule (historique, message « fenetre ? ») meme sans ecran, puis affiche
 def ecranDebitsFonctions_ecran()

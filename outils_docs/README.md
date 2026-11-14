@@ -2132,6 +2132,19 @@ carte à écran, puis « Écrire » ; le module Berry ne pose que les valeurs su
 `CHAMPS` hors des groupes connus, un écran trop petit pour la page (changement d'écran refusé avec le motif) ou un objet
 posé à la main sur la page sont refusés par le validateur. Pas d'icônes pour l'instant (A15 et A18 du plan).
 
+### Page « QR code » d'une carte à écran
+
+Même contenu que la page web `/qrcode` de la carte : le QR code du texte réglé par l'outil des étiquettes (« Page sur la
+carte » activée, port 7970), l'IP réelle de la carte, l'IP inscrite sur l'étiquette, le nom d'hôte, et une pastille qui
+dit si les deux IP concordent (verte si oui, orange si elles diffèrent, grise si l'une manque). Sur l'écran des débits
+c'est la page 5 de `ecran.json` : un objet `qrcode` lié à `qr.texte` (attribut `qr_text`), quatre libellés liés à `qr.ip`,
+`qr.ipInscrite`, `qr.hostname`, `qr.accord`, la pastille liée à `qr.etat`. Les valeurs viennent de
+`ecranDebitsFonctions.qr`, sous-table `qr` du modèle : `/json/qrcode.json` (8 Ko au plus) et `Status 5` sont relus au
+plus une fois par 10 minutes, toutes les minutes tant que l'IP reste inconnue, jamais à chaque seconde. Sans réglage de
+l'outil des étiquettes, la page affiche « Aucun réglage ». Un fichier trop gros ou illisible est journalisé en erreur
+(cible `ecranDebits`). La barre de navigation gagne son sixième bouton toute seule (A17). La cave n'a pas encore sa page :
+son écran appartient à une autre session. Pas essayée sur la carte (A20) ; le firmware est à recompiler par la page Build.
+
 ### Panneau « Icônes »
 
 Onglet « Icônes » du panneau de droite : la grille des 120 glyphes Material Design embarqués dans le firmware, avec

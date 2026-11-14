@@ -18,4 +18,5 @@ if demarrage.prologue()
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")
     demarrage.chargeFichier("controleEcranDebits", "modules.ecranDebits")
     demarrage.chargeFichier("controleEcranSysteme", "modules.ecranSysteme")   # apres l'ecran : interface demarree
+    demarrage.charge(["qrcodePage"])
 end

@@ -60,6 +60,8 @@ def objets_lus(sortie):
     for l in sortie.splitlines():
         if l.startswith("OBJET "):
             _, nom, t, x, y, w, h, parent = l.split(" ")
+            if t == "qrcode" and h == "nil":        # lv.qrcode est carre : le moteur ne pose que la largeur (le validateur refuse l != h)
+                h = w
             r[nom] = (t, x, y, w, h, parent)
     return r
 

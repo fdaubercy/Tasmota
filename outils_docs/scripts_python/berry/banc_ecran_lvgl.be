@@ -123,11 +123,11 @@ end
 # ---- Mode debits ----------------------------------------------------------------------------------------------
 var O = ecranLvgl.objets
 var E = ecranLvgl.ecrans
-verifie("5 pages (4 : Systeme, construite), page 0 sur lv.layer_top()", size(E) == 5 && E[0] == lv.layer_top())
+verifie("6 pages (4 : Systeme, construite ; 5 : QR code), page 0 sur lv.layer_top()", size(E) == 6 && E[0] == lv.layer_top())
 verifie("page de demarrage = page 1 chargee", ecranLvgl.page == 1 && lv.ecran == E[1])
 verifie("page 1 : fond #10161E opaque", E[1].style("bg_color") == 0x10161E && E[1].style("bg_opa") == 255)
 verifie("page 0 transparente", E[0].style("bg_opa") == 0)
-verifie("182 objets crees (82 + bouton 204 + 99 de la page Systeme)", size(O) - 5 == 182)
+verifie("192 objets crees (82 + 9 de la page QR code + boutons 204 et 205 + 99 de la page Systeme) : " + str(size(O) - 6), size(O) - 6 == 192)
 verifie("bouton : texte dans un label enfant centre", ecranLvgl.textes["p0b201"].parent == O["p0b201"] &&
         ecranLvgl.textes["p0b201"].texte == "Débits" && ecranLvgl.textes["p0b201"].aligne == lv.ALIGN_CENTER)
 verifie("label : texte sur l'objet lui-meme", ecranLvgl.textes["p1b11"] == O["p1b11"])
@@ -135,7 +135,7 @@ verifie("police TTF : A: retire, sans / de tete", O["p0b1"].style("text_font") =
 verifie("police entiere : robotocondensed embarquee", O["p2b12"].style("text_font") == "embarquee:robotocondensed-24")
 var ttf = 0  var emb = 0
 for p: lv.polices    if (p[0] == "load_freetype_font")    ttf += 1    else    emb += 1    end    end
-verifie("chaque police chargee une seule fois (5 TTF, 2 embarquees)", ttf == 5 && emb == 2)
+verifie("chaque police chargee une seule fois (6 TTF dont le 24 de la page QR code, 2 embarquees) : " + str(ttf) + " TTF, " + str(emb) + " embarquees", ttf == 6 && emb == 2)
 verifie("align 2 : texte a droite", O["p0b4"].style("text_align") == lv.TEXT_ALIGN_RIGHT)
 verifie("barre : plage 0-100 puis valeur", O["p1b12"].mini == 0 && O["p1b12"].maxi == 100 && O["p1b12"].valeur == 0)
 verifie("barre : rayon de l'indicateur (radius10)", O["p1b12"].style("radius", lv.PART_INDICATOR) == 13)
@@ -145,7 +145,7 @@ var couleurs = []
 for s: O["p2b70"].series    couleurs.push(s[0])    if (s[1] != lv.CHART_AXIS_PRIMARY_Y)    couleurs.push("axe")    end    end
 verifie("courbe : 6 series sur l'axe primaire", couleurs == [0x3FA7FF, 0x3FD08A, 0xFFA53F, 0xC084FC, 0xFF5A5A, 0xF5D04A])
 verifie("courbe : pas de pastille de point", O["p2b70"].style("size", lv.PART_INDICATOR) == 0)
-verifie("boutons tactiles : 12 rappels sur EVENT_CLICKED (204, 120, 121 compris)", size(ecranLvgl.touchers) == 12)
+verifie("boutons tactiles : 13 rappels sur EVENT_CLICKED (204, 205, 120, 121 compris)", size(ecranLvgl.touchers) == 13)
 
 def voie(nom, etat, barre)    return {"nom": nom, "debit": "4,20", "unite": "L/min", "part": "23 %", "barre": barre, "etat": etat}    end
 def historique(n)

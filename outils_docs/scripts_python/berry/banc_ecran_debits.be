@@ -35,7 +35,7 @@ end
 # ---- Faux firmware --------------------------------------------------------------------------------------------
 os.mkdir(SORTIE + "/modules")
 ecris(SORTIE + "/modules/persist.be", "import global\nvar p = module('persist')\np.save = def (x) global.SAUVES += 1 end\nreturn p\n")
-ecris(SORTIE + "/modules/diversFonctions.be", "var d = module('diversFonctions')\nd.traiteAide = def (c, p, f, v) return false end\nreturn d\n")
+ecris(SORTIE + "/modules/diversFonctions.be", "import global\nvar d = module('diversFonctions')\nd.traiteAide = def (c, p, f, v) return false end\nd.ipLAN = def () return global.IP_LAN end\nreturn d\n")
 ecris(SORTIE + "/modules/ecranDebitsFonctions.be", lis(SOURCE))
 ecris(SORTIE + "/modules/ecranHaspmota.be", lis(INTERFACE))
 ecris(SORTIE + "/modules/ecranFonctions.be", lis(GENERIQUE))
@@ -98,6 +98,10 @@ fauxTasmota.add_rule = def (p, f, id) global.REGLES.push([p, f, id]) end
 fauxTasmota.set_timer = def (ms, f, id) var k = id  while global.TIMERS.contains(k)  k = str(k) + "+"  end  global.TIMERS[k] = [ms, f] end
 fauxTasmota.remove_timer = def (id) var k = id  while global.TIMERS.contains(k)  global.TIMERS.remove(k)  k = str(k) + "+"  end end
 fauxTasmota.wire_scan = def (a) return (a == 0x24 && global.EXPANDEUR) ? FauxBus() : nil end
+global.IP_LAN = "192.168.0.51"            # diversFonctions.ipLAN() : "" tant que le Wi-Fi n'est pas monte
+global.STATUS5 = {"StatusNET": {"Hostname": "ECRAN-DEBITS-PAC"}}
+global.COMMANDES_LUES = []                # commandes passees a tasmota.cmd
+fauxTasmota.cmd = def (c, m) global.COMMANDES_LUES.push(c) return global.STATUS5 end
 global.tasmota = fauxTasmota
 class FauxDisp    def get_inactive_time()    return global.INACTIF    end    end
 global.FauxDisp = FauxDisp
@@ -270,7 +274,7 @@ for j: lignes
 end
 verifie("chaque ligne lisible et chaque objet dans la dalle 1024 x 600 : " + str(dehors), size(dehors) == 0)
 verifie("aucun objet en double : " + str(doublons), size(doublons) == 0)
-verifie("pied de page : actions p1 a p4 (Debits, Courbes, Reglages, Systeme)", actions == ["p1", "p2", "p3", "p4"])
+verifie("pied de page : actions p1 a p5 (Debits, Courbes, Reglages, Systeme, QR code)", actions == ["p1", "p2", "p3", "p4", "p5"])
 verifie("page 0 sans dimming_time ni antiburn ni fond (HASPmota ne gere pas la veille, layer_top transparent)", size(reglagesP0) == 0)
 
 import ecranFonctions
@@ -334,6 +338,62 @@ verifie("nom des departs lu du persist", v[0]["nom"] == "Débit 1" && v[5]["nom"
 verifie("total de 6 voies valides : « Total 324,0 L/min » sans « partiel »", m["total"] == "Total 324,0 L/min")
 verifie("releve recu a l'instant : « relevé il y a 0 s », pastille verte", m["age"] == 0 && m["releve"] == "relevé il y a 0 s" && m["liaison"] == "vert")
 verifie("reglages en texte : 10 s, 5 min, 80 %", m["reglages"]["fenetre"] == "10 s" && m["reglages"]["veille"] == "5 min" && m["reglages"]["luminosite"] == "80 %" && size(m["reglages"]) == 3)
+# Page « QR code » : sous-map `qr` du modele, lue du fichier /json/qrcode.json et de la box, pas a chaque seconde
+print("--- page QR code")
+var QRF = SORTIE + "/qrcode.json"
+edf.QR_FICHIER = QRF
+def qrRaz(contenu, ip)
+    edf.qrCache = nil
+    global.IP_LAN = ip
+    global.FICHIERS = contenu == nil ? [] : [QRF]
+    if (contenu != nil)    ecris(QRF, contenu)    end
+    global.COMMANDES_LUES = []
+    global.JOURNAL = []
+end
+qrRaz(nil, "192.168.0.51")
+var q = edf.modele(2000)["qr"]
+verifie("QR sans fichier : texte « Aucun réglage », IP de la box, IP inscrite « non réglée », etat inconnu",
+    q["texte"] == "Aucun réglage" && q["ip"] == "192.168.0.51" && q["ipInscrite"] == "non réglée" && q["etat"] == "inconnu" && erreurs() == 0)
+verifie("QR sans fichier : accord « Pas de réglage QR code », nom d'hote lu de Status 5 (StatusNET)",
+    q["accord"] == "Pas de réglage QR code (outil des étiquettes)" && q["hostname"] == "ECRAN-DEBITS-PAC" && global.COMMANDES_LUES == ["Status 5"])
+qrRaz('{"texte": "http://192.168.0.51/", "ip_inscrite": "192.168.0.51"}', "192.168.0.51")
+q = edf.qr(2000)
+verifie("QR IP inscrite = IP reelle : etat vert, « IP conforme à l'étiquette », texte du fichier",
+    q["etat"] == "vert" && q["accord"] == "IP conforme à l'étiquette" && q["texte"] == "http://192.168.0.51/" && q["ipInscrite"] == "192.168.0.51")
+qrRaz('{"texte": "http://192.168.0.51/", "ip_inscrite": "192.168.0.52"}', "192.168.0.51")
+q = edf.qr(2000)
+verifie("QR IP inscrite differente : etat imprecis, « IP différente de l'étiquette »", q["etat"] == "imprecis" && q["accord"] == "IP différente de l'étiquette")
+qrRaz('{"texte": "http://192.168.0.51/"}', "192.168.0.51")
+q = edf.qr(2000)
+verifie("QR texte sans IP inscrite : etat inconnu, « IP inconnue ou non inscrite »", q["etat"] == "inconnu" && q["accord"] == "IP inconnue ou non inscrite" && q["ipInscrite"] == "non réglée")
+qrRaz('{"texte": "t", "ip_inscrite": "192.168.0.51"}', "")
+q = edf.qr(2000)
+verifie("QR Wi-Fi pas monte (IP vide) : « inconnue », etat inconnu meme avec une IP inscrite", q["ip"] == "inconnue" && q["etat"] == "inconnu" && q["accord"] == "IP inconnue ou non inscrite")
+# Cache : relu apres 60 s tant que l'IP est inconnue, apres 600 s une fois connue
+ecris(QRF, '{"texte": "nouveau", "ip_inscrite": "192.168.0.51"}')
+verifie("QR IP inconnue : rien de relu a 59 s", edf.qr(2059)["texte"] == "t" && size(global.COMMANDES_LUES) == 1)
+verifie("QR IP inconnue : relu a 60 s", edf.qr(2060)["texte"] == "nouveau" && size(global.COMMANDES_LUES) == 2)
+qrRaz('{"texte": "ancien", "ip_inscrite": "192.168.0.51"}', "192.168.0.51")
+edf.qr(2000)
+ecris(QRF, '{"texte": "nouveau", "ip_inscrite": "192.168.0.51"}')
+verifie("QR IP connue : rien de relu a 599 s (ni fichier, ni Status 5)", edf.qr(2599)["texte"] == "ancien" && size(global.COMMANDES_LUES) == 1)
+verifie("QR IP connue : relu a 600 s", edf.qr(2600)["texte"] == "nouveau" && size(global.COMMANDES_LUES) == 2)
+verifie("QR horloge reculee : relu (pas de cache perime)", edf.qr(1000)["texte"] == "nouveau" && size(global.COMMANDES_LUES) == 3)
+var gros = ""
+for i: 1 .. 900    gros += "xxxxxxxxxx"    end
+qrRaz('{"texte": "' + gros + '"}', "192.168.0.51")
+q = edf.qr(2000)
+verifie("QR fichier trop gros : « Aucun réglage » et une erreur", q["texte"] == "Aucun réglage" && erreurs() == 1)
+qrRaz("pas du json", "192.168.0.51")
+q = edf.qr(2000)
+verifie("QR fichier illisible : « Aucun réglage » et une erreur, sans exception", q["texte"] == "Aucun réglage" && erreurs() == 1)
+qrRaz("[1, 2]", "192.168.0.51")
+q = edf.qr(2000)
+verifie("QR fichier qui n'est pas un objet JSON : « Aucun réglage » et une erreur", q["texte"] == "Aucun réglage" && erreurs() == 1)
+qrRaz(nil, "192.168.0.51")
+edf.QR_FICHIER = "/json/qrcode.json"
+edf.qrCache = nil
+raz()
 # Cles du modele rendu (feuilles ; liste de maps : `voies[].k`) : le .py les compare a la section `modele` de ecran.json
 def feuilles(x, p, res, lon)
     if isinstance(x, map)

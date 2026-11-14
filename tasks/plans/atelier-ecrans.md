@@ -332,12 +332,12 @@ Les mêmes informations que la page web `/qrcode` (`data/fs/qrcodePage.be`) : le
 Cartes visées : toutes celles qui ont un écran (aujourd'hui `tasmota32s3-bureau-ecran-debits-pac`, `tasmota32s3-cave-ecran`).
 Après A14 (objet `qrcode`). Limites connues : QR code LVGL à deux couleurs (ni modules arrondis ni dégradé) ; logo central
 seulement par un PNG sous `/sd/images/PNG/` posé en `img` (le data URI de `qrcode.json` n'est pas lisible par LVGL).
-- [ ] `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un)
-- [ ] Valeurs du modèle de chaque module métier d'écran : texte du QR code, IP réelle (`diversFonctions.ipLAN`), IP
-  inscrite, nom d'hôte, accord des deux IP ; lues au démarrage, pas à chaque seconde
-- [ ] Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave :
+- [ ] `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un) — débits fait (qrcode.json, autoexec, cenv) ; cave non faite (autre session)
+- [x] Valeurs du modèle de chaque module métier d'écran : texte du QR code, IP réelle (`diversFonctions.ipLAN`), IP
+  inscrite, nom d'hôte, accord des deux IP ; lues au démarrage, pas à chaque seconde — preuve : `ecranDebitsFonctions.qr`/`qrFichier`, 14 vérifications « page QR code » de banc_ecran_debits.be (cache 60 s / 600 s, fichier absent, trop gros, illisible), BANC_ECRAN_DEBITS VERT. Fait pour l'écran des débits ; la cave attend son autre session
+- [ ] Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave : — débits fait : page 5 de ecran.json, pages.jsonl et ecranLvgl.be régénérés, bouton 205 ; cave non faite
   accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire son `pages.jsonl`
-- [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20)
+- [ ] Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20) — bancs verts (debits, lvgl, systeme, demarrage, tests atelier, sonde Chrome) ; essai sur carte restant (A20)
 
 ## A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude)
 Choix de Claude : construite à la GÉNÉRATION (pas sur la carte : HASPmota n'expose pas les titres des pages, et les pages
