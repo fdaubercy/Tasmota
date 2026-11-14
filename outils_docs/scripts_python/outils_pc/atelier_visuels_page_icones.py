@@ -116,13 +116,14 @@ JS_ICONES = r"""
       var e = AV.elCherche(AV.selEl);
       if (!pris()) return;
       if (!e || e.type !== 'voyant') { info('Sélectionnez d’abord un voyant', true); return; }
-      e.style[b.getAttribute('data-avi-etat')] = icone(); AV.sauveEls(); AV.dessine();
+      e.style[b.getAttribute('data-avi-etat')] = icone(); AV.commitEls();
     });
   });
   $('avi-taille').addEventListener('input', function () {
     var e = AV.elCherche(AV.selEl);
     if (e && e.type === 'voyant') { e.style.taille = +this.value; AV.sauveEls(); AV.dessine(); }
   });
+  $('avi-taille').addEventListener('change', function () { if (AV.elCherche(AV.selEl)) AV.commitEls(); });
   $('avi-garde').addEventListener('click', function () {
     if (!pris()) return;
     if (courante.origine === 'firmware') { info('Icône du firmware : déjà dans le dépôt, rien à garder', false); return; }

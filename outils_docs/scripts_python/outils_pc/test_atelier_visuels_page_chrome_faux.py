@@ -258,6 +258,46 @@ def sonde_points(cdp):
     verifie(js("document.querySelector('[data-avp-outil=voyant]').getAttribute('aria-pressed')"), "false", "points : Echap quitte l'outil")
 
 
+
+# ---------------------------------------------------------------- annuler / retablir des points chauds
+CTRL = "document.body.dispatchEvent(new KeyboardEvent('keydown',{key:%s,ctrlKey:true,bubbles:true}))"
+
+
+def sonde_annule(cdp):
+    js = cdp.js
+    js("localStorage.setItem('av.elements.'+AV.carte,'[]');AV.formes=[];AV.charge()")
+    js(PT)
+    js("document.querySelector('[data-avp-outil=voyant]').click();__pt('pointerdown',100,60);__pt('pointerup',100,60)")
+    js("document.querySelector('[data-avp-outil=valeur]').click();__pt('pointerdown',200,60);__pt('pointerup',200,60)")
+    ids = "AV.elements.map(function(e){return e.id;})"
+    verifie(js(ids), ["v1", "n1"], "annuler : deux points chauds poses")
+    js(CTRL % "'z'")
+    verifie(js(ids), ["v1"], "annuler : Ctrl+Z retire le dernier point chaud")
+    js(CTRL % "'y'")
+    verifie(js(ids), ["v1", "n1"], "annuler : Ctrl+Y le retablit")
+    js("AV.selEl='n1';AV.dessine();document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}))")
+    verifie(js(ids), ["v1"], "annuler : suppression au clavier")
+    js(CTRL % "'z'")
+    verifie(js(ids), ["v1", "n1"], "annuler : Ctrl+Z annule la suppression")
+    js("AV.selEl='v1';AV.dessine();__pt('pointerdown',100,60);__pt('pointermove',150,90);__pt('pointerup',150,90)")
+    verifie(js("[AV.elements[0].x, AV.elements[0].y]"), [150, 90], "annuler : point deplace")
+    js(CTRL % "'z'")
+    verifie(js("[AV.elements[0].x, AV.elements[0].y]"), [100, 60], "annuler : Ctrl+Z annule le deplacement")
+    champ(cdp, "avp-n", 7)
+    verifie(js("AV.elements[0].source.n"), 7, "annuler : numero de relais saisi")
+    js(CTRL % "'z'")
+    verifie(js("AV.elements[0].source.n"), 1, "annuler : Ctrl+Z annule la saisie du panneau")
+    js(CTRL % "'y'")
+    verifie(js("AV.elements[0].source.n"), 7, "annuler : Ctrl+Y la refait")
+    verifie(js("JSON.parse(localStorage.getItem('av.elements.'+AV.carte))[0].source.n"), 7, "annuler : l'etat retabli est enregistre")
+    # le dessin garde sa propre pile : Ctrl+Z vise le dernier domaine modifie
+    js("AV.formes.push(AV_FORMES.normalise({id:AV.idSuivant(),type:'rect',x:10,y:10,l:50,h:40}));AV.commit()")
+    js(CTRL % "'z'")
+    verifie(js("[AV.formes.length, AV.elements.length]"), [0, 2], "annuler : Ctrl+Z apres un dessin annule la forme, pas les points chauds")
+    js(CTRL % "'y'")
+    verifie(js("[AV.formes.length, AV.elements.length]"), [1, 2], "annuler : Ctrl+Y retablit la forme")
+    js("AV.formes=[];AV.commit();AV.elements=[];AV.sauveEls();AV.charge()")
+
 # ---------------------------------------------------------------- bloc 4 : ecriture, suivi, lien Build
 def sonde_ecriture(cdp, depot):
     js = cdp.js
@@ -378,6 +418,7 @@ def lance(cdp, t):
         sonde_icones(cdp, depot)
         sonde_points(cdp)
         sonde_ecriture(cdp, depot)
+        sonde_annule(cdp)
         import test_atelier_visuels_page_chrome as principal
         sonde_ia(cdp, depot, principal.FABRIQUE)
         verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e and "/ecriture/" not in e and "/icone.svg" not in e], [], "faux : aucune erreur dans la console de la page")

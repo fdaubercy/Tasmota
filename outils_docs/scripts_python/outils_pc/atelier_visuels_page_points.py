@@ -8,7 +8,8 @@ de l'element et l'apercu simule sont dans `atelier_visuels_page_elements.py`.
 JS_POINTS = r"""
 (function () {
   var AV = window.AV, F = AV_FORMES, Cq = AV_CALQUES, NS = 'http://www.w3.org/2000/svg', TYPES = ['voyant', 'valeur', 'liaison'], gEl = null;
-  AV.selEl = null;
+  AV.selEl = null; AV.dernier = 'forme';
+  var hist = null;       // historique des points chauds (Ctrl+Z / Ctrl+Y) : pile d'etats JSON, comme le dessin
   // appel JSON au serveur de l'outil : {ok, status, json, texte} ; l'en-tete anti-CSRF part avec chaque POST
   AV.api = function (methode, chemin, corps) {
     var o = {method: methode};
@@ -45,8 +46,16 @@ JS_POINTS = r"""
     var t;
     try { t = JSON.parse(localStorage.getItem(cle()) || '[]'); } catch (e) { t = []; }
     AV.elements = (Array.isArray(t) ? t : []).slice(0, 200).map(AV.normaliseEl).filter(Boolean);
-    AV.sim = {}; AV.selEl = null;
+    AV.sim = {}; AV.selEl = null; hist = F.historique(100, JSON.stringify(AV.elements));
   }
+  function restaureEls(s) {
+    var t; try { t = JSON.parse(s); } catch (e) { t = []; }
+    AV.elements = (Array.isArray(t) ? t : []).slice(0, 200).map(AV.normaliseEl).filter(Boolean);
+    if (!AV.elCherche(AV.selEl)) AV.selEl = null;
+    AV.sauveEls(); AV.dessine();
+  }
+  // a appeler apres toute modification FINIE des points chauds : une etape annulable
+  AV.commitEls = function () { if (hist && hist.pousse(JSON.stringify(AV.elements))) AV.dernier = 'element'; AV.sauveEls(); AV.dessine(); };
   AV.idEl = function (prefixe) {
     var n = 1; while (AV.elements.some(function (e) { return e.id === prefixe + n; })) n++;
     return prefixe + n;
@@ -55,13 +64,13 @@ JS_POINTS = r"""
   AV.ajoutEl = function (el) {
     var e = AV.normaliseEl(el);
     if (!e || AV.elements.length >= 200) return null;
-    AV.elements.push(e); AV.selEl = e.id; AV.sauveEls(); AV.dessine();
+    AV.elements.push(e); AV.selEl = e.id; AV.commitEls();
     return e;
   };
   AV.suppEl = function (id) {
     AV.elements = AV.elements.filter(function (e) { return e.id !== id; }); delete AV.sim[id];
     if (AV.selEl === id) AV.selEl = null;
-    AV.sauveEls(); AV.dessine();
+    AV.commitEls();
   };
   function overlay() {
     var svg = document.getElementById('avf-canevas'), el, c;
@@ -77,6 +86,17 @@ JS_POINTS = r"""
     }
     svg.appendChild(gEl);
   }
+  // Ctrl+Z / Ctrl+Y s'appliquent au dernier domaine modifie (points chauds ou dessin) ; a bout d'historique des points, au dessin
+  var a0 = AV.annule, r0 = AV.retablit, k0 = AV.commit;
+  AV.commit = function () { AV.dernier = 'forme'; k0(); };
+  AV.annule = function () {
+    var s = AV.dernier === 'element' && hist && hist.profondeur() > 0 ? hist.annule() : null;
+    if (s !== null) restaureEls(s); else a0();
+  };
+  AV.retablit = function () {
+    var s = AV.dernier === 'element' && hist ? hist.retablit() : null;
+    if (s !== null) restaureEls(s); else r0();
+  };
   var d0 = AV.dessine, c0 = AV.charge;
   AV.dessine = function () { d0(); overlay(); };
   AV.charge = function () { c0(); chargeEls(); AV.dessine(); };

@@ -188,7 +188,7 @@ JS_ELEMENTS = r"""
     if (el.type === 'liaison') { el.x2 = Math.max(0, Math.min(AV.larg, el.x2)); el.y2 = Math.max(0, Math.min(AV.haut, el.y2)); }
     AV.dessine();
   }
-  function haut() { if (S.drag) { S.drag = null; AV.sauveEls(); } }
+  function haut() { if (S.drag) { S.drag = null; AV.commitEls(); } }
   // ---- poignees d'une liaison (par-dessus les calques)
   var d0 = AV.dessine;
   AV.dessine = function () {
@@ -209,7 +209,7 @@ JS_ELEMENTS = r"""
       b.addEventListener('click', function () { var t = b.getAttribute('data-avp-outil'); outil(S.outil === t ? null : t); });
     });
     ['avp-stype', 'avp-n', 'avp-chemin', 'avp-on', 'avp-id', 'avp-mac', 'avp-seuil', 'avp-forme', 'avp-taille', 'avp-c-on', 'avp-c-off', 'avp-c-inc', 'avp-unite', 'avp-dec', 'avp-exemple']
-      .forEach(function (i) { $(i).addEventListener('input', lit); $(i).addEventListener('change', function () { lit(); if (i === 'avp-stype') { var e = sel(); if (e) lignes(e); } }); });
+      .forEach(function (i) { $(i).addEventListener('input', lit); $(i).addEventListener('change', function () { lit(); AV.commitEls(); if (i === 'avp-stype') { var e = sel(); if (e) lignes(e); } }); });
     $('avp-etat').addEventListener('change', function () { var e = sel(); if (e) { AV.sim[e.id] = this.value; AV.dessine(); } });
     $('avp-supprime').addEventListener('click', function () { if (AV.selEl) AV.suppEl(AV.selEl); });
     document.addEventListener('keydown', function (ev) {
@@ -223,7 +223,7 @@ JS_ELEMENTS = r"""
         pas = ev.shiftKey ? 8 : 1; ev.preventDefault();
         var dx = k === 'ArrowLeft' ? -pas : k === 'ArrowRight' ? pas : 0, dy = k === 'ArrowUp' ? -pas : k === 'ArrowDown' ? pas : 0;
         e.x += dx; e.y += dy; if (e.type === 'liaison') { e.x2 += dx; e.y2 += dy; }
-        AV.sauveEls(); AV.dessine();
+        AV.commitEls();
       }
     });
   }
