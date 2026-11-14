@@ -19,11 +19,12 @@ Aucun agent personnel dans `~/.claude/agents/`.
 | `diagnostic-synchro-fork` | sonnet (effort medium) | Read, Grep, Glob, Bash | Quand le hook signale du retard : nouveautés amont, conflits prévus (`git merge-tree`), voie recommandée ; ne synchronise jamais | Non |
 | `relecteur-docs` | haiku (effort low) | Read, Grep, Glob, Bash | Après un chantier ou avant un commit de docs : renvois `fichier::fonction`, chemins, exceptions des 500 lignes, carte des documents | Non |
 
+| `preparateur-push` | opus (effort high) | Read, Grep, Glob, Bash | Avant tout push (appele par `/commite pousse`) : plage des commits, secrets sur toute la plage, branche, retard d'origin, commits d'autres sessions ; verdict et commande de push, ne pousse jamais | Non (mémoire locale seulement) |
 | `auditeur-menage` | sonnet (effort medium) | Read, Grep, Glob, Bash | Par `/menage`, une fois par mois ou après un gros chantier : orphelins, restes, doublons, reclassements, en proposition avec ce que chacune casserait | Non (mémoire locale seulement) |
 
 ## Mémoire des agents (2026-11-14)
 
-Six des sept nouveaux agents, plus `auditeur-menage`, ont `memory: local` : un dossier `.claude/agent-memory-local/<agent>/` (ignoré par git, propre à ce poste),
+Six des sept premiers agents, plus `auditeur-menage` et `preparateur-push`, ont `memory: local` : un dossier `.claude/agent-memory-local/<agent>/` (ignoré par git, propre à ce poste),
 dont le début de `MEMORY.md` est injecté à chaque lancement. Ils y notent ce qui les aurait aidés (faux positif, piège, commande qui marche).
 Exclu volontairement : `controleur-secrets` (jamais de mémoire sur des secrets).
 Réserves : la doc (code.claude.com/docs/en/sub-agents) active alors Read, Write et Edit pour l'agent ; ils restent en lecture seule

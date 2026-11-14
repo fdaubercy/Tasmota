@@ -36,6 +36,14 @@ git diff HEAD -- <fichiers> | grep -n -i -E "pass(word)?|pwd|secret|token|api[_-
 Lire le resultat. Une valeur nouvelle qui ressemble a un secret → s'arreter et demander. Les mots de
 passe deja publics de `user_config_override.h` ne bloquent pas (lecon du 2026-09-29).
 
+Puis lancer en PLUS, avant de commiter (lecture seule, leur rapport se lit avant le commit ; un « bloquant » arrete) :
+- `controleur-secrets` sur les fichiers retenus, toujours ;
+- `verificateur-solidification` si un `.be` de `data/` est dans le lot ; `relecteur-berry` pour les `.be`, `relecteur-outils-python` pour
+  les `.py` d'outils, `relecteur-pages-web` pour les pages, au jugement.
+Plusieurs sessions travaillent dans les memes fichiers : ne commiter que SES passages. Pour un fichier partage (`CLAUDE.md`,
+`outils_docs/README.md`, plans), indexer par hunks (`git diff -U0` filtre puis `git apply --cached --unidiff-zero --recount`), pas
+par fichier entier, et le dire dans le compte rendu.
+
 ## 3. Commit
 
 - `git add` des fichiers retenus, **nommes un par un** — jamais `git add -A` ni `git add .`.
@@ -51,7 +59,9 @@ passe deja publics de `user_config_override.h` ne bloquent pas (lecon du 2026-09
 ## 4. Push — seulement si `pousse` figure dans les arguments
 
 - Sinon, ne pas pousser et le rappeler en une ligne (le push n'est jamais auto-autorise ici).
-- Avec `pousse` : `git push` sur la branche courante. Jamais `--force` (refuse par les regles `deny`).
+- Avec `pousse` : lancer d'abord l'agent `preparateur-push` (plage complete, secrets, branche, retard d'origin). Verdict « STOP » =
+  ne pas pousser, dire pourquoi. Verdict « on peut pousser » : pousser avec la commande qu'il donne (`git push origin <sha>:development`,
+  sha relu). Jamais `--force` (refuse par les regles `deny`). Hors `/commite`, meme regle : `preparateur-push` avant tout push demande.
 
 ## 5. Compte rendu
 

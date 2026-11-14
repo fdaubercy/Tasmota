@@ -310,7 +310,7 @@ Prise en compte a chaud, sans redemarrer VS Code.
 - **Avant tout commit ou push** (decide le 2026-11-14) : lancer l'agent `controleur-secrets` (depot public), lire son rapport,
   puis seulement commiter, dans un appel suivant. Si le commit touche un `.be` de `data/`, lancer aussi `verificateur-solidification`
   (le vert des bancs ne prouve pas la solidification, panne du 2026-11-13). Un `.py` d'outil : `relecteur-outils-python`
-  est recommande (au jugement). Les autres agents de `outils_docs/SOUS_AGENTS.md` restent au jugement. Un agent qui
+  est recommande (au jugement). **Avant tout push** : agent `preparateur-push` (appele par `/commite pousse`, verdict STOP = pas de push). Les autres agents de `outils_docs/SOUS_AGENTS.md` restent au jugement. Un agent qui
   signale un « bloquant » arrete le commit jusqu'a decision de l'utilisateur.
 
 ## Fichiers a ne jamais toucher sans accord
@@ -502,8 +502,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
 - `.claude/agents/` (2026-11-14) — 7 autres sous-agents de lecture seule : `verificateur-solidification` (module `data/fs` solidifiable :
   builtin masque, `custom_berry_solidify`, `globs`), `controleur-secrets` (avant commit ou push, n'affiche jamais une valeur),
   `relecteur-outils-python`, `verificateur-plans` (preuves des cases cochees), `analyste-journaux-build`, `diagnostic-synchro-fork`
-  (ne synchronise jamais), `relecteur-docs`, `auditeur-menage` (commande `/menage`, propositions de rangement), plus `relecteur-pcb` et
-  `placeur-pcb`. Six ont `memory: local` (dossier `.claude/agent-memory-local/`, ignore par git). Liste complete, modeles et quand les
+  (ne synchronise jamais), `relecteur-docs`, `auditeur-menage` (commande `/menage`, propositions de rangement), `preparateur-push` (verdict avant tout push), plus `relecteur-pcb` et
+  `placeur-pcb`. Huit ont `memory: local` (dossier `.claude/agent-memory-local/`, ignore par git). Liste complete, modeles et quand les
   lancer : `outils_docs/SOUS_AGENTS.md`.
 - `.claude/skills/pcb-tasmota/` — skill PCB KiCad des cartes du fork (schema, placement, routage, fabrication) ; agents `placeur-pcb` et `relecteur-pcb`.
 - `build/cible_pont_serie.py` — cible Custom « Pont serie » (`pont_serie.py`), importee par le pre-script ou posee en `extra_scripts` d'un env ESP8266.
