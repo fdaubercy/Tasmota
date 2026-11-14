@@ -149,14 +149,18 @@ def routes_modules(racine, env):
         verifie(requete(port, "GET", "/ia/quota?fournisseur=nul")[0], 404, "quota d'un fournisseur inconnu : 404")
 
         desc = {"version": 1, "fond": {"type": "svg", "largeur": 10, "hauteur": 10}, "elements": []}
-        st, corps = jpost(port, "/ecriture/prevoit", {"env": env, "description": desc})
+        # sans empreinte_fond ni type_fond, la route refuse (400 en texte) : le chemin reel demande un fond envoye par POST /fond
+        verifie(requete(port, "POST", "/ecriture/prevoit", json.dumps({"env": env, "description": desc}).encode(), ENT)[0], 400, "prevoit sans fond ni type_fond : 400")
+        fond_svg = f'<svg xmlns="{NS}" viewBox="0 0 10 10"><path d="M0 0L9 9"/></svg>'.encode()
+        ef = json.loads(requete(port, "POST", f"/fond?env={env}&type=svg", fond_svg, ENT)[1])["empreinte"]
+        st, corps = jpost(port, "/ecriture/prevoit", {"env": env, "description": desc, "empreinte_fond": ef})
         pret = all((racine / f).is_file() for f in ave.FICHIERS_PAGE)       # fichiers de la page : plan A3/A4
         verifie((st, "empreinte" in json.loads(corps)) if pret else st, (200, True) if pret else 400, "POST /ecriture/prevoit : diff et empreinte (400 motive tant que les fichiers de la page manquent)")
         emp = json.loads(corps).get("empreinte", "x") if pret else "x"
         verifie(jpost(port, "/ecriture/prevoit", {"env": "inconnue", "description": desc})[0], 404, "prevoit : carte inconnue 404")
         verifie(jpost(port, "/ecriture/prevoit", {"env": env, "description": desc, "empreinte_fond": "0" * 64})[0], 404, "prevoit : fond inconnu 404")
         builds.append("pio run -e x")
-        st, corps = jpost(port, "/ecriture/ecrit", {"env": env, "description": desc, "empreinte": emp})
+        st, corps = jpost(port, "/ecriture/ecrit", {"env": env, "description": desc, "empreinte_fond": ef, "empreinte": emp})
         verifie((st, b"build" in corps, b"Traceback" in corps), (409, True, False), "ecriture pendant un build : 409, aucune trace Python")
         verifie(jpost(port, "/ecriture/ecrit", {"env": env, "description": desc})[0], 400, "ecrit sans empreinte du diff : 400")
 
