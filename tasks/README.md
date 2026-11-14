@@ -17,7 +17,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ███████░░░ 68 % (42/68) | 26 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
+| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 78 % (51/68) | 17 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
 | [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ████░░░░░░ 38 % (11/26) | 15 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | █████░░░░░ 54 % (13/24) | 11 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
@@ -70,31 +70,22 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 68 %
+#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 78 %
 
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
 - A5 — Outil 7985 : squelette, import de la photo, deux modes de fond, poids : Tests lancés : rouges
-- A5 — Outil 7985 : squelette, import de la photo, deux modes de fond, poids : Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`),
-- A5 — Outil 7985 : squelette, import de la photo, deux modes de fond, poids : `relecteur-pages-web` lancé, remarques traitées
-- A5 — Outil 7985 : squelette, import de la photo, deux modes de fond, poids : Commit `feat(atelier-visuels): page 7985, import de la photo, fond photo ou dessin, poids (A5)`
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Tests lancés : rouges ; modules écrits ; tests verts
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`)
-- A6 — Points chauds, sources et aperçu par le vrai moteur : `relecteur-pages-web` lancé, remarques traitées
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Commit `feat(atelier-visuels): points chauds, sources du persist, apercu simule ou reel (A6)`
 - A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : `relecteur-pages-web` lancé, remarques traitées
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Commit `feat(atelier-visuels): ecriture au depot, lien Build, suivi depot/carte, mode d'emploi (A7)`
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Accord de l'utilisateur demandé pour la règle `.svg`/`.webp` de `gestionFileFolder.be::listeEtRepartitLesFichiers`
 - A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
 - A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
 - A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
 - A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
 - A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
-- A9 — Assistant IA facultatif (spec § 2.10) : Lire la documentation de chaque offre gratuite visée (limites, données utilisées pour l'entraînement) et noter le
 - A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
 - A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
 - A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
