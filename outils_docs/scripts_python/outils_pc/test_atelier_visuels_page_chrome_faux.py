@@ -234,6 +234,54 @@ def sonde_points(cdp):
     js("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
     verifie(js("document.querySelector('[data-avp-outil=voyant]').getAttribute('aria-pressed')"), "false", "points : Echap quitte l'outil")
 
+
+# ---------------------------------------------------------------- bloc 4 : ecriture, suivi, lien Build
+def sonde_ecriture(cdp, depot):
+    js = cdp.js
+    faux = Path(depot).parent / "faux"
+    dossier = Path(depot) / "data" / "garage" / "tasmota32s3-capteurs-cuve-modbus"
+    visuels = list(Path(depot).glob("data/**/visuel.json"))
+    verifie(visuels, [], "ecriture : aucun visuel.json au depot copie au depart")
+    verifie(condition(cdp, "/Pas de visuel/.test(document.getElementById('ave-badge').textContent)"), True, "suivi : badge « pas de visuel » au depart")
+    js("document.getElementById('av-ecrire').click()")
+    verifie(condition(cdp, "/Gardez d/.test(document.getElementById('ave-msg').textContent)"), True, "ecriture : sans fond garde, la fenetre le demande")
+    js("document.getElementById('ave-ferme').click()")
+    verifie(js("document.getElementById('ave-dlg').hidden"), True, "ecriture : la fenetre se ferme")
+    js("AV.formes.push(AV_FORMES.normalise({id:AV.idSuivant(),type:'rect',x:10,y:10,l:200,h:120,fill:'#336699'}));AV.commit()")
+    condition(cdp, "!document.getElementById('av-garder').disabled")
+    js("document.getElementById('av-garder').click()")
+    verifie(condition(cdp, "!!AV.fond"), True, "ecriture : fond garde")
+    js("document.getElementById('av-ecrire').click()")
+    verifie(condition(cdp, "document.querySelectorAll('#ave-diff details').length >= 3 && !document.getElementById('ave-ok').hidden"), True, "ecriture : diff montre (fichiers a ecrire)")
+    verifie(js("[].map.call(document.querySelectorAll('#ave-diff summary'),function(s){return s.textContent;}).filter(function(t){return /visuel\\.(json|svg)/.test(t);}).length"), 2, "ecriture : visuel.json et visuel.svg dans le diff")
+    verifie(list(Path(depot).glob("data/**/visuel.json")), [], "ecriture : rien n'est ecrit avant la confirmation")
+    # build en cours : refus affiche
+    (faux / "build").write_text("x")
+    js("document.getElementById('ave-ok').click()")
+    verifie(condition(cdp, "/Refusé/.test(document.getElementById('ave-msg').textContent) && document.getElementById('ave-msg').className === 'mauvais'"), True, "ecriture : refus clair pendant un build")
+    verifie(list(Path(depot).glob("data/**/visuel.json")), [], "ecriture : build en cours, rien d'ecrit")
+    (faux / "build").unlink()
+    js("document.getElementById('ave-ok').click()")
+    verifie(condition(cdp, "/Écrit :/.test(document.getElementById('ave-msg').textContent)", 90), True, "ecriture : confirmation, fichiers ecrits")
+    ecrits = list(Path(depot).glob("data/**/visuel.json"))
+    verifie(len(ecrits), 1, "ecriture : visuel.json au depot copie")
+    desc = json.loads(ecrits[0].read_text(encoding="utf-8"))
+    verifie((desc["version"], desc["fond"]["type"], [e["id"] for e in desc["elements"]]), (1, "svg", ["n1", "l1"]), "ecriture : description = fond et elements de la page")
+    verifie((ecrits[0].parent / "visuel.svg").is_file(), True, "ecriture : visuel.svg ecrit")
+    verifie(js("document.getElementById('ave-lien').getAttribute('href')"),
+            js("'http://' + location.hostname + ':7700/?env=' + encodeURIComponent(AV.env) + '&depuis=visuel&fichiers=visuel.json,visuel.svg&redemarrer=1'"), "ecriture : lien Televerser vers la page Build")
+    verifie(js("document.getElementById('ave-lien').hidden"), False, "ecriture : le lien est visible apres l'ecriture")
+    verifie(condition(cdp, "/différente/.test(document.getElementById('ave-badge').textContent)"), True, "suivi : carte differente apres l'ecriture")
+    (faux / "carte.json").write_bytes(ecrits[0].read_bytes())
+    js("AV.majSuivi()")
+    verifie(condition(cdp, "/identique/.test(document.getElementById('ave-badge').textContent)"), True, "suivi : carte identique quand elle porte le meme fichier")
+    js("document.getElementById('ave-ferme').click()")
+    # description invalide : le serveur refuse, la page montre le motif
+    js("AV.elements.push({id:'v9',type:'voyant',x:5,y:5,source:{type:'relais'},style:{}});AV.dessine()")
+    js("document.getElementById('av-ecrire').click()")
+    verifie(condition(cdp, "document.getElementById('ave-msg').className === 'mauvais' && /source\\.n/.test(document.getElementById('ave-msg').textContent)"), True, "ecriture : description invalide, motif du serveur affiche")
+    js("document.getElementById('ave-ferme').click();AV.elements.pop();AV.sauveEls();AV.dessine()")
+
 # ---------------------------------------------------------------- lancement
 def lance(cdp, t):
     """Demarre le serveur a faux (depot copie dans t/depot), y amene `cdp`, joue les sondes. Rend la liste des echecs."""
@@ -248,7 +296,8 @@ def lance(cdp, t):
         cdp.js("AV.env = AV.carte = %s; document.getElementById('av-carte').value = %s; AV.charge()" % (json.dumps(CUVE), json.dumps(CUVE)))
         sonde_icones(cdp, depot)
         sonde_points(cdp)
-        verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e], [], "faux : aucune erreur dans la console de la page")
+        sonde_ecriture(cdp, depot)
+        verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e and "/ecriture/" not in e], [], "faux : aucune erreur dans la console de la page")
     finally:
         tue_arbre(serveur)
     return ECHECS

@@ -110,8 +110,8 @@ def sonde(cdp, port):
     verifie(js("document.querySelectorAll('main > div').length"), 3, "trois colonnes")
     verifie(condition(cdp, "document.querySelectorAll('#av-carte option').length > 0"), True, "cartes chargees dans le select")
     verifie(js("document.querySelectorAll('#av-carte optgroup').length > 0"), True, "cartes groupees par lieu")
-    verifie(js("[document.getElementById('av-export').disabled, document.getElementById('av-ecrire').disabled]"), [False, True],
-            "Exporter actif, Écrire encore inactif")
+    verifie(js("[document.getElementById('av-export').disabled, document.getElementById('av-ecrire').disabled]"), [False, False],
+            "Exporter et Écrire actifs")
 
     # theme : le clic bascule data-theme et change le fond de la page
     lit = "[document.documentElement.getAttribute('data-theme'), getComputedStyle(document.body).backgroundColor]"
@@ -245,7 +245,7 @@ def sonde(cdp, port):
     verifie(recharge(cdp, port), True, "rechargement avec une carte memorisee inconnue")
     verifie(js("[].slice.call(document.querySelectorAll('#av-carte option')).some(function(o){return o.value===AV.env;}) && !window.__pwn"), True, "carte inconnue : repli sur une carte de la liste")
     js("localStorage.clear()")
-    verifie(cdp.erreurs(), [], "aucune erreur dans la console de la page")
+    verifie([e for e in cdp.erreurs() if "/sources?" not in e], [], "aucune erreur dans la console de la page")
 
 
 EXPORT_PREP = ("window.__tel=[];window.__cop=[];AV.telecharge=function(n,b){window.__tel.push({n:n,t:b.type,s:b.size,b:b});};"

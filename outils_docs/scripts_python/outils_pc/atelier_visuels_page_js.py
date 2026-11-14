@@ -200,7 +200,6 @@ JS = r"""
         $('av-empreinte').textContent = d.empreinte;
       }).catch(function () { info('Serveur injoignable', true); });
   });
-  ['av-ecrire'].forEach(function (i) { $(i).disabled = true; $(i).title = 'à venir'; });
   $('av-larg-v').textContent = AV.larg + ' px'; $('av-qualite-v').textContent = $('av-qualite').value + ' %';
   AV.majPoids = poids;
   mode('plat');

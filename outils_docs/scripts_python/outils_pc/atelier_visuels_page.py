@@ -14,6 +14,7 @@ import json
 
 import atelier_visuels_description as avd
 import atelier_visuels_page_calques as calques
+import atelier_visuels_page_ecriture as ecriture
 import atelier_visuels_page_elements as elements
 import atelier_visuels_page_export as export
 import atelier_visuels_page_formes as formes
@@ -51,7 +52,7 @@ HTML = """
 <span class="doux">Fond :</span><button id="av-fond-plat" class="on">Dessin à plat</button><button id="av-fond-photo">Photo allégée</button>
 <span class="sp"></span>
 <span>Poids du fond : <span id="av-poids" class="doux">-</span> <span id="av-type" class="doux"></span></span>
-<button id="av-export">Exporter</button><button id="av-ecrire">Écrire dans le dépôt</button>
+<button id="av-export" aria-expanded="false">Exporter</button><button id="av-ecrire">Écrire dans le dépôt</button>""" + ecriture.HTML_BADGE + """
 <button id="av-theme" type="button">Sombre</button></header>
 <main><div>
 <div class="pan"><h2>1. Photo</h2><div class="g">
@@ -71,7 +72,7 @@ HTML = """
 <input type="range" id="av-qualite" min="30" max="95" value="70"></label>
 <button id="av-garder" class="on" type="button" disabled>Garder ce fond</button>
 <div id="av-msg" class="doux" role="status"></div><div id="av-empreinte" class="doux"></div></div></div>
-""" + elements.HTML_PANNEAU + export.HTML_EXPORT + """
+""" + elements.HTML_PANNEAU + export.HTML_EXPORT + ecriture.HTML_ECRITURE + """
 </div></main>
 """
 
@@ -86,5 +87,5 @@ SEUILS = {"avert": avd.SEUIL_AVERT, "esp32": avd.SEUILS_REFUS["esp32"], "autre":
 
 PAGE = ("<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
         "<title>Atelier des visuels</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE
-        + "<style>" + CSS + formes.CSS_FORMES + export.CSS_EXPORT + icones.CSS_ICONES + elements.CSS_ELEMENTS + "</style></head><body>" + HTML
-        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + calques.JS_CALQUES + points.JS_POINTS + icones.JS_ICONES + elements.JS_ELEMENTS + export.JS_EXPORT + COLLE + "</script></body></html>")
+        + "<style>" + CSS + formes.CSS_FORMES + export.CSS_EXPORT + icones.CSS_ICONES + elements.CSS_ELEMENTS + ecriture.CSS_ECRITURE + "</style></head><body>" + HTML
+        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + calques.JS_CALQUES + points.JS_POINTS + icones.JS_ICONES + elements.JS_ELEMENTS + export.JS_EXPORT + ecriture.JS_ECRITURE + COLLE + "</script></body></html>")
