@@ -293,12 +293,22 @@ OUTILS = [
         [_port("http", 7940)],
         "http",
         "Console capturée : " + CONSOLE.format("cartes_simulees") + "."),
+    Outil(
+        "atelier_visuels", "Atelier des visuels", "Atelier des visuels", GROUPES[4],
+        "Prépare le visuel d'accueil d'une carte : fond (photo ou dessin) et points chauds.",
+        "Page web qui nettoie le fond choisi (poids, format), place les points chauds (voyant, valeur, liaison) et écrit "
+        "visuel.json et le fond dans le dossier de la carte. Seul paramètre ici : le port de la page (7985). Rien n'est "
+        "écrit avant « Écrire dans le dépôt » : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/atelier_visuels_web.py",
+        [_port("http", 7985)],
+        "http",
+        "Console capturée : " + CONSOLE.format("atelier_visuels") + "."),
 ]
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.
 for _o in OUTILS:
     _o.lieu = _o.id in ("build", "fichiers_berry", "assistant_persist", "atelier_graphiques", "etiquettes_qr", "atelier_ecrans", "fabrique_tapp",
-                        "syslog", "sniffeur_mqtt")
+                        "atelier_visuels", "syslog", "sniffeur_mqtt")
 
 
 def par_id(id):
