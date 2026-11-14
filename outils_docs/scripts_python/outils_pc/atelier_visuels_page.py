@@ -18,6 +18,7 @@ import atelier_visuels_page_ecriture as ecriture
 import atelier_visuels_page_elements as elements
 import atelier_visuels_page_export as export
 import atelier_visuels_page_formes as formes
+import atelier_visuels_page_ia as ia_page
 import atelier_visuels_page_icones as icones
 import atelier_visuels_page_points as points
 import atelier_visuels_page_js as js
@@ -72,7 +73,7 @@ HTML = """
 <input type="range" id="av-qualite" min="30" max="95" value="70"></label>
 <button id="av-garder" class="on" type="button" disabled>Garder ce fond</button>
 <div id="av-msg" class="doux" role="status"></div><div id="av-empreinte" class="doux"></div></div></div>
-""" + elements.HTML_PANNEAU + export.HTML_EXPORT + ecriture.HTML_ECRITURE + """
+""" + ia_page.HTML_IA + elements.HTML_PANNEAU + export.HTML_EXPORT + ecriture.HTML_ECRITURE + """
 </div></main>
 """
 
@@ -87,5 +88,5 @@ SEUILS = {"avert": avd.SEUIL_AVERT, "esp32": avd.SEUILS_REFUS["esp32"], "autre":
 
 PAGE = ("<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
         "<title>Atelier des visuels</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE
-        + "<style>" + CSS + formes.CSS_FORMES + export.CSS_EXPORT + icones.CSS_ICONES + elements.CSS_ELEMENTS + ecriture.CSS_ECRITURE + "</style></head><body>" + HTML
-        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + calques.JS_CALQUES + points.JS_POINTS + icones.JS_ICONES + elements.JS_ELEMENTS + export.JS_EXPORT + ecriture.JS_ECRITURE + COLLE + "</script></body></html>")
+        + "<style>" + CSS + formes.CSS_FORMES + export.CSS_EXPORT + icones.CSS_ICONES + elements.CSS_ELEMENTS + ecriture.CSS_ECRITURE + ia_page.CSS_IA + "</style></head><body>" + HTML
+        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + calques.JS_CALQUES + points.JS_POINTS + icones.JS_ICONES + elements.JS_ELEMENTS + export.JS_EXPORT + ecriture.JS_ECRITURE + ia_page.JS_IA + COLLE + "</script></body></html>")

@@ -77,7 +77,7 @@ def mode_faux(port, depot):
     class Faux(ia.Fournisseur):
         def __init__(self, id_, externe):
             super().__init__({})
-            self.id, self.nom, self.externe, self.gratuit = id_, "Faux " + id_, externe, "gratuit"
+            self.id, self.nom, self.externe, self.gratuit, self.cle_requise = id_, "Faux " + id_, externe, "gratuit", externe
 
         def demande(self, consigne, chemin_image, delai=600):
             (tmp / "ia.log").open("a").write(f"{self.id} {Path(chemin_image).stat().st_size}\n")
@@ -282,6 +282,44 @@ def sonde_ecriture(cdp, depot):
     verifie(condition(cdp, "document.getElementById('ave-msg').className === 'mauvais' && /source\\.n/.test(document.getElementById('ave-msg').textContent)"), True, "ecriture : description invalide, motif du serveur affiche")
     js("document.getElementById('ave-ferme').click();AV.elements.pop();AV.sauveEls();AV.dessine()")
 
+
+# ---------------------------------------------------------------- bloc 5 : assistant IA
+def sonde_ia(cdp, depot, fabrique):
+    js = cdp.js
+    faux = Path(depot).parent / "faux"
+    verifie(condition(cdp, "document.querySelectorAll('#avia-four option').length === 2"), True, "ia : les deux procedes proposes")
+    js("document.getElementById('avia-four').value='ext';document.getElementById('avia-four').dispatchEvent(new Event('change',{bubbles:true}))")
+    verifie(js("/Faux ext/.test(document.getElementById('avia-avert').textContent) && /externe/.test(document.getElementById('avia-avert').textContent)"), True, "ia : l'avertissement nomme le service externe")
+    verifie(js("document.getElementById('avia-envoi').disabled"), True, "ia : envoi inactif sans photo")
+    js(fabrique)
+    condition(cdp, "!!AV.src")
+    js("var c=document.getElementById('avia-consigne');c.value='dessine la facade';c.dispatchEvent(new Event('input',{bubbles:true}))")
+    verifie(js("document.getElementById('avia-envoi').disabled"), True, "ia : service externe, envoi inactif sans confirmation")
+    js("document.getElementById('avia-confirme').click()")
+    verifie(js("document.getElementById('avia-envoi').disabled"), False, "ia : confirmation cochee, envoi actif")
+    js("document.getElementById('avia-envoi').click()")
+    verifie(condition(cdp, "!document.getElementById('avia-ouvre').hidden"), True, "ia : dessin recu")
+    verifie(js("[document.getElementById('avia-confirme').checked, document.getElementById('avia-envoi').disabled]"), [False, True], "ia : la confirmation est a refaire a chaque envoi")
+    verifie(js("/Envois aujourd/.test(document.getElementById('avia-quota').textContent) && /1/.test(document.getElementById('avia-quota').textContent)"), True, "ia : compteur de quota mis a jour")
+    verifie(sum(1 for ligne in (faux / "ia.log").read_text().splitlines() if ligne.startswith("ext ")), 1, "ia : le faux fournisseur a recu exactement un envoi")
+    n0 = js("AV.formes.length")
+    js("document.getElementById('avia-ouvre').click()")
+    verifie(js("[AV.formes.length - %s, AV.formes.slice(-2).map(function(f){return f.fill;}), Math.round(AV.formes[AV.formes.length-1].x)]" % n0), [2, ["#336699", "#cc9933"], 48],
+            "ia : le dessin s'ouvre dans l'editeur (rect mis a l'echelle, SVG nettoye)")
+    js("AV.annule()")
+    verifie(js("AV.formes.length"), n0, "ia : l'ajout s'annule en une etape")
+    # procede local : pas de confirmation requise
+    js("document.getElementById('avia-four').value='local';document.getElementById('avia-four').dispatchEvent(new Event('change',{bubbles:true}))")
+    verifie(js("[document.getElementById('avia-conf-l').hidden, document.getElementById('avia-envoi').disabled, document.getElementById('avia-cle-b').hidden]"), [True, False, True],
+            "ia : procede local, pas de confirmation ni de cle")
+    # cle : envoyee puis effacee du champ, jamais dans le DOM ni le stockage
+    js("document.getElementById('avia-four').value='ext';document.getElementById('avia-four').dispatchEvent(new Event('change',{bubbles:true}))")
+    js("var k=document.getElementById('avia-cle');k.value='sk-SECRET-987654321';document.getElementById('avia-cle-ok').click()")
+    verifie(condition(cdp, "/se termine par/.test(document.getElementById('avia-cle-etat').textContent)"), True, "ia : cle enregistree, seule la fin est montree")
+    verifie(js("[document.getElementById('avia-cle').value, document.documentElement.outerHTML.indexOf('SECRET-987654321') < 0, JSON.stringify(localStorage).indexOf('SECRET') < 0]"),
+            ["", True, True], "ia : la cle n'est ni dans le champ, ni dans le DOM, ni dans le stockage")
+    verifie(js("document.getElementById('avia-cle').type"), "password", "ia : champ de cle masque")
+
 # ---------------------------------------------------------------- lancement
 def lance(cdp, t):
     """Demarre le serveur a faux (depot copie dans t/depot), y amene `cdp`, joue les sondes. Rend la liste des echecs."""
@@ -297,6 +335,8 @@ def lance(cdp, t):
         sonde_icones(cdp, depot)
         sonde_points(cdp)
         sonde_ecriture(cdp, depot)
+        import test_atelier_visuels_page_chrome as principal
+        sonde_ia(cdp, depot, principal.FABRIQUE)
         verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e and "/ecriture/" not in e], [], "faux : aucune erreur dans la console de la page")
     finally:
         tue_arbre(serveur)
