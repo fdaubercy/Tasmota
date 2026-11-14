@@ -131,7 +131,7 @@ var modaleId = null, enCours = false;
 function memo(cle, v) { try { if (v) localStorage.setItem(cle, v); else localStorage.removeItem(cle); } catch (e) {} }
 function relu(cle) { try { return localStorage.getItem(cle) || ""; } catch (e) { return ""; } }
 // Outils de suivi en continu ou de longue duree : un bouton « ↗ » les ouvre a cote de l'annuaire.
-var A_PART = ["pont_serie", "sniffeur_modbus", "sniffeur_i2c", "testeur_udp", "sniffeur_mqtt", "syslog", "build"];
+var A_PART = ["pont_serie", "sniffeur_modbus", "sniffeur_i2c", "testeur_udp", "sniffeur_mqtt", "syslog", "build", "organigramme_plans"];
 var DELAI_APPEL = 10000;     // ms : au-dela, l'appel est abandonne (AbortController)
 
 // Cree un element : h("div", {class:"x", onclick:f}, enfants...) ; les textes passent par textContent.
