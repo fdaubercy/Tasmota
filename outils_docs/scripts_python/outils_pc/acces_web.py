@@ -45,6 +45,8 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
+import acces_repli
+
 COULEUR = "#1f2937"
 PORT_ANNUAIRE = 7600
 ICONE = ("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' "
@@ -199,21 +201,26 @@ class Acces:
         if "id='barre-outils'" in html or "</head>" not in html:
             return html
         tete = ("<link rel='manifest' href='/manifest.webmanifest'><link rel='icon' href='/icone.svg'>"
-                f"<meta name='theme-color' content='{COULEUR}'>")
+                f"<meta name='theme-color' content='{COULEUR}'>" + acces_repli.ENREGISTREMENT)
         html = html.replace("</head>", tete + "</head>", 1)
         return re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + BARRE.replace("{nom}", _html.escape(self.nom)), html, count=1,
                       flags=re.I)
 
     def _statique(self, handler):
-        """Manifeste et icone : publics (le navigateur les demande sans cookie), rien de secret. True si servi."""
+        """Manifeste, icone et service worker de repli : publics (le navigateur les demande sans cookie), rien de secret. True si servi."""
         chemin = urlsplit(handler.path).path
-        if handler.command != "GET" or chemin not in ("/manifest.webmanifest", "/icone.svg"):
+        if handler.command != "GET" or chemin not in ("/manifest.webmanifest", "/icone.svg", "/sw.js"):
             return False
-        corps, genre = ((self.manifeste(), "application/manifest+json") if chemin.endswith("webmanifest")
-                        else (ICONE, "image/svg+xml"))
+        if chemin == "/sw.js":
+            corps, genre = acces_repli.service_worker(self.nom), "text/javascript; charset=utf-8"
+        elif chemin.endswith("webmanifest"):
+            corps, genre = self.manifeste(), "application/manifest+json"
+        else:
+            corps, genre = ICONE, "image/svg+xml"
         corps = corps.encode("utf-8")
         handler.send_response(200)
         handler.send_header("Content-Type", genre)
+        handler.send_header("Cache-Control", "no-cache")
         handler.send_header("Content-Length", str(len(corps)))
         handler.end_headers()
         handler.wfile.write(corps)

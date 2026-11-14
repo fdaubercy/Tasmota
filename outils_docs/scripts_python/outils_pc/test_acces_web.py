@@ -225,7 +225,8 @@ def principal():
     # Routes publiques du manifeste et de l'icone (sans jeton, y compris depuis un autre appareil simule : ici ce PC).
     acces_s = acces_web.Acces(0, True, "Outil test")
     srv2 = serveur(acces_s)
-    for chemin, genre in (("/manifest.webmanifest", "application/manifest+json"), ("/icone.svg", "image/svg+xml")):
+    for chemin, genre in (("/manifest.webmanifest", "application/manifest+json"), ("/icone.svg", "image/svg+xml"),
+                          ("/sw.js", "text/javascript; charset=utf-8")):
         st, ent = requete("127.0.0.1", acces_s.port, "GET", chemin)
         verifie((st, ent.get("Content-Type")), (200, genre), f"route {chemin}")
     st, _ = requete("127.0.0.1", acces_s.port, "POST", "/icone.svg")
