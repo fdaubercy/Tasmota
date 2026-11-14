@@ -14,6 +14,7 @@ import json
 
 import atelier_visuels_description as avd
 import atelier_visuels_page_calques as calques
+import atelier_visuels_page_elements as elements
 import atelier_visuels_page_export as export
 import atelier_visuels_page_formes as formes
 import atelier_visuels_page_icones as icones
@@ -61,7 +62,7 @@ HTML = """
 <div class="row"><label class="doux" for="av-larg">Largeur de travail</label><span id="av-larg-v"></span></div>
 <input type="range" id="av-larg" min="320" max="800" step="10" value="480">
 </div></div>
-""" + formes.HTML_FORMES + icones.HTML_ICONES + """
+""" + formes.HTML_FORMES + elements.HTML_PALETTE + icones.HTML_ICONES + """
 </div>
 <div><div class="cv" id="av-canevas"></div></div>
 <div>
@@ -70,7 +71,7 @@ HTML = """
 <input type="range" id="av-qualite" min="30" max="95" value="70"></label>
 <button id="av-garder" class="on" type="button" disabled>Garder ce fond</button>
 <div id="av-msg" class="doux" role="status"></div><div id="av-empreinte" class="doux"></div></div></div>
-""" + export.HTML_EXPORT + """
+""" + elements.HTML_PANNEAU + export.HTML_EXPORT + """
 </div></main>
 """
 
@@ -85,5 +86,5 @@ SEUILS = {"avert": avd.SEUIL_AVERT, "esp32": avd.SEUILS_REFUS["esp32"], "autre":
 
 PAGE = ("<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
         "<title>Atelier des visuels</title><link rel=\"icon\" href=\"data:,\">" + THEME_TETE
-        + "<style>" + CSS + formes.CSS_FORMES + export.CSS_EXPORT + icones.CSS_ICONES + "</style></head><body>" + HTML
-        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + calques.JS_CALQUES + points.JS_POINTS + icones.JS_ICONES + export.JS_EXPORT + COLLE + "</script></body></html>")
+        + "<style>" + CSS + formes.CSS_FORMES + export.CSS_EXPORT + icones.CSS_ICONES + elements.CSS_ELEMENTS + "</style></head><body>" + HTML
+        + "<script>window.AV_SEUILS = " + json.dumps(SEUILS) + ";" + lieux.JS + js.JS + formes.JS_FORMES + calques.JS_CALQUES + points.JS_POINTS + icones.JS_ICONES + elements.JS_ELEMENTS + export.JS_EXPORT + COLLE + "</script></body></html>")

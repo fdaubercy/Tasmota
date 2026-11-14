@@ -164,6 +164,76 @@ def sonde_icones(cdp, depot):
     verifie(js("/mon\\.svg/.test(document.getElementById('avi-info').textContent) && !window.__pwn"), True, "icones : import nomme, script ignore")
 
 
+
+# ---------------------------------------------------------------- bloc 3 : points chauds
+PT = ("window.__pt=function(t,x,y){var s=document.getElementById('avf-canevas'),b=s.getBoundingClientRect(),X=b.left+x*b.width/AV.larg,Y=b.top+y*b.height/AV.haut;"
+      "var tg=t==='pointerdown'?document.elementFromPoint(X,Y):s;(tg||s).dispatchEvent(new PointerEvent(t,{clientX:X,clientY:Y,pointerId:1,bubbles:true}));};")
+
+
+def champ(cdp, ident, valeur):
+    cdp.js("(function(){var e=document.getElementById(%s);e.value=%s;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()"
+           % (json.dumps(ident), json.dumps(str(valeur))))
+
+
+def sonde_points(cdp):
+    js = cdp.js
+    js("AV.elements=[];AV.sim={};AV.selEl=null;AV.sauveEls();AV.dessine()")
+    verifie(condition(cdp, "document.getElementById('avp-note').textContent.length > 0"), True, "points : sans route /sources, saisie a la main annoncee")
+    js(PT)
+    js("document.querySelector('[data-avp-outil=voyant]').click()")
+    js("__pt('pointerdown',144,81);__pt('pointerup',144,81)")
+    verifie(js("[AV.elements.length, AV.elements[0].type, AV.elements[0].x, AV.elements[0].y, AV.selEl, document.getElementById('avp-panel').hidden]"),
+            [1, "voyant", 144, 81, "v1", False], "points : un voyant pose au clic, selectionne, panneau ouvert")
+    verifie(js("AV.elements[0].source"), {"type": "relais", "n": 1}, "points : source relais par defaut")
+    champ(cdp, "avp-n", 3)
+    verifie(js("AV.elements[0].source.n"), 3, "points : numero de relais saisi")
+    champ(cdp, "avp-stype", "mesure")
+    champ(cdp, "avp-chemin", "Switch1")
+    verifie(js("AV.elements[0].source"), {"type": "mesure", "chemin": ["Switch1"]}, "points : entree (mesure) choisie")
+    # valeur
+    js("document.querySelector('[data-avp-outil=valeur]').click()")
+    js("__pt('pointerdown',288,81);__pt('pointerup',288,81)")
+    champ(cdp, "avp-unite", "cm")
+    verifie(js("[AV.elements[1].id, AV.elements[1].type, AV.elements[1].source.chemin, AV.elements[1].style.unite]"), ["n1", "valeur", ["ANALOG", "A1"], "cm"], "points : valeur posee, unite")
+    verifie(js("document.querySelector('#avc-g [data-el=n1] text').textContent"), "0 cm", "points : la valeur est dessinee avec son unite")
+    # liaison en deux clics
+    js("document.querySelector('[data-avp-outil=liaison]').click()")
+    js("__pt('pointerdown',50,200);__pt('pointerup',50,200);__pt('pointerdown',300,220);__pt('pointerup',300,220)")
+    verifie(js("[AV.elements[2].type, AV.elements[2].x, AV.elements[2].y, AV.elements[2].x2, AV.elements[2].y2, AV.elements[2].source]"),
+            ["liaison", 50, 200, 300, 220, {"type": "modbus_serie", "seuil_s": 30}], "points : liaison posee en deux clics, seuil par defaut")
+    verifie(js("document.querySelectorAll('#avc-g .avp-poignee').length"), 2, "points : deux poignees pour la liaison selectionnee")
+    champ(cdp, "avp-stype", "modbus_esclave")
+    verifie(js("/ModBus/.test(document.getElementById('avp-alerte').textContent)"), True, "points : identifiant d'esclave manquant signale")
+    champ(cdp, "avp-id", 3)
+    champ(cdp, "avp-seuil", 90)
+    verifie(js("AV.elements[2].source"), {"type": "modbus_esclave", "seuil_s": 90, "id": 3}, "points : liaison vers un esclave ModBus, seuil_s")
+    verifie(js("document.getElementById('avp-alerte').textContent"), "", "points : plus d'alerte")
+    js("__pt('pointerdown',300,220);__pt('pointermove',200,150);__pt('pointerup',200,150)")
+    verifie(js("[AV.elements[2].x2, AV.elements[2].y2]"), [200, 150], "points : poignee d'arrivee deplacee")
+    # deplacement du voyant
+    js("__pt('pointerdown',144,81);__pt('pointermove',184,101);__pt('pointerup',184,101)")
+    verifie(js("[AV.elements[0].x, AV.elements[0].y, JSON.parse(localStorage.getItem('av.elements.'+AV.carte))[0].x]"), [184, 101, 184], "points : voyant deplace a la souris et enregistre")
+    # apercu simule
+    js("document.getElementById('avp-apercu').click()")
+    js("__pt('pointerdown',184,101);__pt('pointerup',184,101)")
+    verifie(js("[AV.sim.v1, document.querySelector('#avc-g [data-el=v1]').getAttribute('class')]"), ["on", "av-v on"], "apercu : un clic bascule le voyant en ON")
+    js("__pt('pointerdown',184,101);__pt('pointerup',184,101)")
+    verifie(js("document.querySelector('#avc-g [data-el=v1]').getAttribute('class')"), "av-v off", "apercu : second clic, OFF")
+    js("document.getElementById('avp-apercu').click()")
+    js("AV.selEl='l1';AV.dessine()")
+    champ(cdp, "avp-etat", "muette")
+    verifie(js("document.querySelector('#avc-g [data-el=l1]').getAttribute('class')"), "av-l muette", "apercu : liaison muette (etat simule du panneau)")
+    champ(cdp, "avp-etat", "active")
+    verifie(js("document.querySelector('#avc-g [data-el=l1]').getAttribute('class')"), "av-l active", "apercu : liaison active")
+    # fleches et suppression au clavier
+    js("AV.selEl='v1';AV.dessine();document.activeElement.blur&&document.activeElement.blur();document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))")
+    verifie(js("AV.elements[0].x"), 185, "points : fleche droite, 1 px")
+    js("document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}))")
+    verifie(js("[AV.elements.length, AV.elements.some(function(e){return e.id==='v1';})]"), [2, False], "points : Suppr retire l'element")
+    js("document.querySelector('[data-avp-outil=voyant]').click()")
+    js("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
+    verifie(js("document.querySelector('[data-avp-outil=voyant]').getAttribute('aria-pressed')"), "false", "points : Echap quitte l'outil")
+
 # ---------------------------------------------------------------- lancement
 def lance(cdp, t):
     """Demarre le serveur a faux (depot copie dans t/depot), y amene `cdp`, joue les sondes. Rend la liste des echecs."""
@@ -177,7 +247,8 @@ def lance(cdp, t):
         cdp.js("localStorage.clear()")
         cdp.js("AV.env = AV.carte = %s; document.getElementById('av-carte').value = %s; AV.charge()" % (json.dumps(CUVE), json.dumps(CUVE)))
         sonde_icones(cdp, depot)
-        verifie([e for e in cdp.erreurs() if "horsligne" not in e], [], "faux : aucune erreur dans la console de la page")
+        sonde_points(cdp)
+        verifie([e for e in cdp.erreurs() if "horsligne" not in e and "/sources?" not in e], [], "faux : aucune erreur dans la console de la page")
     finally:
         tue_arbre(serveur)
     return ECHECS
