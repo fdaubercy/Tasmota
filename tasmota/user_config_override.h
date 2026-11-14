@@ -2553,6 +2553,8 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
 
         // -- Options for tasmota32s3-bureau-ecran-debits-pac ------
         #elif defined(FIRMWARE_ESP32S3_BUREAU_ECRAN_DEBITS_PAC)
+            #undef CFG_HOLDER
+            #define CFG_HOLDER  1609    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
@@ -2694,6 +2696,8 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #define USE_MODBUS
         // -- Options for tasmota32s3-cave-ecran ------
         #elif defined(FIRMWARE_ESP32S3_CAVE_ECRAN)
+            #undef CFG_HOLDER
+            #define CFG_HOLDER  1609    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
