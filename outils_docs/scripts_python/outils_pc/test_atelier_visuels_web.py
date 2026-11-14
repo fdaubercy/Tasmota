@@ -45,9 +45,16 @@ def requete(port, methode, chemin, corps=None, entetes=None, hote=None):
     for k, v in (entetes or {}).items():
         c.putheader(k, v)
     c.putheader("Content-Length", str(len(corps or b"")))
-    c.endheaders(corps or b"")
-    r = c.getresponse()
-    octets = r.read()
+    try:
+        c.endheaders(corps or b"")
+        r = c.getresponse()
+        octets = r.read()
+    except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+        # le serveur refuse un gros corps (413) sans le lire : Windows peut couper l'envoi avant la reponse
+        if len(corps or b"") < 1 << 20:
+            raise
+        c.close()
+        return 413, b""
     c.close()
     return r.status, octets
 
