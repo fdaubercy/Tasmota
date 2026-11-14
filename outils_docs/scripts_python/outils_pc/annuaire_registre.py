@@ -265,7 +265,7 @@ OUTILS = [
         "Montre les plans de tasks/plans/ en arbre par famille, avec statut, % et dates ; un clic ouvre le détail, le plan et son spec.",
         "Page web en lecture seule qui lit les en-têtes des plans (famille, parent, liens, spec) et leur historique git, "
         "et les montre en arbre par famille : un clic sur un plan donne son objectif, ses plans voisins et les liens vers "
-        "le plan et son spec sur GitHub. Seul paramètre ici : le port de la page (7990). Rien n'est écrit : l'arrêter à tout moment.",
+        "le plan et son spec sur GitHub. Seul paramètre ici : le port de la page (7990). Seule écriture : le bouton « Publier sur GitHub Pages » (organigramme_plans.py --publier : branche etiquettes, sans forcer, adresses IP masquées, double clic de confirmation). L'arrêter à tout moment.",
         DOSSIER + "outils_pc/organigramme_plans_web.py",
         [_port("http", 7990)],
         "http",

@@ -22,6 +22,7 @@ import sys
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), *[".."] * 3))
 SORTIE = os.path.join(RACINE, "outils_docs", "organigramme_plans")
 GITHUB = "https://github.com/fdaubercy/Tasmota/blob/development/"
+URL_PAGES = "https://fdaubercy.github.io/Tasmota/organigramme.html"
 FAMILLES = {  # cle de l'en-tete -> libelle ; l'ordre est celui des diapos
     "build": "Build et outils PC", "methode": "Méthode et audits", "modbus-reseau": "ModBus, réseau, matériel",
     "cave": "Cave et nouveaux envs", "debits-energie": "Débits et énergie", "graphiques-ecrans": "Graphiques, écrans, visuels"}
@@ -165,7 +166,7 @@ def pptx():
 if __name__ == "__main__":
     if "--publier" in sys.argv:
         sha = publie_pages()
-        print("deja a jour" if not sha else f"publie : {sha[:9]} -> https://fdaubercy.github.io/Tasmota/organigramme.html")
+        print("deja a jour" if not sha else f"publie : {sha[:9]} -> {URL_PAGES}")
         sys.exit(0)
     retard = ecris(donnees())
     if "--verifier" in sys.argv:

@@ -1,4 +1,4 @@
-"""Banc de la page « Organigramme des plans » : routes, lecture seule, Host hostile refuse, donnees des plans.
+"""Banc de la page « Organigramme des plans » : routes, publication refusee sans en-tete (la vraie publication n'est jamais lancee), Host hostile refuse, donnees des plans.
 
 Lancement : python test_organigramme_plans_web.py   (code 0 = vert). Python de PlatformIO non requis.
 """
@@ -59,7 +59,10 @@ def main():
         verifie(all(re.match(r"\d{4}-\d\d-\d\d$", p["cree"]) and p["maj"] >= p["cree"] for p in d["plans"]), True, "donnees : dates")
         verifie(requete(port, "GET", "/autre")[0], 404, "GET /autre : 404")
         verifie(requete(port, "GET", "/", hote="evil.example")[0], 403, "Host hostile : 403")
-        verifie(requete(port, "POST", "/")[0], 200, "POST : meme reponse qu'un GET, aucun effet")
+        verifie("id='pub'" in page, True, "GET / : bouton de publication")
+        verifie(requete(port, "POST", "/")[0], 403, "POST / : refuse")
+        verifie(requete(port, "POST", "/publier")[0], 403, "POST /publier sans en-tete : refuse (rien publie)")
+        verifie(requete(port, "POST", "/publier", hote="evil.example")[0], 403, "POST /publier, Host hostile : refuse")
     finally:
         serveur.shutdown()
         serveur.server_close()
