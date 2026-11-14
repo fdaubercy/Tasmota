@@ -80,12 +80,14 @@ JS_ELEMENTS = r"""
   var c0 = AV.charge;
   AV.charge = function () { c0(); chargeSources(); };
 
+  // seuil par defaut d'une liaison ModBus : 3 x la periode de releve du persist, 30 s sans elle (atelier_visuels_description.defauts_seuils)
+  function seuilDefaut() { return SRC && SRC.periodeReleve ? 3 * SRC.periodeReleve : 30; }
   // ---- creation
   function defaut(type, x, y) {
     var id = AV.idEl(type === 'voyant' ? 'v' : type === 'valeur' ? 'n' : 'l');
     if (type === 'voyant') return {id: id, type: type, x: x, y: y, source: {type: 'relais', n: 1}, style: {forme: 'rond', taille: 14}};
     if (type === 'valeur') return {id: id, type: type, x: x, y: y, source: {type: 'mesure', chemin: ['ANALOG', 'A1']}, style: {unite: '', decimales: 1, exemple: '0'}};
-    return {id: id, type: type, x: x, y: y, x2: x + 60, y2: y, source: {type: 'modbus_serie', seuil_s: SRC && SRC.defauts && SRC.defauts.modbus_serie || 30}, style: {}};
+    return {id: id, type: type, x: x, y: y, x2: x + 60, y2: y, source: {type: 'modbus_serie', seuil_s: seuilDefaut()}, style: {}};
   }
   function outil(t) {
     S.outil = t; S.l0 = null;
@@ -133,7 +135,7 @@ JS_ELEMENTS = r"""
   function lit() {
     var e = sel(), k = $('avp-stype').value, s, st;
     if (!e) return;
-    if (k !== (e.source || {}).type) { s = {type: k}; if (k === 'modbus_serie' || k === 'modbus_esclave') s.seuil_s = SRC && SRC.defauts && SRC.defauts[k] || 30; }
+    if (k !== (e.source || {}).type) { s = {type: k}; if (k === 'modbus_serie' || k === 'modbus_esclave') s.seuil_s = seuilDefaut(); }
     else s = {type: k};
     if (k === 'relais') s.n = num('avp-n');
     if (k === 'mesure') { s.chemin = $('avp-chemin').value.split('.').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 8); if (e.type === 'voyant' && num('avp-on') !== undefined) s.on = num('avp-on'); }
@@ -212,7 +214,7 @@ JS_ELEMENTS = r"""
     $('avp-supprime').addEventListener('click', function () { if (AV.selEl) AV.suppEl(AV.selEl); });
     document.addEventListener('keydown', function (ev) {
       var t = ev.target && ev.target.tagName, e = sel(), k = ev.key, pas;
-      if (!e || AV.selection !== null || t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') {
+      if (!e || AV.modal || AV.selection !== null || t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') {
         if (k === 'Escape' && S.outil) outil(null);
         return;
       }

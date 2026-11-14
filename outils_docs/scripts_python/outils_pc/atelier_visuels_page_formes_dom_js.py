@@ -42,8 +42,8 @@ JS_DOM = r"""
     svg.addEventListener('dblclick', ferme);
   }
   function zoneVisuel(f, el) {
-    var c = f.zone === 'effacer' ? '#d93025' : '#1e8e3e';
-    el.setAttribute('fill', c); el.setAttribute('fill-opacity', 0.25); el.setAttribute('stroke', c); el.setAttribute('stroke-dasharray', '6 4');
+    var c = f.zone === 'effacer' ? 'var(--mauvais)' : 'var(--bon)';
+    el.style.fill = c; el.style.stroke = c; el.setAttribute('fill-opacity', 0.25); el.setAttribute('stroke-dasharray', '6 4');
   }
   AV.dessine = function () {
     if (!svg) construit();
@@ -223,7 +223,7 @@ JS_DOM = r"""
     if ($('opacite')) $('opacite').addEventListener('input', AV.dessine);
     document.addEventListener('keydown', function (e) {
       var t = e.target && e.target.tagName, k = e.key;
-      if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
+      if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || AV.modal) return;
       if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) { e.preventDefault(); if (e.shiftKey) AV.retablit(); else AV.annule(); }
       else if ((e.ctrlKey || e.metaKey) && (k === 'y' || k === 'Y')) { e.preventDefault(); AV.retablit(); }
       else if (k === 'Delete' || k === 'Backspace') { if (AV.selection !== null) { e.preventDefault(); supprime(); } }

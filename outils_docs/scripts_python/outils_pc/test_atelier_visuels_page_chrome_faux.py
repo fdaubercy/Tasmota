@@ -178,7 +178,8 @@ def champ(cdp, ident, valeur):
 def sonde_points(cdp):
     js = cdp.js
     js("AV.elements=[];AV.sim={};AV.selEl=null;AV.sauveEls();AV.dessine()")
-    verifie(condition(cdp, "document.getElementById('avp-note').textContent.length > 0"), True, "points : sans route /sources, saisie a la main annoncee")
+    verifie(condition(cdp, "document.getElementById('avp-note').textContent.length > 0 || document.querySelectorAll('#avp-panel datalist option').length > 0"), True,
+            "points : sources du persist proposees, ou saisie a la main annoncee si la route manque")
     js(PT)
     js("document.querySelector('[data-avp-outil=voyant]').click()")
     js("__pt('pointerdown',144,81);__pt('pointerup',144,81)")
@@ -252,9 +253,24 @@ def sonde_ecriture(cdp, depot):
     js("document.getElementById('av-garder').click()")
     verifie(condition(cdp, "!!AV.fond"), True, "ecriture : fond garde")
     js("document.getElementById('av-ecrire').click()")
-    verifie(condition(cdp, "document.querySelectorAll('#ave-diff details').length >= 3 && !document.getElementById('ave-ok').hidden"), True, "ecriture : diff montre (fichiers a ecrire)")
+    verifie(condition(cdp, "document.querySelectorAll('#ave-diff details').length >= 3 && !document.getElementById('ave-ok').hidden", 90), True, "ecriture : diff montre (fichiers a ecrire)")
     verifie(js("[].map.call(document.querySelectorAll('#ave-diff summary'),function(s){return s.textContent;}).filter(function(t){return /visuel\\.(json|svg)/.test(t);}).length"), 2, "ecriture : visuel.json et visuel.svg dans le diff")
     verifie(list(Path(depot).glob("data/**/visuel.json")), [], "ecriture : rien n'est ecrit avant la confirmation")
+    verifie(js("(function(){var l=[];for(var i=0;i<3000;i++)l.push('ligne '+i);var av=l.join('\\n');l[1500]='ligne 1500 modifiee';var r=AV.diffLignes(av,l.join('\\n'));"
+               "return [r.length<=8,r.some(function(o){return o[0]=='-'&&o[1]=='ligne 1500';}),r.some(function(o){return o[0]=='+'&&o[1]=='ligne 1500 modifiee';})];})()"),
+            [True, True, True], "diff : gros fichier, seules la ligne changee et 3 lignes de contexte sont montrees")
+    verifie(js("(function(){var d=[].filter.call(document.querySelectorAll('#ave-diff details'),function(e){return /cenv/.test(e.firstChild.textContent);})[0];"
+               "return !!d&&d.querySelectorAll('.ave-p,.ave-m').length>0&&d.querySelectorAll('.ave-diffl > div').length<120;})()"), True,
+            "diff : le cenv (gros fichier) montre ses lignes modifiees, pas le fichier entier")
+    # fenetre ouverte : raccourcis clavier ignores, fond invalide sans effet sur l'ecriture, focus piege, Echap
+    js("AV.selection=AV.formes[0].id;AV.dessine()")
+    x0 = js("AV.formes[0].x")
+    js("document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))")
+    verifie(js("AV.formes[0].x"), x0, "ecriture : fenetre ouverte, les fleches ne deplacent pas le dessin")
+    js("AV.invalide()")
+    verifie(js("(function(){var f=[].filter.call(document.querySelectorAll('#ave-boite button,#ave-boite summary'),function(e){return !e.hidden&&e.offsetParent!==null;});"
+               "f[f.length-1].focus();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));return document.activeElement===f[0];})()"),
+            True, "ecriture : le focus est piege dans la fenetre (Tab du dernier au premier)")
     # build en cours : refus affiche
     (faux / "build").write_text("x")
     js("document.getElementById('ave-ok').click()")
@@ -271,6 +287,11 @@ def sonde_ecriture(cdp, depot):
     verifie(js("document.getElementById('ave-lien').getAttribute('href')"),
             js("'http://' + location.hostname + ':7700/?env=' + encodeURIComponent(AV.env) + '&depuis=visuel&fichiers=visuel.json,visuel.svg&redemarrer=1'"), "ecriture : lien Televerser vers la page Build")
     verifie(js("document.getElementById('ave-lien').hidden"), False, "ecriture : le lien est visible apres l'ecriture")
+    js("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
+    verifie(js("document.getElementById('ave-dlg').hidden"), True, "ecriture : Echap ferme la fenetre")
+    condition(cdp, "!document.getElementById('av-garder').disabled")
+    js("document.getElementById('av-garder').click()")
+    condition(cdp, "!!AV.fond")
     verifie(condition(cdp, "/différente/.test(document.getElementById('ave-badge').textContent)"), True, "suivi : carte differente apres l'ecriture")
     (faux / "carte.json").write_bytes(ecrits[0].read_bytes())
     js("AV.majSuivi()")
