@@ -13,7 +13,7 @@ const D = JSON.parse(readFileSync(entree, "utf-8"))
 const COUL = ["1F6FB2", "7A5CB8", "C0561E", "2A8A5A", "B08400", "C0397A"]
 const cles = Object.keys(D.familles)
 const fr = s => s.slice(8) + "/" + s.slice(5, 7)
-const FOND = { actif: "FFFFFF", clos: "ECEFF3", "en-pause": "FDF1E8" }
+const FOND = { actif: "FFFFFF", clos: "D5DAE1", "en-pause": "FDF1E8" }
 
 const pptx = new PptxGenJS()
 pptx.layout = "LAYOUT_16x9"
@@ -59,7 +59,7 @@ cles.forEach((k, i) => {
   const ordre = []
   const marche = (p, d) => { ordre.push({ p, d }); enfants(p.nom).forEach(c => marche(c, d + 1)) }
   racines.forEach(r => marche(r, 0))
-  titre(s, D.familles[k] + " (" + ps.length + " plans)", "Cliquez sur une vignette pour ouvrir le plan. Trait plein = actif, pâle = clos. Plans voisins dans les notes.")
+  titre(s, D.familles[k] + " (" + ps.length + " plans)", "Cliquez sur une vignette pour ouvrir le plan. Fond gris, nom barré et « ✔ CLOS » = plan clos ; trait épais = en cours. Plans voisins dans les notes.")
   const parCol = 8, h = 0.5, pas = 0.58, w = 3.0
   const pos = new Map()
   ordre.forEach(({ p, d }, r) => {
@@ -77,7 +77,8 @@ cles.forEach((k, i) => {
   ordre.forEach(({ p }) => {
     const q = pos.get(p.nom)
     s.addText([
-      { text: p.nom, options: { bold: true, fontSize: 9, hyperlink: { url: p.url }, color: "1B2430", breakLine: true } },
+      { text: (p.statut === "clos" ? "✔ CLOS  " : p.statut === "en-pause" ? "⏸ EN PAUSE  " : ""), options: { bold: true, fontSize: 7, color: p.statut === "clos" ? "5D6877" : "C0561E" } },
+      { text: p.nom, options: { bold: true, fontSize: 9, strike: p.statut === "clos", hyperlink: { url: p.url }, color: p.statut === "clos" ? "5D6877" : "1B2430", breakLine: true } },
       { text: fr(p.cree) + " → " + fr(p.maj) + " · " + p.pct + " % · " + p.statut, options: { fontSize: 7, color: "5D6877" } }],
       { x: q.x, y: q.y, w, h, fill: { color: FOND[p.statut] || "FFFFFF" }, line: { color: COUL[i], width: p.statut === "actif" ? 2.25 : 0.75, dashType: p.statut === "en-pause" ? "dash" : "solid" }, fontFace: "Calibri", valign: "middle", margin: 4 })
   })

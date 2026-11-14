@@ -1012,8 +1012,8 @@
    "specs": [],
    "cree": "2026-11-14",
    "maj": "2026-11-14",
-   "pct": 0,
-   "etapes": "0/28",
+   "pct": 50,
+   "etapes": "14/28",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-page.md",
    "urls_spec": []
   }

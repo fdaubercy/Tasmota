@@ -28,14 +28,21 @@ FAMILLES = {  # cle de l'en-tete -> libelle ; l'ordre est celui des diapos
     "cave": "Cave et nouveaux envs", "debits-energie": "Débits et énergie", "graphiques-ecrans": "Graphiques, écrans, visuels"}
 
 
+# Commits qui ne changent que l'en-tete de tous les plans (ajout de famille/parent/liens/spec) : pas une modification.
+COMMITS_ECARTES = ("e65d46087",)
+
+
 def _dates_git():
     """Un seul `git log` pour tous les plans : {chemin: (ajout, dernier)} ; le plus recent vient en premier."""
-    r = subprocess.run(["git", "log", "--name-status", "--format=@%as", "--", "tasks/plans"],
+    r = subprocess.run(["git", "log", "--name-status", "--format=@%H %as", "--", "tasks/plans"],
                        capture_output=True, text=True, encoding="utf-8", cwd=RACINE)
-    jour, dates = "", {}
+    jour, dates, ignore = "", {}, False
     for ligne in r.stdout.splitlines():
         if ligne.startswith("@"):
-            jour = ligne[1:]
+            sha, jour = ligne[1:].split()
+            ignore = sha.startswith(COMMITS_ECARTES)
+        elif ignore:
+            continue
         elif "	" in ligne:
             statut, chemin = ligne.split("	")[0], ligne.split("	")[-1]
             dernier, ajout = dates.get(chemin, (jour, ""))
@@ -93,7 +100,7 @@ h1{font-size:20px;margin:0 0 4px}p.s{color:var(--mut);margin:0 0 12px}
 .fam h2{font-size:14px;margin:0 0 8px;color:var(--c)}
 ul{list-style:none;margin:0;padding-left:16px;border-left:1px solid var(--line)}ul.r{padding-left:0;border:0}li{margin:4px 0}
 .p{display:block;width:100%;text-align:left;font:inherit;padding:4px 8px;border:2px solid var(--c);border-radius:5px;background:var(--bg);color:var(--fg);cursor:pointer}
-.p small{display:block;color:var(--mut);font-size:11px}.p.clos{opacity:.65;border-width:1px}.p.en-pause{border-style:dashed}.p.sel{outline:3px solid var(--fg)}.p.cache{display:none}
+.p small{display:block;color:var(--mut);font-size:11px}.p.clos{border-width:1px;color:var(--mut);background:repeating-linear-gradient(135deg,var(--bg) 0 5px,var(--line) 5px 6px)}.p.clos b{text-decoration:line-through;text-decoration-thickness:1px}.p.en-pause{border-style:dashed}.t{float:right;font-style:normal;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:0 6px;border-radius:8px;background:var(--mut);color:var(--bg)}.t.actif{background:var(--c);color:var(--bg)}.t.en-pause{background:none;border:1px dashed var(--mut);color:var(--mut)}.p.sel{outline:3px solid var(--fg)}.p.cache{display:none}
 aside{position:sticky;top:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}aside h2{font-size:16px;margin:0 0 4px}
 aside a{color:inherit}.k{color:var(--mut);font-size:12px;margin-top:8px}.ch{display:inline-block;margin:2px 4px 2px 0;padding:1px 8px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:none;color:inherit;font:inherit;font-size:12px}
 .b{height:6px;background:var(--line);border-radius:3px;margin:6px 0}.b i{display:block;height:100%;background:var(--fg);border-radius:3px}
@@ -102,9 +109,9 @@ aside a{color:inherit}.k{color:var(--mut);font-size:12px;margin-top:8px}.ch{disp
 <div class="wrap"><div class="fams" id="fams"></div><aside id="d">Cliquez sur un plan pour voir son détail, son plan et son spec.</aside></div>
 <script>const D=__DONNEES__;const P=Object.fromEntries(D.plans.map(p=>[p.nom,p]));
 const K=Object.keys(D.familles);const fr=s=>s.slice(8)+'/'+s.slice(5,7);let filtre='tous';
-document.getElementById('s').textContent=D.plans.length+' plans, '+D.plans.filter(p=>p.statut=='actif').length+' actifs. Parent = plan dont celui-ci découle ; liens = plans voisins.';
+document.getElementById('s').textContent=D.plans.length+' plans, '+D.plans.filter(p=>p.statut=='actif').length+' actifs. Fond hachuré et nom barré = plan clos ; pointillé = en pause ; cadre épais = en cours. Parent = plan dont celui-ci découle ; liens = plans voisins.';
 const bar=document.getElementById('bar');['tous','actif','clos','en-pause'].forEach(f=>{const b=document.createElement('button');b.textContent=f;b.setAttribute('aria-pressed',f==filtre);b.onclick=()=>{filtre=f;[...bar.children].forEach(x=>x.setAttribute('aria-pressed',x==b));document.querySelectorAll('.p').forEach(e=>e.classList.toggle('cache',f!='tous'&&P[e.dataset.n].statut!=f))};bar.appendChild(b)});
-function noeud(p,fam){const li=document.createElement('li');const b=document.createElement('button');b.className='p '+p.statut;b.dataset.n=p.nom;b.innerHTML=p.nom+'<small>'+fr(p.cree)+' → '+fr(p.maj)+' · '+p.pct+' %</small>';b.onclick=()=>montre(p.nom);li.appendChild(b);
+function noeud(p,fam){const li=document.createElement('li');const b=document.createElement('button');b.className='p '+p.statut;b.dataset.n=p.nom;b.innerHTML='<em class="t '+p.statut+'">'+({actif:'en cours',clos:'clos','en-pause':'en pause'})[p.statut]+'</em><b>'+p.nom+'</b><small>'+fr(p.cree)+' → '+fr(p.maj)+' · '+p.pct+' %</small>';b.onclick=()=>montre(p.nom);li.appendChild(b);
 const fils=D.plans.filter(q=>q.parent==p.nom&&q.famille==fam);if(fils.length){const u=document.createElement('ul');fils.forEach(q=>u.appendChild(noeud(q,fam)));li.appendChild(u)}return li}
 K.forEach((k,i)=>{const f=document.createElement('section');f.className='fam';f.style.setProperty('--c','var(--f'+i+')');f.innerHTML='<h2>'+D.familles[k]+'</h2>';const u=document.createElement('ul');u.className='r';
 D.plans.filter(p=>p.famille==k&&!(p.parent&&P[p.parent]&&P[p.parent].famille==k)).forEach(p=>u.appendChild(noeud(p,k)));f.appendChild(u);document.getElementById('fams').appendChild(f)});
