@@ -8,3 +8,5 @@ case "$chemin" in
     *) exit 0 ;;
 esac
 node "$CLAUDE_PROJECT_DIR/.claude/hooks/index_plans.mjs" || exit 0
+# Organigramme des plans (page web, json, pptx) : meme declencheur, ~3 s, ne bloque jamais.
+python "$CLAUDE_PROJECT_DIR/outils_docs/scripts_python/maintenance/organigramme_plans.py" >/dev/null 2>&1 || true

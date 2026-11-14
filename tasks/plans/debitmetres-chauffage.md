@@ -6,6 +6,9 @@ cree: 2026-11-08
 maj: 2026-11-13
 source: graceful-orbiting-pudding.md
 objectif: Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran
+famille: debits-energie
+liens: debits-deux-cartes, equilibrage-par-la-carte, historique-debits
+spec: 2026-11-09-debits-deux-cartes-design.md
 ---
 # Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web
 

@@ -5,6 +5,9 @@ objectif: Modifier ou ajouter des lignes à l'autoexec.bat d'une carte depuis l'
 statut: clos
 cree: 2026-11-03
 maj: 2026-11-09
+famille: build
+liens: autoexec-mqtt-tapp, energie-differentiel, jauges-cuve
+spec: 2026-11-03-onglet-autoexec-bat-design.md
 ---
 # Onglet « autoexec.bat » de l'Assistant persist
 

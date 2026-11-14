@@ -5,6 +5,9 @@ objectif: Préparer sur le PC un graphique pour une carte, le voir avec ses vrai
 statut: clos
 cree: 2026-11-03
 maj: 2026-11-09
+famille: graphiques-ecrans
+liens: atelier-destinations, energie-atelier
+spec: 2026-11-03-atelier-graphiques-design.md
 ---
 # Atelier des graphiques
 

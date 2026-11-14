@@ -5,6 +5,8 @@ objectif: Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restan
 statut: actif
 cree: 2026-10-26
 maj: 2026-10-26
+famille: modbus-reseau
+spec: 2026-10-26-ethernet-p4-design.md
 ---
 # Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)
 

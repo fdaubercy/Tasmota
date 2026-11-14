@@ -5,6 +5,10 @@ objectif: Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier
 statut: actif
 cree: 2026-11-11
 maj: 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée)
+famille: cave
+parent: cave-s3-waveshare
+liens: cave-s3-waveshare, classement-par-lieu, debits-deux-cartes, ecran-cave-vues-commandes, lieu-partage-syslog-mqtt, visuel-reglage-volets
+spec: 2026-11-11-visuel-volets-reglage-durees-design.md
 ---
 # Deux envs : serveur du grenier du RDC et Sonoff de la porte de la cave ; cave S3
 

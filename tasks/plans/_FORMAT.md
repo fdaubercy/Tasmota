@@ -14,6 +14,10 @@ objectif: Une phrase : le but principal du plan   # repris dans tasks/README.md 
 statut: actif                  # actif | en-pause | clos
 cree: 2026-10-18
 maj: 2026-10-18
+famille: build                 # build | methode | modbus-reseau | cave | debits-energie | graphiques-ecrans (organigramme)
+parent: autre-plan             # plan dont celui-ci découle, même famille (facultatif ; racine de l'arbre sinon)
+liens: plan-a, plan-b          # plans voisins, toutes familles (facultatif)
+spec: 2026-11-09-xxx-design.md # spec(s) de docs/superpowers/specs/ (facultatif)
 source: reprendre-serialized-firefly.md   # plan d'origine dans ~/.claude/plans (facultatif)
 reprise: tasks/reprise-chantier-modbus-grenier.md                 # (facultatif)
 ---

@@ -5,6 +5,8 @@ objectif: Voir sur la façade de l'accueil du P4 et de la carte du rideau l'éta
 statut: actif
 cree: 2026-11-13
 maj: 2026-11-13
+famille: graphiques-ecrans
+liens: build-reparations, ecran-cave-vues-commandes
 ---
 # Façade du garage : fins de course et décor
 

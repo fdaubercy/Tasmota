@@ -5,6 +5,9 @@ objectif: Etendre a tous les envs personnels le lib_ignore valide sur la cuve, c
 statut: clos
 cree: 2026-10-31
 maj: 2026-11-02
+famille: build
+parent: lib-ignore-cuve
+liens: lib-ignore-cuve
 ---
 # lib_ignore pour chaque env personnel
 

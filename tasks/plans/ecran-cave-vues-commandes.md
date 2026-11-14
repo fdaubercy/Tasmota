@@ -5,6 +5,10 @@ objectif: Commander les appareils de la cave et voir son état sur l'écran 7B e
 statut: actif
 cree: 2026-11-12
 maj: 2026-11-13
+famille: cave
+parent: envs-grenier-rdc-sonoff-cave
+liens: atelier-ecrans, build-reparations, debits-deux-cartes, envs-grenier-rdc-sonoff-cave, facade-garage-capteurs
+spec: 2026-11-12-ecran-cave-vues-commandes-design.md
 ---
 # Écran 7B de la cave : plan de réalisation
 

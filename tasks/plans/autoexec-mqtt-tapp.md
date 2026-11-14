@@ -6,6 +6,9 @@ cree: 2026-11-05
 maj: 2026-11-09
 source: squishy-imagining-raven.md
 objectif: Envoyer l'autoexec.bat par MQTT, signaler une commande non compilée pour la carte, et savoir fabriquer un .tapp (document, script, page de l'annuaire)
+famille: build
+parent: autoexec-bat
+liens: autoexec-bat, energie-differentiel, jauges-cuve
 ---
 # Envoi MQTT, commandes par carte, extensions .tapp
 

@@ -5,6 +5,9 @@ objectif: Dessiner sous les curseurs des volets une façade dont les tabliers su
 statut: actif
 cree: 2026-11-11
 maj: 2026-11-12
+famille: graphiques-ecrans
+liens: envs-grenier-rdc-sonoff-cave
+spec: 2026-11-11-visuel-volets-reglage-durees-design.md
 ---
 # Visuel des volets et réglage des durées
 

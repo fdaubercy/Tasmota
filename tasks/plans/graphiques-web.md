@@ -6,6 +6,8 @@ statut: clos
 cree: 2026-10-18
 maj: 2026-10-20
 source: resilient-soaring-stearns.md
+famille: graphiques-ecrans
+liens: modbus-garage, plan-par-conversation
 ---
 # Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
 

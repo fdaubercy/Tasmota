@@ -5,6 +5,9 @@ objectif: Modifier sur le PC la disposition d'un écran tactile de carte (objets
 statut: actif
 cree: 2026-11-11
 maj: 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits)
+famille: graphiques-ecrans
+liens: debits-deux-cartes, ecran-cave-vues-commandes, etiquettes-qrcode
+spec: 2026-11-11-atelier-ecrans-design.md, 2026-11-12-atelier-ecrans-ameliorations-design.md
 ---
 # Atelier des écrans
 

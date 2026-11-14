@@ -5,6 +5,10 @@ objectif: Reprendre un env existant dans la page 7900 pour le modifier sans perd
 statut: clos
 cree: 2026-10-29
 maj: 2026-10-30
+famille: build
+parent: assistant-persist
+liens: assistant-persist
+spec: 2026-10-27-assistant-persist-design.md
 ---
 # Assistant persist — modification et suppression d'un env (A10)
 

@@ -6,6 +6,7 @@ statut: clos
 cree: 2026-10-26
 maj: 2026-10-27
 source: dynamic-floating-cosmos.md
+famille: modbus-reseau
 ---
 # Alerte web « firmware du coprocesseur ESP32-C6 pas à jour » sur les P4
 

@@ -5,6 +5,9 @@ objectif: Retrouver les cartes par emplacement dans la maison sur la page Build 
 statut: clos
 cree: 2026-11-10
 maj: 2026-11-11
+famille: build
+liens: envs-grenier-rdc-sonoff-cave, lieu-partage-syslog-mqtt
+spec: 2026-11-10-classement-par-lieu-design.md
 ---
 # Classement des cartes par lieu — plan de mise en œuvre
 

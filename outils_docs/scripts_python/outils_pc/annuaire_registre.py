@@ -260,6 +260,16 @@ OUTILS = [
         [_port("http", 7980)],
         "http",
         "Console capturée : " + CONSOLE.format("fabrique_tapp") + ". Sources et archives : data/extensions/."),
+    Outil(
+        "organigramme_plans", "Organigramme des plans", "Organigramme des plans", GROUPES[4],
+        "Montre les plans de tasks/plans/ en arbre par famille, avec statut, % et dates ; un clic ouvre le détail, le plan et son spec.",
+        "Page web en lecture seule qui lit les en-têtes des plans (famille, parent, liens, spec) et leur historique git, "
+        "et les montre en arbre par famille : un clic sur un plan donne son objectif, ses plans voisins et les liens vers "
+        "le plan et son spec sur GitHub. Seul paramètre ici : le port de la page (7990). Rien n'est écrit : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/organigramme_plans_web.py",
+        [_port("http", 7990)],
+        "http",
+        "Console capturée : " + CONSOLE.format("organigramme_plans") + "."),
 ]
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.

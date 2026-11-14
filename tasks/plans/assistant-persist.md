@@ -5,6 +5,9 @@ objectif: Créer le persist, l'autoexec et les sections de build d'une nouvelle 
 statut: clos
 cree: 2026-10-27
 maj: 2026-10-30
+famille: build
+liens: assistant-persist-modification
+spec: 2026-10-27-assistant-persist-design.md
 ---
 # Assistant de création du persist — plan d'implémentation
 

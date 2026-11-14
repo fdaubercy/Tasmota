@@ -5,6 +5,8 @@ objectif: Réduire le temps du scan LDF et de la compilation de l'env cuve en ig
 statut: clos
 cree: 2026-10-31
 maj: 2026-11-01
+famille: build
+liens: lib-ignore-envs
 ---
 # Essai lib_ignore sur l'env de la cuve
 

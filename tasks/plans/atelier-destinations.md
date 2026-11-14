@@ -5,6 +5,10 @@ objectif: Poser un graphique de l'atelier sur une page dédiée, sur /graphiques
 statut: clos
 cree: 2026-11-04
 maj: 2026-11-08
+famille: graphiques-ecrans
+parent: atelier-graphiques
+liens: atelier-graphiques
+spec: 2026-11-04-atelier-destinations-televersement-design.md
 ---
 # Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »
 

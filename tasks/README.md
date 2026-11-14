@@ -13,16 +13,17 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-48 plans : 22 actif, 1 en-pause, 25 clos.
+49 plans : 23 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | █████░░░░░ 49 % (29/68) | 39 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
-| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | █░░░░░░░░░ 13 % (4/26) | 22 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
+| [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ███████░░░ 66 % (39/68) | 29 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
+| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ████░░░░░░ 38 % (11/26) | 15 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
+| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
+| [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █░░░░░░░░░ 14 % (4/26) | 22 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 83 % (70/91) | 21 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ██████░░░░ 60 % (35/51) | 16 étapes, 4 améliorations | 2026-11-08 | 2026-11-13 |
 | [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 87 % (34/41) | 7 étapes | 2026-11-12 | 2026-11-13 |
-| [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 89 % (50/56) | 6 étapes | 2026-11-12 | 2026-11-13 |
 | [Façade du garage (P4 et carte du rideau) : fins de course animées, porte, chèvrefeuille, pergola et jasmin](plans/facade-garage-capteurs.md) | Voir sur la façade de l'accueil du P4 et de la carte du rideau l'état réel des deux fins de course, dans un dessin fidèle au garage | actif | ████░░░░░░ 38 % (7/13) | 6 étapes, 1 amélioration | 2026-11-13 | 2026-11-13 |
 | [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service | actif | ████░░░░░░ 43 % (44/95) | 51 étapes, 3 améliorations | 2026-11-11 | 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée) |
 | [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) | Dessiner sous les curseurs des volets une façade dont les tabliers suivent la position réelle en direct, et régler tempsMontee et tempsDescente depuis la page Configuration avec les boutons existants | actif | ████████░░ 79 % (38/46) | 8 étapes, 1 amélioration | 2026-11-11 | 2026-11-12 |
@@ -68,20 +69,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 49 %
+#### [Atelier des visuels d'accueil (page 7990) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 66 %
 
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `banc_visuel.be` écrit (lancé par `banc_visuel.py`, code de sortie 0/1) : sans `/json/visuel.json` aucun driver ;
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Banc lancé : rouge (modules absents)
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `visuelFonctions.be` et `controleVisuel.be` écrits (charte des logs ; aucun nom de builtin Berry en variable) ;
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Cenv : liste `visuel_accueil` ajoutée à `[berry_commun]`, `${berry_commun.visuel_accueil}` dans le
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : `relecteur-berry` lancé, remarques traitées
-- A3 — Côté carte : `visuelFonctions.be`, `controleVisuel.be`, cenv : Commit `feat(visuel): module Berry du visuel d'accueil, route /visuel, liste visuel_accueil exclue partout (A3)`
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : `test_visuel_js.mjs` écrit (`node`, faux `document` minimal ou `jsdom` absent : le test construit le SVG par
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Test lancé : rouge
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : `visuel.js` écrit ; test vert ; `node --check` vert
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Commit `feat(visuel): moteur visuel.js des calques de l'accueil (A4)`
 - A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Tests lancés : rouges
 - A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : Cible `build/cible_atelier_visuels.py` (`NOM_CIBLE = "atelier_visuels"`, page détachée, modèle `cible_tapp.py`),
 - A5 — Outil 7990 : squelette, import de la photo, deux modes de fond, poids : `relecteur-pages-web` lancé, remarques traitées
@@ -113,15 +104,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
 - Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
 
-#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 13 %
+#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 38 %
 
-- A2 — Verrou de fichier (`build_reparations_verrou.py`) : Écrire d'abord `test_build_reparations_verrou.py` (rouge) : un processus Python de test ouvre un fichier temporaire en
-- A2 — Verrou de fichier (`build_reparations_verrou.py`) : Créer `outils_docs/scripts_python/outils_pc/build_reparations_verrou.py` : `processus_du_fichier(chemin: str) -> list[dict]`
-- A2 — Verrou de fichier (`build_reparations_verrou.py`) : Banc vert, mutant : retirer la liste blanche ou le garde du pid de la série doit rendre le banc rouge
-- A3 — Moteur et branchement dans la série : Écrire d'abord les tests dans `test_build_serie.py` (nouveau groupe, faux `pio` qui échoue avec un journal de verrou puis
-- A3 — Moteur et branchement dans la série : Étendre `build_reparations.py` : `Reparateur(serie, regles, horloge=time.monotonic)` avec
-- A3 — Moteur et branchement dans la série : Brancher dans `build_serie.py::Serie._execute_env` (quelques lignes) : boucle de relance autour de `_lance_pio`
-- A3 — Moteur et branchement dans la série : Bancs `test_build_serie.py` et `test_build_reparations.py` verts, mutants (limite de relances retirée, boucle sans signature,
 - A4 — Routes de la page (`build_web.py`) : Écrire d'abord les tests dans `test_build_web.py` : `GET /reparations` rend règles (base + locales) et historique de la
 - A4 — Routes de la page (`build_web.py`) : Ajouter les routes dans `build_web.py` (quelques lignes, logique dans `build_reparations.py`)
 - A5 — Page : bandeau, choix, panneau « Réparations » : Écrire d'abord la sonde `test_build_page_reparations_chrome.py` (rouge ; pas de pause fixe, attendre des conditions) :
@@ -139,6 +123,41 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Retour au plan en cours avant ce chantier : Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs`
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
+
+#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 90 %
+
+- A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
+- A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
+- A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Commit
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
+- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
+
+#### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 14 %
+
+- A2 — Lancement de l'audit par la page : `menage_lancement.py::lance` : `claude -p` en lecture seule (outils Read, Grep, Glob, Bash restreint ; hooks coupés ; jamais `bypassPermissions`), paramètres validés contre une liste blanche (dossiers, catégories, entier borné pour l'ancienneté, modèle parmi sonnet/opus/haiku)
+- A2 — Lancement de l'audit par la page : Refus si un build tourne (appel de la vraie détection de `build_serie`, jamais un `builds_en_cours` factice), refus si un audit est déjà en cours, délai maximal avec arrêt propre du processus fils
+- A2 — Lancement de l'audit par la page : Rapport lu, validé (A1), chemins ramenés au dépôt, valeurs ressemblant à des secrets masquées avant d'aller à la page
+- A2 — Lancement de l'audit par la page : Banc `test_menage_lancement.py` avec un faux `claude` (processus qui rend un JSON fixe) : succès, JSON invalide, délai dépassé, build en cours, double lancement
+- A3 — Mémoire « à garder » : `menage_memoire.py` : liste des chemins gardés dans `%LOCALAPPDATA%\outils_tasmota\menage\garde.json` (hors dépôt, écriture atomique, sauvegarde horodatée)
+- A3 — Mémoire « à garder » : L'agent reçoit cette liste en entrée et ne repropose pas ces chemins ; un chemin gardé qui n'existe plus est retiré à la lecture
+- A3 — Mémoire « à garder » : Banc `test_menage_memoire.py` : ajout, retrait, fichier corrompu, écriture interrompue
+- A4 — Serveur et routes : `menage_web.py` : `GET /` (page), `GET /etat`, `POST /lancer`, `GET /rapport`, `POST /garder`, `POST /ignorer` ; règle d'accès de `acces_web.py` (en-tête `X-Menage: 1`, même origine, jeton depuis un autre appareil) ; exception inattendue = 500 avec son message
+- A4 — Serveur et routes : Fiche de présence de l'outil pour l'annuaire, `--sans-navigateur`, `--local`
+- A4 — Serveur et routes : Banc `test_menage_web.py` : refus sans en-tête, mauvaise origine, paramètre hors liste blanche, client distant sans jeton
+- A5 — Page : Paramètres : périmètre (cases par dossier), catégories de contrôles, ancienneté du « en cours », modèle et effort ; valeurs précédentes mémorisées dans le navigateur (`localStorage` gardé par try/catch)
+- A5 — Page : Rapport : tableau trié par risque, une ligne par proposition (chemin, constat, preuve, ce que ça casserait, avantages/inconvénients), filtres par catégorie et par risque, lignes « en cours » repliées
+- A5 — Page : Actions de version 1 : « Garder » (A3), « Ignorer cette fois », « Copier la liste » ; aucun bouton qui écrit dans le dépôt
+- A5 — Page : Textes de la page échappés (aucun `innerHTML` sur une valeur du rapport), mode sombre, avancement et bouton Arrêter pendant l'audit
+- A5 — Page : Sonde Chrome hermétique `test_menage_page_chrome.py` (faux `claude`), Chrome headless `sonde_*` arrêtés après coup (compter les `HasExited` faux 15 s après)
+- A6 — Branchement dans l'annuaire et dans les outils : Tuile de l'annuaire (groupe « Maintenance »), tâche VS Code « Outil : ménage du dépôt », cible Custom détachée `build/cible_menage.py` (`NOM_CIBLE` ajouté à `CIBLES_OUTILS` de `.claude/hooks/garde_build.py`, `garde_build` vérifie la liste)
+- A6 — Branchement dans l'annuaire et dans les outils : Banc `build/test_cible_menage.py`, `test_garde_build.py` vert
+- A6 — Branchement dans l'annuaire et dans les outils : Entrée dans la Carte des documents de `CLAUDE.md`, section dans `outils_docs/README.md`, ligne dans `outils_docs/SOUS_AGENTS.md`
+- A6 — Branchement dans l'annuaire et dans les outils : Relecture par `relecteur-outils-python` et `relecteur-pages-web` avant commit
+- A6 — Branchement dans l'annuaire et dans les outils : Commit (avec `controleur-secrets` puis `preparateur-push` avant le push)
+- A7 — Essais réels et décision sur la version 2 : Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés
+- A7 — Essais réels et décision sur la version 2 : Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan
+- Amélioration [projet] : Version 2 : application d'un lot depuis la page (selon A7)
+- Amélioration [projet] : Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles
 
 #### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 83 %
 
@@ -197,15 +216,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A9 — Essai sur carte (écran branché) : Marche manuelle de la pompe : flotteurs ignorés, réactivés à l'arrêt et après la minuterie
 - A9 — Essai sur carte (écran branché) : Veille, réveil sans action, luminosité
 - A9 — Essai sur carte (écran branché) : RAM de l'écran (relecture finale du 2026-11-13) : `BRY: GC` sur 10 min, écran allumé ; `affiche` recrée chaque seconde le modèle, la table des valeurs (plus de 60 entrées) et parcourt l'historique. Si le tas Berry grimpe ou si le GC passe plus d'une fois toutes les quelques secondes : ne recalculer `valeurs` que si le modèle a changé, l'horloge à part, les hauts d'axe seulement à l'ajout d'un point
-
-#### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 89 %
-
-- A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
-- A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
-- A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Commit
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Mise en service par l'utilisateur, une fois : Settings > Pages > Source « Deploy from a branch », branche
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
 
 #### [Façade du garage (P4 et carte du rideau) : fins de course animées, porte, chèvrefeuille, pergola et jasmin](plans/facade-garage-capteurs.md) — 38 %
 

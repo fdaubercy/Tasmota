@@ -125,6 +125,8 @@ def prevoit_publication(racine, envs, cartes=None):
     pointe = _pointe(racine)
     avant = _publies(racine, pointe)
     apres, refus = {".nojekyll": ""}, []
+    if "organigramme.html" in avant:            # page d'un autre outil (maintenance/organigramme_plans.py), gardee telle quelle
+        apres["organigramme.html"] = avant["organigramme.html"]
     for env in lien:
         reglage = modele.charge_reglage(racine, env)
         persist = modele.persist_de(racine, env)

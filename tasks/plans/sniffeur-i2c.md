@@ -6,6 +6,8 @@ cree: 2026-10-31
 maj: 2026-10-31
 source: iridescent-dazzling-journal.md
 objectif: Voir en direct le trafic I2C de n'importe quelle carte du parc, décodé jusqu'au registre, et lire ou écrire un registre par la carte ou au banc
+famille: modbus-reseau
+spec: 2026-10-31-sniffeur-i2c-design.md
 ---
 # Sniffeur I2C — plan
 

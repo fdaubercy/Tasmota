@@ -5,6 +5,9 @@ objectif: Garder en flash l'historique des 6 débits et du total, et les voir en
 statut: actif
 cree: 2026-11-08
 maj: 2026-11-09
+famille: debits-energie
+parent: debitmetres-chauffage
+liens: debitmetres-chauffage
 ---
 # Historique et page /graphiques des 6 débits de la nourrice
 

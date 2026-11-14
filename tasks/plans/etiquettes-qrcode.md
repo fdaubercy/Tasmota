@@ -5,6 +5,10 @@ objectif: Composer par env un QR code stylé qui affiche l identité de la carte
 statut: actif
 cree: 2026-11-12
 maj: 2026-11-14
+famille: graphiques-ecrans
+parent: atelier-ecrans
+liens: atelier-ecrans
+spec: 2026-11-12-etiquettes-qrcode-design.md
 ---
 # Étiquettes QR code des cartes
 

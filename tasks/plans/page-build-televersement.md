@@ -5,6 +5,8 @@ objectif: Compiler et téléverser en série (COM ou OTA) les envs cochés depui
 statut: actif
 cree: 2026-10-24
 maj: 2026-11-09
+famille: build
+spec: 2026-10-24-page-build-televersement-design.md
 ---
 # Page web « Build et téléversement » — plan d'implémentation
 

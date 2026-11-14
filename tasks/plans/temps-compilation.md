@@ -6,6 +6,7 @@ cree: 2026-11-01
 maj: 2026-11-02
 source: breezy-mapping-backus.md
 objectif: Ne plus recompiler tasmota.ino.cpp ni purger .pio/build sans raison, mesurer avant de séparer les dossiers de build par env, puis montrer l'occupation mémoire et régler les partitions depuis la page build
+famille: build
 ---
 # Réduire le temps des compilations
 

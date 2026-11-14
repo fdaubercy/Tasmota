@@ -6,6 +6,8 @@ cree: 2026-10-31
 maj: 2026-11-02
 source: concurrent-crafting-knuth.md
 objectif: Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554
+famille: cave
+liens: envs-grenier-rdc-sonoff-cave, relais-cave-s3, voie-reseau-ethernet
 ---
 # Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO
 

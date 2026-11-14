@@ -6,6 +6,8 @@ cree: 2026-11-03
 maj: 2026-11-03
 source: squishy-imagining-raven.md
 objectif: Sauvegarder, comparer, modifier paramètre par paramètre et restaurer la configuration (/dl : Settings + .drvset*) de chaque carte depuis la page build
+famille: build
+liens: energie-differentiel, jauges-cuve
 ---
 # Onglet « Sauvegarde configuration » de la page build
 

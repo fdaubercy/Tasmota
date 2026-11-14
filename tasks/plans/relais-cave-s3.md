@@ -6,6 +6,9 @@ cree: 2026-10-31
 maj: 2026-10-31
 source: concurrent-crafting-knuth.md
 objectif: Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32-S3 à 8 relais pour la remplacer
+famille: cave
+parent: audit-relais-cave-s3
+liens: audit-relais-cave-s3, cave-s3-waveshare
 ---
 # Cave — envs ESP32/S3 alignés sur la carte en ligne, audit S3, carte de remplacement
 

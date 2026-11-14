@@ -6,6 +6,9 @@ statut: clos
 cree: 2026-10-28
 maj: 2026-10-28
 source: tranquil-sleeping-taco.md
+famille: modbus-reseau
+parent: blocage-trappe-mpu6050
+liens: blocage-trappe-mpu6050
 ---
 # Capteur d'inclinaison MPU6050 pour les volets (trappe du grenier)
 

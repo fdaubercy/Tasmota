@@ -6,6 +6,9 @@ statut: clos
 cree: 2026-10-21
 maj: 2026-10-22
 source: partitioned-hatching-key.md
+famille: methode
+parent: actions-audit-berry
+liens: actions-audit-berry
 ---
 # Audit complet — scripts Berry, environnements de build, solidification, logs et communications
 

@@ -6,6 +6,8 @@ statut: clos
 cree: 2026-10-18
 maj: 2026-10-18
 source: reprendre-serialized-firefly.md
+famille: methode
+liens: plan-par-conversation
 ---
 # Suivi des plans de travail (extension VS Code + mod)
 

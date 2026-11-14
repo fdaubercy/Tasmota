@@ -5,6 +5,8 @@ objectif: Depuis une photo réelle, produire par carte un fond (photo allégée 
 statut: actif
 cree: 2026-11-13
 maj: 2026-11-14
+famille: graphiques-ecrans
+spec: 2026-11-13-atelier-visuels-accueil-design.md
 ---
 # Atelier des visuels d'accueil
 

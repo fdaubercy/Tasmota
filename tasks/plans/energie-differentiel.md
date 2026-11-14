@@ -6,6 +6,10 @@ cree: 2026-10-31
 maj: 2026-11-09
 source: squishy-imagining-raven.md
 objectif: Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h)
+famille: debits-energie
+parent: jauges-cuve
+liens: autoexec-bat, autoexec-mqtt-tapp, jauges-cuve, sauvegarde-config-cartes
+spec: 2026-10-31-page-energie-differentiel-design.md, 2026-11-03-onglet-autoexec-bat-design.md
 ---
 # Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie »
 

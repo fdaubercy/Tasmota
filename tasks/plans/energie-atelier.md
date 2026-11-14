@@ -5,6 +5,9 @@ objectif: Que l'atelier reprenne et modifie la page /energie du différentiel (a
 statut: clos
 cree: 2026-11-08
 maj: 2026-11-09
+famille: debits-energie
+liens: atelier-graphiques
+spec: 2026-11-08-atelier-energie-differentiel-design.md
 ---
 # Atelier des graphiques — page « Énergie » du différentiel
 

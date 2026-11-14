@@ -5,6 +5,8 @@ objectif: Arrêter un volet et loguer une erreur quand son inclinaison ne bouge 
 statut: clos
 cree: 2026-10-28
 maj: 2026-10-29
+famille: modbus-reseau
+liens: inclinaison-trappe-mpu6050
 ---
 # Détection de blocage d'un volet par son inclinaison (MPU6050)
 

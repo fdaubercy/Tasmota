@@ -5,6 +5,8 @@ objectif: Guider pas à pas la synchro du fork sur la page 7500, avec résolutio
 statut: clos
 cree: 2026-10-27
 maj: 2026-10-29
+famille: build
+spec: 2026-10-27-assistant-synchro-fork-design.md
 ---
 # Assistant pas à pas de la synchro du fork — plan d'implémentation
 

@@ -5,6 +5,8 @@ objectif: Qu'une carte en voie Ethernet garde tous ses services et ses esclaves,
 statut: actif
 cree: 2026-11-02
 maj: 2026-11-08
+famille: modbus-reseau
+liens: cave-s3-waveshare
 ---
 # Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi
 

@@ -5,6 +5,8 @@ objectif: Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 7
 statut: actif
 cree: 2026-10-22
 maj: 2026-10-26
+famille: methode
+liens: audit-berry
 ---
 # Plan d'action de l'audit Berry (propositions P2.1 à P10.7)
 

@@ -6,6 +6,9 @@ statut: clos
 cree: 2026-10-18
 maj: 2026-10-18
 source: bright-mixing-phoenix.md
+famille: methode
+parent: suivi-plan
+liens: graphiques-web, modbus-garage, suivi-plan
 ---
 # La vue de droite suit le plan de la conversation active
 

@@ -6,6 +6,8 @@ cree: 2026-10-31
 maj: 2026-11-09
 source: squishy-imagining-raven.md
 objectif: Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4
+famille: debits-energie
+liens: autoexec-bat, autoexec-mqtt-tapp, energie-differentiel, sauvegarde-config-cartes
 ---
 # Page dédiée « Niveau de la cuve » (jauges A, H et B)
 

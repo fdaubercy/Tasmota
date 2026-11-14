@@ -5,6 +5,10 @@ objectif: Faire passer les 6 débits de la carte d'acquisition (esclave ModBus i
 statut: actif
 cree: 2026-11-09
 maj: 2026-11-11
+famille: debits-energie
+parent: debitmetres-chauffage
+liens: atelier-ecrans, debitmetres-chauffage, ecran-cave-vues-commandes, envs-grenier-rdc-sonoff-cave
+spec: 2026-11-09-debits-deux-cartes-design.md
 ---
 # Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître
 

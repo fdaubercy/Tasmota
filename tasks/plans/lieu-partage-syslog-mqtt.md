@@ -5,6 +5,10 @@ objectif: Choisir un lieu une fois dans l'annuaire et le retrouver dans les page
 statut: clos
 cree: 2026-11-11
 maj: 2026-11-11
+famille: build
+parent: classement-par-lieu
+liens: classement-par-lieu, envs-grenier-rdc-sonoff-cave
+spec: 2026-11-10-classement-par-lieu-design.md, 2026-11-11-lieu-partage-syslog-mqtt-design.md
 ---
 # Lieu partagé, syslog et sniffeur MQTT — plan de mise en œuvre
 

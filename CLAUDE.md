@@ -1048,3 +1048,11 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     et `test_qrcode_carte_chrome.py`, `berry/banc_qrcode_page.py`, `build/test_qrcode_build.py`, `build/test_cible_etiquettes_qr.py`.
     Mode d'emploi : `outils_docs/README.md` ; spec `docs/superpowers/specs/2026-11-12-etiquettes-qrcode-design.md` ; plan
     `tasks/plans/etiquettes-qrcode.md`.
+  - `maintenance/organigramme_plans.py` (+ `organigramme_pptx.mjs`, `outils_pc/organigramme_plans_web.py`) — organigramme des plans
+    de `tasks/plans/` (2026-11-14) : lit les clés `famille:`, `parent:`, `liens:`, `spec:` de l'en-tête de chaque plan (format :
+    `tasks/plans/_FORMAT.md`) et les dates git ; écrit `outils_docs/organigramme_plans/` (`plans.json`, `index.html` = vue arbre avec
+    détail au clic, `organigramme-plans.pptx` = synthèse + une diapo par famille, nécessite `pptxgenjs` hors dépôt dans
+    `%LOCALAPPDATA%\outils_tasmota\organigramme`). Régénéré par le hook `index_plans_edition.sh` à chaque édition d'un plan ;
+    `--verifier` (code 1 si en retard), `--publier` (GitHub Pages : `https://fdaubercy.github.io/Tasmota/organigramme.html`, branche
+    `etiquettes`, IPv4 masquées, jamais de force ; la publication des étiquettes QR garde ce fichier). Tuile « Organigramme des plans »
+    de l'annuaire, page http://127.0.0.1:7990 en lecture seule, banc `outils_pc/test_organigramme_plans_web.py`.

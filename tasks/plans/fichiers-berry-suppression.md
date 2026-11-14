@@ -5,6 +5,10 @@ objectif: Supprimer et renommer un env depuis la page Fichiers Berry, avec écri
 statut: clos
 cree: 2026-10-25
 maj: 2026-10-25
+famille: build
+parent: fichiers-berry-env
+liens: fichiers-berry-env
+spec: 2026-10-25-page-fichiers-berry-design.md
 ---
 # Supprimer et renommer un env depuis la page « Fichiers Berry par env »
 

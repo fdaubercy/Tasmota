@@ -6,6 +6,8 @@ statut: en-pause
 cree: 2026-10-31
 maj: 2026-10-31
 source: outils_docs/AUDIT_RELAIS_CAVE_S3_2026-10-31.md
+famille: cave
+liens: relais-cave-s3
 ---
 # Suites de l'audit de l'env S3 du serveur relais de la cave
 

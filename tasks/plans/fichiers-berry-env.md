@@ -5,6 +5,9 @@ objectif: Régler par une page web l'état de chaque fichier Berry par env (FS, 
 statut: clos
 cree: 2026-10-25
 maj: 2026-10-25
+famille: build
+liens: fichiers-berry-suppression
+spec: 2026-10-25-page-fichiers-berry-design.md
 ---
 # Page web « Fichiers Berry par env » — plan d'implémentation
 

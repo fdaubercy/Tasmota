@@ -6,6 +6,7 @@ cree: 2026-11-01
 maj: 2026-11-01
 source: cuddly-rolling-sprout.md
 objectif: Choisir sur la page Build les envs compilés par un simple pio run, sans ouvrir platformio_override.ini
+famille: build
 ---
 # Modifier `default_envs` depuis la page Build
 

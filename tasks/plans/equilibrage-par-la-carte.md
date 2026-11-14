@@ -6,6 +6,9 @@ cree: 2026-11-09
 maj: 2026-11-09
 source: graceful-orbiting-pudding.md
 objectif: Ouvrir le guide d'équilibrage depuis la carte des débits et y lire les 6 débits mesurés, sans les taper à la main
+famille: debits-energie
+parent: debitmetres-chauffage
+liens: debitmetres-chauffage
 ---
 # Page d'équilibrage servie par la carte des débits
 

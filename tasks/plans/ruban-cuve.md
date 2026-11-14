@@ -5,6 +5,9 @@ objectif: Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) e
 statut: actif
 cree: 2026-10-18
 maj: 2026-11-02
+famille: modbus-reseau
+parent: modbus-garage
+liens: modbus-garage
 ---
 # Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2
 
