@@ -43,10 +43,10 @@ secrets), `menage_memoire.py` (liste « à garder »), `build/cible_menage.py`.
 - [x] Banc `outils_pc/test_menage_rapport.py` : rapports valides et invalides (champ manquant, chemin hors dépôt, `..`, risque inconnu), avec mutants (validation retirée) — preuve : test_menage_rapport.py VERT (code 0), 2 mutants (chemin_sur, masque) acceptent le cas hostile, banc rouge sur un premier masquage incomplet corrigé
 
 ## A2 — Lancement de l'audit par la page
-- [ ] `menage_lancement.py::lance` : `claude -p` en lecture seule (outils Read, Grep, Glob, Bash restreint ; hooks coupés ; jamais `bypassPermissions`), paramètres validés contre une liste blanche (dossiers, catégories, entier borné pour l'ancienneté, modèle parmi sonnet/opus/haiku)
-- [ ] Refus si un build tourne (appel de la vraie détection de `build_serie`, jamais un `builds_en_cours` factice), refus si un audit est déjà en cours, délai maximal avec arrêt propre du processus fils
-- [ ] Rapport lu, validé (A1), chemins ramenés au dépôt, valeurs ressemblant à des secrets masquées avant d'aller à la page
-- [ ] Banc `test_menage_lancement.py` avec un faux `claude` (processus qui rend un JSON fixe) : succès, JSON invalide, délai dépassé, build en cours, double lancement
+- [x] `menage_lancement.py::lance` : `claude -p` en lecture seule (outils Read, Grep, Glob, Bash restreint ; hooks coupés ; jamais `bypassPermissions`), paramètres validés contre une liste blanche (dossiers, catégories, entier borné pour l'ancienneté, modèle parmi sonnet/opus/haiku) — preuve : outils_pc/menage_lancement.py::parametres, ::OPTIONS (Read,Grep,Glob,Bash limite, Write/Edit refuses, dontAsk, sans hooks, budget 3 $) ; banc : 10 cas de parametres hostiles refuses, options lues par un faux claude
+- [x] Refus si un build tourne (appel de la vraie détection de `build_serie`, jamais un `builds_en_cours` factice), refus si un audit est déjà en cours, délai maximal avec arrêt propre du processus fils — preuve : menage_lancement.py::Audit.lance (builds_en_cours injecte, double lancement), ::arrete, delai ; banc : refus pendant un build, 2e audit refuse, arret propre, delai de 2 s depasse, aucun processus orphelin
+- [x] Rapport lu, validé (A1), chemins ramenés au dépôt, valeurs ressemblant à des secrets masquées avant d'aller à la page — preuve : menage_lancement.py::_traite passe par menage_rapport.valide ; banc : rapport invalide (chemin ..) et sortie sans JSON refuses, erreur claude et code 1 propres
+- [x] Banc `test_menage_lancement.py` avec un faux `claude` (processus qui rend un JSON fixe) : succès, JSON invalide, délai dépassé, build en cours, double lancement — preuve : test_menage_lancement.py VERT (code 0) ; mutants : sans garde de build et sans liste blanche acceptent le cas hostile
 
 ## A3 — Mémoire « à garder »
 - [ ] `menage_memoire.py` : liste des chemins gardés dans `%LOCALAPPDATA%\outils_tasmota\menage\garde.json` (hors dépôt, écriture atomique, sauvegarde horodatée)
