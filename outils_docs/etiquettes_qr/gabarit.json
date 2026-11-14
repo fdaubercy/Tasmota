@@ -1,11 +1,41 @@
 {
-  "version": 1,
-  "lignes": [
-    {"source": "standard", "cle": "hostname", "libelle": "Hostname"},
-    {"source": "standard", "cle": "ip", "libelle": "IP"}
-  ],
-  "separateur": " : ",
-  "entre_lignes": " · ",
-  "style": {"points": "rounded", "coins": "extra-rounded", "couleur": "#000000", "fond": "#ffffff", "image": null},
-  "taille_mm": 25
+ "version": 1,
+ "lignes": [
+  {
+   "source": "standard",
+   "cle": "hostname",
+   "libelle": "Hostname"
+  },
+  {
+   "source": "standard",
+   "cle": "range_extender",
+   "libelle": "Passerelle Wifi"
+  },
+  {
+   "source": "standard",
+   "cle": "ip",
+   "libelle": "IP"
+  },
+  {
+   "source": "standard",
+   "cle": "ip",
+   "libelle": "URL",
+   "avant": "http://"
+  },
+  {
+   "source": "standard",
+   "cle": "topic",
+   "libelle": "Topic MQTT"
+  }
+ ],
+ "separateur": " : ",
+ "entre_lignes": " · ",
+ "style": {
+  "points": "rounded",
+  "coins": "extra-rounded",
+  "couleur": "#000000",
+  "fond": "#ffffff",
+  "image": null
+ },
+ "taille_mm": 35
 }

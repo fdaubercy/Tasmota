@@ -1,6 +1,6 @@
 {
  "version": 1,
- "texte": "Hostname : ECRAN-DEBITS-PAC · IP : 192.168.0.51",
+ "texte": "Hostname : ECRAN-DEBITS-PAC · Passerelle Wifi : ECRAN-DEBITS-PAC-GATEWAY · IP : 192.168.0.51 · URL : http://192.168.0.51 · Topic MQTT : chauffage/pac/ecran",
  "style": {
   "points": "rounded",
   "coins": "extra-rounded",
@@ -9,7 +9,7 @@
  },
  "image": null,
  "correction": "M",
- "modules": 33,
+ "modules": 53,
  "ip_inscrite": "192.168.0.51",
  "entre_lignes": " · "
 }
