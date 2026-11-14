@@ -37,6 +37,10 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
                      un lancement ou un build, si la table est refusee ou si les fichiers ont change depuis le diff)
     POST /continuer  {env, choix: continuer | passer} : reponse a la pause « rebranchez la carte » (409 si
                      aucune pause en cours ou si elle attend un autre env, 400 si choix invalide)
+    GET  /reparations regles (base + locales, origine, supprimable) et reparations de la serie ; lecture permise a distance
+    POST /reparation {env, choix: fermer | attendre | annuler} : reponse a un choix de reparation (400 choix invalide,
+                     409 aucune demande ouverte) ; POST /reparations/supprime {id} : retire une regle LOCALE (409 si
+                     de base, 400 si inconnue) ; ces deux POST : ce PC seulement (403 pour un client distant)
     GET  /cache      cache objet .cache : taille, objets inutilises depuis 30 jours et leur taille (rien n'est supprime)
     POST /cache/purger {} : supprime ces objets (409 pendant un lancement ou un build)
     GET  /defaut     bloc default_envs de platformio_override.ini : colonnes, actifs, apercu (build_defaut.lit)
@@ -70,6 +74,7 @@ import build_memoire
 import build_partitions
 import build_sauvegarde
 import build_serie
+import build_web_reparations
 import lieux
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "maintenance"))
@@ -223,7 +228,7 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
     etat = {"debut": float("inf")}                        # heure du dernier lancement accepte (inf : aucun, repli sur le dernier journal)
     verrou_sauvegarde = threading.Lock()
 
-    def traite_post(chemin, demande):
+    def traite_post(chemin, demande, client=None):
         reponse = build_sauvegarde.traite_post(chemin, demande, serie, racine, verrou_sauvegarde, adresse_carte)
         if reponse is not None:
             return reponse
@@ -260,6 +265,14 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
             return {"ok": True}
         if chemin == "/continuer":                         # ValueError (400) ou RuntimeError (409)
             serie.reprend(str(demande.get("env") or ""), str(demande.get("choix") or ""))
+            return {"ok": True}
+        if chemin in ("/reparation", "/reparations/supprime"):   # ce PC seulement ; ValueError 400, RuntimeError 409
+            if not acces_web.est_local(client):
+                raise PermissionError("réservé à ce PC")
+            if chemin == "/reparation":
+                serie.repond_reparation(str(demande.get("env") or ""), str(demande.get("choix") or ""))
+            else:
+                build_web_reparations.supprime(dossier, str(demande.get("id") or ""))
             return {"ok": True}
         if chemin == "/memoire/analyser":                  # relit le dernier build, sans pio : permis pendant un build
             env = str(demande.get("env") or "")
@@ -391,6 +404,8 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                     total, vieux = inventaire_cache()
                     self._json({"total": total, "objets": len(vieux), "liberable": sum(o for _, o in vieux),
                                 "jours": purge_cache_build.JOURS_DEFAUT})
+                elif url.path == "/reparations":          # lecture : permise aux clients distants
+                    self._json(build_web_reparations.liste(dossier, serie))
                 elif url.path == "/defaut":
                     self._json(build_defaut.lit(racine))
                 elif url.path == "/sauvegardes":
@@ -424,7 +439,9 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
                 demande = json.loads(self.rfile.read(longueur).decode("utf-8") or "{}")
                 if not isinstance(demande, dict):
                     raise ValueError("corps JSON attendu")
-                self._json(traite_post(urlsplit(self.path).path, demande))
+                self._json(traite_post(urlsplit(self.path).path, demande, self.client_address))
+            except PermissionError as erreur:
+                self._envoie(403, str(erreur).encode("utf-8"))
             except LookupError:
                 self._envoie(404, b"introuvable")
             except (ValueError, TypeError) as erreur:

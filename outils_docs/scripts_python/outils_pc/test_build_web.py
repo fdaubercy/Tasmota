@@ -693,6 +693,41 @@ def test_continuer(b):
     verifie(b.json("GET", "/execution")[1].get("pause", "absent"), None, "continuer : plus de pause a la fin")
 
 
+def test_reparations(b):
+    """GET /reparations (regles base + locales, historique), POST /reparation et /reparations/supprime : ce PC seulement."""
+    regle = {"id": "essai-local", "titre": "Regle d'essai", "motif": "zzz", "etapes": ["toutes"],
+             "actions": [{"action": "attendre", "parametres": {"secondes": 1}}]}
+    local = b.dossier / "reparations.json"
+    b.dossier.mkdir(parents=True, exist_ok=True)
+    local.write_text(json.dumps({"regles": [regle]}), encoding="utf-8")
+    statut, d = b.json("GET", "/reparations")
+    regles = {r["id"]: r for r in d["regles"]} if statut == 200 else {}
+    base = [r for r in regles.values() if r["origine"] == "base"]
+    verifie((statut, d.get("historique") if statut == 200 else None, "essai-local" in regles and regles["essai-local"]["origine"],
+             regles.get("essai-local", {}).get("supprimable"), bool(base), any(r["supprimable"] for r in base)),
+            (200, [], "locale", True, True, False), "reparations : GET = regles base + locale, historique vide")
+    verifie([b.requete("POST", "/reparation", {"env": A, "choix": "fermer"})[0],
+             b.requete("POST", "/reparation", {"env": A, "choix": "oups"})[0],
+             b.requete("POST", "/reparation", {"env": A, "choix": "fermer"}, entetes={})[0]], [409, 400, 403],
+            "reparation : aucune demande -> 409, choix inconnu -> 400, sans X-Build -> 403")
+    verifie([b.requete("POST", "/reparations/supprime", {"id": base[0]["id"]})[0],
+             b.requete("POST", "/reparations/supprime", {"id": "inconnue"})[0]], [409, 400],
+            "reparations/supprime : regle de base refusee (409), inconnue 400")
+    vrai = acces_web.est_local
+    acces_web.est_local = lambda adresse: False                                 # client distant avec le jeton
+    try:
+        cookie = {"X-Build": "1", "Cookie": f"{b.acces.cookie}={b.acces.jeton}"}
+        verifie([b.requete("GET", "/reparations", entetes={k: v for k, v in cookie.items() if k == "Cookie"})[0],
+                 b.requete("POST", "/reparation", {"env": A, "choix": "fermer"}, entetes=cookie)[0],
+                 b.requete("POST", "/reparations/supprime", {"id": "essai-local"}, entetes=cookie)[0]], [200, 403, 403],
+                "reparations : client distant = lecture seule (GET 200, deux POST 403)")
+    finally:
+        acces_web.est_local = vrai
+    verifie(local.is_file() and "essai-local" in local.read_text(encoding="utf-8"), True, "reparations : le distant n'a rien supprime")
+    verifie(b.json("POST", "/reparations/supprime", {"id": "essai-local"}), (200, {"ok": True}), "reparations/supprime : regle locale retiree")
+    verifie("essai-local" in [r["id"] for r in b.json("GET", "/reparations")[1]["regles"]], False, "reparations : disparue du GET")
+
+
 def test_fermeture_pendant_pause():
     """Ctrl+C du serveur pendant une pause : aucun envoi en vol, l'arret n'attend pas l'utilisateur."""
     with tempfile.TemporaryDirectory() as t:
@@ -780,7 +815,7 @@ def principal():
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe, test_defaut, test_cache, test_memoire_carte,
                          test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
-                         test_sortie_en_direct, test_erase_upload, test_fichiers, test_continuer):
+                         test_sortie_en_direct, test_erase_upload, test_fichiers, test_continuer, test_reparations):
                 test(b)
         finally:
             b.ferme()
