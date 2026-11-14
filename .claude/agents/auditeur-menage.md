@@ -64,6 +64,11 @@ Contrôles :
 6. **Dossiers vides, `.keep` inutiles, images volumineuses** (> 1 Mo) non référencées.
 7. **Poids du dépôt** : les 10 plus gros fichiers suivis (un `du` par dossier suspect, sans pipe), s'ils sont inutiles.
 
+CHAMP `vers` : un chemin EXACT relatif au dépôt, sans texte autour, sans `<...>`, sans parenthèse ni commentaire, jamais une
+chaîne vide ; omets le champ s'il n'y a pas de déplacement. Pour un déplacement qui concerne plusieurs fichiers, fais UNE
+proposition par fichier ou par dossier entier (chemin = le dossier, vers = son nouvel emplacement exact). Tout commentaire (dossier
+à créer, nombre de fichiers concernés, raison du choix) va dans `constat`, jamais dans `vers`.
+
 COMMANDES BASH : une seule commande simple par appel, sans `cd` (le dépôt est le dossier courant), sans pipe, sans `;`, `&&` ni redirection ;
 une commande composée est refusée par la page. Filtre avec Grep et Glob.
 
@@ -79,5 +84,5 @@ FORMAT DE SORTIE, quand la consigne demande le JSON (lancement par la page) : te
 conforme à `outils_docs/schemas/menage_rapport.schema.json` :
 `{"resume": "...", "non_verifie": "...", "propositions": [{"id": "M1", "categorie": "orphelin|reste|hors_dossier|doublon|taille|poids|vide",
 "chemin": "relatif au depot", "constat": "...", "preuve": "commande et sortie, valeurs sensibles masquees", "action": "supprimer|archiver|deplacer|garder",
-"vers": "destination si deplacer ou archiver", "casserait": "renvois, imports, listes du cenv, bancs", "risque": "faible|moyen|eleve", "en_cours": false}]}`.
+"vers": "chemin exact si deplacer ou archiver, sinon omis", "casserait": "renvois, imports, listes du cenv, bancs", "risque": "faible|moyen|eleve", "en_cours": false}]}`.
 Chemins relatifs au dépôt, sans `..`, jamais de valeur secrète dans `preuve` ni `constat`. Sans la consigne JSON, rends le rapport en tableaux comme avant.

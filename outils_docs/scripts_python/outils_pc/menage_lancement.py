@@ -70,7 +70,7 @@ def consigne(params, gardes):
         "Chemins a GARDER (ne jamais les proposer) : " + (", ".join(gardes) if gardes else "aucun") + ".\n"
         "Rappel : tout fichier modifie ou non suivi par git, ou touche depuis moins de anciennete_jours jours, est « en cours » "
         "(en_cours: true, jamais propose) ; un plan de statut actif n'est jamais propose a l'archivage.\n"
-        "Si la categorie hors_dossier est demandee, propose aussi des DEPLACEMENTS pour mieux classer (action deplacer, vers), pas "
+        "Si la categorie hors_dossier est demandee, propose aussi des DEPLACEMENTS pour mieux classer (action deplacer, vers = chemin exact sans texte ni commentaire, explications dans constat), pas "
         "seulement des suppressions.\n"
         "Bash : UNE seule commande simple par appel (git status --porcelain, git ls-files, git log, git diff, git hash-object, "
         "git check-ignore, ls, wc, du), sans cd, sans pipe, sans ; ni &&, sans redirection : le depot est deja le dossier courant, "
