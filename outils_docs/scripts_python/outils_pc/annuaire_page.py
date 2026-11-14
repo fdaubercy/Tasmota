@@ -59,6 +59,13 @@ PAGE = r"""<!doctype html>
   .btn{display:inline-block;padding:4px 12px;border-radius:5px;border:1px solid var(--btn-bord);background:var(--btn);color:var(--texte);font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
   .btn.p{background:var(--bleu);color:#fff;border-color:var(--bleu)}
   .btn:disabled{opacity:.5;cursor:default}
+  .btn svg{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
+  .btn.ic{padding:5px;font-size:16px;line-height:0}.btn:not(.p):hover{border-color:var(--bleu);color:var(--bleu)}
+  .ligne-sw{display:flex;align-items:center;gap:10px;margin-top:auto}.ligne-sw .et{font-size:12px;color:var(--doux);flex:1}
+  .sw{position:relative;width:46px;height:28px;border-radius:14px;border:0;background:var(--gris);padding:0;flex:none;cursor:pointer;transition:background .2s}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0005;transition:transform .2s}
+  .sw[aria-checked=true]{background:var(--vert)}.sw[aria-checked=true]::after{transform:translateX(18px)}
+  .sw:disabled{opacity:.5;cursor:default}
   .lien{background:none;border:none;color:var(--bleu);cursor:pointer;font:inherit;font-size:12px;padding:0;text-decoration:underline}
   .reseau{background:var(--reseau-fond);border:1px solid var(--reseau-bord);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px}
   .reseau code{word-break:break-all}
@@ -183,23 +190,31 @@ function heure(debut) { return debut && debut.length >= 16 ? debut.slice(11, 16)
 function parId(id) { return registre.outils.filter(function (o) { return o.id === id; })[0]; }
 
 // ---------- tuiles ----------
+var ICO_ECRAN = '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>';
+var ICO_ONGLET = '<path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/><path d="m21 3-9 9"/><path d="M15 3h6v6"/>';
+function icone(trace) {
+  var s = h("span");
+  s.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + trace + '</svg>';
+  return s.firstChild;
+}
 function tuile(o) {
   var e = etats[o.id] || {etat: "arrete", port: o.port_defaut};
   var attente = occupe[o.id];
   var meta = ":" + (e.port || o.port_defaut) + (e.etat === "marche" && e.debut ? " · depuis " + heure(e.debut) : "");
   var actions = h("div", {"class": "actions"});
-  if (attente) {
-    actions.appendChild(h("span", {"class": "meta", texte: attente}));
-  } else {
-    if (e.etat === "marche" && e.lien)
-      actions.appendChild(h("a", {"class": "btn p", href: lienLieu(o, e.lien), texte: "Ouvrir"}));
-    if (e.etat === "marche" && e.lien && A_PART.indexOf(o.id) >= 0)
-      actions.appendChild(h("a", {"class": "btn", href: lienLieu(o, e.lien), target: "_blank", rel: "noopener",
-                                  title: "Ouvrir dans un nouvel onglet", "aria-label": "Ouvrir " + o.nom + " dans un nouvel onglet", texte: "↗"}));
-    if (e.etat !== "marche" && !e.peut_arreter)
-      actions.appendChild(h("button", {"class": "btn p", type: "button", texte: "Lancer", onclick: function () { ouvreLancement(o); }}));
-    if (e.peut_arreter)
-      actions.appendChild(h("button", {"class": "btn", type: "button", texte: "Arrêter", onclick: function () { arrete(o); }}));
+  var marche = e.etat === "marche";
+  var interrupteur = h("button", {"class": "sw", type: "button", role: "switch", "aria-checked": marche ? "true" : "false",
+    "aria-label": (marche ? "Arrêter " : "Lancer ") + o.nom, title: marche ? "Arrêter" : "Lancer"});
+  interrupteur.disabled = !!attente || (marche && !e.peut_arreter);
+  interrupteur.onclick = function () { if (marche) arrete(o); else ouvreLancement(o); };
+  var texte = attente || (marche ? (e.peut_arreter ? "En cours" : "En cours (non arrêtable ici)") : "Arrêté");
+  var ligne = h("div", {"class": "ligne-sw"}, interrupteur, h("span", {"class": "et", texte: texte}));
+  if (!attente) {
+    if (marche && e.lien)
+      actions.appendChild(h("a", {"class": "btn", href: lienLieu(o, e.lien), title: "Ouvrir", "aria-label": "Ouvrir " + o.nom}, icone(ICO_ECRAN), " Ouvrir"));
+    if (marche && e.lien && A_PART.indexOf(o.id) >= 0)
+      actions.appendChild(h("a", {"class": "btn ic", href: lienLieu(o, e.lien), target: "_blank", rel: "noopener",
+                                  title: "Ouvrir dans un nouvel onglet", "aria-label": "Ouvrir " + o.nom + " dans un nouvel onglet"}, icone(ICO_ONGLET)));
     if (e.console)
       actions.appendChild(h("button", {"class": "lien", type: "button", texte: "console", onclick: function () { ouvreConsole(o); }}));
   }
@@ -211,6 +226,7 @@ function tuile(o) {
     e.raison ? h("div", {"class": "raison", texte: e.raison}) : null,
     e.lie ? h("div", {"class": "erreur lie", texte: "liée à l'annuaire : s'arrêtera avec VS Code"}) : null,
     erreurs[o.id] ? h("div", {"class": "erreur", texte: erreurs[o.id]}) : null,
+    ligne,
     actions);
 }
 

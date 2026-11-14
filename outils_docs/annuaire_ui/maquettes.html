@@ -1,0 +1,118 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquettes de l'annuaire</title><style>
+:root{--bg:#f4f5f7;--fg:#1b2430;--mut:#5d6877;--card:#fff;--line:#c4ccd8;--acc:#4c8dff;--ok:#2ea043;--off:#8a94a3}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1319;--fg:#e6eaf0;--mut:#9aa5b4;--card:#1a212b;--line:#34404f;--acc:#5b9bff;--ok:#3fb950;--off:#6b7585}}
+*{box-sizing:border-box}body{margin:0 auto;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif;padding:20px 16px;max-width:1100px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:34px 0 4px;padding-top:14px;border-top:1px solid var(--line)}p.n{color:var(--mut);margin:0 0 12px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.o{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}.o>h3{font-size:13px;margin:0 0 10px;color:var(--mut)}
+.o>h3 b{color:var(--fg);background:var(--line);border-radius:4px;padding:1px 7px;margin-right:6px}
+.o small{display:block;color:var(--mut);margin-top:10px}
+svg{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
+button{font:inherit;color:inherit;cursor:pointer}
+.fond{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-height:60px}
+.ib{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:var(--card);font-size:14px;color:var(--fg);text-decoration:none}
+.ib.r{padding:6px;font-size:17px}.ib:hover{border-color:var(--acc);color:var(--acc)}
+.cl[aria-pressed=false]{color:var(--off)}.cl[aria-pressed=true]{color:var(--ok);border-color:var(--ok)}
+.cl .on{display:none}.cl[aria-pressed=true] .on{display:inline}.cl[aria-pressed=true] .off{display:none}
+.tuile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;width:100%}
+.tuile h4{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}.tuile p{margin:0 0 10px;color:var(--mut);font-size:12.5px}
+.pt{width:9px;height:9px;border-radius:50%;background:var(--off)}.run .pt{background:var(--ok)}
+.sw{position:relative;width:46px;height:28px;border-radius:14px;border:0;background:var(--off);padding:0;transition:background .2s;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0005;transition:transform .2s}
+.sw[aria-checked=true]{background:var(--ok)}.sw[aria-checked=true]::after{transform:translateX(18px)}
+.sw.s{width:38px;height:22px}.sw.s::after{width:18px;height:18px}.sw.s[aria-checked=true]::after{transform:translateX(16px)}
+.ligne{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.act{display:flex;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:20px;padding:3px 10px 3px 4px;background:var(--card)}
+.tip{position:relative}.tip:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;white-space:nowrap;background:var(--fg);color:var(--bg);font-size:12px;padding:3px 8px;border-radius:5px;z-index:3}
+.barre{display:flex;justify-content:space-between;align-items:center;width:100%}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+<symbol id="belloff" viewBox="0 0 24 24"><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/></symbol>
+<symbol id="ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+<symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+<symbol id="arc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="m12 16 4-4-4-4"/></symbol>
+<symbol id="win" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 4v4"/><path d="M2 8h20"/><path d="M6 4v4"/></symbol>
+<symbol id="sq" viewBox="0 0 24 24"><path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/><path d="m21 3-9 9"/><path d="M15 3h6v6"/></symbol>
+<symbol id="lnk" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+<symbol id="pl" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4z"/></symbol>
+<symbol id="mon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></symbol>
+</defs></svg>
+<h1>Maquettes de l'annuaire des outils</h1>
+<p class="n">Tout est cliquable et survolable. Quatre sujets, trois propositions chacun. Répondez par exemple « 1B, 2A, 3C, 4B ».</p>
+
+<h2>1. Organigramme : lien vers la version en ligne</h2>
+<p class="n">Remplace l'URL en texte. Le bouton « Publier sur GitHub Pages » reste.</p>
+<div class="g">
+<div class="o"><h3><b>1A</b>Icône seule, avec infobulle</h3><div class="fond">
+<button class="ib">Publier sur GitHub Pages</button><span style="color:var(--mut)">publiée (0876e7b56)</span>
+<button class="ib r tip" data-tip="Ouvrir la version en ligne"><svg><use href="#globe"/></svg></button></div>
+<small>Le plus discret. Le globe ouvre la page publique dans un nouvel onglet.</small></div>
+<div class="o"><h3><b>1B</b>Icône + texte court</h3><div class="fond">
+<button class="ib">Publier sur GitHub Pages</button>
+<a class="ib" href="#" onclick="return false"><svg><use href="#ext"/></svg>Version en ligne</a>
+<span style="color:var(--mut)">0876e7b56</span></div>
+<small>Le libellé reste lisible sans survol, utile sur téléphone.</small></div>
+<div class="o"><h3><b>1C</b>Deux icônes : ouvrir et copier le lien</h3><div class="fond">
+<button class="ib">Publier sur GitHub Pages</button>
+<span class="pill"><button class="ib r tip" data-tip="Ouvrir la version en ligne" style="border:0"><svg><use href="#globe"/></svg></button>
+<button class="ib r tip" data-tip="Copier le lien" style="border:0"><svg><use href="#lnk"/></svg></button></span>
+<span style="color:var(--mut)">0876e7b56</span></div>
+<small>Pratique pour coller le lien dans un message sans l'afficher.</small></div></div>
+
+<h2>2. Notifications : cloche en haut à droite</h2>
+<p class="n">Cliquez pour basculer. Gris barrée = désactivées, verte = activées. Survolez pour l'infobulle.</p>
+<div class="g">
+<div class="o"><h3><b>2A</b>Cloche seule + infobulle</h3><div class="fond"><div class="barre"><strong>Titre de la page</strong>
+<button class="ib r cl tip" data-tip="Activer les notifications" aria-pressed="false" data-a="Désactiver les notifications" data-d="Activer les notifications"><svg class="off"><use href="#belloff"/></svg><svg class="on"><use href="#bell"/></svg></button></div></div>
+<small>Comme demandé, minimal. L'infobulle change avec l'état.</small></div>
+<div class="o"><h3><b>2B</b>Cloche + texte à côté</h3><div class="fond"><div class="barre"><strong>Titre de la page</strong>
+<button class="ib cl" aria-pressed="false" data-ta="Notifications activées" data-td="Notifications désactivées"><svg class="off"><use href="#belloff"/></svg><svg class="on"><use href="#bell"/></svg><span>Notifications désactivées</span></button></div></div>
+<small>Aucun survol nécessaire. Un peu plus large dans l'en-tête.</small></div>
+<div class="o"><h3><b>2C</b>Cloche + mini interrupteur</h3><div class="fond"><div class="barre"><strong>Titre de la page</strong>
+<span class="pill cl2" style="padding-left:10px"><svg style="color:var(--off)"><use href="#belloff"/></svg><button class="sw s" role="switch" aria-checked="false" aria-label="Notifications"></button></span></div></div>
+<small>Cohérent avec l'interrupteur des tuiles (sujet 3). La cloche passe au vert à l'activation.</small></div></div>
+
+<h2>3. Lancer / arrêter une tuile : bouton « iPhone »</h2>
+<p class="n">Cliquez sur l'interrupteur : la tuile passe d'arrêtée à en cours. Les boutons Ouvrir utilisent ici la proposition 4A.</p>
+<div class="g">
+<div class="o"><h3><b>3A</b>Interrupteur + état écrit</h3><div class="tuile">
+<h4><span class="pt"></span>Organigramme des plans</h4><p>Montre les plans de tasks/plans/ en arbre par famille. :7990</p>
+<div class="ligne"><div class="act"><button class="sw" role="switch" aria-checked="false" aria-label="Lancer"></button><span class="et">Arrêté</span></div>
+<span class="act"><button class="ib r tip" data-tip="Ouvrir"><svg><use href="#arc"/></svg></button><button class="ib r tip" data-tip="Ouvrir dans un nouvel onglet"><svg><use href="#ext"/></svg></button></span></div></div>
+<small>Le point gris reste pour l'état, l'interrupteur pour l'ordre.</small></div>
+<div class="o"><h3><b>3B</b>Interrupteur en haut à droite, point supprimé</h3><div class="tuile">
+<h4 class="ligne" style="width:100%"><span>Organigramme des plans</span><button class="sw s" role="switch" aria-checked="false" aria-label="Lancer"></button></h4><p>Montre les plans de tasks/plans/ en arbre par famille. :7990</p>
+<div class="act"><button class="ib r tip" data-tip="Ouvrir"><svg><use href="#arc"/></svg></button><button class="ib r tip" data-tip="Ouvrir dans un nouvel onglet"><svg><use href="#ext"/></svg></button></div></div>
+<small>Le vert de l'interrupteur remplace le point. Tuile plus compacte, une seule information d'état.</small></div>
+<div class="o"><h3><b>3C</b>Interrupteur en pied de tuile avec texte d'aide</h3><div class="tuile">
+<h4><span class="pt"></span>Organigramme des plans</h4><p>Montre les plans de tasks/plans/ en arbre par famille. :7990</p>
+<div class="ligne"><button class="sw" role="switch" aria-checked="false" aria-label="Lancer"></button><span class="et" style="flex:1;color:var(--mut)">Arrêté, glisser pour lancer</span>
+<span class="act"><button class="ib r tip" data-tip="Ouvrir"><svg><use href="#arc"/></svg></button><button class="ib r tip" data-tip="Ouvrir dans un nouvel onglet"><svg><use href="#ext"/></svg></button></span></div></div>
+<small>Cible tactile large. Même place que le bouton « Lancer » actuel.</small></div></div>
+
+<h2>4. Icônes pour « Ouvrir » et « Ouvrir dans un nouvel onglet »</h2>
+<p class="n">Style trait fin (type Lucide, licence libre). Au survol : le texte actuel.</p>
+<div class="g">
+<div class="o"><h3><b>4A</b>Flèche dans un cercle + lien externe</h3><div class="fond">
+<button class="ib r tip" data-tip="Ouvrir" style="font-size:22px"><svg><use href="#arc"/></svg></button>
+<button class="ib r tip" data-tip="Ouvrir dans un nouvel onglet" style="font-size:22px"><svg><use href="#ext"/></svg></button></div>
+<small>Convention connue : « lien externe » veut dire nouvel onglet partout.</small></div>
+<div class="o"><h3><b>4B</b>Lecture + fenêtre</h3><div class="fond">
+<button class="ib r tip" data-tip="Ouvrir" style="font-size:22px"><svg><use href="#pl"/></svg></button>
+<button class="ib r tip" data-tip="Ouvrir dans un nouvel onglet" style="font-size:22px"><svg><use href="#win"/></svg></button></div>
+<small>Le triangle suggère « démarrer et entrer » ; risque de confusion avec l'interrupteur.</small></div>
+<div class="o"><h3><b>4C</b>Bouton principal avec mot, secondaire en icône</h3><div class="fond">
+<button class="ib tip" data-tip="Ouvrir"><svg><use href="#mon"/></svg>Ouvrir</button>
+<button class="ib r tip" data-tip="Ouvrir dans un nouvel onglet"><svg><use href="#sq"/></svg></button></div>
+<small>Le bouton principal garde son mot, seul le secondaire devient une icône.</small></div></div>
+<script>
+document.querySelectorAll('.cl').forEach(b=>b.onclick=()=>{const v=b.getAttribute('aria-pressed')!='true';b.setAttribute('aria-pressed',v);
+if(b.dataset.a)b.dataset.tip=v?b.dataset.a:b.dataset.d;const s=b.querySelector('span');if(s)s.textContent=v?b.dataset.ta:b.dataset.td});
+document.querySelectorAll('.cl2 .sw').forEach(b=>b.onclick=()=>{const v=b.getAttribute('aria-checked')!='true';b.setAttribute('aria-checked',v);
+const s=b.previousElementSibling;s.style.color=v?'var(--ok)':'var(--off)';s.firstElementChild.setAttribute('href',v?'#bell':'#belloff')});
+document.querySelectorAll('.tuile .sw').forEach(b=>b.onclick=()=>{const v=b.getAttribute('aria-checked')!='true';b.setAttribute('aria-checked',v);
+const t=b.closest('.tuile');t.classList.toggle('run',v);const e=t.querySelector('.et');if(e)e.textContent=v?'En cours':(e.style.flex?'Arrêté, glisser pour lancer':'Arrêté')});
+</script></body></html>

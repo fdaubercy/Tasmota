@@ -23,7 +23,12 @@ import organigramme_plans as org          # noqa: E402
 PORT_DEFAUT = 7990
 VERROU = threading.Lock()                 # une publication a la fois
 BOUTON = (
-    "<p><button id='pub'>Publier sur GitHub Pages</button> <span id='pubm'></span></p>"
+    "<p style='display:flex;gap:10px;align-items:center'><button id='pub'>Publier sur GitHub Pages</button> <span id='pubm'></span>"
+    "<a href='" + org.URL_PAGES + "' target='_blank' rel='noopener' title='Ouvrir la version en ligne' aria-label='Ouvrir la version en ligne' "
+    "style='display:inline-flex;padding:5px;border:1px solid currentColor;border-radius:7px;color:inherit'>"
+    "<svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' "
+    "stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20'/>"
+    "<path d='M2 12h20'/></svg></a></p>"
     "<script>document.getElementById('pub').onclick=function(){var b=this,m=document.getElementById('pubm');"
     "if(!confirm_pub())return;b.disabled=true;m.textContent='publication en cours...';"
     "fetch('/publier',{method:'POST',headers:{'X-Organigramme':'1'}}).then(function(r){return r.text()}).then(function(t){"
@@ -76,7 +81,7 @@ def fabrique_gestionnaire(acces):
                 return self._envoie(409, "une publication est deja en cours".encode("utf-8"))
             try:
                 sha = org.publie_pages()
-                texte = "deja a jour" if not sha else f"publie ({sha[:9]}) : {org.URL_PAGES}"
+                texte = "deja a jour" if not sha else f"publiee ({sha[:9]})"
                 self._envoie(200, texte.encode("utf-8"))
             except Exception as erreur:      # reseau, branche qui a bouge : le message, pas une trace
                 self._envoie(500, f"publication impossible : {type(erreur).__name__} : {erreur}".encode("utf-8"))
