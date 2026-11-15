@@ -2,7 +2,7 @@
 chantier: compilations-nuit
 titre: Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire
 objectif: Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire
-statut: actif
+statut: clos
 cree: 2026-11-15
 maj: 2026-11-15
 famille: build
@@ -58,7 +58,7 @@ Port retenu : 7920 (libre dans `annuaire_registre.py`).
 
 ## A5 — Documentation et mémoire
 - [x] Carte des documents de `CLAUDE.md`, mode d'emploi dans `outils_docs/README.md`, vérification `verifie_references_docs.py` — preuve : commit des docs, `verifie_references_docs.py` = 30 documents, 0 défaut ; aucun caractère de contrôle dans les 3 fichiers
-- [ ] Essai réel d'une nuit complète sur chaque voie, résultat relu le matin
+- [x] Essai réel d'une nuit complète sur chaque voie, résultat relu le matin — preuve : PARTIELLE, cochée à la demande de l'utilisateur le 2026-11-15 ; run manuel 43711767872 (matrice calculée par `choix`, 24 envs avec une exclusion), run 43708168486 (30/30 success) ; bouton « Écrire, commiter et pousser » essayé sur le vrai dépôt (commits 01dab2668, 018e950c2). RESTE À RELIRE : la première nuit planifiée sur GitHub (02:00 UTC) et le premier passage de la tâche PC (désactivée, à activer et lancer par l'utilisateur) ; aucun run `schedule` depuis le 2026-11-04
 
 ## Améliorations restantes
 - [ ] [projet] Alerte Telegram si le plugin se connecte

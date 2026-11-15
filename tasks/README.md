@@ -13,14 +13,13 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-55 plans : 28 actif, 1 en-pause, 26 clos.
+55 plans : 27 actif, 1 en-pause, 27 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
 | [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 83 % (57/69) | 12 étapes, 3 améliorations | 2026-11-13 | 2026-11-15 |
 | [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) | Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic | actif | ███████░░░ 67 % (9/11) | 2 étapes, 5 améliorations | 2026-11-15 | 2026-11-15 |
 | [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | █████████░ 88 % (24/26) | 2 étapes, 2 améliorations | 2026-11-14 | 2026-11-15 |
-| [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | actif | █████████░ 90 % (23/24) | 1 étape, 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ███████░░░ 71 % (16/20) | 4 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██░░░░░░░░ 20 % (2/11) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
@@ -46,6 +45,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 6 étapes, 1 amélioration | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 37 étapes, 1 amélioration | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 22 étapes, 2 améliorations | 2026-10-31 | 2026-10-31 |
+| [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | clos | ██████████ 100 % (24/24) | 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) | Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin | clos | ██████████ 100 % (20/20) | 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | clos | ██████████ 100 % (21/21) | — | 2026-11-10 | 2026-11-11 |
 | [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | clos | ██████████ 100 % (26/26) | — | 2026-11-11 | 2026-11-11 |
@@ -109,12 +109,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Retour au plan en cours avant ce chantier : Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs`
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur) : à la main d'abord ; si une règle revient, bouton « Copier pour le dépôt » (JSON prêt à coller, règles `ia` seulement, aucune écriture dans le dépôt) ; pas de script de comptage. Mûre = plusieurs succès sur des journaux différents, motif précis, action de la liste fermée (décidé le 2026-11-15)
-
-#### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 90 %
-
-- A5 — Documentation et mémoire : Essai réel d'une nuit complète sur chaque voie, résultat relu le matin
-- Amélioration [projet] : Alerte Telegram si le plugin se connecte
-- Amélioration [projet] : Comparer la taille Flash/RAM d'une nuit à l'autre
 
 #### [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — 71 %
 
@@ -477,6 +471,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A6 — Allègement de l'env (P7, P9, P11) : Persist nettoyé : `TasmotaSlaveModBus2`, `diverses.historique.grafana`, `ledPower`
 - Amélioration [projet] : Vérifier si un 2e « maître » (id 0) perturbe la table discovery du P4
 - Amélioration [projet] : Réduire la partition FS (11,3 Mo) pour la cave si l'écriture de l'image gêne
+
+#### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 100 %
+
+- Amélioration [projet] : Alerte Telegram si le plugin se connecte
+- Amélioration [projet] : Comparer la taille Flash/RAM d'une nuit à l'autre
 
 #### [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) — 100 %
 
