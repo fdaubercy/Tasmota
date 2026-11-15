@@ -157,8 +157,11 @@ def vrFonctions_configVRByJson()
 
                     # Paramètre le délai de bascule du relai (si Mode=3: Volet Roulant de garage)
                     if (vrJSON["mode"] == 3)
-                        if (configGlobal.testeParam(string.format("PulseTime%i", vrJSON["environnement"]["VRs"][cle]["relais1"]), 5, "int"))
-                            vrFonctions.log(string.format("CONFIG_VR2: Paramètre le délai de bascule du 1er relai du volet roulant %i: 5s !", vrJSON["environnement"]["VRs"][cle]["id"]), LOG_LEVEL_DEBUG)
+                        # Clé "impulsion" du VR, en dixièmes de seconde (PulseTime) : 5 par défaut (0,5 s, rideau), 10 pour le portail (1 s)
+                        var impulsion = vrJSON["environnement"]["VRs"][cle].find("impulsion", 5)
+                        if (type(impulsion) != "int" || impulsion < 1 || impulsion > 111)    impulsion = 5    end
+                        if (configGlobal.testeParam(string.format("PulseTime%i", vrJSON["environnement"]["VRs"][cle]["relais1"]), impulsion, "int"))
+                            vrFonctions.log(string.format("CONFIG_VR2: Paramètre le délai de bascule du 1er relai du volet roulant %i: %i dixièmes de s !", vrJSON["environnement"]["VRs"][cle]["id"], impulsion), LOG_LEVEL_DEBUG)
                         end
                     # Interlock entre le relai1 et le suivant : groupe retenu, envoye apres la boucle
                     elif (vrJSON["mode"] == 1)

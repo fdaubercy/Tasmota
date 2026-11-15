@@ -943,6 +943,21 @@ webserver.privilegie = false
 rc = ordreVolet(vr1["id"], "stop")
 verifie(size(tasmota.cmds) == 0, "acces non privilegie : rien commande")
 webserver.privilegie = true
+
+print("19. Impulsion du relais en mode 3 : cle impulsion du VR (dixiemes de s), 5 par defaut ou si invalide")
+voletsMoteur["mode"] = 3
+vr2["impulsion"] = 10
+vr3["impulsion"] = 999
+params.clear()
+vrFonctions.configVRByJson()
+verifie(param("PulseTime1") == 5 && param("PulseTime3") == 10 && param("PulseTime5") == 5, "PulseTime : sans cle 5, impulsion 10 = 10 (portail, 1 s), 999 invalide = 5")
+voletsMoteur["mode"] = 1
+params.clear()
+vrFonctions.configVRByJson()
+verifie(param("PulseTime1") == nil && param("PulseTime3") == nil, "mode 1 : aucun PulseTime pose")
+vr2.remove("impulsion")
+vr3.remove("impulsion")
+
 vr2["activation"] = "OFF"
 modules.remove("garage")
 modules.remove("autres")

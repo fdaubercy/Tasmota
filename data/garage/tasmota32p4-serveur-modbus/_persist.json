@@ -247,7 +247,7 @@
 						"idModBus": 2
 					},
 					"interrupteur3": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "Capteur Fermeture Portail",
 						"id": 3,
 						"pin": -1,
@@ -1328,7 +1328,7 @@
 						"id": 3
 					},
 					"TasmotaSlaveModBus3": {
-						"activation": "OFF",
+						"activation": "ON",
 						"name": "Portail Jardin ModBus",
 						"id": 4
 					}
@@ -1494,13 +1494,14 @@
 						}
 					},
 					"VR2": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "Portail 1 vantail",
 						"id": 2,
 						"facade": {"type": "portail1", "place": 4, "finsDeCourse": {"module": "garage", "fermeture": 3}},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 20,
+						"impulsion": 10,
 						"boutons": {
 							"bouton1": {"activation": "ON", "id": 3, "function": "toggle", "mqtt": "OFF"},
 							"bouton2": {"activation": "OFF", "id": -1, "function": "up", "mqtt": "OFF"},
@@ -1537,13 +1538,14 @@
 						}
 					},
 					"VR3": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "Portail 2 vantaux",
 						"id": 3,
 						"facade": {"type": "portail2", "place": 5, "finsDeCourse": {"module": "garage", "fermeture": 3}},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 22,
+						"impulsion": 10,
 						"boutons": {
 							"bouton1": {"activation": "ON", "id": 4, "function": "toggle", "mqtt": "OFF"},
 							"bouton2": {"activation": "OFF", "id": -1, "function": "up", "mqtt": "OFF"},
