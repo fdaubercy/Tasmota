@@ -35,7 +35,7 @@ h1{font-size:20px;margin:0} h2{font-size:15px;margin:0 0 8px}
 .ligne{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
 label.ch{display:flex;gap:6px;align-items:flex-start;margin:4px 0}
 label.ch input{margin-top:3px;flex:none}
-.champ{display:block;margin:8px 0} .champ span{display:block;font-size:12px;color:var(--doux);margin-bottom:2px}
+.groupe>summary{font-size:12px;margin-bottom:2px} .champ{display:block;margin:8px 0} .champ span{display:block;font-size:12px;color:var(--doux);margin-bottom:2px}
 input[type=number],select{font:inherit;padding:5px 7px;border:1px solid var(--bord);border-radius:5px;background:var(--champ);color:var(--texte);width:100%}
 .etat{padding:8px 10px;border-radius:6px;background:var(--piste);margin-top:8px;overflow-wrap:anywhere}
 .detail{margin-top:8px} .detail pre{max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin:6px 0 0}
@@ -69,8 +69,8 @@ HTML = """
 <div class="colonnes">
 <div>
  <section class="carte"><h2>Paramètres de l'audit</h2>
-  <div class="champ"><span>Dossiers à examiner</span><div id="p-zone"></div></div>
-  <div class="champ"><span>Contrôles</span><div id="p-cat"></div></div>
+  <details class="champ groupe" open><summary>Dossiers à examiner <span class="doux" id="n-zone"></span></summary><div id="p-zone"></div></details>
+  <details class="champ groupe" open><summary>Contrôles <span class="doux" id="n-cat"></span></summary><div id="p-cat"></div></details>
   <label class="champ"><span>Travail « en cours » : modifié ou touché depuis moins de (jours)</span><input type="number" id="p-jours" min="0" max="365" value="3"></label>
   <label class="champ"><span>Modèle</span><select id="p-modele"></select></label>
   <label class="champ"><span>Effort</span><select id="p-effort"></select></label>
@@ -191,7 +191,12 @@ function parametres() {
   return {zone: coches($("p-zone")), categories: coches($("p-cat")), anciennete_jours: parseInt($("p-jours").value, 10),
           modele: $("p-modele").value, effort: $("p-effort").value};
 }
-function memorise() { memo("params", parametres()); }
+function comptes() {
+  [["p-zone", "n-zone"], ["p-cat", "n-cat"]].forEach(function (g) {
+    var t = $(g[0]).querySelectorAll("input"); $(g[1]).textContent = t.length ? "(" + coches($(g[0])).length + "/" + t.length + ")" : "";
+  });
+}
+function memorise() { comptes(); memo("params", parametres()); }
 
 function chargeOptions() {
   return api("GET", "/options").then(function (r) {
@@ -206,6 +211,7 @@ function chargeOptions() {
     var f = $("f-cat"); r.donnees.categories.forEach(function (c) { var o = el("option", null, c); o.value = c; f.appendChild(o); });
     ["p-zone", "p-cat"].forEach(function (id) { $(id).onchange = memorise; });
     ["p-jours", "p-modele", "p-effort"].forEach(function (id) { $(id).onchange = memorise; });
+    comptes();
   });
 }
 

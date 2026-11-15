@@ -158,6 +158,8 @@ def scenario(m, temoin):
     verifie(cdp.js("document.querySelectorAll('#p-cat input').length"), 7, "une case par controle")
     verifie(cdp.js("document.title"), "Ménage du dépôt", "titre")
     verifie(cdp.js("document.getElementById('b-copie').disabled"), True, "copier grise sans rapport")
+    verifie(cdp.js("document.getElementById('n-zone').textContent"), "(%d/%d)" % (len(mw.ml.ZONES), len(mw.ml.ZONES)), "groupe dossiers : compte des cases cochees")
+    verifie(cdp.js("(function(){var d=document.getElementById('p-cat').parentNode; d.open=false; var c=document.getElementById('p-cat'); var ferme=!c.checkVisibility({contentVisibilityAuto:true}); d.open=true; return d.tagName==='DETAILS' && ferme && c.checkVisibility()})()"), True, "groupe controles : repliable")
 
     cdp.js("document.querySelectorAll('#p-zone input').forEach(function(c){c.checked=false})")
     clic(cdp, "b-lance")
