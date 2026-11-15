@@ -22,21 +22,24 @@ par la tuile, tuile pour VOIR et PARAMÉTRER, avec activation et désactivation 
 Port retenu : 7920 (libre dans `annuaire_registre.py`).
 
 ## A1 — Voie GitHub fiable
-- [ ] Diagnostiquer l'absence de lancements (`gh api repos/fdaubercy/Tasmota/actions/workflows`, état « disabled_inactivity » ?) et réactiver
-- [ ] `build_custom.yml` : matrice des 25 envs (liste lue de `platformio_tasmota_cenv.ini`), ajouter un contrôle qui échoue si un env manque
-- [ ] Vérifier que le build GitHub reflète la config réelle (`platformio_override.ini` de l'échantillon vs dépôt) et noter l'écart
-- [ ] Un lancement `workflow_dispatch` complet, lu jusqu'au bout (SUCCESS/FAILED par env)
+- [x] Diagnostiquer l'absence de lancements et réactiver — preuve : Actions désactivées sur le fork par GitHub (bandeau « Workflows on this fork have been disabled »), bouton cliqué le 2026-11-15, `gh workflow run` accepté ensuite
+- [x] `build_custom.yml` : matrice des 25 envs — preuve : commit 9d4637049 (13 envs ajoutés), run 43695356628 = 25 envs verts
+- [x] `build_custom.yml` : contrôle qui échoue si un env du cenv manque dans la matrice — preuve : job `verifie-matrice`, 25/25 en local ; témoin négatif : retirer tasmota-rdc-tv-salon le fait nommer et sortir en code 1 (le 1er jet lisait 0 env : il se coupait sur sa propre chaîne, corrigé par une ancre de début de ligne)
+- [x] Vérifier que le build GitHub reflète la config réelle — preuve : journal du run 43695356628 (rideau-garage) : « Will solidify … », donc le pré-script tourne sur GitHub ; écarts connus de l'échantillon, sans effet sur les envs du cenv : `default_envs` et `data_dir` (inutiles pour `-e`), `extra_scripts` de `tasmota32_idf55_base` seulement. Le CFG_HOLDER, le cache objet et `data_dir` du FS ne sont pas ceux du PC : GitHub prouve que le code COMPILE, pas que le FS est identique
+- [x] Débloquer `workflow_dispatch` (422 « Actions has been disabled ») — preuve : cause = désactivation automatique des workflows d'un fork, réactivée par l'utilisateur ; `permissions` renvoyait `enabled: true` à tort, d'où le contrôle de santé de A3
+- [x] Un lancement `workflow_dispatch` complet, lu jusqu'au bout — preuve : run 43695356628, 29 jobs success (1er run 43692897852 : rdc-vr-porte en échec, dossier vide non suivi par git, corrigé par 775f8b227 ; safeboot retirés)
 
 ## A2 — Voie PC (tâche Windows qui pilote la page Build)
-- [ ] Script `maintenance/compilation_nuit.py` : refuse si un build tourne (garde existante), démarre la page Build si absente, `POST /lancer` (compiler seulement, sans port), attend la fin, écrit un résumé JSON par env
-- [ ] Journal et résultat dans `%LOCALAPPDATA%\outils_tasmota\compilations_nuit\` (30 jours)
+- [x] Script `maintenance/compilation_nuit.py` : refuse si un build tourne (garde existante), démarre la page Build si absente, `POST /lancer` (compiler seulement, sans port), attend la fin, écrit un résumé JSON par env — preuve : banc 15/15, 2 mutants rouges, `--dry-run` réel sur :7700 = 25 envs écrivables ; démarrage détaché de la page NON essayé (page déjà lancée)
+- [x] Journal et résultat dans `%LOCALAPPDATA%\outils_tasmota\compilations_nuit\` (30 jours) — preuve : `resultat-*.json` + `dernier.json` atomiques, purge à 30 jours (compilation_nuit.py::execute, banc « dernier.json écrit »)
 - [ ] Enregistrement de la tâche planifiée Windows (`schtasks`, réveil du PC optionnel), sans droits administrateur
-- [ ] Banc `test_compilation_nuit.py` (faux serveur de build : refus pendant un build, échec d'un env, reprise)
+- [x] Banc `test_compilation_nuit.py` (faux serveur de build : refus pendant un build, échec d'un env, reprise) — preuve : exit 0, 15 vérifications (nominal, échec, exclusion, refus 409, désactivé, dry-run, Ctrl+C, config)
 
 ## A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture)
 - [ ] `taches_planifiees_web.py` + `_page.py` + cible Custom détachée + tuile de l'annuaire (groupe Déploiement) + tâche VS Code
 - [ ] Liste des deux voies : activée ou non, prochaine exécution, dernier résultat, durée, envs en échec avec lien vers le journal
 - [ ] Lecture GitHub par `gh` (derniers runs), lecture PC par le dossier de résultats ; sondes hors ligne tolérées
+- [ ] Contrôle de santé GitHub à CHAQUE ouverture de la page : `gh api repos/fdaubercy/Tasmota/actions/permissions`, `gh workflow list --all` (repérer `disabled_inactivity`) et ancienneté du dernier run planifié (alerte rouge au-delà de 36 h). Constat du 2026-11-15 : les permissions disent `enabled: true` alors que `gh workflow run` répond 422 « Actions has been disabled », donc le premier contrôle seul ne suffit pas
 - [ ] Bancs et sonde Chrome
 
 ## A4 — Tuile : activer, désactiver, paramétrer

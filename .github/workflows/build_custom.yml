@@ -11,6 +11,27 @@ concurrency:
 
 jobs:
 
+  # --- Controle : tous les envs du cenv sont dans la matrice (la liste ecrite a la main avait pris du retard) ---
+  verifie-matrice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Comparer le cenv et la matrice custom-images
+        run: |
+          python - <<'EOF'
+          import re, sys
+          cenv = set(re.findall(r'^\[env:([^\]]+)\]', open('platformio_tasmota_cenv.ini', encoding='utf-8').read(), re.M))
+          wf = open('.github/workflows/build_custom.yml', encoding='utf-8').read()
+          bloc = re.search(r'^  custom-images:.*?steps:', wf, re.M | re.S).group(0)
+          matrice = set(re.findall(r'^\s+- (\S+)\s*$', bloc, re.M)) - {'ubuntu-latest'}
+          manque, en_trop = sorted(cenv - matrice), sorted(matrice - cenv)
+          print('envs du cenv :', len(cenv), '- matrice :', len(matrice))
+          if manque or en_trop:
+              print('MANQUENT dans la matrice :', manque)
+              print('INCONNUS du cenv :', en_trop)
+              sys.exit(1)
+          EOF
+
   # --- Environnements Tasmota de base (ESP32 S3 / P4) ---
   base-images:
     runs-on: ubuntu-latest
