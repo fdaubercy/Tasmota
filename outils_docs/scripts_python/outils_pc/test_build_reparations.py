@@ -282,6 +282,10 @@ def passe_reparateur(d):
     verifie("base illisible : un seul avertissement echouee",
             len(av) == 1 and av[0]["etat"] == "echouee" and av[0]["message"].startswith("catalogue des réparations illisible"))
     verifie("base lisible : pas d'avertissement", br.charge_defaut(Path(d) / "n")[1] == "")
+    # branchement de PRODUCTION : un Reparateur fait par pour_serie porte le vrai diagnostic (sans lui, la case de l'IA est muette ;
+    # les bancs de la serie injectent un faux diagnostic et ne le voient pas : panne constatee le 2026-11-15)
+    import build_reparations_ia as ia
+    verifie("pour_serie : le vrai diagnostic de l'IA est branche", r.diagnostique is ia.diagnostique)
 
 
 def mutant(nom, remplace_ancien, remplace_nouveau):

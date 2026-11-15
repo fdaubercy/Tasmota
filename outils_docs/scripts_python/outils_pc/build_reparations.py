@@ -176,7 +176,8 @@ def pour_serie(serie):
     """Reparateur d'une serie (un par lancement : compteurs remis a zero) ; catalogue local a cote des donnees de la page."""
     local = Path(serie.dossier) / "reparations.json"
     regles, cause = charge_defaut(local)
-    return Reparateur(serie, regles, chemin_local=local, avertissement=cause)
+    import build_reparations_ia                                 # ici : ce module importe build_reparations (import circulaire sinon)
+    return Reparateur(serie, regles, chemin_local=local, avertissement=cause, diagnostique=build_reparations_ia.diagnostique)
 
 
 class Reparateur:
