@@ -669,8 +669,8 @@
 						"idModBus": 16
 					},
 					"relai20": {
-						"activation": "OFF",
-						"nom": "Portail 1 vantail",
+						"activation": "ON",
+						"nom": "Ouverture 1 vantail Portail",
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 20,
@@ -710,8 +710,8 @@
 						}
 					},
 					"relai22": {
-						"activation": "OFF",
-						"nom": "Portail 2 vantaux",
+						"activation": "ON",
+						"nom": "Ouverture 2 vantaux Portail",
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 22,

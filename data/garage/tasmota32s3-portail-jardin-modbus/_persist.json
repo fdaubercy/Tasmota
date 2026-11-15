@@ -188,7 +188,7 @@
 				"relais": {
 					"relai1": {
 						"activation": "ON",
-						"nom": "Portail 1 vantail",
+						"nom": "Ouverture 1 vantail Portail",
 						"afficheWeb": "OFF",
 						"pin": 41,
 						"id": 1,
@@ -208,7 +208,7 @@
 					},
 					"relai2": {
 						"activation": "ON",
-						"nom": "Portail 2 vantaux",
+						"nom": "Ouverture 2 vantaux Portail",
 						"afficheWeb": "OFF",
 						"pin": 42,
 						"id": 2,
