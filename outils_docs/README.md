@@ -2200,7 +2200,7 @@ fontTools) dit s'il est à refaire, sans `--verifier` il le réécrit.
 ### Catalogue d'icônes (page web)
 
 Page de consultation, **lecture seule** (aucune route POST, rien n'est écrit), http://127.0.0.1:7930 : tuile « Catalogue d'icônes »
-de l'annuaire (groupe Ateliers), tâche VS Code « Outil : catalogue d'icones (http://127.0.0.1:7930) », cible Custom détachée
+de l'annuaire (groupe Dépôt et références), tâche VS Code « Outil : catalogue d'icones (http://127.0.0.1:7930) », cible Custom détachée
 « Catalogue d'icones (page web) » (`build/cible_icones_catalogue.py`, `pio run` : jamais pendant un build) ou
 `python outils_docs/scripts_python/outils_pc/icones_catalogue_web.py [--http 7930] [--local] [--sans-navigateur]`.
 Plan `tasks/plans/atelier-ecrans.md` A18. Le catalogue est recalculé à chaque ouverture par `outils_pc/icones_catalogue.py::construit` :
@@ -2576,7 +2576,7 @@ LibreOffice sur le poste) : à ouvrir avant de le présenter.
 
 ## Ménage du dépôt (page web)
 
-Tuile « Ménage du dépôt » de l'annuaire (groupe Ateliers), page http://127.0.0.1:7995 ; tâche VS Code « Outil : menage du depot » ou cible Custom « Menage du depot (page web) ». Elle lance l'agent `auditeur-menage` en lecture seule (équivalent de `/menage`) avec les paramètres choisis : dossiers, catégories de contrôle, ancienneté du travail en cours, modèle. Résultat : propositions triées par risque (orphelins, restes, doublons, reclassements), chacune avec sa preuve et ce qu'elle casserait. Le travail en cours et les plans actifs ne sont jamais proposés.
+Tuile « Ménage du dépôt » de l'annuaire (groupe Dépôt et références), page http://127.0.0.1:7995 ; tâche VS Code « Outil : menage du depot » ou cible Custom « Menage du depot (page web) ». Elle lance l'agent `auditeur-menage` en lecture seule (équivalent de `/menage`) avec les paramètres choisis : dossiers, catégories de contrôle, ancienneté du travail en cours, modèle. Résultat : propositions triées par risque (orphelins, restes, doublons, reclassements), chacune avec sa preuve et ce qu'elle casserait. Le travail en cours et les plans actifs ne sont jamais proposés.
 
 Rien n'est déplacé ni supprimé dans le dépôt. « Garder » mémorise un chemin hors dépôt (`%LOCALAPPDATA%\outils_tasmota\menage\garde.json`) pour qu'il ne soit plus proposé ; « Ignorer » ne vaut que pour la session de l'outil. Lancement refusé pendant un build. Bancs : `test_menage_rapport.py`, `test_menage_lancement.py`, `test_menage_memoire.py`, `test_menage_web.py`, sonde `test_menage_page_chrome.py`, `build/test_cible_menage.py`.
 
@@ -2590,11 +2590,30 @@ Pendant l'audit, la page montre sa progression et ce que fait l'agent : une barr
 
 ## Cartes simulées (page web)
 
-Tuile « Cartes simulées » de l'annuaire (groupe Ateliers), page http://127.0.0.1:7940 ; tâche VS Code « Outil : cartes simulees » ou cible Custom détachée. Elle simule hors ligne une carte du parc : « Lancer » démarre un serveur local sur `127.0.0.1`, au port web de la vraie carte (8082 pour le rideau du garage, 8080 + id − 1 derrière un maître), « Ouvrir » affiche sa page d'accueil, « Arrêter » la coupe.
+Tuile « Cartes simulées » de l'annuaire (groupe Bus et cartes), page http://127.0.0.1:7940 ; tâche VS Code « Outil : cartes simulees » ou cible Custom détachée. Elle simule hors ligne une carte du parc : « Lancer » démarre un serveur local sur `127.0.0.1`, au port web de la vraie carte (8082 pour le rideau du garage, 8080 + id − 1 derrière un maître), « Ouvrir » affiche sa page d'accueil, « Arrêter » la coupe.
 
 Le rideau rejoue ses vrais modules Berry (`controleRideau.be`) par `berry.exe` sur les bouchons de `scripts_python/berry/bouchons_berry/` et lit sa position chez le P4 par un seul `GET /cm?cmnd=Status 10` (lecture seule). Les 12 autres cartes n'ont que leur identité réseau et un accueil générique. Nom d'hôte, passerelle, masque, DNS, MQTT et port viennent du `_persist.json`.
 
 Limites : une carte qui répond sur le réseau n'est jamais simulée (refus 409), le P4 en 192.168.0.43 en fait partie ; MQTT n'est jamais connecté (un second client du même nom ferait tomber la vraie carte) ; pas d'alias d'IP ; les pages natives du C++ (Configuration, Console) sont en 404. Rien n'est écrit dans le dépôt. Pour que « Arrêter » apparaisse dans l'annuaire, lancer l'outil depuis sa tuile ou la cible Custom, pas à la main. Bancs : `test_cartes_simulees.py`, `test_cartes_simulees_web.py`, sonde `test_cartes_simulees_page_chrome.py`, `build/test_cible_cartes_simulees.py`.
+
+## Compilations de nuit et tâches planifiées (page web)
+
+Tuile « Tâches planifiées » de l'annuaire (groupe Déploiement), page http://127.0.0.1:7920 ; tâche VS Code « Outil : taches planifiees » ou cible Custom détachée. Elle montre et pilote la vérification de nuit que tous les envs perso du fork compilent, par deux voies indépendantes :
+
+- **Sur ce PC** : la tâche Windows `Tasmota-CompilationNuit` lance `maintenance/compilation_nuit.py`, qui passe par la page Build (:7700, action « compiler » seule, jamais de téléversement). Elle est créée **désactivée**, à 02:00, sans réveil du PC ni rattrapage (`maintenance/compilation_nuit_tache.py creer|etat|active|desactive|supprime`). Le script refuse de partir si un build tourne déjà (409 de la page Build) ou si un autre `compilation_nuit.py` est vivant (`en_cours.json`), et ne relit que les événements de SA série. Résultats : `%LOCALAPPDATA%\outils_tasmota\compilations_nuit\` (`dernier.json`, `resultat-*.json` sur 30 jours, `config.json` : `actif`, `envs_exclus`, `port`). Codes de sortie : 0 tout compile, 1 échec ou arrêt, 2 refus, 3 désactivé.
+- **Sur GitHub** : le workflow `Build_custom` (cron 02:00 UTC, lancement manuel possible). Sa matrice n'est plus écrite à la main : un job `choix` exécute `maintenance/matrice_github.py` (envs du `platformio_tasmota_cenv.ini` moins `outils_docs/compilations_nuit/envs_github.json`).
+
+**Bandeau de santé, recalculé à chaque ouverture** : permissions Actions, état du workflow (`disabled_inactivity`), ancienneté du dernier run planifié (rouge au-delà de 36 h). GitHub désactive les workflows d'un fork après une synchro avec l'amont, et `actions/permissions` répond alors quand même `enabled: true` : le contrôle de l'âge du dernier run est le seul qui le voit. Remède : bouton vert « I understand my workflows, go ahead and re-enable them » sur la page Actions du fork.
+
+**Gestes** (seulement depuis ce PC, en-tête `X-Taches: 1`, jamais avec un jeton distant) : activer ou désactiver, changer l'heure (PC), choisir les envs compilés (une case par env et par voie), lancer maintenant, arrêter. Lancer, arrêter et écrire dans le dépôt demandent deux clics. **Arrêter la voie PC** arrête immédiatement la série en cours de la page Build, y compris au milieu d'un env, **même si elle a été lancée à la main** ; côté GitHub, les runs en cours et en file sont annulés. La sélection GitHub est le fichier `outils_docs/compilations_nuit/envs_github.json` : il faut le **commiter et le pousser** pour que GitHub en tienne compte (la page ne pousse jamais). Un env décoché n'est plus compilé la nuit sur la voie concernée.
+
+Limites : GitHub prouve que le code compile avec `platformio_override_sample.ini`, pas que le système de fichiers ni le cache sont ceux du PC ; les gestes n'ont été essayés qu'avec de faux `gh` et `schtasks`. Les safeboot ne sont plus compilés par ce workflow (échec amont `be_constobj.h`). Pas de synchro nocturne du fork, décision du 2026-11-15 : elle reste manuelle. Plan `tasks/plans/compilations-nuit.md`.
+
+## Sondes en cours (page web)
+
+Tuile « Sondes en cours » de l'annuaire (groupe Dépôt et références), page http://127.0.0.1:7910 ; tâche VS Code « Outil : sondes en cours » ou cible Custom détachée. Elle liste les bancs Python et les Chrome de sonde qui tournent sur ce PC, avec leur durée et leur **avancement réel** : nombre de vérifications faites, phase (`== temoin innerHTML`), dernier cas, échecs en direct. Un banc apparaît avec son avancement quand il appelle `suivi_sondes.suit()` (fichiers `%LOCALAPPDATA%\outils_tasmota\sondes\<pid>.json`) ; les 33 sondes Chrome qui importent `test_build_page_chrome.py` sont couvertes d'un seul coup, les autres bancs s'affichent « sans suivi » (durée seulement). Un Chrome de sonde dont le banc parent n'existe plus est signalé **orphelin**, avec un bouton « Arrêter les orphelines ». `SUIVI_SONDES=0` coupe le suivi.
+
+Arrêter une sonde : bouton à deux clics, accepté seulement pour un numéro présent dans le dernier relevé (jamais un processus quelconque), arbre tué par `taskkill /T /F`. Mêmes contrôles d'accès que la page Tâches planifiées (`X-Sondes: 1`, origine, Host, ce PC seulement). Limite : un relevé PowerShell prend 11 à 24 s sous charge, la page peut afficher un relevé retardé. Plan `tasks/plans/sondes-en-cours.md`.
 
 <hr></hr>
 
