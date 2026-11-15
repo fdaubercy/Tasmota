@@ -19,7 +19,8 @@ liens: menage-page
 - **Périmètre minimal** : seule l'étape 1 du plan d'action de la page est applicable (aucun renvoi dans les documents, le code ou
   la configuration, vérifié par git, vérification disponible, chemin existant, destination libre, fichier suivi et propre).
   Les étapes 2 à 4 restent manuelles.
-- **Actions** : `deplacer` (git mv) SEULEMENT en version 1 ; `supprimer` (git rm) refusé par l'aperçu et l'application, décision du 2026-11-15. Jamais `archiver`, jamais un dossier d'un coup, jamais un chemin hors de la liste cochée.
+- **Actions** (révisé le 2026-11-15 après l'audit refait : l'étape 1 ne contient que des suppressions) : `deplacer` (git mv) et `supprimer` (git rm SANS -f ni -r), toujours limitées à l'étape 1. Jamais `archiver`, jamais un dossier d'un coup, jamais un chemin hors de la liste cochée, jamais le dossier `modbus poll` (code d'enregistrement d'un logiciel tiers : historique git, passe par `controleur-secrets`).
+- **Dry-run d'abord** : l'aperçu lance `git rm -n` / `git mv -n` (sortie réelle de git affichée). « Appliquer » reste grisé tant que le dry-run du MÊME lot (empreinte, HEAD) n'est pas passé sans erreur ; il est relancé juste avant l'exécution réelle sans `-n`.
 - **Réversibilité** : tout passe par git, rien n'est commité par la page. L'utilisateur relit `git status` et commite lui-même ; `git restore --staged --worktree` annule.
 - **Garde-fous** : refus pendant un build ; refus si le fichier est modifié ou non suivi ; refus si la destination existe ; contre-vérification refaite
   juste avant l'application (l'état a pu changer depuis l'audit) ; en-tête anti-CSRF et nom d'hôte comme les autres routes ; une seule application à la fois.
