@@ -76,7 +76,6 @@ Décisions :
 
 ## Améliorations restantes
 - [x] [projet] Brancher la page de l'atelier des visuels sur les consignes (plan atelier-visuels, A7) — preuve : fait le 2026-11-15, voir atelier-visuels A7 (consignes branchées, bancs verts)
-- [ ] [projet] Même façade animée pour la carte du rideau et l'accueil d'autres lieux
 
 ## Vérification
 Bancs : `node outils_docs/scripts_python/outils_pc/test_volets.mjs`, `berry/banc_reglage_volets.py`, sondes `test_volets_chrome.py` et
