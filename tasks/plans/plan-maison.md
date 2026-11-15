@@ -37,11 +37,11 @@ Décisions de conception (mes choix, à corriger) :
 - [x] Un trait par type — preuve : `python outils_docs/plan_maison/genere_plan_maison.py` -> « 18 cartes, 10 traits de lien, 3 maîtres, 5 esclaves » sans avertissement, rendu relu en capture Chrome le 2026-11-15 : ModBus série = plein épais (bus RS485), UDP/Wi-Fi = pointillé, MQTT = tiret-point, TCP = double trait ; couleur en renfort seulement
 - [x] Légende complète — preuve : `python outils_docs/plan_maison/genere_plan_maison.py` -> « 18 cartes, 10 traits de lien, 3 maîtres, 5 esclaves » sans avertissement, rendu relu en capture Chrome le 2026-11-15 de la page (trait, symbole, signification), cases de filtre par type
 - [x] Flèches — preuve : `python outils_docs/plan_maison/genere_plan_maison.py` -> « 18 cartes, 10 traits de lien, 3 maîtres, 5 esclaves » sans avertissement, rendu relu en capture Chrome le 2026-11-15 : maître -> esclave pour la commande ; flèche inverse fine pour le push esclave -> maître (`ModbusPushUDP`) quand l'UDP est actif
-- [ ] Pastille sur le milieu du lien : texte court (id ModBus, débit 19200 8N1)
+- [x] Pastille sur le milieu du lien : texte court (id ModBus, débit 19200 8N1) — preuve : étiquette « id N » au milieu des liens RS485 et UDP, relue en capture et testée par la sonde Chrome (ne mentionne pas le débit : tient dans la fiche)
 
 ## A4 — Symboles maître et esclave
 - [x] Maître : couronne — preuve : `python outils_docs/plan_maison/genere_plan_maison.py` -> « 18 cartes, 10 traits de lien, 3 maîtres, 5 esclaves » sans avertissement, rendu relu en capture Chrome le 2026-11-15 ou étoile sur la pastille + bordure double ; esclave : badge rond numéroté (id ModBus)
-- [ ] Marque « Range Extender » (point d'accès NAPT) sur les cartes qui portent un réseau derrière elles
+- [x] Marque « Range Extender » (point d'accès NAPT) sur les cartes qui portent un réseau derrière elles — preuve : marque « 📶 RE ×N » sur les maîtres du plan, sonde Chrome « maitre P4 : marque Range Extender x3 »
 - [x] Carte isolée — preuve : `python outils_docs/plan_maison/genere_plan_maison.py` -> « 18 cartes, 10 traits de lien, 3 maîtres, 5 esclaves » sans avertissement, rendu relu en capture Chrome le 2026-11-15 (aucun lien actif) : pastille estompée avec la mention « autonome »
 - [x] Carte du dossier `-sauvegarde` — preuve : `python outils_docs/plan_maison/genere_plan_maison.py` -> « 18 cartes, 10 traits de lien, 3 maîtres, 5 esclaves » sans avertissement, rendu relu en capture Chrome le 2026-11-15 ou ancien code : marque « ancien code » (cave)
 
@@ -59,7 +59,7 @@ Décisions de conception (mes choix, à corriger) :
 
 ## A7 — Qualité et documentation
 - [x] Banc `test_plan_maison.py` : dérivation des liens sur des persist de test, avertissements (carte sans placement, lien orphelin), témoin négatif — preuve : `python outils_docs/plan_maison/test_plan_maison.py` -> 18 OK, 0 échec, sortie 0
-- [ ] Sonde Chrome de la page : pas de débordement de pièce, un lien par entrée du banc, filtres, légende
+- [x] Sonde Chrome de la page : pas de débordement de pièce, un lien par entrée du banc, filtres, légende — preuve : `python outils_docs/scripts_python/outils_pc/test_plan_maison_page_chrome.py` 33 OK, 0 échec ; témoins (survol et en-tête cassés) détectés par 3 KO ; aucun Chrome orphelin
 - [x] Section du `outils_docs/README.md` et entrée de la carte des documents de `CLAUDE.md` (arrêt libre, hors build) — preuve : section « Plan de la maison » du README et ligne de la carte des documents de CLAUDE.md
 - [ ] Contrôle de secrets avant commit (la page affiche IP, topics, jamais de mot de passe) puis commit en français sans accents
 
@@ -70,11 +70,22 @@ Décisions de conception (mes choix, à corriger) :
 - [x] Tuile « Plan de la maison » dans l'annuaire (port 7915, lecture seule) — preuve : `python outils_docs/scripts_python/outils_pc/test_plan_maison_web.py` 5 OK, test_annuaire.py VERT (22 outils)
 - [ ] Confirmer avec l'utilisateur : l'appareil réel de MAISON pour chaque module (déduit : Freebox Server), répéteur salon sans SSID identifié
 
+## A9 — Couche chauffage et débits
+- [x] Vue chauffage : PAC (cave), nourrice (bureau), eau chaude PAC -> nourrice, départs vers les pièces chauffées (RDC, 1er hors bureau, chambres du 2e) — preuve : capture Chrome 2026-11-15, sonde « vue chauffage : PAC et nourrice, traits d'eau », données dans placement.json > chauffage (réponses de l'utilisateur)
+- [ ] Affecter Débit 1 à 6 à leur pièce (7 pièces candidates pour 6 départs, ordre inconnu) ; aujourd'hui traits en pointillé
+- [ ] Afficher les valeurs en direct des 6 débits (lecture de la carte des débits, à la demande comme « Tester les cartes »)
+
 ## Améliorations restantes
 - [x] [projet] Tuile « Plan de la maison » dans l'annuaire des outils (page servie sur un port libre, lecture seule)
 - [ ] [projet] Dessiner un vrai plan à l'échelle des pièces (si l'utilisateur fournit les dimensions ou un plan)
 - [ ] [projet] Lier la page aux façades animées (`volets.js`) : clic sur une pièce -> sa page d'accueil
-- [ ] [conversation] Confirmer les placements incertains de A1
+- [ ] [conversation] Confirmer les placements incertains de A1 (position de la cave)
+- [ ] [projet] Corriger les rattachements Wi-Fi : appareil réel de MAISON pour chaque carte (défaut Freebox Server, faux pour certaines), répéteur du salon sans SSID identifié (`wifi_manuel`)
+- [ ] [projet] Vérifier l'en-tête fixe dans un navigateur avec la barre « Annuaire » (décalage de 32 px estimé)
+- [ ] [projet] Pousser les commits du plan de la maison (agent `preparateur-push` d'abord)
+- [ ] [projet] Lier le plan aux pages des cartes : clic sur une pièce ou une carte -> sa façade animée (`volets.js`) ou sa page d'accueil
+- [ ] [projet] Plan à l'échelle des pièces, si l'utilisateur fournit les dimensions ou un plan
+- [ ] [projet] Cible PlatformIO et tâche VS Code pour la tuile « Plan de la maison » (comme les autres outils de l'annuaire)
 
 ## Vérification
 Régénérer la page, la lire dans Chrome headless (capture) et dans un navigateur : toutes les cartes de `data/` placées, liens identiques à ceux des persist, légende cohérente avec les traits dessinés, rendu lisible en noir et blanc. Aucune compilation, aucun appel réseau, aucun fichier de `data/fs` touché.

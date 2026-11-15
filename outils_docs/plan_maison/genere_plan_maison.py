@@ -22,7 +22,7 @@ NOMS = {"serie": "ModBus RS485 (série)", "udp": "UDP (commande et push)"}
 def lit(cle):
     """Ce que le persist dit de la carte ; valeurs neutres si le dossier n'a pas de persist (ESP8266)."""
     r = {"hote": "", "topic": "", "ip": "", "mb": False, "mb_id": None, "serie": False, "udp": False,
-         "re": False, "re_id": None, "ip_maitre": "", "mqtt": False, "mqtt_hote": "", "persist": False, "ssids": []}
+         "re": False, "re_id": None, "ip_maitre": "", "mqtt": False, "mqtt_hote": "", "persist": False, "ssids": [], "debit": "", "mode": ""}
     try:
         d = json.loads((DATA / cle / "_persist.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -39,7 +39,7 @@ def lit(cle):
     r.update(persist=True, hote=s.get("hostname") or "", topic=mq.get("topic") or "", ip="" if ip == "0.0.0.0" else ip,
              mb=mb.get("activation") == "ON", mb_id=mb.get("id"), serie=tc.get("Serial") == "ON", udp=tc.get("UDP") == "ON",
              re=rx.get("activation") == "ON", re_id=rx.get("id"), ip_maitre=rx.get("ipMaitre") or "",
-             ssids=ssids, mqtt=mq.get("activation") == "ON", mqtt_hote=f"{mq.get('hote') or ''}:{mq.get('port') or ''}".rstrip(":"))
+             ssids=ssids, debit=str(mb.get("debit") or ""), mode=str(mb.get("mode") or ""), mqtt=mq.get("activation") == "ON", mqtt_hote=f"{mq.get('hote') or ''}:{mq.get('port') or ''}".rstrip(":"))
     return r
 
 
@@ -119,6 +119,15 @@ def triangle(x, y, dx, dy, t=8):
             f'{x - dx * t * 1.6 - px * t * .7:.0f},{y - dy * t * 1.6 - py * t * .7:.0f}"/>')
 
 
+def etiquette(pts, texte):
+    """Texte au milieu du plus long segment (halo de la couleur du fond) ; rien si aucun segment n'a 20 px."""
+    seg = max(zip(pts, pts[1:]), key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
+    (a, b), (c, d) = seg
+    if abs(a - c) + abs(b - d) < 20 or not texte:
+        return ""
+    return f'<text class="lbl" x="{(a + c) / 2:.0f}" y="{(b + d) / 2 + 3.5:.0f}" text-anchor="middle">{html.escape(texte)}</text>'
+
+
 def svg_lien(ln, pts, liens):
     """(ordre de dessin, svg) d'un lien le long de la polyligne pts ; le pointille clair passe au-dessus du trait plein."""
     d = "M" + " L".join(f"{x:.0f},{y:.0f}" for x, y in pts)
@@ -130,10 +139,10 @@ def svg_lien(ln, pts, liens):
     retour = triangle(u2, v2, (u2 - u1) / m, (v2 - v1) / m, 6)
     attr = f'data-de="{html.escape(ln["de"])}" data-vers="{html.escape(ln["vers"])}"'
     if ln["type"] == "serie":
-        return 0, f'<g class="lien serie" data-type="serie" {attr}><path d="{d}"/>{pointe}</g>'
+        return 0, f'<g class="lien serie" data-type="serie" {attr}><path d="{d}"/>{pointe}{etiquette(pts, ln["etiquette"])}</g>'
     if any(k["type"] == "serie" and k["de"] == ln["de"] and k["vers"] == ln["vers"] for k in liens):
         return 2, f'<g class="lien udp sur-serie" data-type="udp" {attr}><path d="{d}"/>{retour}</g>'
-    return 1, f'<g class="lien udp seul" data-type="udp" {attr}><path d="{d}"/>{pointe}{retour}</g>'
+    return 1, f'<g class="lien udp seul" data-type="udp" {attr}><path d="{d}"/>{pointe}{retour}{etiquette(pts, ln["etiquette"])}</g>'
 
 
 def route(a, b, salles):
@@ -170,6 +179,8 @@ def svg_carte(cle, x, y, m):
     elif m["badge"] == "id":
         deco = (f'<circle class="idb" cx="{x + CW - 14}" cy="{y + 14}" r="9"/>'
                 f'<text class="idt" x="{x + CW - 14}" y="{y + 18}">{html.escape(str(m["id"]))}</text>')
+    if m.get("re_n"):
+        deco += f'<text class="re" x="{x + CW - 18}" y="{y + CH - 5}" text-anchor="end">📶 RE ×{m["re_n"]}</text>'
     etat = f'<circle class="etat" cx="{x + CW - 9}" cy="{y + CH - 8}" r="4"/>' if m["url"] else ""
     url = f' data-url="{html.escape(m["url"])}"' if m["url"] else ""
     return (f'<g class="{m["cls"]}" data-id="{html.escape(cle)}"{url} tabindex="0"><rect x="{x}" y="{y}" width="{CW}" height="{CH}" rx="5"/>'
@@ -271,7 +282,7 @@ def construit():
         ip_ok = re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", i["ip"] or "")
         metas[cle] = {"libelle": c["libelle"], "sous": sous, "badge": badge, "id": esclaves.get(cle), "role": role, "puce": puce,
                       "coul": PUCE_COUL.get(puce, "#888"), "etiq": etiq, "mqtt": i["mqtt"], "url": f"http://{i['ip']}/" if ip_ok else "",
-                      "cls": "carte" + (" maitre" if badge == "etoile" else "") + (" autonome" if autonome else "")}
+                      "re_n": len({ln["vers"] for ln in liens if ln["de"] == cle}), "cls": "carte" + (" maitre" if badge == "etoile" else "") + (" autonome" if autonome else "")}
 
     pieces, ordre, pos, salles, out_p = {}, {}, {}, {}, []
     for niv in conf["niveaux"]:
@@ -327,6 +338,21 @@ def construit():
             d = "M" + " L".join(f"{x:.0f},{y:.0f}" for x, y in route(pos[w["de"]], dest, salles))
             out_w.append(f'<g class="lien wl wre" data-type="wre" data-de="{html.escape(w["de"])}" data-vers="{html.escape(w["vers"])}">'
                          f'<path class="rail" d="{d}"{dash}/><path class="ame" d="{d}"/></g>')
+    ch = conf.get("chauffage", {})
+    out_ch, jch = [], {}
+    if ch:
+        for k, e in (("ch:pac", ch["pac"]), ("ch:nourrice", ch["nourrice"])):
+            niv, pc = pieces[e["piece"]]
+            jch[k] = (niv["x"] + pc["x"] + pc["w"] - (254 if e["piece"] in ("bureau", "cave") else 128), niv["y"] + 4, e)
+        (px, py, _), (nx, ny, _) = jch["ch:pac"], jch["ch:nourrice"]
+        out_ch.append(f'<g class="lien chl" data-de="ch:pac" data-vers="ch:nourrice"><path class="hyd" d="M{px + 59},{py + 10} L{nx + 59},{ny + 10}"/></g>')
+        for pid in ch.get("departs", []):
+            niv, pc = pieces[pid]
+            out_ch.append(f'<g class="lien chl" data-de="ch:nourrice" data-vers="{pid}"><path class="dep" d="M{nx + 59},{ny + 10} L{niv["x"] + pc["x"] + pc["w"] / 2:.0f},{niv["y"] + 12}"/>'
+                          f'<circle cx="{niv["x"] + pc["x"] + pc["w"] / 2:.0f}" cy="{niv["y"] + 12}" r="5"/></g>')
+        for k, (x, y, e) in jch.items():
+            out_c.append(f'<g class="carte chn" data-id="{k}" tabindex="0"><rect x="{x}" y="{y}" width="118" height="20" rx="4"/>'
+                         f'<text class="t2" x="{x + 59}" y="{y + 14}" text-anchor="middle" style="fill:var(--txt);font-weight:600">{html.escape("🔥 " + e["nom"])}</text></g>')
     for k, (x, y, a) in app.items():
         out_c.append(f'<g class="carte apn" data-id="{k}" tabindex="0"><rect x="{x}" y="{y}" width="118" height="20" rx="10" stroke="{a["coul"]}"/>'
                      f'<text class="t2" x="{x + 59}" y="{y + 14}" text-anchor="middle" style="fill:var(--txt);font-weight:600">'
@@ -355,10 +381,15 @@ def construit():
                                  + f' ({w["ssid"]})' for w in wifi if w["vers"] == cle]
         fiches[cle]["liens"] += [f'Range Extender de cette carte : {conf["cartes"][w["vers"]]["libelle"]}'
                                  for w in wifi if w["kind"] == "re" and w["de"] == cle and w["rang"] == 0]
+    for k, (x, y, e) in jch.items():
+        acq = conf["cartes"].get(ch.get("acquisition", ""), {}).get("libelle", "")
+        fiches[k] = {"libelle": e["nom"], "dossier": "-", "puce": "Chauffage", "piece": pieces[e["piece"]][1]["nom"], "hote": "", "topic": "", "ip": "-",
+                     "url": "", "role": "chauffage central", "mqtt": "-", "note": ch.get("note", "") + (f" Débits mesurés par : {acq}." if k == "ch:nourrice" and acq else ""),
+                     "liens": (["Alimente : " + ", ".join(pieces[q][1]["nom"] for q in ch.get("departs", []))] if k == "ch:nourrice" else ["Eau chaude vers la nourrice"])}
     leg_puces = "".join(f'<span><i class="carre" style="background:{c}"></i>{n}</span>' for n, c in PUCE_COUL.items())
     legende = (LEGENDE.replace("@SERIE@", COUL_SERIE).replace("@UDP@", COUL_UDP).replace("@MQTT@", COUL_MQTT)
                .replace("@PUCES@", leg_puces))
-    page = (MODELE.replace("@@PIECES@@", "".join(out_p)).replace("@@LIENS@@", "".join(out_l) + "".join(out_w)).replace("@@CARTES@@", "".join(out_c))
+    page = (MODELE.replace("@@PIECES@@", "".join(out_p)).replace("@@LIENS@@", "".join(out_l) + "".join(out_w) + "".join(out_ch)).replace("@@CARTES@@", "".join(out_c))
             .replace("@@RESEAU@@", vue_reseau(conf, metas, liens, maitres, conf.get("broker", {}), hotes))
             .replace("@@LEGENDE@@", legende).replace("@@COULS@@", COUL_SERIE).replace("@@COULU@@", COUL_UDP).replace("@@COULM@@", COUL_MQTT)
             .replace("@@FICHES@@", json.dumps(fiches, ensure_ascii=False).replace("</", "<\\/")))
@@ -380,6 +411,8 @@ LEGENDE = """<div class="legende">
 <label class="seul-wifi"><input type="checkbox" checked data-type="wap"><svg width="46" height="12"><path d="M2,6 L36,6" stroke="#7048e8" stroke-width="2.2"/><circle cx="40" cy="6" r="4.5" fill="#7048e8"/></svg>vers un appareil Wi-Fi (couleur = appareil)</label>
 <label class="seul-wifi"><input type="checkbox" data-type="wsec"><svg width="46" height="12"><path d="M2,6 L36,6" stroke="#7048e8" stroke-width="2.2" stroke-dasharray="7 5" opacity=".6"/></svg>pointillé = réseau de secours (masqué par défaut)</label>
 <label class="seul-wifi"><input type="checkbox" checked data-type="wre"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#d6336c" stroke-width="6"/><path d="M2,6 L44,6" stroke="var(--carte)" stroke-width="2.2"/></svg>Range Extender du maître</label>
+<span class="seul-chauffage"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#1098ad" stroke-width="5"/></svg>eau chaude PAC vers la nourrice</span>
+<span class="seul-chauffage"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#1098ad" stroke-width="2" stroke-dasharray="6 5"/></svg>départs vers les pièces chauffées (affectation Débit 1 à 6 à préciser)</span>
 <span class="puces l-comm">@PUCES@</span></div>"""
 
 MODELE = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -402,8 +435,10 @@ aside{flex:0 1 280px;background:var(--carte);border:1px solid var(--trait);borde
 .carte rect:first-child{fill:var(--carte);stroke:var(--trait);stroke-width:1.2;cursor:pointer}.carte.maitre rect:first-child{stroke:var(--txt);stroke-width:2.6}
 .carte:hover rect:first-child,.carte:focus rect:first-child,.carte.sel rect:first-child{stroke:var(--accent);stroke-width:2.8}.carte.autonome{opacity:.8}.carte.apn rect{stroke-width:2;fill:var(--carte)}
 .wl path{fill:none}.wl .rail{stroke:#d6336c;stroke-width:6;stroke-linejoin:round}.wl .ame{stroke:var(--carte);stroke-width:2.2;stroke-linejoin:round}
-body:not(.v-wifi) .wl,body:not(.v-wifi) .apn,body:not(.v-wifi) .seul-wifi{display:none}
-body.v-wifi .lien.serie,body.v-wifi .lien.udp,body.v-wifi svg.reseau,body.v-wifi .l-comm,body.v-wifi .seul-reseau{display:none}
+body:not(.v-wifi) .wl,body:not(.v-wifi) .apn,body:not(.v-wifi) .seul-wifi,body:not(.v-chauffage) .chl,body:not(.v-chauffage) .chn,body:not(.v-chauffage) .seul-chauffage{display:none}
+.chl path{fill:none}.chl .hyd{stroke:#1098ad;stroke-width:5}.chl .dep{stroke:#1098ad;stroke-width:2;stroke-dasharray:6 5}.chl circle{fill:#1098ad}.carte.chn rect{stroke:#1098ad;stroke-width:2;fill:var(--carte)}
+.lbl{fill:var(--txt);font-size:10px;font-weight:700;paint-order:stroke;stroke:var(--piece);stroke-width:3px;pointer-events:none}.carte .re{fill:var(--doux);font-size:9.5px;pointer-events:none}
+body.v-wifi .lien.serie,body.v-wifi .lien.udp,body.v-wifi svg.reseau,body.v-wifi .l-comm,body.v-wifi .seul-reseau,body.v-chauffage .lien.serie,body.v-chauffage .lien.udp,body.v-chauffage svg.reseau,body.v-chauffage .l-comm,body.v-chauffage .seul-reseau{display:none}
 body.v-plan svg.reseau,body.v-reseau svg.plan{display:none}
 .carte .t1{fill:var(--txt);font-size:12px;font-weight:600;pointer-events:none}.carte .t2{fill:var(--doux);font-size:10.5px;pointer-events:none}
 .carte .etoile{fill:#e0a800;font-size:16px;pointer-events:none}.carte .etoile.vide{fill:var(--doux)}.idb{fill:var(--txt)}.idt{fill:var(--carte);font-size:11px;text-anchor:middle;font-weight:700;pointer-events:none}
@@ -416,7 +451,7 @@ body.v-plan svg.reseau,body.v-reseau svg.plan{display:none}
 dt{color:var(--doux);font-size:12px;margin-top:8px}dd{margin:0;word-break:break-all}
 @media print{.haut{position:static}:root{--fond:#fff;--carte:#fff;--piece:#f1efe9;--trait:#777;--txt:#111;--doux:#444}.barre,aside,.legende label input{display:none}main{padding:0}svg.plan,svg.reseau{max-width:none;width:100%}@page{size:landscape;margin:8mm}}
 </style></head><body class="v-plan">
-<div class="haut"><header><h1>Plan de la maison</h1><div class="barre"><button id="b-plan" class="actif">Vue plan</button><button id="b-reseau">Vue réseau</button><button id="b-wifi">Vue Wi-Fi</button>
+<div class="haut"><header><h1>Plan de la maison</h1><div class="barre"><button id="b-plan" class="actif">Vue plan</button><button id="b-reseau">Vue réseau</button><button id="b-wifi">Vue Wi-Fi</button><button id="b-chauffage">Vue chauffage</button>
 <button id="b-test" title="Interroge l'IP connue de chaque carte, uniquement quand on clique">Tester les cartes</button><button id="b-print">Imprimer / PDF</button></div></header>
 @@LEGENDE@@</div>
 <main><svg class="plan" viewBox="0 0 1120 770" role="img" aria-label="Cartes Tasmota par pièce">@@PIECES@@@@LIENS@@@@CARTES@@</svg>@@RESEAU@@
@@ -424,8 +459,8 @@ dt{color:var(--doux);font-size:12px;margin-top:8px}dd{margin:0;word-break:break-
 <script>
 const F=@@FICHES@@,$=s=>[...document.querySelectorAll(s)],e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 $("input[data-type]").forEach(i=>i.addEventListener("change",()=>$("[data-type='"+i.dataset.type+"']:not(input)").forEach(p=>p.classList.toggle("off",!i.checked))));
-function vue(v){document.body.className="v-"+v;$("#b-plan").forEach(b=>b.classList.toggle("actif",v=="plan"));$("#b-reseau").forEach(b=>b.classList.toggle("actif",v=="reseau"));$("#b-wifi").forEach(b=>b.classList.toggle("actif",v=="wifi"))}
-document.getElementById("b-plan").onclick=()=>vue("plan");document.getElementById("b-reseau").onclick=()=>vue("reseau");document.getElementById("b-wifi").onclick=()=>vue("wifi");document.getElementById("b-print").onclick=()=>window.print();
+function vue(v){document.body.className="v-"+v;$("#b-plan").forEach(b=>b.classList.toggle("actif",v=="plan"));$("#b-reseau").forEach(b=>b.classList.toggle("actif",v=="reseau"));$("#b-wifi").forEach(b=>b.classList.toggle("actif",v=="wifi"));$("#b-chauffage").forEach(b=>b.classList.toggle("actif",v=="chauffage"))}
+document.getElementById("b-plan").onclick=()=>vue("plan");document.getElementById("b-reseau").onclick=()=>vue("reseau");document.getElementById("b-wifi").onclick=()=>vue("wifi");document.getElementById("b-chauffage").onclick=()=>vue("chauffage");document.getElementById("b-print").onclick=()=>window.print();
 document.getElementById("b-test").onclick=async()=>{const cs=$(".carte[data-url]");cs.forEach(c=>{c.classList.remove("ok","ko");c.classList.add("test")});
 await Promise.all(cs.map(c=>fetch(c.dataset.url,{mode:"no-cors",signal:AbortSignal.timeout(2500)}).then(()=>{c.classList.remove("test");c.classList.add("ok")},()=>{c.classList.remove("test");c.classList.add("ko")})))};
 let cur=null;function hl(id){if(!id){$(".lien,.carte").forEach(n=>n.classList.remove("fade","sel"));return}const v=new Set([id]);$(".lien").forEach(l=>{const m=l.dataset.de==id||l.dataset.vers==id;l.classList.toggle("fade",!m);if(m){v.add(l.dataset.de);v.add(l.dataset.vers)}});

@@ -298,5 +298,26 @@
   "re_hotes": {
    "SERVEUR-GARAGE": "garage/tasmota32p4-serveur-modbus"
   }
+ },
+ "chauffage": {
+  "pac": {
+   "piece": "cave",
+   "nom": "PAC air-eau"
+  },
+  "nourrice": {
+   "piece": "bureau",
+   "nom": "Nourrice 6 départs"
+  },
+  "acquisition": "bureau/tasmota32s3-serveur-debits-pac",
+  "departs": [
+   "salon",
+   "sam",
+   "cuisine",
+   "parentale",
+   "sdb",
+   "camille",
+   "axelgael"
+  ],
+  "note": "Six départs répartis sur ces pièces (réponses du 2026-11-15 : RDC, 1er étage hors bureau, chambres du 2e). L'affectation Débit 1 à 6 -> pièce n'est pas connue : traits en pointillé."
  }
 }
