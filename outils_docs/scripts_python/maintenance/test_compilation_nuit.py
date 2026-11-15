@@ -11,6 +11,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes  # avancement reel sur la page Sondes en cours
+suivi_sondes.suit()
 import compilation_nuit as cn
 
 ENVS = [{"nom": "a", "ecrivable": True}, {"nom": "b", "ecrivable": True}, {"nom": "c", "ecrivable": True},

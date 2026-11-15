@@ -91,6 +91,21 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
         verifie("GET /etat : etats orpheline / en_cours / sans_suivi / disparue", etats == {10: "orpheline", 20: "en_cours", 21: "sans_suivi", 30: "disparue"})
         verifie("GET /etat : bandeau rouge (orpheline) et phrase", j["niveau"] == "rouge" and "orphelin" in j["phrase"])
         verifie("GET /etat : l'avancement reel (4 / 10) est transmis", next(s for s in j["sondes"] if s["pid"] == 20)["faits"] == 4)
+        # -- detail d'une sonde ---------------------------------------------------------------
+        (t / "sondes").mkdir(exist_ok=True)
+        ok20 = dict(fichier(20, "test_alpha"), script="C:/x/test_alpha.py", phases=[{"nom": "p1", "t": 1.5, "faits": 3, "echecs": 1}, "mauvais", {"nom": "x", "faits": "abc", "echecs": [1]}],
+                    journal=[[1.0, "phase", "== p1"], [2.0, "ko", "KO  x"], "mauvais", [3, "ok", "<b>OK</b>"]])
+        (t / "sondes" / "20.json").write_text(json.dumps(ok20), encoding="utf-8")
+        st, corps = req("GET", "/detail?pid=20")
+        d = json.loads(corps) if st == 200 else {}
+        verifie("GET /detail?pid=20 : fiche, script, phases et journal (entrees mal formees ecartees, texte brut)",
+                st == 200 and d["sonde"]["pid"] == 20 and d["script"].endswith("test_alpha.py") and [(p["nom"], p["faits"], p["echecs"]) for p in d["phases"]] == [("p1", 3, 1), ("x", 0, 0)]
+                and [l[1] for l in d["journal"]] == ["phase", "ko", "ok"] and d["journal"][2][2] == "<b>OK</b>")
+        st, corps = req("GET", "/detail?pid=21")
+        d = json.loads(corps) if st == 200 else {}
+        verifie("GET /detail?pid=21 (sans suivi) : 200, phases et journal vides", st == 200 and d["phases"] == [] and d["journal"] == [])
+        verifie("GET /detail : pid absent du releve -> 404 ; pid absent ou non entier -> 400",
+                req("GET", "/detail?pid=999")[0] == 404 and req("GET", "/detail")[0] == 400 and req("GET", "/detail?pid=abc")[0] == 400)
         verifie("GET inconnu : 404 ; GET ne tue rien", req("GET", "/arreter")[0] == 404 and req("GET", "/autre")[0] == 404 and not tues)
         verifie("PUT et DELETE : aucune route", [req(m, "/arreter", None, ENT)[0] for m in ("PUT", "DELETE")] == [501, 501])
 

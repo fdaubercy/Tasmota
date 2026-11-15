@@ -101,6 +101,10 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
             d["echecs"] == ["KO   trois", "ECHEC quatre", "KO   temoin y non detecte"])
     verifie("phase = temoin x ; dernier cas = derniere ligne vue", d["phase"] == "temoin x" and d["dernier"].startswith("ROUGE ou VERT"))
     verifie("etat termine par atexit ; total, nom, parent renseignes", d["etat"] == "termine" and d["total"] == 8 and d["nom"] == "enfant" and d["parent"] > 0)
+    verifie("phases : 2 phases, comptes par phase (OK/KO/ECHEC faits, echecs hors KO attendu d'un temoin)",
+            [(x["nom"], x["faits"], x["echecs"]) for x in d["phases"]] == [("passage normal", 4, 2), ("temoin x", 3, 1)])
+    verifie("journal : phases, ok, ko, et le KO attendu du temoin marque « attendu »",
+            [l[1] for l in d["journal"]] == ["phase", "ok", "ok", "ko", "ko", "phase", "attendu", "ko", "ok"])
     verifie("pas de fichier .tmp oublie", not list((t / "sondes").glob("*.tmp")))
     rel = sondes_scan.releve([], sondes_scan.lit_fichiers(t / "sondes"))
     verifie("releve : termine, verdict rouge", len(rel) == 1 and rel[0]["etat"] == "termine" and rel[0]["verdict"] == "rouge")

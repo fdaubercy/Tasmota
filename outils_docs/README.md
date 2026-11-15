@@ -2613,6 +2613,8 @@ Limites : GitHub prouve que le code compile avec `platformio_override_sample.ini
 
 Tuile « Sondes en cours » de l'annuaire (groupe Dépôt et références), page http://127.0.0.1:7910 ; tâche VS Code « Outil : sondes en cours » ou cible Custom détachée. Elle liste les bancs Python et les Chrome de sonde qui tournent sur ce PC, avec leur durée et leur **avancement réel** : nombre de vérifications faites, phase (`== temoin innerHTML`), dernier cas, échecs en direct. Un banc apparaît avec son avancement quand il appelle `suivi_sondes.suit()` (fichiers `%LOCALAPPDATA%\outils_tasmota\sondes\<pid>.json`) ; les 33 sondes Chrome qui importent `test_build_page_chrome.py` sont couvertes d'un seul coup, les autres bancs s'affichent « sans suivi » (durée seulement). Un Chrome de sonde dont le banc parent n'existe plus est signalé **orphelin**, avec un bouton « Arrêter les orphelines ». `SUIVI_SONDES=0` coupe le suivi.
 
+Cliquer sur l'en-tête d'une carte en déplie le détail du suivi : script, phases (début, vérifications faites, échecs) et journal des 200 dernières lignes `OK` / `KO` / `==` du banc, mis à jour toutes les 2 s ; un second clic le replie (route `GET /detail?pid=`, même règle que l'arrêt : seulement un numéro du dernier relevé).
+
 Arrêter une sonde : bouton à deux clics, accepté seulement pour un numéro présent dans le dernier relevé (jamais un processus quelconque), arbre tué par `taskkill /T /F`. Mêmes contrôles d'accès que la page Tâches planifiées (`X-Sondes: 1`, origine, Host, ce PC seulement). Limite : un relevé PowerShell prend 11 à 24 s sous charge, la page peut afficher un relevé retardé. Plan `tasks/plans/sondes-en-cours.md`.
 
 <hr></hr>

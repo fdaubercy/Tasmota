@@ -16,6 +16,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import suivi_sondes  # avancement reel sur la page Sondes en cours
+suivi_sondes.suit()
 import acces_web
 import taches_planifiees_web as tw
 from test_taches_planifiees_web import faux_gh

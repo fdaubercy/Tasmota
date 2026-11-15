@@ -25,6 +25,12 @@ h1{font-size:20px;margin:0} .doux{color:var(--doux)} .petit{font-size:12px}
 .barre{height:8px;border-radius:4px;background:var(--barre);overflow:hidden;margin:6px 0} .barre>i{display:block;height:100%;background:var(--barre-ok)}
 .ligne{margin:3px 0;overflow-wrap:anywhere} code{font:12px ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
 ul.echecs{margin:4px 0;padding-left:18px;color:var(--rouge)} ul.echecs li{overflow-wrap:anywhere}
+.tete.clic{cursor:pointer} .tete.clic:hover .nom{text-decoration:underline} .fleche{color:var(--doux);width:1em}
+.detail{margin-top:8px;border-top:1px solid var(--bord);padding-top:8px}
+.detail h3{font-size:13px;margin:8px 0 4px} table.phases{border-collapse:collapse;width:100%;font-size:12px} table.phases td,table.phases th{padding:2px 8px 2px 0;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+table.phases tr.ko td{color:var(--rouge)}
+.journal{max-height:260px;overflow:auto;border:1px solid var(--bord);border-radius:6px;padding:4px 8px;font:12px ui-monospace,Consolas,monospace;background:var(--fond)}
+.journal div{overflow-wrap:anywhere;padding:1px 0} .journal .ko{color:var(--rouge);font-weight:600} .journal .phase{color:var(--barre-ok);font-weight:600} .journal .attendu{color:var(--doux)} .journal .t{color:var(--doux);margin-right:6px}
 .btn{padding:6px 12px;border:1px solid var(--btn-bord);border-radius:6px;background:var(--btn);font:inherit;color:inherit;cursor:pointer}
 .btn.danger{border-color:var(--rouge);color:var(--rouge)} .msg{min-height:1em;margin:6px 0;overflow-wrap:anywhere}
 """
@@ -39,6 +45,8 @@ function el(tag, cls, texte) {
 }
 function duree(s) { return s < 90 ? s + " s" : s < 5400 ? Math.round(s / 60) + " min" : (s / 3600).toFixed(1) + " h"; }
 var LIBELLE = { en_cours: "en cours", sans_suivi: "sans suivi", termine: "terminée", disparue: "disparue", orpheline: "orpheline" };
+var defile = {};
+var ouvertes = {}, details = {};      // pid -> true (detail deplie) ; pid -> dernier detail recu
 var armes = {};                       // pid -> minuteur : l'etat « arme » survit au rafraichissement de 2 s
 
 function post(corps) {
@@ -59,8 +67,36 @@ function deuxTemps(cle, texte, attention, corps) {
   };
   return b;
 }
+function hms(t) { t = Math.round(t); return Math.floor(t / 60) + ":" + ("0" + (t % 60)).slice(-2); }
+function blocDetail(s) {
+  var d = el("div", "detail"), x = details[s.pid];
+  if (!x) { d.appendChild(el("div", "doux petit", "Lecture du détail...")); return d; }
+  if (x.script) d.appendChild(el("div", "ligne doux petit", "Script : " + x.script));
+  if (!x.journal.length && !x.phases.length) { d.appendChild(el("div", "ligne doux", "Aucun détail enregistré : le banc n'a pas de suivi, ou n'a encore rien imprimé.")); return d; }
+  if (x.phases.length) {
+    d.appendChild(el("h3", null, "Phases (" + x.phases.length + ")"));
+    var tb = el("table", "phases"), th = el("tr");
+    ["Début", "Phase", "Faites", "Échecs"].forEach(function (h) { th.appendChild(el("th", null, h)); }); tb.appendChild(th);
+    x.phases.forEach(function (p, i) {
+      var tr = el("tr", p.echecs ? "ko" : ""); tr.appendChild(el("td", "doux", hms(p.t))); tr.appendChild(el("td", null, p.nom + (i === x.phases.length - 1 && s.etat === "en_cours" ? "  ◂ en cours" : "")));
+      tr.appendChild(el("td", null, String(p.faits))); tr.appendChild(el("td", null, String(p.echecs))); tb.appendChild(tr);
+    });
+    d.appendChild(tb);
+  }
+  d.appendChild(el("h3", null, "Journal des vérifications (" + x.journal.length + " dernières lignes)"));
+  var j = el("div", "journal");
+  x.journal.forEach(function (l) { var r = el("div", l[1]); r.appendChild(el("span", "t", hms(l[0]))); r.appendChild(document.createTextNode(l[2])); j.appendChild(r); });
+  d.appendChild(j);
+  j.dataset.pid = s.pid;
+  var m = defile[s.pid];
+  setTimeout(function () { j.scrollTop = !m || m.bas ? j.scrollHeight : m.haut; }, 0);
+  return d;
+}
 function carte(s) {
-  var c = el("section", "sonde " + s.etat), t = el("div", "tete");
+  var c = el("section", "sonde " + s.etat), t = el("div", "tete clic");
+  t.onclick = function () { if (ouvertes[s.pid]) delete ouvertes[s.pid]; else ouvertes[s.pid] = true; charge(); };
+  t.title = "Cliquer pour voir le détail du suivi";
+  t.appendChild(el("span", "fleche", ouvertes[s.pid] ? "▾" : "▸"));
   t.appendChild(el("span", "nom", s.nom));
   t.appendChild(el("span", "badge " + (s.etat === "orpheline" || s.etat === "disparue" ? "ko" : s.etat === "termine" ? (s.verdict === "rouge" ? "ko" : "ok") : "en"), LIBELLE[s.etat] || s.etat));
   if (s.verdict) t.appendChild(el("span", "badge " + (s.verdict === "vert" ? "ok" : "ko"), s.verdict === "vert" ? "vert" : "rouge"));
@@ -79,11 +115,15 @@ function carte(s) {
   if (s.etat === "en_cours" || s.etat === "sans_suivi" || s.etat === "orpheline") {
     var r = el("div", "ligne"); r.appendChild(deuxTemps("p" + s.pid, "Arrêter", "arrêter " + s.nom + " et ses sous-processus", { pid: s.pid })); c.appendChild(r);
   }
+  if (ouvertes[s.pid]) c.appendChild(blocDetail(s));
   return c;
 }
 var dernier = null, enCours = false;
 function rend(e) {
   if (!e) return;
+  Array.prototype.forEach.call(document.querySelectorAll(".journal"), function (j) {          // memorise le defilement : le rafraichissement ne ramene pas en bas
+    defile[j.dataset.pid] = { haut: j.scrollTop, bas: j.scrollHeight - j.scrollTop - j.clientHeight < 40 };
+  });
   var b = $("bandeau"); b.className = "bandeau " + e.niveau; b.textContent = e.phrase;
   $("instant").textContent = "Relevé du " + e.instant;
   var z = $("liste"); z.textContent = "";
@@ -92,10 +132,17 @@ function rend(e) {
   var o = $("orph"); o.textContent = "";
   if (e.sondes.some(function (s) { return s.etat === "orpheline"; })) o.appendChild(deuxTemps("orphelines", "Arrêter les orphelines", "arrêter tous les Chrome orphelins", { orphelines: true }));
 }
+function chargeDetails(e) {
+  var pids = e.sondes.map(function (s) { return s.pid; }).filter(function (p) { return ouvertes[p]; });
+  Object.keys(details).forEach(function (k) { if (!ouvertes[k]) delete details[k]; });
+  return Promise.all(pids.map(function (p) {
+    return fetch("/detail?pid=" + p, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (x) { if (x) details[p] = x; }).catch(function () {});
+  }));
+}
 function charge() {
   if (enCours) return; enCours = true;
   fetch("/etat", { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-    .then(function (e) { dernier = e; rend(e); })
+    .then(function (e) { dernier = e; rend(e); return chargeDetails(e).then(function () { rend(e); }); })
     .catch(function (x) { var b = $("bandeau"); b.className = "bandeau orange"; b.textContent = "L'outil ne répond pas : " + x.message; })
     .then(function () { enCours = false; });
 }

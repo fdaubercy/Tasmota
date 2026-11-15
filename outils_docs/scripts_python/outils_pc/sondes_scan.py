@@ -91,6 +91,27 @@ def _s(valeur, limite=300):
     return str(valeur if valeur is not None else "")[:limite]
 
 
+def _entier(valeur):
+    try:
+        return int(valeur or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def liste_sure(valeur, maxi):
+    """Les `maxi` derniers elements d'une liste lue dans un fichier de suivi, textes bornes ; [] si la forme est inattendue."""
+    if not isinstance(valeur, list):
+        return []
+    sortie = []
+    for v in valeur[-maxi:]:
+        if isinstance(v, dict):
+            sortie.append({"nom": _s(v.get("nom")), "t": v.get("t") if isinstance(v.get("t"), (int, float)) else 0,
+                           "faits": _entier(v.get("faits")), "echecs": _entier(v.get("echecs"))})
+        elif isinstance(v, list) and len(v) == 3:
+            sortie.append([v[0] if isinstance(v[0], (int, float)) else 0, _s(v[1], 20), _s(v[2])])
+    return sortie
+
+
 def _sonde(pid, parent, nature, nom, debut, duree, faits, total, echecs, phase, dernier, etat, verdict, proc_debut=None):
     # proc_debut : heure de creation du PROCESSUS (pas celle du fichier de suivi) : l'arret la reverifie avant de tuer (pid reutilise par Windows)
     return {"pid": pid, "parent": parent, "proc_debut": proc_debut, "nature": nature, "nom": _s(nom, 120), "debut": debut, "duree_s": max(0, int(duree)), "faits": faits,

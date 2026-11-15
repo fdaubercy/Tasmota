@@ -25,6 +25,8 @@ from pathlib import Path
 PERIODE_S = 0.3
 PURGE_S = 2 * 24 * 3600
 MAX_ECHECS = 20
+MAX_JOURNAL = 200        # lignes de verdict gardees pour le detail de la page (les plus recentes)
+MAX_PHASES = 60
 MAX_TEXTE = 300
 _OK = re.compile(r"\s*OK\b")
 _KO = re.compile(r"\s*(KO|ECHEC)\b")
@@ -72,7 +74,8 @@ class Suivi:
         self.verrou = threading.RLock()
         self.dossier = Path(dossier)
         self.etat = {"pid": os.getpid(), "parent": os.getppid(), "nom": nom, "script": os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else "",
-                     "debut": time.time(), "maj": time.time(), "total": total, "faits": 0, "echecs": [], "phase": "", "dernier": "", "etat": "en_cours"}
+                     "debut": time.time(), "maj": time.time(), "total": total, "faits": 0, "echecs": [], "phase": "", "dernier": "", "etat": "en_cours",
+                     "phases": [], "journal": []}
         self.dernier_ecrit = 0.0
         self.tampon = ""
         self.sale = False
@@ -86,14 +89,23 @@ class Suivi:
                     return
                 force = False
                 m = _PHASE.match(brut)
+                t = round(time.time() - e["debut"], 1)
                 if m:
                     e["phase"] = m.group(1)[:MAX_TEXTE]
+                    e["phases"] = (e["phases"] + [{"nom": e["phase"], "t": t, "faits": 0, "echecs": 0}])[-MAX_PHASES:]
+                    self._journal(t, "phase", brut)
                 elif _OK.match(brut):
                     e["faits"] += 1
+                    self._compte("faits")
+                    self._journal(t, "ok", brut)
                 elif _KO.match(brut):
                     e["faits"] += 1
+                    self._compte("faits")
+                    attendu = e["phase"].startswith(("temoin", "mutant")) and not re.match(r"\s*KO\s+(temoin|mutant)", brut)
+                    self._journal(t, "attendu" if attendu else "ko", brut)
                     # KO attendu d'un temoin : pas un echec, sauf le verdict « KO temoin ... » (temoin non detecte)
-                    if not e["phase"].startswith(("temoin", "mutant")) or re.match(r"\s*KO\s+(temoin|mutant)", brut):
+                    if not attendu:
+                        self._compte("echecs")
                         e["echecs"] = (e["echecs"] + [brut.strip()[:MAX_TEXTE]])[-MAX_ECHECS:]
                         force = True
                 e["dernier"] = brut.strip()[:MAX_TEXTE]
@@ -101,13 +113,21 @@ class Suivi:
         except Exception:
             pass
 
+    def _journal(self, t, genre, brut):
+        j = self.etat["journal"]
+        j.append([t, genre, brut.strip()[:MAX_TEXTE]])
+        del j[:-MAX_JOURNAL]
+
+    def _compte(self, cle):
+        if self.etat["phases"]:
+            self.etat["phases"][-1][cle] += 1
+
     def ecrit(self, force=False):
         try:
             with self.verrou:
                 if not force and time.monotonic() - self.dernier_ecrit < PERIODE_S:
                     self.sale = True            # ecriture differee : le fil de _relais() la fera, la derniere ligne ne reste jamais en retard
                     return
-                self.sale = False
                 self.dernier_ecrit = time.monotonic()
                 self.etat["maj"] = time.time()
                 self.dossier.mkdir(parents=True, exist_ok=True)
@@ -115,8 +135,9 @@ class Suivi:
                 tmp = cible.with_name(cible.name + ".tmp")
                 tmp.write_text(json.dumps(self.etat, ensure_ascii=False), encoding="utf-8")
                 os.replace(tmp, cible)
+                self.sale = False
         except Exception:
-            pass
+            self.sale = True            # ecriture ratee (fichier tenu par un lecteur) : le fil de _relais() reessaie
 
     def fin(self):
         try:

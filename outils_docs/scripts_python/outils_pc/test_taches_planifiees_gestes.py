@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import suivi_sondes  # avancement reel sur la page Sondes en cours
+suivi_sondes.suit()
 import taches_planifiees_gestes as g
 
 ECHECS = []

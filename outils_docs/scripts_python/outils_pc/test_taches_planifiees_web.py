@@ -16,6 +16,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import acces_web
+import suivi_sondes  # avancement reel sur la page Sondes en cours
+suivi_sondes.suit()
 import taches_planifiees_github as tg_original
 import taches_planifiees_sante as ts_original
 import taches_planifiees_web as tw

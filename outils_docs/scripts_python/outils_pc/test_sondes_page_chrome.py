@@ -31,6 +31,7 @@ PAGE_ORIGINALE = page_mod.PAGE
 TEMOINS = {
     "innerHTML": ("if (texte != null) e.textContent = texte;", "if (texte != null) e.innerHTML = texte;", "hostile : nom, phase et echecs restent du texte"),
     "deux-temps": ("if (!armes[cle]) {", "if (false) {", "arreter : le 1er clic arme seulement"),
+    "detail-clic": ("t.onclick = function () { if (ouvertes[s.pid])", "t.onclick = function () { if (false)", "detail : un clic sur la carte deplie le journal"),
     "en-tete": ('"X-Sondes": "1"', '"X-Autre": "1"', "arreter : l'en-tete X-Sondes part avec le POST"),
 }
 
@@ -130,10 +131,24 @@ def scenario(m):
     verifie(cdp.js("document.body.textContent.indexOf(" + json.dumps(HOSTILE) + ") >= 0"), True, "hostile (nom, phase, dernier cas) affiche tel quel, comme du texte")
     verifie(cdp.js("document.querySelectorAll('main img, main b').length === 0 && window.__pwn === undefined"), True, "hostile : aucune balise creee, aucun script")
     # -- une sonde qui avance entre deux releves --------------------------------------------------
-    m.ecrit(fichier(20, "test_alpha", 9, ["KO   premier echec", "KO   second echec"], phase="phase 2", dernier="OK   cas neuf"))
+    f20 = fichier(20, "test_alpha", 9, ["KO   premier echec", "KO   second echec"], phase="phase 2", dernier="OK   cas neuf")
+    f20["phases"] = [{"nom": "phase 1", "t": 1, "faits": 4, "echecs": 1}, {"nom": "phase 2", "t": 70, "faits": 5, "echecs": 1}]
+    f20["journal"] = [[1, "phase", "== phase 1"], [2, "ok", "OK   cas un"], [3, "ko", "KO   " + HOSTILE], [70, "phase", "== phase 2"]]
+    m.ecrit(f20)
     verifie(bool(attend(cdp, carte20 + ".textContent.indexOf('9 / 10') >= 0", 15)), True, "la page se rafraichit seule : 9 / 10")
     verifie(cdp.js(carte20 + ".querySelector('.barre > i').style.width + '|' + " + carte20 + ".querySelectorAll('ul.echecs li').length"), "90%|2", "barre a 90 %, deux echecs")
     verifie(cdp.js(carte20 + ".textContent.indexOf('phase 2') >= 0 && " + carte20 + ".textContent.indexOf('cas neuf') >= 0"), True, "phase et dernier cas a jour")
+    # -- detail au clic ---------------------------------------------------------------------------
+    verifie(cdp.js(carte20 + ".querySelector('.detail')"), None, "detail : replie par defaut")
+    cdp.js(carte20 + ".querySelector('.tete').click()")
+    verifie(bool(attend(cdp, carte20 + ".querySelectorAll('.journal > div').length === 4", 15)), True, "detail : un clic sur la carte montre les 4 lignes du journal")
+    verifie(cdp.js(carte20 + ".querySelectorAll('table.phases tr').length"), 3, "detail : tableau des phases (en-tete + 2)")
+    verifie(cdp.js(carte20 + ".querySelector('.journal .ko').textContent.indexOf(" + json.dumps(HOSTILE) + ") >= 0 && !" + carte20 + ".querySelector('.journal img')"), True,
+            "detail : ligne hostile du journal en texte, sans balise")
+    time.sleep(2.6)       # un rafraichissement passe : le detail reste deplie
+    verifie(cdp.js(carte20 + ".querySelectorAll('.journal > div').length"), 4, "detail : reste deplie apres le rafraichissement de 2 s")
+    cdp.js(carte20 + ".querySelector('.tete').click()")
+    verifie(bool(attend(cdp, carte20 + ".querySelector('.detail') === null", 15)), True, "detail : un second clic le replie")
     # -- bouton a deux temps ----------------------------------------------------------------------
     btn = lambda c: "(" + c + ").querySelector('button')"
     cdp.js(btn(carte20) + ".click()")

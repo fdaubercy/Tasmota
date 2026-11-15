@@ -8,6 +8,7 @@ Sources : sondes_scan.py (processus par PowerShell + fichiers de suivi ecrits pa
 Routes :
     GET /        la page (sondes_page.PAGE)
     GET /etat    {niveau: vert|orange|rouge, phrase, instant, erreur, sondes: [...]}
+    GET /detail?pid=N  le detail d'une sonde du dernier releve : {sonde, script, phases, journal} (404 si le pid n'y est pas)
     POST /arreter {pid} ou {orphelines: true} : exige X-Sondes: 1, la meme origine, un client de CE PC (403 sinon, jamais de jeton distant) ;
                   pid hors du dernier releve : 404 (sondes_actions.py)
 Banc : test_sondes_web.py.
@@ -19,7 +20,7 @@ import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import acces_web
 from annuaire_outils import hote_autorise
@@ -66,6 +67,17 @@ class Etat:
                 self._cache = (time.monotonic(), v)
             return v
 
+    def detail(self, pid):
+        """Detail d'une sonde du dernier releve montre a la page (LookupError sinon) : sa fiche + phases et journal lus dans son fichier de suivi."""
+        with self._verrou:
+            releve = (self._cache[1] or {}).get("sondes", [])
+        sonde = next((s for s in releve if s["pid"] == pid), None)
+        if sonde is None:
+            raise LookupError(f"pid {pid} absent du dernier relevé")
+        fichier = next((f for f in sondes_scan.lit_fichiers(self.dossier or suivi_sondes.dossier_sondes()) if f["pid"] == pid), {})
+        return {"sonde": sonde, "script": sondes_scan._s(fichier.get("script"), 400), "phases": sondes_scan.liste_sure(fichier.get("phases"), 60),
+                "journal": sondes_scan.liste_sure(fichier.get("journal"), 200)}
+
     def arrete(self, demande):
         with self._verrou:
             releve = (self._cache[1] or {}).get("sondes", [])      # le dernier releve montre a la page, jamais un releve neuf
@@ -102,6 +114,16 @@ def fabrique_gestionnaire(acces, etat):
                     self._envoie(200, acces.habille(sondes_page.PAGE).encode("utf-8"), "text/html; charset=utf-8")
                 elif chemin == "/etat":
                     self._envoie(200, json.dumps(etat.complet(), ensure_ascii=False).encode("utf-8"), "application/json")
+                elif chemin == "/detail":
+                    try:
+                        pid = int(parse_qs(urlsplit(self.path).query).get("pid", [""])[0])
+                    except ValueError:
+                        self._envoie(400, "pid entier attendu".encode("utf-8"))
+                        return
+                    try:
+                        self._envoie(200, json.dumps(etat.detail(pid), ensure_ascii=False).encode("utf-8"), "application/json")
+                    except LookupError as erreur:
+                        self._envoie(404, str(erreur).encode("utf-8"))
                 else:
                     self._envoie(404, b"introuvable")
             except Exception as erreur:
