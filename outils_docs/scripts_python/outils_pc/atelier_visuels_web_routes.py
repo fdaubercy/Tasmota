@@ -140,7 +140,7 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
     def post(chemin, q, corps):
         try:
             d = json.loads(corps or b"{}")
-        except ValueError:
+        except (ValueError, RecursionError):      # RecursionError est un RuntimeError : sans cela, 409 au lieu de 400
             raise ValueError("corps JSON illisible") from None
         if not isinstance(d, dict):
             raise ValueError("objet JSON attendu")

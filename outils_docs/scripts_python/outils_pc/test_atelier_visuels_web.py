@@ -396,6 +396,8 @@ def etat_et_valide(racine, env):
         verifie(jpost(port, "/valide", {"description": {"version": 1}})[0], 200, "POST /valide : description incomplete = 200 avec erreurs")
         verifie(jpost(port, "/valide", {"description": "texte"})[0], 400, "POST /valide : description qui n'est pas un objet : 400")
         verifie(requete(port, "POST", "/valide", b"[1]", ENT)[0], 400, "POST /valide : corps qui n'est pas un objet : 400")
+        profond = b'{"description":' + b"[" * 200000 + b"]" * 200000 + b"}"
+        verifie(requete(port, "POST", "/valide", profond, ENT)[0], 400, "POST /valide : JSON imbrique a l'exces (RecursionError) : 400, pas 409")
         verifie(jpost(port, "/valide", {"description": {}}, {})[0], 403, "POST /valide sans en-tete : 403")
         verifie(requete(port, "POST", "/valide", b"x" * (avw.MAX_CORPS + 1), ENT)[0], 413, "POST /valide au-dessus de 1 Mo : 413")
     finally:
