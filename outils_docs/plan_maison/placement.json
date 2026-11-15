@@ -1,0 +1,254 @@
+{
+ "_note": "Placement des cartes. Les liens et les rôles maître/esclave sont DERIVES des _persist.json (ipMaitre, typeComm, id ModBus). ip_cartes tranche une IP portée par deux cartes ; etiquettes = marque libre sur une pastille ; liens_manuels = exceptions {type: serie|udp, de: maitre, vers: esclave}.",
+ "niveaux": [
+  {
+   "nom": "Grenier 2e étage",
+   "x": 40,
+   "y": 20,
+   "w": 640,
+   "h": 80,
+   "pieces": [
+    {
+     "id": "grenier2",
+     "nom": "Grenier 2e étage",
+     "x": 0,
+     "w": 640
+    }
+   ]
+  },
+  {
+   "nom": "2e étage",
+   "x": 40,
+   "y": 130,
+   "w": 640,
+   "h": 78,
+   "pieces": [
+    {
+     "id": "camille",
+     "nom": "Chambre Camille",
+     "x": 0,
+     "w": 320
+    },
+    {
+     "id": "axelgael",
+     "nom": "Chambre Axel & Gaël",
+     "x": 320,
+     "w": 320
+    }
+   ],
+   "titre": "2e étage"
+  },
+  {
+   "nom": "1er étage",
+   "x": 40,
+   "y": 232,
+   "w": 640,
+   "h": 130,
+   "pieces": [
+    {
+     "id": "parentale",
+     "nom": "Chambre parentale",
+     "x": 0,
+     "w": 140
+    },
+    {
+     "id": "sdb",
+     "nom": "Salle de bain",
+     "x": 140,
+     "w": 120
+    },
+    {
+     "id": "bureau",
+     "nom": "Bureau",
+     "x": 260,
+     "w": 380
+    }
+   ],
+   "titre": "1er étage"
+  },
+  {
+   "nom": "Combles RDC",
+   "x": 40,
+   "y": 370,
+   "w": 640,
+   "h": 76,
+   "pieces": [
+    {
+     "id": "grenier_rdc",
+     "nom": "Grenier RDC (sur la cuisine)",
+     "x": 320,
+     "w": 200,
+     "tirets": true
+    }
+   ]
+  },
+  {
+   "nom": "RDC",
+   "x": 40,
+   "y": 470,
+   "w": 640,
+   "h": 120,
+   "pieces": [
+    {
+     "id": "salon",
+     "nom": "Salon",
+     "x": 0,
+     "w": 190
+    },
+    {
+     "id": "sam",
+     "nom": "Salle à manger",
+     "x": 190,
+     "w": 130
+    },
+    {
+     "id": "cuisine",
+     "nom": "Cuisine",
+     "x": 320,
+     "w": 130
+    },
+    {
+     "id": "wc",
+     "nom": "WC",
+     "x": 450,
+     "w": 190
+    }
+   ],
+   "titre": "Rez-de-chaussée"
+  },
+  {
+   "nom": "Cave",
+   "x": 40,
+   "y": 614,
+   "w": 640,
+   "h": 134,
+   "pieces": [
+    {
+     "id": "cave",
+     "nom": "Cave (à confirmer : position)",
+     "x": 0,
+     "w": 640
+    }
+   ],
+   "titre": "Cave"
+  },
+  {
+   "nom": "Garage",
+   "x": 740,
+   "y": 470,
+   "w": 380,
+   "h": 262,
+   "pieces": [
+    {
+     "id": "garage",
+     "nom": "Garage",
+     "x": 0,
+     "w": 380
+    }
+   ]
+  },
+  {
+   "nom": "Jardin",
+   "x": 740,
+   "y": 304,
+   "w": 380,
+   "h": 150,
+   "pieces": [
+    {
+     "id": "jardin",
+     "nom": "Jardin",
+     "x": 0,
+     "w": 380,
+     "ancrage": "bas"
+    }
+   ]
+  }
+ ],
+ "cartes": {
+  "etage2/tasmota32s3-grenier": {
+   "piece": "grenier2",
+   "libelle": "Serveur grenier 2e"
+  },
+  "rdc/tasmota32s3-grenier": {
+   "piece": "grenier_rdc",
+   "libelle": "Serveur grenier RDC"
+  },
+  "rdc/tasmota32-vr-porte": {
+   "piece": "wc",
+   "libelle": "VR porte (devant les WC)"
+  },
+  "rdc/tasmota-tv-salon": {
+   "piece": "salon",
+   "libelle": "TV salon"
+  },
+  "bureau/tasmota32-interrupteur-energie": {
+   "piece": "bureau",
+   "libelle": "Disjoncteur diff."
+  },
+  "bureau/tasmota32s3-ecran-debits-pac": {
+   "piece": "bureau",
+   "libelle": "Écran débits PAC"
+  },
+  "bureau/tasmota32s3-serveur-debits-pac": {
+   "piece": "bureau",
+   "libelle": "Serveur débits PAC"
+  },
+  "cave/tasmota32s3-ecran": {
+   "piece": "cave",
+   "libelle": "Écran cave"
+  },
+  "cave/tasmota32s3-serveur-rly": {
+   "piece": "cave",
+   "libelle": "Serveur relais cave"
+  },
+  "cave/tasmota32-serveur-rly": {
+   "piece": "cave",
+   "libelle": "Serveur relais (ancien)"
+  },
+  "cave/tasmota-lumiere-porte": {
+   "piece": "cave",
+   "libelle": "Lumière porte"
+  },
+  "garage/tasmota32p4-serveur-modbus": {
+   "piece": "garage",
+   "libelle": "P4 maître ModBus"
+  },
+  "garage/tasmota32s3-serveur-modbus": {
+   "piece": "garage",
+   "libelle": "Serveur garage S3"
+  },
+  "garage/tasmota32s3-rideau-garage-modbus": {
+   "piece": "garage",
+   "libelle": "Rideau garage"
+  },
+  "jardin/tasmota32-projecteur-led": {
+   "piece": "jardin",
+   "libelle": "Projecteur LED"
+  },
+  "jardin/tasmota-pompe-piscine": {
+   "piece": "jardin",
+   "libelle": "Pompe piscine"
+  },
+  "garage/tasmota32s3-capteurs-cuve-modbus": {
+   "piece": "jardin",
+   "libelle": "Capteurs cuve"
+  },
+  "garage/tasmota32s3-portail-jardin-modbus": {
+   "piece": "jardin",
+   "libelle": "Portail jardin"
+  }
+ },
+ "ip_cartes": {
+  "192.168.0.43": "garage/tasmota32p4-serveur-modbus",
+  "192.168.0.243": "cave/tasmota32s3-serveur-rly"
+ },
+ "etiquettes": {
+  "cave/tasmota32-serveur-rly": "ancien code (même IP que le relais V2)",
+  "garage/tasmota32s3-serveur-modbus": "variante S3 (même IP que le P4)",
+  "garage/tasmota32s3-capteurs-cuve-modbus": "sous le jardin"
+ },
+ "liens_manuels": [],
+ "broker": {
+  "nom": "Pi SERVEUR-BUREAU"
+ }
+}

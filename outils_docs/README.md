@@ -2619,6 +2619,14 @@ Arrêter une sonde : bouton à deux clics, accepté seulement pour un numéro pr
 
 <hr></hr>
 
+## Plan de la maison (page HTML générée)
+
+`outils_docs/plan_maison/` : `python outils_docs/plan_maison/genere_plan_maison.py` écrit `plan_maison.html`, une page autonome (SVG, clair ou sombre) qui place chaque carte de `data/<lieu>/<carte>/` dans sa pièce. Deux vues : plan (pièces par étage, jardin et garage à part) et réseau (broker MQTT, un groupe par maître avec ses esclaves derrière son Wi-Fi). Les liens et les rôles sont DÉRIVÉS des `_persist.json` : `serveur.rangeExtender.ipMaitre` (qui est l'esclave de qui), `drivers.ModBus.typeComm` (trait plein = RS485, pointillé = UDP), `rangeExtender.id` (rond numéroté), `serveur.mqtt.hote` (broker). Aucun mot de passe n'est lu.
+
+`placement.json` porte ce que les persist ne disent pas : pièces et position, carte -> pièce, libellés, `ip_cartes` (arbitre une IP portée par deux cartes), `etiquettes`, `liens_manuels`, nom du broker. Une carte de `data/` sans placement, un lien orphelin, une pièce qui déborde ou une IP ambiguë sont signalés sur stderr. Le bouton « Tester les cartes » interroge les IP au clic seulement. Aucun appel réseau à la génération, jamais pendant un build.
+
+Banc : `python outils_docs/plan_maison/test_plan_maison.py` (code 0 = vert). Plan : `tasks/plans/plan-maison.md`.
+
 ## Les devices Tasmota développées :
 
 ```
