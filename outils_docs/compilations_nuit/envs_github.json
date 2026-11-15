@@ -1,5 +1,3 @@
 {
-  "exclus": [
-    "tasmota32-jardin-projecteur-led"
-  ]
+  "exclus": []
 }
