@@ -9,7 +9,7 @@ de ligne de commande. Chaque valeur est contrainte (liste fermee ou entier borne
 import threading
 from dataclasses import dataclass
 
-GROUPES = ["Bus et cartes", "Réseau et journaux", "Déploiement", "Configuration des cartes", "Ateliers"]
+GROUPES = ["Bus et cartes", "Réseau et journaux", "Déploiement", "Configuration des cartes", "Ateliers", "Dépôt et références"]
 DEBITS = [9600, 19200, 38400, 57600, 74880, 115200, 230400, 460800, 921600]
 CONSOLE = "%LOCALAPPDATA%\\outils_tasmota\\consoles\\{}.log"
 DOSSIER = "outils_docs/scripts_python/"
@@ -262,7 +262,7 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("fabrique_tapp") + ". Sources et archives : data/extensions/."),
     Outil(
-        "organigramme_plans", "Organigramme des plans", "Organigramme des plans", GROUPES[4],
+        "organigramme_plans", "Organigramme des plans", "Organigramme des plans", GROUPES[5],
         "Montre les plans de tasks/plans/ en arbre par famille, avec statut, % et dates ; un clic ouvre le détail, le plan et son spec.",
         "Page web en lecture seule qui lit les en-têtes des plans (famille, parent, liens, spec) et leur historique git, "
         "et les montre en arbre par famille : un clic sur un plan donne son objectif, ses plans voisins et les liens vers "
@@ -272,7 +272,7 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("organigramme_plans") + "."),
     Outil(
-        "menage", "Menage du depot", "Ménage du dépôt", GROUPES[4],
+        "menage", "Menage du depot", "Ménage du dépôt", GROUPES[5],
         "Lance l'audit de rangement du dépôt (agent auditeur-menage) et montre ses propositions : orphelins, restes, doublons, reclassements.",
         "Page web qui lance l'agent auditeur-menage en lecture seule avec les paramètres choisis (dossiers, contrôles, ancienneté du travail "
         "en cours, modèle) et montre ses propositions triées par risque, avec la preuve et ce que chacune casserait. Le travail en cours et les "
@@ -283,7 +283,30 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("menage") + "."),
     Outil(
-        "cartes_simulees", "Cartes simulees", "Cartes simulées", GROUPES[4],
+        "taches_planifiees", "Taches planifiees", "Tâches planifiées", GROUPES[2],
+        "Montre et pilote les compilations de nuit, sur ce PC et sur GitHub : état, activation, heure, envs compilés, lancer et arrêter.",
+        "Page web : tâche Windows Tasmota-CompilationNuit et derniers résultats de nuit sur ce PC, derniers runs du workflow Build_custom du fork "
+        "par la CLI gh (permissions, workflow désactivé par GitHub, ancienneté du dernier run planifié), bandeau vert, orange ou rouge et envs en "
+        "échec avec leur lien. Elle agit sur la tâche Windows, sur GitHub (gh) et sur le fichier outils_docs/compilations_nuit/envs_github.json du "
+        "dépôt, par des boutons (lancer, arrêter et écrire demandent une confirmation en deux clics) et seulement depuis ce PC. Seul paramètre ici : "
+        "le port de la page (7920). Rien n'est écrit sans geste dans la page : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/taches_planifiees_web.py",
+        [_port("http", 7920)],
+        "http",
+        "Console capturée : " + CONSOLE.format("taches_planifiees") + "."),
+    Outil(
+        "sondes", "Sondes en cours", "Sondes en cours", GROUPES[5],
+        "Montre les bancs et sondes Chrome qui tournent sur ce PC, avec leur avancement réel, et arrête un Chrome orphelin.",
+        "Page web, rafraîchie toute seule : bancs test_*.py et banc_*.py et Chrome de sonde en cours, avec les vérifications faites, la phase, le dernier cas "
+        "et les échecs en direct (pour les bancs qui branchent le module suivi_sondes ; les autres n'ont que leur durée), puis les derniers terminés. "
+        "Seul paramètre ici : le port de la page (7910). Un bouton à deux temps arrête une sonde et ses sous-processus, ou tous les Chrome orphelins, "
+        "depuis ce PC seulement. Rien d'autre n'est écrit ni lancé : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/sondes_web.py",
+        [_port("http", 7910)],
+        "http",
+        "Console capturée : " + CONSOLE.format("sondes") + "."),
+    Outil(
+        "cartes_simulees", "Cartes simulees", "Cartes simulées", GROUPES[0],
         "Simule hors ligne une carte du parc (le rideau du garage) : ses pages et ses modules Berry réels, l'identité réseau de son persist.",
         "Page web qui lance et arrête la simulation d'une carte hors ligne : accueil et routes rejoués par les vrais modules Berry du dépôt "
         "(berry.exe), nom d'hôte, passerelle, MQTT et port lus dans son _persist.json. Le rideau peut lire la vraie position du P4 en ligne "
@@ -304,7 +327,7 @@ OUTILS = [
         "http",
         "Console capturée : " + CONSOLE.format("atelier_visuels") + "."),
     Outil(
-        "icones_catalogue", "Catalogue d'icones", "Catalogue d'icônes", GROUPES[4],
+        "icones_catalogue", "Catalogue d'icones", "Catalogue d'icônes", GROUPES[5],
         "Glyphes du firmware, PNG du dépôt et sites d'icônes libres : recherche, fiche et code à copier.",
         "Page web en lecture seule : grille des glyphes Material Design embarqués (dessinés par la police MDI du dépôt), code à copier "
         "pour l'attribut text, usages dans les écrans et les .be, PNG du dépôt, sites libres avec leur licence, icônes utilisées mais absentes "

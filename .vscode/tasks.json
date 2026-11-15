@@ -289,6 +289,26 @@
             "problemMatcher": []
         },
         {
+            // Taches planifiees : etat et gestes des compilations de nuit (PC et GitHub) : activer, heure, envs, lancer, arreter.
+            // Aussi cible Custom « Taches planifiees (page web) ».
+            "label": "Outil : taches planifiees (http://127.0.0.1:7920)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/taches_planifiees_web.py", "--http", "7920"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            // Sondes en cours : bancs et sondes Chrome de ce PC, avec leur avancement reel.
+            // Aussi cible Custom « Sondes en cours (page web) ».
+            "label": "Outil : sondes en cours (http://127.0.0.1:7910)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/sondes_web.py", "--http", "7910"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
             // Cartes simulees : cartes hors ligne (le rideau du garage) rejouees par leurs vrais modules Berry.
             // Aussi cible Custom « Cartes simulees (page web) ».
             "label": "Outil : cartes simulees (http://127.0.0.1:7940)",

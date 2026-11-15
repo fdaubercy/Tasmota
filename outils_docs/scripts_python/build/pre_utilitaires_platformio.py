@@ -713,6 +713,12 @@ cible_tapp.enregistre(env)
 # CIBLE MENAGE DU DEPOT (meme menu Custom) : audit de rangement du depot, en lecture seule
 import cible_menage
 cible_menage.enregistre(env)
+# CIBLE TACHES PLANIFIEES (meme menu Custom) : etat et gestes des compilations de nuit PC et GitHub
+import cible_taches_planifiees
+cible_taches_planifiees.enregistre(env)
+# CIBLE SONDES EN COURS (meme menu Custom) : bancs et sondes Chrome en cours sur ce PC, avancement reel
+import cible_sondes
+cible_sondes.enregistre(env)
 # CIBLE CARTES SIMULEES (meme menu Custom) : cartes hors ligne rejouees par leurs modules Berry
 import cible_cartes_simulees
 cible_cartes_simulees.enregistre(env)
@@ -739,6 +745,8 @@ cible_icones_catalogue.enregistre(env)
 #   - etiquettes_qr : lancement detache (ou ouverture) de la page Etiquettes QR code ;
 #   - atelier_ecrans : lancement detache (ou ouverture) de la page Atelier des ecrans ;
 #   - menage : lancement detache (ou ouverture) de la page Menage du depot ;
+#   - taches_planifiees : lancement detache (ou ouverture) de la page Taches planifiees ;
+#   - sondes : lancement detache (ou ouverture) de la page Sondes en cours ;
 #   - cartes_simulees : lancement detache (ou ouverture) de la page Cartes simulees ;
 #   - atelier_visuels : lancement detache (ou ouverture) de la page Atelier des visuels ;
 #   - icones_catalogue : lancement detache (ou ouverture) de la page Catalogue d'icones ;
@@ -747,7 +755,7 @@ cible_icones_catalogue.enregistre(env)
 CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_sniffeur_mqtt.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
                      cible_sniffeur_modbus.NOM_CIBLE, cible_testeur_udp.NOM_CIBLE, cible_synchro_fork.NOM_CIBLE,
                      cible_annuaire.NOM_CIBLE, cible_build_web.NOM_CIBLE, cible_fichiers_berry.NOM_CIBLE,
-                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, cible_atelier_ecrans.NOM_CIBLE, cible_etiquettes_qr.NOM_CIBLE, cible_tapp.NOM_CIBLE, cible_menage.NOM_CIBLE, cible_cartes_simulees.NOM_CIBLE, cible_atelier_visuels.NOM_CIBLE, cible_icones_catalogue.NOM_CIBLE, "__idedata")
+                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, cible_atelier_ecrans.NOM_CIBLE, cible_etiquettes_qr.NOM_CIBLE, cible_tapp.NOM_CIBLE, cible_menage.NOM_CIBLE, cible_taches_planifiees.NOM_CIBLE, cible_sondes.NOM_CIBLE, cible_cartes_simulees.NOM_CIBLE, cible_atelier_visuels.NOM_CIBLE, cible_icones_catalogue.NOM_CIBLE, "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================

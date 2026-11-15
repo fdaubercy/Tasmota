@@ -39,6 +39,9 @@ import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 
+import suivi_sondes  # avancement reel de la sonde sur la page Sondes en cours (sans effet hors test_*/banc_*.py)
+suivi_sondes.suit_si_script_test()
+
 ICI = Path(__file__).resolve().parent
 FAUX_PIO = ICI / "build_faux_pio.py"
 CHROMES = [Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Google/Chrome/Application/chrome.exe",

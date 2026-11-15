@@ -41,9 +41,11 @@ def lit(outil):
 def section_registre():
     print("== registre ==")
     ids = ["pont_serie", "sniffeur_modbus", "sniffeur_i2c", "testeur_udp", "sniffeur_mqtt", "syslog", "synchro_fork", "build",
-           "fichiers_berry", "assistant_persist", "atelier_graphiques", "etiquettes_qr", "atelier_ecrans", "fabrique_tapp", "organigramme_plans", "menage", "cartes_simulees", "atelier_visuels", "icones_catalogue"]
+           "fichiers_berry", "assistant_persist", "atelier_graphiques", "etiquettes_qr", "atelier_ecrans", "fabrique_tapp", "organigramme_plans", "menage", "taches_planifiees", "sondes", "cartes_simulees", "atelier_visuels", "icones_catalogue"]
     verifie([o.id for o in reg.OUTILS], ids, "sept_outils : ids et ordre")
     verifie(all(o.groupe in reg.GROUPES for o in reg.OUTILS), True, "sept_outils : groupes connus")
+    verifie([g for g in reg.GROUPES if not any(o.groupe == g for o in reg.OUTILS)], [], "sept_outils : aucun groupe vide")
+    verifie(max(sum(1 for o in reg.OUTILS if o.groupe == g) for g in reg.GROUPES) <= 6, True, "sept_outils : 6 tuiles au plus par groupe (tri des ateliers, 2026-11-15)")
     verifie([o.id for o in reg.OUTILS if not os.path.isfile(os.path.join(RACINE, o.script))], [],
             "sept_outils : scripts existants")
     verifie(all(o.interet and o.aide and o.journaux and o.nom for o in reg.OUTILS), True, "textes renseignes")
@@ -342,10 +344,10 @@ def section_serveur():
 
     try:
         s, j = appel(port, "GET", "/registre")
-        verifie((s, len(j["outils"])), (200, 19), "routes_get : /registre a 19 outils")
+        verifie((s, len(j["outils"])), (200, 21), "routes_get : /registre a 21 outils")
         s, j = appel(port, "GET", "/etat")
-        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 19, True),
-                "routes_get : /etat a 19 entrees")
+        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 21, True),
+                "routes_get : /etat a 21 entrees")
         verifie(isinstance(j.get("derniers"), dict), True, "routes_get : /etat porte derniers (dict)")
         verifie(appel(port, "GET", "/console?id=inconnu")[0], 404, "routes_get : console inconnue -> 404")
         verifie(appel(port, "GET", "/console?id=syslog")[1], {"lignes": []}, "routes_get : console vide")
