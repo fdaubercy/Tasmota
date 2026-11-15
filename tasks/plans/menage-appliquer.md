@@ -39,9 +39,9 @@ liens: menage-page
 - [x] Lancement de `verifie_references_docs.py` après l'application et affichage de son verdict — preuve : `applique` rend `renvois` {code, sortie} après chaque application (test § 8, contrôleur injecté) ; jamais de correction automatique
 
 ## A3 — Page
-- [ ] Avertissement affiché près du bouton : la contre-vérification ne voit pas un renvoi construit dynamiquement (listes `custom_files_*` de l'ini, glob) ; `git restore --staged --worktree <chemin>` annule une suppression
-- [ ] Cases à cocher sur les propositions de l'étape 1, bouton « Voir ce que ça ferait », liste des commandes, bouton « Appliquer » grisé tant que l'aperçu n'est pas affiché ; message final : « relisez git status, rien n'est commité »
-- [ ] Sonde Chrome avec témoins (bouton actif sans aperçu, texte hostile, case sur une proposition non éligible)
+- [x] Avertissement affiché près du bouton : la contre-vérification ne voit pas un renvoi construit dynamiquement (listes `custom_files_*` de l'ini, glob) ; `git restore --staged --worktree <chemin>` annule une suppression — preuve : texte du bloc « Appliquer un lot » (menage_page.py), sonde Chrome VERT
+- [x] Cases à cocher sur les propositions de l'étape 1, bouton « Voir ce que ça ferait », liste des commandes, bouton « Appliquer » grisé tant que l'aperçu n'est pas affiché ; message final : « relisez git status, rien n'est commité » — preuve : test_menage_page_chrome.py VERT : une seule case (suppression sans renvoi), boutons grisés, « Appliquer » grisé sans aperçu, aperçu simulé par git, à blanc, confirmation, résultat, annulation par git restore
+- [x] Sonde Chrome avec témoins (bouton actif sans aperçu, texte hostile, case sur une proposition non éligible) — preuve : témoins lot-sans-confirm et lot-apercu-garde détectés ; dépôt jetable, jamais le vrai
 
 ## A4 — Essai réel et clôture
 - [ ] Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin — preuve : sortie de `git status`

@@ -1,6 +1,6 @@
 {
   "name": "meteo-contexte",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Barre de remplissage du contexte et cout de la session au-dessus du prompt ; bouton de passation (/fin-de-session) a partir de 45 %.",
   "author": {
     "name": "fdaubercy"

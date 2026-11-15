@@ -11,6 +11,17 @@
       ],
       "origine": "base",
       "ajoutee_le": "2026-11-14"
+    },
+    {
+      "id": "uv_esptool_timeout",
+      "titre": "Installation d'esptool par uv trop lente (CPU sature)",
+      "motif": "TimeoutExpired: Command '\\[.*uv(\\.exe)?.*install.*esptool",
+      "etapes": ["prebuild", "compilation"],
+      "actions": [
+        {"action": "attendre", "parametres": {"secondes": 120}}
+      ],
+      "origine": "base",
+      "ajoutee_le": "2026-11-15"
     }
   ]
 }

@@ -41,6 +41,9 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
     "detail-html": ('$("detail-texte").textContent = dt;', '$("detail-texte").innerHTML = dt;', "echec : le detail reste du texte"),
     "suivi-cache": ('$("suivi").hidden = !(enCours || j.childNodes.length > 0);', '$("suivi").hidden = true;', "suivi : bloc d'avancement visible, au-dessus des propositions, dans l'ecran"),
     "couv-html": ('l.appendChild(t); z.appendChild(l);', 'l.appendChild(t); t.innerHTML += c.note; z.appendChild(l);', "couverture : texte de l'agent affiche comme du texte"),
+    "lot-sans-confirm": ('if (!aBlanc && !window.confirm(', 'if (false && !window.confirm(', "lot : confirmation refusee, rien n'est applique"),
+    "lot-apercu-garde": ('$("b-blanc").disabled = true; $("b-applique").disabled = true;', '$("b-blanc").disabled = true;', "lot : changer la selection invalide l'apercu et grise « Appliquer »"),
+    "lot-reponse-tardive": ('if (JSON.stringify(ids) !== JSON.stringify(S.lot.ids)) return;', 'if (false) return;', "lot : un apercu qui arrive apres un changement de selection n'arme pas « Appliquer »"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -195,6 +198,51 @@ def scenario(m, temoin):
             "plan d'action : seule l'etape 1 (aucun renvoi) existe pour ces propositions")
     verifie(cdp.js("document.querySelector('#plan details[open]').textContent.indexOf('tasks/README.md') >= 0 && document.querySelector('#plan details[open]').textContent.indexOf('tasks/encours.md') < 0"), True,
             "plan d'action : la proposition « en cours » n'entre pas dans le plan")
+    # lot : cocher, voir ce que git ferait, jouer a blanc, appliquer (depot jetable de la sonde, jamais le vrai)
+    depot = m.t / "depot"
+    verifie(cdp.js("document.getElementById('lot').hidden === false && document.querySelectorAll('.lot-case input').length"), 1,
+            "lot : une seule case, sur la suppression sans renvoi (ni l'archivage, ni la ligne en cours)")
+    verifie(cdp.js("document.getElementById('b-apercu').disabled && document.getElementById('b-blanc').disabled && document.getElementById('b-applique').disabled"), True,
+            "lot : rien de coche, tous les boutons grises")
+    cdp.js("document.querySelector('.lot-case input').click()")
+    verifie(cdp.js("document.getElementById('b-apercu').disabled === false && document.getElementById('b-applique').disabled"), True,
+            "lot : coche, l'apercu est possible mais « Appliquer » reste grise tant que l'apercu n'est pas affiche")
+    clic(cdp, "b-apercu")
+    verifie(bool(attend(cdp, "document.getElementById('lot-apercu').textContent.indexOf('git rm -- tasks/autre.md') >= 0", 20)), True, "lot : l'apercu montre la commande exacte")
+    verifie(cdp.js("document.getElementById('lot-apercu').textContent.indexOf('simulation par git -n') >= 0 && document.getElementById('b-applique').disabled === false"), True,
+            "lot : apercu simule par git, « Appliquer » devient possible")
+    cdp.js("document.querySelector('.lot-case input').click()")
+    cdp.js("document.querySelector('.lot-case input').click()")
+    verifie(cdp.js("document.getElementById('b-applique').disabled && document.getElementById('b-blanc').disabled && document.getElementById('lot-apercu').textContent"), "",
+            "lot : changer la selection invalide l'apercu et grise « Appliquer »")
+    clic(cdp, "b-apercu")
+    attend(cdp, "document.getElementById('b-blanc').disabled === false", 20)
+    clic(cdp, "b-blanc")
+    verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('rien n') >= 0", 20)), True, "lot : jouer a blanc affiche son resultat")
+    verifie(((depot / "tasks" / "autre.md").exists(), "autre.md" in subprocess.run(["git", "status", "--short"], cwd=depot, capture_output=True).stdout.decode()), (True, False),
+            "lot : a blanc, le fichier existe encore et git ne voit aucun changement")
+    # reponse d'apercu en retard : la selection change pendant l'attente, l'ancien apercu ne doit pas armer « Appliquer »
+    cdp.js("(function(){var r=window.fetch; window.fetch=function(u,o){var p=r.apply(this,arguments); return String(u).indexOf('/appliquer/apercu')>=0 ? new Promise(function(ok){setTimeout(function(){ok(p)},1500)}) : p;}; document.getElementById('b-apercu').click(); document.querySelector('.lot-case input').click(); document.querySelector('.lot-case input').click();})()")
+    time.sleep(3)
+    verifie(cdp.js("document.getElementById('b-applique').disabled"), True, "lot : un apercu qui arrive apres un changement de selection n'arme pas « Appliquer »")
+    clic(cdp, "b-apercu")
+    attend(cdp, "document.getElementById('b-blanc').disabled === false", 30)
+    cdp.js("window.confirm = function () { return false; }")
+    clic(cdp, "b-applique")
+    verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('Appliqu') >= 0", 6)), False, "lot : confirmation refusee, aucun resultat n'apparait")
+    verifie((depot / "tasks" / "autre.md").exists(), True, "lot : confirmation refusee, rien n'est applique")
+    cdp.js("window.confirm = function () { return true; }")
+    clic(cdp, "b-applique")
+    verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('non commit') >= 0", 20)), True, "lot : application confirmee, resultat affiche")
+    etat_git = subprocess.run(["git", "status", "--short"], cwd=depot, capture_output=True).stdout.decode()
+    nb_commits = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=depot, capture_output=True).stdout.decode().strip()
+    verifie((not (depot / "tasks" / "autre.md").exists(), "D" in etat_git and "autre.md" in etat_git, nb_commits), (True, True, "1"),
+            "lot : le fichier est supprime dans l'arbre et l'index, RIEN n'est commite")
+    verifie(cdp.js("document.getElementById('lot-resultat').textContent.indexOf('git restore --staged --worktree') >= 0"), True, "lot : la commande d'annulation est donnee")
+    verifie(cdp.js("document.querySelectorAll('.lot-case input').length"), 0, "lot : la ligne appliquee n'est plus cochable (badge « appliquee »)")
+    verifie(cdp.js("document.querySelectorAll('#lot img, #lot b').length < 3 && window.__pwn === undefined"), True, "lot : aucun HTML injecte")
+    subprocess.run(["git", "restore", "--staged", "--worktree", "--", "tasks/autre.md"], cwd=depot, capture_output=True)      # la commande donnee a l'ecran ; la suite de la sonde a besoin du fichier
+    verifie((depot / "tasks" / "autre.md").exists(), True, "lot : git restore --staged --worktree annule la suppression")
     verifie(cdp.js("document.getElementById('b-copie').disabled"), False, "copier actif avec un rapport")
     verifie(cdp.js("document.getElementById('couverture').hidden === false && document.querySelectorAll('#couv .couv-ligne').length"), 7,
             "couverture : une ligne par controle demande (les non declares y figurent)")

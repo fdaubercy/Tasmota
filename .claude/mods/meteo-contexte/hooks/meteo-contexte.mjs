@@ -74,6 +74,10 @@ export function register(on) {
     return Box({ flexDirection: "row", paddingX: 1, children: elements });
   });
 
+  // Bande de ponytail masquee (demande du 2026-11-15) : la bande ne garde que la ligne de ce mod, 1 ligne de haut.
+  on("ui.render", { component: "AbovePromptList" }, ($, e, next) =>
+    next({ ...e, rows: e.rows.filter((r) => !String(r.plugin).includes("ponytail")) }));
+
   // L'id passe a $.ui.open devient le requestId du rendu.
   on("ui.render", { component: "Pane", requestId: PANE }, ($, e, next) => {
     if (!lecture) {

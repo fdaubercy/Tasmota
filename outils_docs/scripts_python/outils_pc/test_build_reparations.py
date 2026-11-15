@@ -85,12 +85,20 @@ def passe_catalogue_depot():
     # la regle de base livree se charge et reconnait le cas d'origine, pas un port COM
     racine = Path(__file__).resolve().parents[3]
     rs = br.charge_catalogue(racine / "outils_docs" / "schemas" / "reparations_build.json", Path("absent.json"))
-    verifie("regle de base verrou_fichier", [r.id for r in rs] == ["verrou_fichier"])
+    verifie("regles de base", [r.id for r in rs] == ["verrou_fichier", "uv_esptool_timeout"])
+    # journal reel du 2026-11-15 (RDC grenier) : antislashs doubles, pre-build
+    ju = ("Error in package configuration: TimeoutExpired: Command "
+          "'['C:\\\\Users\\\\x\\\\.platformio\\\\penv\\\\Scripts\\\\uv.exe', 'pip', 'install', '--quiet', '--reinstall-package', "
+          "'esptool', '-e', 'C:\\\\Users\\\\x\\\\.platformio\\\\packages\\\\tool-esptoolpy']' timed out after 60 seconds\n"
+          "TypeError: cannot unpack non-iterable NoneType object:")
+    verifie("timeout uv/esptool reconnu", br.cherche(rs, ju, "prebuild", "e").id == "uv_esptool_timeout")
+    verifie("autre timeout ignore", br.cherche(rs, "TimeoutExpired: Command '['git', 'fetch']' timed out", "prebuild", "e") is None)
     j = ("[1/3] ...\nPermissionError: [Errno 13] Permission denied: "
          "'C:\\\\Users\\\\x\\\\Documents\\\\Github\\\\Tasmota\\\\lib\\\\libesp32\\\\berry_custom\\\\src\\\\modules.h'\n*** error")
     verifie("verrou du depot reconnu", br.cherche(rs, j, "compilation", "e") is not None)
     verifie("port COM ignore", br.cherche(rs, "PermissionError: [Errno 13] Permission denied: 'COM7'", "compilation", "e") is None)
     verifie("actions de base", [a["action"] for a in rs[0].actions] == ["libere_verrou", "attendre"])
+    verifie("uv : attente seule", [a["action"] for a in rs[1].actions] == ["attendre"])
 
 
 def passe_cherche(d):

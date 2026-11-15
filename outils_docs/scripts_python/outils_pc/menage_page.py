@@ -46,6 +46,8 @@ input[type=number],select{font:inherit;padding:5px 7px;border:1px solid var(--bo
 @keyframes pulse{50%{opacity:.25}} @media (prefers-reduced-motion:reduce){.pastille{animation:none}}
 .couv-ligne{display:flex;gap:10px;align-items:flex-start;margin:6px 0} .couv-ligne .badge{flex:none;min-width:84px;text-align:center}
 #limites-bloc h3{font-size:13px;margin:10px 0 2px} #limites-bloc ul{margin:0;padding-left:18px} #brut pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.lot{margin:10px 0;padding:8px 10px;border:1px solid var(--bord);border-radius:8px} .lot h3{font-size:13px;margin:0 0 4px} .lot h4{font-size:12px;margin:8px 0 2px}
+.lot-ligne{margin:4px 0} .lot-ligne code{font-size:12px;overflow-wrap:anywhere} .lot pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px} .lot-case{display:block;font-size:12px;margin:4px 0}
 .avance{margin-top:8px} .barre{height:8px;border-radius:4px;background:var(--piste);overflow:hidden}
 .rempli{height:100%;width:0;background:var(--bleu);transition:width .6s ease}
 .journal{margin-top:8px;max-height:240px;overflow:auto;padding:6px 8px;border:1px solid var(--bord);border-radius:6px;background:var(--champ);
@@ -100,6 +102,17 @@ HTML = """
 <section class="carte"><h2>Propositions <span class="doux petit" id="n-props"></span></h2>
  <ul id="resume" class="doux resume"></ul>
  <div id="plan" hidden></div>
+ <section class="lot" id="lot" hidden>
+  <h3>Appliquer un lot (suppressions et déplacements sans aucun renvoi)</h3>
+  <p class="doux petit">Cochez les propositions « sans renvoi » ci-dessous, puis voyez ce que git ferait. La vérification ne voit pas un renvoi construit dynamiquement
+   (listes <b>custom_files_*</b> de l'ini, motifs génériques) : relisez avant d'appliquer. Rien n'est commité ; <b>git restore --staged --worktree -- chemin</b> annule une suppression ou un déplacement.</p>
+  <div class="ligne"><span id="lot-n" class="doux"></span>
+   <button class="btn" id="b-apercu" disabled>Voir ce que ça ferait</button>
+   <button class="btn" id="b-blanc" disabled>Jouer à blanc</button>
+   <button class="btn prim" id="b-applique" disabled>Appliquer pour de bon</button></div>
+  <div id="lot-apercu"></div>
+  <div id="lot-resultat" role="status"></div>
+ </section>
  <div class="ligne">
   <label>Catégorie <select id="f-cat"><option value="">toutes</option></select></label>
   <label>Risque <select id="f-risque"><option value="">tous</option><option>faible</option><option>moyen</option><option>eleve</option></select></label>
@@ -115,7 +128,8 @@ HTML = """
 
 JS = r"""
 "use strict";
-var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0, derniere: null, demandes: null, arefaire: []};
+var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0, derniere: null, demandes: null, arefaire: [],
+         lot: {ids: [], apercu: null}, appliques: []};
 function $(id) { return document.getElementById(id); }
 function vide(n) { while (n.firstChild) n.removeChild(n.firstChild); }
 function el(tag, classe, texte) { var e = document.createElement(tag); if (classe) e.className = classe; if (texte != null) e.textContent = texte; return e; }
@@ -263,6 +277,16 @@ function propositionVue(p) {
   }
   var c = el("details"); c.appendChild(el("summary", null, "Ce que ça casserait")); c.appendChild(el("pre", null, p.casserait)); d.appendChild(c);
   var pr = el("details"); pr.appendChild(el("summary", null, "Preuve")); pr.appendChild(el("pre", null, p.preuve)); d.appendChild(pr);
+  if (S.appliques.indexOf(p.chemin) >= 0) b.appendChild(el("span", "badge faible", "appliquée (non commitée)"));
+  else if (lotPossible(p)) {
+    var lc = el("label", "lot-case"), cc = el("input"); cc.type = "checkbox"; cc.checked = S.lot.ids.indexOf(p.id) >= 0;
+    cc.onchange = function () {
+      var i = S.lot.ids.indexOf(p.id);
+      if (cc.checked && i < 0) S.lot.ids.push(p.id); else if (!cc.checked && i >= 0) S.lot.ids.splice(i, 1);
+      lotChange();
+    };
+    lc.appendChild(cc); lc.appendChild(el("span", null, " Dans le lot")); d.appendChild(lc);
+  }
   if (!p.en_cours) {
     var a = el("div", "actions");
     var g = el("button", "btn", "Garder"); g.title = "Ne plus jamais proposer ce chemin";
@@ -295,10 +319,78 @@ function etapeDe(p) {
   if (v.n_docs) return "docs";
   return "sur";
 }
+function lotPossible(p) {
+  return !p.en_cours && (p.action === "supprimer" || p.action === "deplacer") && etapeDe(p) === "sur" && S.appliques.indexOf(p.chemin) < 0;
+}
+function lotChange(garde) {
+  S.lot.apercu = null; vide($("lot-apercu")); if (!garde) vide($("lot-resultat"));
+  var n = S.lot.ids.length;
+  $("lot-n").textContent = n ? n + " ligne(s) dans le lot" : "Aucune ligne cochée.";
+  $("b-apercu").disabled = !n; $("b-blanc").disabled = true; $("b-applique").disabled = true;
+}
+function rendLot(r) {
+  var dispo = r.propositions.filter(lotPossible).map(function (p) { return p.id; });
+  S.lot.ids = S.lot.ids.filter(function (i) { return dispo.indexOf(i) >= 0; });
+  $("lot").hidden = !dispo.length && !S.appliques.length;
+  if (!S.lot.apercu) lotChange(true);
+}
+function ligneLot(texte, classe) { return el("div", classe || "doux petit", texte); }
+function apercuLot() {
+  var ids = S.lot.ids.slice(), z = $("lot-apercu"); vide(z); vide($("lot-resultat"));
+  $("b-apercu").disabled = true;
+  api("POST", "/appliquer/apercu", {ids: ids}).then(function (x) {
+    $("b-apercu").disabled = !S.lot.ids.length;
+    if (JSON.stringify(ids) !== JSON.stringify(S.lot.ids)) return;       // la selection a change pendant l'attente : cette reponse ne vaut plus rien
+    if (!x.ok) { z.appendChild(ligneLot("Aperçu refusé : " + x.texte, "etat ko")); return; }
+    var d = x.donnees;
+    z.appendChild(el("h4", null, d.eligibles.length + " action(s) que git ferait (simulation par git -n)"));
+    d.eligibles.forEach(function (e) {
+      var l = el("div", "lot-ligne"); l.appendChild(el("code", null, e.commande));
+      if (e.cree_dossier) l.appendChild(el("div", "doux petit", "crée d'abord le dossier " + e.cree_dossier));
+      l.appendChild(el("div", "doux petit", "git dit : " + (e.dry_run.sortie || "(rien à signaler)"))); z.appendChild(l);
+    });
+    if (d.refuses.length) {
+      z.appendChild(el("h4", null, d.refuses.length + " ligne(s) refusée(s), retirées du lot"));
+      d.refuses.forEach(function (e) { z.appendChild(ligneLot((e.chemin || e.id) + " : " + e.motif)); });
+    }
+    if (d.eligibles.length) {
+      S.lot.apercu = {ids: ids, empreinte: d.empreinte, head: d.head};
+      $("b-blanc").disabled = false; $("b-applique").disabled = false;
+    }
+  });
+}
+function appliqueLot(aBlanc) {
+  var a = S.lot.apercu, z = $("lot-resultat"); if (!a) return;
+  if (!aBlanc && !window.confirm("Appliquer ces " + a.ids.length + " ligne(s) ? Les fichiers seront supprimés ou déplacés dans l'arbre de travail (rien n'est commité).")) return;
+  var corps = {ids: a.ids, empreinte: a.empreinte, head: a.head}; if (aBlanc) corps.a_blanc = true; else corps.confirme = true;
+  $("b-blanc").disabled = $("b-applique").disabled = true; vide(z);
+  api("POST", "/appliquer", corps).then(function (x) {
+    if (!x.ok) {
+      z.appendChild(ligneLot((aBlanc ? "À blanc refusé : " : "Application refusée : ") + x.texte, "etat ko"));
+      if (x.statut === 403 || x.statut === 409) { S.lot.apercu = null; $("b-blanc").disabled = $("b-applique").disabled = true; z.appendChild(ligneLot("Refaites l'aperçu avant de réessayer.")); }
+      else $("b-blanc").disabled = $("b-applique").disabled = false;
+      return;
+    }
+    var d = x.donnees;
+    z.appendChild(el("h4", null, (d.a_blanc ? "À blanc : rien n'a été modifié. " : "Appliqué (non commité). ") + d.faits.length + " action(s) " + (d.a_blanc ? "jouées" : "faites")));
+    d.faits.forEach(function (f) { z.appendChild(ligneLot("✓ " + f.commande)); });
+    if (d.echec) z.appendChild(ligneLot("✗ arrêt sur " + d.echec.chemin + " : " + d.echec.motif, "etat ko"));
+    if (d.restants.length) z.appendChild(ligneLot(d.restants.length + " ligne(s) non lancée(s)."));
+    if (!d.a_blanc && d.faits.length) {
+      var faitsIds = d.faits.map(function (f) { return f.id; });
+      d.faits.forEach(function (f) { S.appliques.push(f.chemin); });                 // par CHEMIN : les identifiants de l'agent changent d'un audit a l'autre
+      S.lot.ids = S.lot.ids.filter(function (i) { return faitsIds.indexOf(i) < 0; });
+      if (d.renvois) { z.appendChild(el("h4", null, "Contrôle des renvois des documents : " + (d.renvois.code === 0 ? "aucun défaut" : "à regarder")));
+                       z.appendChild(el("pre", null, d.renvois.sortie)); }
+      z.appendChild(ligneLot("Relisez git status : rien n'est commité. Annuler une ligne : git restore --staged --worktree -- chemin"));
+      S.lot.apercu = null; rend();
+    } else { $("b-blanc").disabled = $("b-applique").disabled = !S.lot.apercu; }
+  });
+}
 function rendPlan(r) {
   var z = $("plan"); vide(z);
   var groupes = {sur: [], docs: [], code: [], main: []};
-  r.propositions.forEach(function (p) { var e = p.en_cours ? null : etapeDe(p); if (e) groupes[e].push(p); });
+  r.propositions.forEach(function (p) { var e = (p.en_cours || S.appliques.indexOf(p.chemin) >= 0) ? null : etapeDe(p); if (e) groupes[e].push(p); });
   var total = 0; ETAPES.forEach(function (e) { total += groupes[e[0]].length; });
   if (!total) return;
   z.appendChild(el("h3", null, "Actions à réaliser, par priorité"));
@@ -324,7 +416,7 @@ function rend() {
   if (!actives.length) zone.appendChild(el("p", "doux", "Aucune proposition."));
   en.forEach(function (p) { zoneEn.appendChild(propositionVue(p)); });
   $("encours").hidden = !en.length; $("n-encours").textContent = String(en.length);
-  rendResume(r.resume); rendPlan(r); rendCouverture(r);
+  rendResume(r.resume); rendPlan(r); rendLot(r); rendCouverture(r);
   $("n-props").textContent = "(" + actives.length + ")"; $("b-copie").disabled = !actives.length;
 }
 
@@ -392,7 +484,7 @@ function lance() {
   if (!(p.anciennete_jours >= 0 && p.anciennete_jours <= 365)) { message("ko", "Ancienneté : un nombre de 0 à 365."); return; }
   api("POST", "/lancer", p).then(function (r) {
     if (!r.ok) { message("ko", r.texte); return; }
-    S.demandes = p.categories;
+    S.demandes = p.categories; S.lot.ids = []; S.lot.apercu = null;       // nouvel audit : les identifiants de l'ancien ne valent plus rien
     S.gen++; S.rapport = null; rend();
     vide($("journal")); S.recu = 0; S.derniere = null; $("suivi").hidden = false; $("suivi").scrollIntoView({block: "nearest"});
     etat();
@@ -416,6 +508,9 @@ function copie() {
 
 $("b-lance").onclick = lance;
 $("b-refaire").onclick = refaire;
+$("b-apercu").onclick = apercuLot;
+$("b-blanc").onclick = function () { appliqueLot(true); };
+$("b-applique").onclick = function () { appliqueLot(false); };
 $("b-stop").onclick = arrete;
 $("b-copie").onclick = copie;
 $("f-cat").onchange = $("f-risque").onchange = rend;
