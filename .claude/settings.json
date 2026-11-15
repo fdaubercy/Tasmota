@@ -45,6 +45,11 @@
             "type": "command",
             "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/verifie_synchro_fork.sh\"",
             "timeout": 60000
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/fils_github.py\"",
+            "timeout": 45000
           }
         ]
       },
