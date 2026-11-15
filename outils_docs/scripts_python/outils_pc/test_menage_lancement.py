@@ -18,7 +18,7 @@ entree = sys.stdin.buffer.read().decode("utf-8")
 mode = os.environ.get("FAUX_MODE", "ok")
 trace = os.environ.get("FAUX_TRACE")
 if trace:
-    open(trace, "w", encoding="utf-8").write(json.dumps({"args": sys.argv[1:], "entree": entree}))
+    open(trace, "w", encoding="utf-8").write(json.dumps({"args": sys.argv[1:], "entree": entree, "cle": sorted(k for k in os.environ if k.startswith("ANTHROPIC_"))}))
 rapport = {"resume": "1", "propositions": [{"id": "M1", "categorie": "reste", "chemin": "tasks/README.md", "constat": "c", "preuve": "p",
            "action": "archiver", "casserait": "rien", "risque": "faible", "en_cours": False}]}
 if mode == "ok":
@@ -82,6 +82,8 @@ for libelle, brut in [("zone inconnue", {"zone": ["/etc"]}), ("zone vide", {"zon
 # 2. succes : rapport valide, options de lecture seule, consigne avec les gardes
 trace = Path(tempfile.mkdtemp()) / "trace.json"
 os.environ["FAUX_TRACE"] = str(trace)
+os.environ["ANTHROPIC_API_KEY"] = "valeur-factice-de-test"       # la page ne doit jamais la transmettre a claude
+os.environ["ANTHROPIC_AUTH_TOKEN"] = "valeur-factice-de-test"
 a = audit("ok", gardes=lambda: ["data/vieux.txt"])
 ok, msg = a.lance({"zone": ["tasks"], "anciennete_jours": 5})
 verifie(ok, True, "lancement accepte")
@@ -95,6 +97,8 @@ verifie("--dangerously-skip-permissions" in args or "bypassPermissions" in args,
 verifie(args[args.index("--tools") + 1], "Read,Grep,Glob,Bash", "outils limites")
 verifie(any(x.startswith("Bash(git status") for x in args) and not any(x == "Bash" for x in args), True, "Bash limite a des commandes de lecture")
 verifie(("data/vieux.txt" in t["entree"], "anciennete_jours = 5" in t["entree"], "zone = tasks" in t["entree"]), (True, True, True), "consigne : gardes, anciennete, zone")
+verifie(t["cle"], [], "l'audit n'herite d'aucune ANTHROPIC_* de l'environnement : abonnement claude.ai, pas la cle API")
+os.environ.pop("ANTHROPIC_API_KEY"); os.environ.pop("ANTHROPIC_AUTH_TOKEN")
 del os.environ["FAUX_TRACE"]
 
 # 3. echecs

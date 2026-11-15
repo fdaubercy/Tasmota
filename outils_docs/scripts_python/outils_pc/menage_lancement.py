@@ -82,11 +82,13 @@ def consigne(params, gardes):
 
 
 MAX_DETAIL = 1200
+CLES_API = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")      # jamais transmises a claude : l'audit passe par la connexion claude.ai
 # (motif sur le texte d'erreur en minuscules, cause en francais) : la 1re cause trouvee est la raison de l'echec
 CAUSES = [
     (("credit balance", "insufficient credit", "billing"),
-     "Le crédit du compte API est épuisé : claude refuse de travailler. Rechargez le crédit sur console.anthropic.com, ou retirez la variable "
-     "d'environnement ANTHROPIC_API_KEY pour utiliser votre abonnement claude.ai."),
+     "Le crédit du compte facturé à l'API est épuisé : claude refuse de travailler. La page ne transmet pas votre clé ANTHROPIC_API_KEY ; si claude "
+     "facture quand même l'API, c'est que sa propre configuration (connexion à un compte API, apiKeyHelper) le demande : reconnectez-vous avec "
+     "votre abonnement (/login dans claude) ou rechargez le crédit sur console.anthropic.com."),
     (("invalid api key", "authentication_error", "invalid x-api-key", "please run /login", "not logged in", "oauth token", "401"),
      "Claude a refusé la connexion : la clé API ou la session est invalide ou expirée. Reconnectez-vous (/login dans claude) ou corrigez la variable "
      "d'environnement ANTHROPIC_API_KEY."),
@@ -96,8 +98,8 @@ CAUSES = [
      "Les serveurs de claude sont surchargés ou indisponibles : réessayez dans quelques minutes."),
 ]
 CONTEXTES = [
-    (("anthropic_api_key",), "Une clé API (ANTHROPIC_API_KEY) est définie dans l'environnement de cette page : claude l'utilise à la place de votre "
-                             "connexion claude.ai, et les connecteurs de votre compte sont désactivés. Si elle est invalide ou sans crédit, l'audit échoue."),
+    (("anthropic_api_key",), "claude signale une clé API (ANTHROPIC_API_KEY) qui prend le pas sur votre connexion claude.ai. Cette page la retire pourtant "
+                             "de l'environnement de claude : elle vient donc d'ailleurs (configuration de claude) ; si elle est invalide ou sans crédit, l'audit échoue."),
     (("not been trusted", "hastrustdialogaccepted"), "Claude Code n'a pas encore approuvé ce dossier : il ignore les autorisations de .claude/settings.json "
                                                      "(l'audit garde les siennes). Pour l'approuver, ouvrez claude une fois dans le dépôt et acceptez la confiance."),
 ]
@@ -231,8 +233,10 @@ class Audit:
             return "echec", "claude introuvable dans le PATH", None
         options = OPTIONS + ["--model", params["modele"], "--effort", params["effort"], "--settings", str(reglages_sans_hooks())]
         try:
+            # Pas de cle API heritee : elle passerait avant l'abonnement claude.ai et l'audit serait facture sur son credit.
+            env = {k: v for k, v in os.environ.items() if k not in CLES_API}
             p = subprocess.Popen(list(programme) + options, cwd=self.racine, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                 stderr=subprocess.PIPE, env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except OSError as e:
             return "echec", f"lancement de claude impossible : {e}", None
         self._proc = p
