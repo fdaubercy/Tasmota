@@ -137,9 +137,21 @@ def main():
     modele = re.compile(r"demarrage\.(?:importe|compile|charge)\(\[([^\]]*)\]")
     for c in inv:
         a = cs.RACINE / c["dossier"] / "autoexec.be"
-        attendus = set(re.findall(r'"([^"]+)"', " ".join(modele.findall(a.read_text(encoding="utf-8"))))) if a.is_file() else set()
+        t_a = a.read_text(encoding="utf-8") if a.is_file() else ""
+        attendus = set(re.findall(r'"([^"]+)"', " ".join(modele.findall(t_a))))
+        # ancien format : chargeModule("x") et import de tete, seulement si x est un .be de la carte ou de data/fs
+        for n in re.findall(r'chargeModule\("([^"]+)"', t_a) + re.findall(r"^import (\w+)\s*$", t_a, re.M):
+            if (cs.RACINE / c["dossier"] / (n + ".be")).is_file() or (cs.RACINE / "data" / "fs" / (n + ".be")).is_file():
+                attendus.add(n)
         verifie(set(c["modules"]), attendus, f"{c['env']} : modules de l'autoexec ({len(attendus)})")
     verifie(cs.modules_autoexec("dossier/inexistant"), [], "temoin : sans autoexec, aucun module")
+    for c in inv:
+        verifie(c["modules"] != [], True, f"{c['env']} : au moins un module reconnu (ancien format compris)")
+    ri = cs.inventaire()[ENV]["routes"]
+    verifie("/rideau" in ri and ri.count("/rideau") == 1, True, "rideau : route /rideau lue dans controleRideau.be, sans doublon")
+    verifie(cs.routes_modules(cs.inventaire()[ENV]["dossier"], ["moduleInexistant"]), [], "temoin : module sans fichier, aucune route")
+    brut_r = re.findall(r'webserver\.on\(\s*"(/[^"]*)"', (DOSSIER / "controleRideau.be").read_text(encoding="utf-8"))
+    verifie("/rideau" in brut_r, True, "temoin : la route est bien dans le source relu en brut")
     print("7. Temoin negatif des routes Berry : le rejeu suit le VRAI code et le VRAI persist de la carte")
     cs.SCENARIO["source_p4"] = "simule"
     origine = cs.fichiers_berry_etat.dossier_carte

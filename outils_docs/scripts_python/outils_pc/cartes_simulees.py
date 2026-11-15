@@ -58,11 +58,28 @@ def modules_autoexec(dossier):
     vus = []
     for liste_ in re.findall(r"demarrage\.(?:importe|compile|charge)\(\[([^\]]*)\]", f.read_text(encoding="utf-8", errors="replace")):
         vus += [n for n in re.findall(r'"([^"]+)"', liste_) if n not in vus]
+    # ancien format (cartes figees) : chargeModule("x", ...) et `import x` de tete, si x est un .be de la carte ou de data/fs
+    texte = f.read_text(encoding="utf-8", errors="replace")
+    for n in re.findall(r'chargeModule\("([^"]+)"', texte) + re.findall(r"^import (\w+)\s*$", texte, re.M):
+        if n not in vus and ((RACINE / dossier / (n + ".be")).is_file() or (RACINE / "data" / "fs" / (n + ".be")).is_file()):
+            vus.append(n)
+    return vus
+
+
+def routes_modules(dossier, modules):
+    """Chemins declares par `webserver.on("/x", ...)` dans les .be de ces modules (dossier de la carte d'abord, puis data/fs)."""
+    vus = []
+    for m in modules:
+        for base in (RACINE / dossier, RACINE / "data" / "fs"):
+            if (base / (m + ".be")).is_file():
+                t = (base / (m + ".be")).read_text(encoding="utf-8", errors="replace")
+                vus += [r for r in dict.fromkeys(re.findall(r'webserver\.on\(\s*"(/[^"]*)"', t)) if r not in vus]
+                break
     return vus
 
 
 def inventaire():
-    """{env: {"env", "dossier", "adresse", "berry", "puce", "modules"}} des cartes du parc (famille « cartes ») dont le dossier porte un _persist.json."""
+    """{env: {"env", "dossier", "adresse", "berry", "puce", "modules", "routes"}} des cartes du parc (famille « cartes ») dont le dossier porte un _persist.json."""
     if not _INVENTAIRE:
         for e in build_envs.liste_envs(RACINE):
             if e.famille != "cartes":
@@ -73,7 +90,7 @@ def inventaire():
                 continue
             if d and (RACINE / d / "_persist.json").is_file():
                 _INVENTAIRE[e.nom] = {"env": e.nom, "dossier": d, "adresse": e.ip or "", "berry": e.nom in MODULES_BERRY,
-                                     "puce": lieux.puce(e.nom), "modules": modules_autoexec(d)}
+                                     "puce": lieux.puce(e.nom), "modules": (mods := modules_autoexec(d)), "routes": routes_modules(d, mods)}
     return _INVENTAIRE
 
 

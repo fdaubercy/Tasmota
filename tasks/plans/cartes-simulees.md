@@ -23,7 +23,7 @@ Décisions de l'utilisateur (2026-11-14) :
 
 ## A1 — Inventaire des envs simulables
 - [x] Liste des envs, dossier `data/<lieu>/<carte>`, IP, hostname, topic, puce (réutiliser `outils_pc/build_envs.py` et `lieux.py::identites`) — preuve : `cartes_simulees.py --liste` (13 cartes, puce par `lieux.puce`), outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles), sections 4 et 6
-- [ ] Pour chaque env : modules Berry chargés (autoexec) et routes déclarées — FAIT pour les modules : `cartes_simulees.py::modules_autoexec`, relus en brut par la section 6 (outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles)) ; 2 cartes sans module (cave-serveur-rly, garage-serveur-modbus : autoexec d'ancien format, à vérifier) ; RESTE les routes, déclarées pour le rideau seulement (`MODULES_BERRY`)
+- [x] Pour chaque env : modules Berry chargés (autoexec) et routes déclarées — preuve : `cartes_simulees.py::modules_autoexec` (ancien format `chargeModule`/`import` reconnu : cave-serveur-rly 14 modules, garage-serveur-modbus 26, deux cartes figées « remplacées ») et `::routes_modules` (`webserver.on` lus dans les .be), outils_pc/test_cartes_simulees.py VERT le 2026-11-15 (87 contrôles, témoins). Limite : la route /cuve (déclarée par `CAPTEURS_CUVE`) n'est pas lue, seules les routes `webserver.on` écrites en clair le sont
 - [x] Banc de l'inventaire — preuve : outils_pc/test_cartes_simulees.py section 4 VERT (13 cartes avec persist, hote et topic relus en brut, accueil générique ; 45 contrôles)
 
 ## A2 — Moteur Berry (routes réelles)
