@@ -60,6 +60,9 @@ Décisions :
 - [ ] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, exception des lignes de `volets.js`), `CONSIGNES_VISUELS.md` (journal des affinements) ; `verifie_references_docs.py` vert
 - [ ] Agents avant commit : `controleur-secrets`, `relecteur-pages-web` ; commit `feat(volets): ...`
 
+## A8 — Retour au plan atelier-visuels
+- [ ] Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
+
 ## Améliorations restantes
 - [ ] [projet] Brancher la page de l'atelier des visuels sur les consignes (plan atelier-visuels, A7)
 - [ ] [projet] Même façade animée pour la carte du rideau et l'accueil d'autres lieux

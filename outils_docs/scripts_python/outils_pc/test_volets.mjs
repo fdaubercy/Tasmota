@@ -292,7 +292,7 @@ verifie([V.fermeture('ON'), V.fermeture('OFF'), V.fermeture(undefined), V.fermet
   [{ferme: true, texte: 'fermé ✔'}, {ferme: false, texte: 'ouvert'}, {ferme: null, texte: '?'}, {ferme: null, texte: '?'}], 'fermeture : ON = ferme, OFF = ouvert, autre = inconnu');
 const PORT = Object.assign({}, FACADES.garage, {ouvertures: [O(1, 'garage'), O(2, 'portail1', {nom: 'Portail 1 vantail'}), O(3, 'portail2', {nom: 'Portail 2 vantaux'})]});
 const [cpo, spo] = dessin(PORT);
-verifie([spo.attrs.viewBox, spo.volets.length, spo.volets.map(v => v.o.type)], ['0 0 420 320', 3, ['garage', 'portail1', 'portail2']], 'portail : viewBox agrandie vers le sol, trois entrees (le garage reste en rangee)');
+verifie([spo.attrs.viewBox, spo.volets.length, spo.volets.map(v => v.o.type)], ['0 0 540 320', 3, ['garage', 'portail1', 'portail2']], 'portail : viewBox agrandie vers le sol et vers la haie, trois entrees (le garage reste en rangee)');
 verifie([compte(cpo, 'data-portail'), tous(cpo, n => n.attrs['data-vantail']).length], [1, 2], 'portail : un groupe portail, deux vantaux (gauche et droit)');
 verifie(empreinte(dessin(Object.assign({}, FACADES.garage, {ouvertures: [O(1, 'garage')]}))[0]), EMPREINTES.garage, 'sans portail : dessin du garage inchange');
 const vant = (c, cote) => tous(c, n => n.attrs['data-vantail'] === cote)[0];

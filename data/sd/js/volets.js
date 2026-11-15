@@ -457,37 +457,148 @@
   function fermeture(etat) {
     return etat == 'ON' ? {ferme: true, texte: 'fermé ✔'} : (etat == 'OFF' ? {ferme: false, texte: 'ouvert'} : {ferme: null, texte: '?'});
   }
-  function portail(svg, W, ouvPortail) {
-    var P = {etat: {1: 0, 2: 0}, g: el(svg, 'g', {'data-portail': ''}), feuAllume: null}, lisse = function (x) { return x * x * (3 - 2 * x); };
-    el(P.g, 'rect', {x: 0, y: 196, width: W, height: 124, fill: '#bdbab3', 'pointer-events': 'none'});
-    var mid = W / 2, pil = function (x) {
-      el(P.g, 'rect', {x: x, y: 176, width: 32, height: 134, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
-      el(P.g, 'rect', {x: x - 3, y: 171, width: 38, height: 6, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
-    };
-    pil(22); pil(W - 54);
-    P.vantail = {};
-    [['gauche', 56, mid - 1, 'left center', -1], ['droit', mid + 1, W - 56, 'right center', 1]].forEach(function (q) {
-      var g = el(P.g, 'g', {'data-vantail': q[0], 'data-ouverture': '0'}), w = q[2] - q[1], i;
-      g.style.transformBox = 'fill-box'; g.style.transformOrigin = q[3];
-      el(g, 'rect', {x: q[1], y: 204, width: w, height: 102, fill: '#f1f5f9', stroke: '#cbd5e1', 'stroke-width': 1.5});
-      for (i = 1; i < 5; i++) el(g, 'line', {x1: q[1] + w * i / 9, y1: 212, x2: q[1] + w * i / 9, y2: 298, stroke: '#cbd5e1', 'stroke-width': 0.8});
-      for (i = 0; i < 5; i++) el(g, 'rect', {x: q[4] > 0 ? q[1] + w * 0.62 : q[1] + w * 0.38 - w * 0.34, y: 214 + i * 16, width: w * 0.34, height: 8, fill: '#2a2f36', opacity: 0.85});
-      P.vantail[q[0]] = {g: g, sens: q[4]};
+  // Scene (maquette validee outils_docs/volets_visuels/maquette_portail_g.html) : repere de 540 x 320, point de fuite (210, 190), vantaux qui
+  // pivotent vers l'interieur en perspective ; decor : sol de pierre, photinias, pergola a deux arches, grillage. Le tout est decale de dx si W > 420.
+  var PV = {YH: 190, D: 500, WL: 154, YB: 304, XG: 54, XD: 366, PW: 34, H: 110, AMAX: 92};
+  function semis(s) { return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
+  function feuille(g, r, x, y, rx, ry, fill) {
+    el(g, 'ellipse', {cx: x, cy: y, rx: rx, ry: ry, fill: fill, transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+  }
+  function verte(r) { var c = r(); return c < 0.16 ? '#b4402f' : (c < 0.26 ? '#cf6a44' : (c < 0.55 ? '#356b31' : (c < 0.8 ? '#3f7d3a' : '#2c5a2a'))); }
+  function pts(l) { return l.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); }
+  // Ligne garage-poteau : t = 0 au coin du mur (loin, petit), t = 1 au poteau (pres) ; off = decalage lateral en metres
+  function sur(t, off, hm) { var k = 0.55 + 0.45 * t, u = 78 * k; return {x: 404 + 40 * t + off * u, y: 200 + 104 * t - hm * u, k: k, u: u}; }
+  function plante(g, r, q, dense) {      // jasmin blanc, bignone orange et feuilles, melanges
+    for (var c = 0; c < 9; c++) {
+      if (r() > dense) continue;
+      var x = q.x + (r() - 0.5) * 14 * q.k, y = q.y + (r() - 0.5) * 14 * q.k, a = r();
+      if (a < 0.34) el(g, 'circle', {cx: x, cy: y, r: (1.5 + r() * 1.4) * q.k, fill: '#fbfbf2'});
+      else if (a < 0.52) { feuille(g, r, x, y, 3.2 * q.k, 2 * q.k, '#e8661a'); el(g, 'circle', {cx: x, cy: y, r: 0.9 * q.k, fill: '#b13e0c'}); }
+      else feuille(g, r, x, y, 3.2 * q.k, 1.9 * q.k, r() < 0.5 ? '#3f7d3a' : '#5f9a48');
+    }
+  }
+  function arche(t1, t2, off, hp, hr) {      // poteau 1, cintre, poteau 2 (memes indices d'une arche a l'autre)
+    var i, n = 40, f, T = {p1: [], c: [], p2: []};
+    for (i = 0; i <= 8; i++) T.p1.push(sur(t1, off, hp * i / 8));
+    for (i = 0; i <= n; i++) { f = (1 - Math.cos(Math.PI * i / n)) / 2; T.c.push(sur(t1 + (t2 - t1) * f, off, hp + hr * Math.sin(Math.PI * i / n))); }
+    for (i = 0; i <= 8; i++) T.p2.push(sur(t2, off, hp * i / 8));
+    return T;
+  }
+  function decorPortail(g, dx, WV) {
+    var r = semis(5), i, j, x, y, c = ['#cfcdc6', '#aeaba3', '#dcdad3', '#b9b6ae', '#c4c1b9'];
+    el(g, 'rect', {x: -dx, y: 196, width: WV, height: 110, fill: '#bdbab3'});                      // sol : tapis de pierre
+    for (i = 0; i < 520; i++) el(g, 'ellipse', {cx: r() * WV - dx, cy: 197 + r() * 108, rx: 1 + r() * 2.2, ry: 0.8 + r() * 1.3, fill: c[Math.floor(r() * 5)]});
+    el(g, 'rect', {x: -dx, y: 306, width: WV, height: 14, fill: '#d9d8d2'});
+    el(g, 'line', {x1: -dx, y1: 306, x2: WV - dx, y2: 306, stroke: '#9a9992', 'stroke-width': 1});
+    r = semis(23);                                                                                  // photinias de la haie, derriere le grillage
+    [[418, 14], [446, 20], [480, 24], [514, 26]].forEach(function (b) {
+      var hh = 112 + r() * 14;
+      for (j = 0; j < 230; j++) {
+        y = 304 - r() * hh; x = b[0] + (r() - 0.5) * 2 * b[1] * 1.3 * (0.75 + 0.5 * Math.sin(Math.PI * Math.min(1, (304 - y) / hh + 0.08)));
+        feuille(g, r, x, y, 4.6, 2.9, verte(r));
+      }
     });
-    P.feuH = el(P.g, 'circle', {cx: W - 38, cy: 190, r: 10, fill: 'rgba(255,150,20,.3)'}); P.feuH.style.display = 'none';
-    P.feu = el(P.g, 'ellipse', {cx: W - 38, cy: 190, rx: 3.4, ry: 4.4, fill: '#8a5a1c', stroke: '#5a3a0c', 'stroke-width': 0.8});
-    P.halo = P.feuH;
-    P.capteur = el(P.g, 'circle', {cx: mid, cy: 258, r: 5, fill: '#777', stroke: '#222', 'stroke-width': 0.6});
-    P.texte = el(P.g, 'text', {x: mid, y: 200, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'});
+    r = semis(41);                                                                                  // pergola : deux arches a 30 cm, barreaux entre les deux
+    var T1 = arche(0.12, 0.58, 0, 1.6, 0.65), T2 = arche(0.09, 0.55, -0.3, 1.6, 0.65), m = [];
+    var bois = function (T) {
+      el(g, 'polyline', {points: pts(T.p1.concat(T.c, T.p2.slice().reverse()).map(function (q) { return [q.x, q.y]; })), fill: 'none', stroke: '#7a5a43', 'stroke-width': 7 * T.p1[0].k, 'stroke-linejoin': 'round'});
+    };
+    var barreau = function (p, q) {
+      el(g, 'line', {x1: p.x, y1: p.y, x2: q.x, y2: q.y, stroke: '#8b6b4a', 'stroke-width': 3.4 * p.k, 'stroke-linecap': 'round'});
+      m.push({x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, k: p.k});
+    };
+    bois(T1);
+    for (i = 1; i <= 7; i += 1.5) { j = Math.round(i); barreau(T1.p1[j], T2.p1[j]); barreau(T1.p2[j], T2.p2[j]); }
+    for (i = 3; i < T1.c.length - 2; i += 4) barreau(T1.c[i], T2.c[i]);
+    bois(T2);
+    [T1, T2].forEach(function (T) {
+      var l = T.p1.concat(T.c, T.p2), n = T.c.length;
+      l.forEach(function (q, k) { plante(g, r, q, k >= 9 && k < 9 + n && Math.abs(k - 9 - n / 2) < n * 0.15 ? 0.55 : 1); });
+    });
+    m.forEach(function (q) { plante(g, r, q, 1); plante(g, r, q, 1); });
+    r = semis(31);                                                                                  // arbre, puis deux photinias en arbre
+    var a = sur(0.74, 0.95, 0), cy = a.y - 1.9 * a.u, rx = 0.7 * a.u, ry = 0.55 * a.u;
+    el(g, 'rect', {x: a.x - 0.07 * a.u, y: a.y - 1.5 * a.u, width: 0.12 * a.u, height: 1.5 * a.u, fill: '#5b4a2e'});
+    for (i = 0; i < 420; i++) {
+      x = a.x + (r() - 0.5) * 2 * rx; y = cy + (r() - 0.5) * 2 * ry;
+      if ((x - a.x) * (x - a.x) / (rx * rx) + (y - cy) * (y - cy) / (ry * ry) > 1) continue;
+      feuille(g, r, x, y, 5.5 * a.k, 3.4 * a.k, ['#4f9444', '#5f9a48', '#3f7d3a', '#6aa84f'][Math.floor(r() * 4)]);
+    }
+    [[0.80, 7], [0.94, 19]].forEach(function (s) {
+      var q = sur(s[0], 0.1, 0), cyp = q.y - 1.45 * q.u, rxp = 0.62 * q.u, ryp = 0.7 * q.u, tr = function (hm, ddx) { return [q.x + ddx * q.u, q.y - hm * q.u]; };
+      var rp = semis(s[1]);
+      el(g, 'polyline', {points: pts([tr(0, 0), tr(0.9, 0.02), tr(1.6, 0)]), fill: 'none', stroke: '#5b4a2e', 'stroke-width': 0.13 * q.u, 'stroke-linecap': 'round'});
+      [[-0.38, 1.35], [0.4, 1.4], [-0.2, 1.8], [0.22, 1.85], [0, 2.05]].forEach(function (b) {
+        el(g, 'line', {x1: q.x, y1: q.y - q.u, x2: q.x + b[0] * q.u, y2: q.y - b[1] * q.u, stroke: '#5b4a2e', 'stroke-width': 0.055 * q.u, 'stroke-linecap': 'round'});
+      });
+      for (i = 0; i < 520; i++) {
+        x = q.x + (rp() - 0.5) * 2 * rxp; y = cyp + (rp() - 0.5) * 2 * ryp;
+        if ((x - q.x) * (x - q.x) / (rxp * rxp) + (y - cyp) * (y - cyp) / (ryp * ryp) > 1) continue;
+        feuille(g, rp, x, y, 5.2 * q.k, 3.2 * q.k, verte(rp));
+      }
+    });
+    var pat = el(el(g, 'defs', {}), 'pattern', {id: 'vf_mailles', width: 13, height: 13, patternUnits: 'userSpaceOnUse'});      // grillage gris
+    el(pat, 'rect', {width: 13, height: 13, fill: 'rgba(200,205,210,0.10)'});
+    el(pat, 'path', {d: 'M0,0 H13 M0,0 V13', stroke: '#6f7479', 'stroke-width': 2, fill: 'none'});
+    el(g, 'rect', {x: 400, y: 190, width: 140, height: 114, fill: 'url(#vf_mailles)'});
+    el(g, 'rect', {x: 400, y: 187, width: 140, height: 5, fill: '#5f6469'});
+    el(g, 'rect', {x: 400, y: 300, width: 140, height: 4, fill: '#5f6469'});
+    for (x = 400; x < 540; x += 46) el(g, 'rect', {x: x, y: 187, width: 4.5, height: 117, fill: '#5f6469'});
+  }
+  // Point du vantail f = {a: angle, hx: charniere, dir} : u le long du vantail (0 charniere, 1 bord libre), v en hauteur (0 bas, 1 haut)
+  function pt(f, u, v) {
+    var a = f.a * Math.PI / 180, s = 1 / (1 + u * PV.WL * Math.sin(a) / PV.D);
+    return [210 + (f.hx + f.dir * u * PV.WL * Math.cos(a) - 210) * s, PV.YH + (PV.YB - 6 - PV.H + v * PV.H - PV.YH) * s];
+  }
+  function vantailDessin(g, f) {
+    var i, B = 'rgba(255,255,255,0.6)', poly = function (l, at) { at.points = pts(l.map(function (q) { return pt(f, q[0], q[1]); })); el(g, 'polygon', at); };
+    var tout = [[0, 0], [1, 0], [1, 1], [0, 1]], ligne = function (u, v0, v1) {
+      var a = pt(f, u, v0), b = pt(f, u, v1);
+      el(g, 'line', {x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: B, 'stroke-width': 0.7});
+    };
+    poly(tout, {fill: 'none', stroke: 'rgba(60,60,60,0.55)', 'stroke-width': 3.4});
+    poly(tout, {fill: 'rgba(255,255,255,0.38)', stroke: '#fff', 'stroke-width': 1.5});
+    poly([[0.07, 0.08], [0.93, 0.08], [0.93, 0.92], [0.07, 0.92]], {fill: 'none', stroke: B, 'stroke-width': 1});
+    for (i = 0.10; i < 0.56; i += 0.04) ligne(i, 0.10, 0.90);
+    poly([[0.56, 0.09], [0.67, 0.09], [0.795, 0.91], [0.685, 0.91]], {fill: 'rgba(255,255,255,0.5)', stroke: '#fff', 'stroke-width': 1});
+    for (i = 0; i < 7; i++) {
+      var v0 = 0.11 + i * 0.1143, u0 = 0.685 + i * 0.018;
+      poly([[u0, v0], [0.91, v0], [0.91, v0 + 0.06], [u0 + 0.004, v0 + 0.06]], {fill: 'rgba(25,28,32,0.82)'});
+    }
+    var m = pt(f, 1, 0.5);                                  // moteur au bord libre
+    el(g, 'rect', {x: f.dir > 0 ? m[0] - 3 : m[0], y: m[1] - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
+  }
+  function portail(svg, W, WV) {
+    var dx = (W - 420) / 2, P = {etat: {1: 0, 2: 0}, g: el(svg, 'g', {'data-portail': '', transform: 'translate(' + dx + ',0)'}), feuAllume: null};
+    var lisse = function (x) { return x * x * (3 - 2 * x); }, top = PV.YB - PV.H - 6 - 28, ym = PV.YB - 6 - PV.H * 0.5;
+    decorPortail(el(P.g, 'g', {'pointer-events': 'none'}), dx, WV);
+    P.vantail = {};
+    [['gauche', PV.XG, 1], ['droit', PV.XD, -1]].forEach(function (q) { P.vantail[q[0]] = {g: el(P.g, 'g', {'data-vantail': q[0], 'data-ouverture': '0'}), sens: q[2], hx: q[1]}; });
+    [20, PV.XD].forEach(function (x) {                      // poteaux, apres les vantaux
+      el(P.g, 'rect', {x: x, y: top, width: PV.PW, height: 308 - top, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
+      for (var i = top + 12; i < 308; i += 13) el(P.g, 'line', {x1: x, y1: i, x2: x + PV.PW, y2: i, stroke: '#cfc8b0', 'stroke-width': 0.6});
+      el(P.g, 'rect', {x: x - 3, y: top - 5, width: PV.PW + 6, height: 6, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
+    });
+    var fx = PV.XD + PV.PW, fy = top + 16;                  // feu orange sur le flanc du poteau droit (dessin seul, aucun relais)
+    el(P.g, 'rect', {x: fx - 1, y: fy - 7, width: 6, height: 14, rx: 2, fill: '#3a3a3a', stroke: '#222', 'stroke-width': 0.6});
+    P.halo = el(P.g, 'g', {}); P.halo.style.display = 'none';
+    el(P.halo, 'circle', {cx: fx + 4, cy: fy, r: 14, fill: 'rgba(255,150,20,0.28)'});
+    el(P.halo, 'circle', {cx: fx + 4, cy: fy, r: 8, fill: 'rgba(255,170,40,0.45)'});
+    P.feu = el(P.g, 'ellipse', {cx: fx + 3, cy: fy, rx: 4.2, ry: 5.2, fill: '#8a5a1c', stroke: '#5a3a0c', 'stroke-width': 0.8});
+    el(P.g, 'circle', {cx: 210, cy: ym - 14, r: 8, fill: 'none', stroke: '#444', 'stroke-width': 1.5});
+    P.capteur = el(P.g, 'circle', {cx: 210, cy: ym - 14, r: 4, fill: '#777', stroke: '#222', 'stroke-width': 0.6});
+    P.texte = el(P.g, 'text', {x: 210, y: PV.YB - 6 - PV.H - 6, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'});
     P.texte.textContent = '?';
     P.pose = function () {
       var v = vantaux({1: P.etat[1] * 100, 2: P.etat[2] * 100});
       ['gauche', 'droit'].forEach(function (c) {
-        var x = lisse(v[c]), e = P.vantail[c];
+        var e = P.vantail[c];
         e.g.setAttribute('data-ouverture', String(Math.round(v[c] * 100)));
-        e.g.style.transform = 'scaleX(' + (1 - 0.84 * x) + ') skewY(' + (e.sens * 8 * x) + 'deg)';
+        while (e.g.firstChild) e.g.removeChild(e.g.firstChild);
+        vantailDessin(e.g, {a: PV.AMAX * lisse(v[c]), hx: e.hx, dir: e.sens});
       });
     };
+    P.pose();
     return P;
   }
   function poseFeuPortail(svg, allume) {
@@ -540,7 +651,7 @@
     var W = Math.max(maison ? 300 : 240, somme + 80), x = (W - somme) / 2;
     // Decor (toit unPan seulement) : rideau a x = 70 ; porte 20 apres le dernier volet ; mur arrete avant la pergola
     var listeDecor = Array.isArray(facade.decor) ? facade.decor : [];
-    var decor = toit == 'unPan' ? listeDecor : [], porte = decor.indexOf('porte') >= 0, perg = decor.indexOf('pergola') >= 0;
+    var decor = toit == 'unPan' ? listeDecor : [], porte = decor.indexOf('porte') >= 0, perg = decor.indexOf('pergola') >= 0 && !ouvPortail.length;   // avec un portail, sa pergola (2 arches) remplace celle du mur
     if (ouvPortail.length) W = Math.max(W, 420);
     var xMur = W - 20, alea = hasard(), maisonD = listeDecor.indexOf('maison') >= 0, pos = {};
     if (maisonD) {
@@ -557,8 +668,10 @@
     var plancher = maison ? [66, 72] : [30, 38];
     var marches = function (xm) { return 100 + 9 * Math.floor(xm / 24); };
     while (conteneur.firstChild) conteneur.removeChild(conteneur.firstChild);
-    var svg = el(conteneur, 'svg', {viewBox: '0 0 ' + W + (maisonD ? ' 214' : (ouvPortail.length ? ' 320' : ' 200')), width: '100%', style: 'display:block;margin:8px 0'});
+    var WV = ouvPortail.length ? W + 120 : W;               // le portail s'etend 120 u a droite du mur (haie, grillage)
+    var svg = el(conteneur, 'svg', {viewBox: '0 0 ' + WV + (maisonD ? ' 214' : (ouvPortail.length ? ' 320' : ' 200')), width: '100%', style: 'display:block;margin:8px 0'});
     var defs = el(svg, 'defs', {});
+    if (ouvPortail.length) el(svg, 'rect', {x: 0, y: 0, width: WV, height: 196, fill: '#bcd3e6', 'pointer-events': 'none'});
     [['vf_lames', 10, 8, 6.5, 1.5, '#9aa3ab', '#6f777e'], ['vf_lamesG', 12, 10, 8, 2, '#b4bcc3', '#7d858c']].forEach(function (m) {
       var p = el(defs, 'pattern', {id: m[0], width: m[1], height: m[2], patternUnits: 'userSpaceOnUse'});
       el(p, 'rect', {width: m[1], height: m[2], fill: m[5]});
@@ -632,7 +745,7 @@
     if (maisonD) maisonDevant(svg, pos);
     if (porte) portePleine(svg, x - 20);
     if (perg) pergola(svg, alea, xMur, 44 + 16 * (xMur - 20) / (W - 40), 196);
-    svg.portail = ouvPortail.length ? portail(svg, W, ouvPortail) : null;
+    svg.portail = ouvPortail.length ? portail(svg, W, WV) : null;
     if (svg.portail) {                                      // une entree par volet portail : pose(f) met a jour le vantail, g et textes factices pour pose()
       ouvPortail.forEach(function (o) {
         var g = el(svg.portail.g, 'g', {'data-id': o.id, 'data-ouverture': ''}), tx = el(g, 'text', {style: 'display:none'});
@@ -642,7 +755,7 @@
       });
     }
     if (finition) {                                         // voile de nuit, puis les cones par-dessus (ils restent vifs la nuit)
-      svg.nuit = el(svg, 'rect', {x: 0, y: 0, width: W, height: ouvPortail.length ? 320 : 200, fill: 'rgb(43,59,107)', opacity: 0, 'pointer-events': 'none', 'data-nuit': ''});
+      svg.nuit = el(svg, 'rect', {x: 0, y: 0, width: WV, height: ouvPortail.length ? 320 : 200, fill: 'rgb(43,59,107)', opacity: 0, 'pointer-events': 'none', 'data-nuit': ''});
       var cone = function (pts, rempl, nom) {
         var c = el(svg, 'polygon', {points: pts, fill: rempl, 'pointer-events': 'none', 'data-cone': nom});
         c.style.opacity = '0'; c.style.transition = 'opacity .5s';
