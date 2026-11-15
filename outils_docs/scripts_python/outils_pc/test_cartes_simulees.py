@@ -175,6 +175,31 @@ def main():
                    "persist modifie : l'accueil rejoue le nouveau nom de la porte")
         finally:
             cs.fichiers_berry_etat.dossier_carte = origine
+    print("8. Scenarios nommes du rideau, appliques par POST /__sim puis lus sur /rideau")
+    srv = cs.serveur(ENV, 0)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    po = srv.server_address[1]
+
+    def pose(corps, en_tete="1"):
+        rq = urllib.request.Request(f"http://127.0.0.1:{po}/__sim", data=json.dumps(corps).encode(), method="POST", headers={"X-Sim": en_tete})
+        try:
+            with urllib.request.urlopen(rq, timeout=10) as r:
+                return r.status
+        except urllib.error.HTTPError as e:
+            return e.code
+    try:
+        attendu = {"ouvert": (100, False, "ON", "OFF"), "ferme": (0, False, "OFF", "ON"), "maitre_muet": (100, True, "ON", "OFF"), "incoherent": (0, False, "ON", "OFF")}
+        for nom, (ouv, muet, f_ouv, f_fer) in attendu.items():
+            verifie(pose({"preset": nom}), 200, f"scenario {nom} applique")
+            rep = json.loads(get(po, "/rideau?f=position&id=1")[1])
+            cap = rep.get("capteurs", {})
+            verifie([rep.get("ouverture"), rep.get("muet"), cap.get("ouverture"), cap.get("fermeture")], [ouv, muet, f_ouv, f_fer], f"{nom} : ouverture, muet, fins de course")
+        verifie(pose({"preset": "inconnu"}), 400, "scenario inconnu refuse (400)")
+        verifie(pose({"preset": "ouvert"}, en_tete="0"), 403, "sans l'en-tete anti-CSRF : 403")
+        verifie(json.loads(get(po, "/rideau?f=position&id=1")[1]).get("ouverture"), 0, "temoin : le refus n'a rien change (reste sur incoherent : 0 %)")
+    finally:
+        srv.shutdown()
+        cs.SCENARIO.update({"maitre": {"code": 200, "position": 30}, "interrupteurs": {"1": "OFF", "2": "OFF"}, "source_p4": "simule"})
     print("\n" + ("VERT" if not ECHECS else "ROUGE : " + "; ".join(ECHECS)))
     return 1 if ECHECS else 0
 

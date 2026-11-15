@@ -34,6 +34,11 @@ SCRIPTS = RACINE / "outils_docs" / "scripts_python" / "berry"
 # env -> script Berry qui rejoue UNE requete avec les vrais modules de la carte ; routes = chemins servis par ces modules
 MODULES_BERRY = {"tasmota32s3-garage-rideau-garage-modbus": {"script": "simule_carte_rideau.be", "routes": ["/rideau"]}}
 SCENARIO = {"maitre": {"code": 200, "position": 30}, "interrupteurs": {"1": "OFF", "2": "OFF"}, "source_p4": "simule"}
+# scenarios nommes du rideau : curseur du P4 (inverse=1 : ouverture = 100 - curseur) ; interrupteur 2 = fin de course ouverture, 1 = fermeture
+PRESETS = {"ouvert": {"maitre": {"code": 200, "position": 0}, "interrupteurs": {"1": "OFF", "2": "ON"}},
+           "ferme": {"maitre": {"code": 200, "position": 100}, "interrupteurs": {"1": "ON", "2": "OFF"}},
+           "maitre_muet": {"maitre": {"code": -1}, "interrupteurs": {"1": "OFF", "2": "ON"}},
+           "incoherent": {"maitre": {"code": 200, "position": 100}, "interrupteurs": {"1": "OFF", "2": "ON"}}}   # P4 dit ferme, le capteur dit ouvert
 URL_MAITRE = None          # test : adresse d'un faux P4 ; None = http://<ipMaitre du persist>/cm?cmnd=Status%2010
 VERROU = threading.Lock()
 
@@ -179,7 +184,9 @@ PANNEAU = """<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><title>S
 <label>P4 muet (simule) <input id='muet' type='checkbox'></label><br><label>Curseur du P4 (0..100) <input id='pos' type='number' value='30'></label><br>
 <label>Fin de course ouverture <select id='i2'><option>OFF</option><option>ON</option></select></label><br>
 <label>Fin de course fermeture <select id='i1'><option>OFF</option><option>ON</option></select></label><br>
+<p>Scenarios : <button onclick="pre('ouvert')">ouvert</button> <button onclick="pre('ferme')">ferme</button> <button onclick="pre('maitre_muet')">maitre muet</button> <button onclick="pre('incoherent')">incoherent</button></p>
 <button onclick='go()'>Appliquer</button> <a href='/'>accueil</a><pre id='r'></pre><script>
+function pre(n){fetch('/__sim',{method:'POST',headers:{'X-Sim':'1'},body:JSON.stringify({preset:n})}).then(r=>r.text()).then(t=>document.getElementById('r').textContent=t)}
 function go(){fetch('/__sim',{method:'POST',headers:{'X-Sim':'1'},body:JSON.stringify({source_p4:document.getElementById('src').value,maitre:document.getElementById('muet').checked?{code:-1}:
 {code:200,position:+document.getElementById('pos').value},interrupteurs:{1:document.getElementById('i1').value,2:document.getElementById('i2').value}})})
 .then(r=>r.text()).then(t=>document.getElementById('r').textContent=t)}</script></body></html>"""
@@ -223,11 +230,13 @@ def serveur(env, port):
                 return self.envoie(403, "text/plain", "refuse")
             try:
                 n = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+                if "preset" in n:
+                    n = {**PRESETS[n["preset"]], "source_p4": "simule"}
                 SCENARIO["maitre"] = n["maitre"]
                 SCENARIO["source_p4"] = "reel" if n.get("source_p4") == "reel" else "simule"
                 SCENARIO["interrupteurs"] = {k: ("ON" if v == "ON" else "OFF") for k, v in n["interrupteurs"].items()}
                 self.envoie(200, "text/plain", "scenario applique : " + json.dumps(SCENARIO))
-            except (ValueError, KeyError, TypeError):
+            except (ValueError, KeyError, TypeError):      # KeyError : preset inconnu aussi
                 self.envoie(400, "text/plain", "scenario illisible")
     return ThreadingHTTPServer(("127.0.0.1", port), H)
 
