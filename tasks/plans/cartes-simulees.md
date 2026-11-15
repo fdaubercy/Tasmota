@@ -28,8 +28,8 @@ Décisions de l'utilisateur (2026-11-14) :
 
 ## A2 — Moteur Berry (routes réelles)
 - [x] Exécuter par `berry.exe` le module de la carte (ex. `controleRideau.be::web_add_main_button`) sur les bouchons et capturer le HTML — preuve : berry/simule_carte_rideau.be accueil -> window.VOLETS avec decor [chevrefeuille, porte, pergola] ; route /rideau : curseur P4 30 -> 70 %, P4 muet + contact ON -> 100 % muet (sortie lue 2026-11-14)
-- [ ] Bouchons manquants (`tasmota`, `webserver`, `persist` du dossier de la carte, `path`)
-- [ ] Banc : la sortie du rideau contient `window.VOLETS` avec le décor
+- [x] Bouchons manquants (`tasmota`, `webserver`, `persist` du dossier de la carte, `path`) — preuve : `berry/simule_carte_rideau.be` pose `tasmota`, `webserver`, `webclient`, `gestionFileFolder` et le `persist` lu dans le dossier de la carte, `bouchons_berry/rideau/gpio.be` ; le rejeu complet passe (test_cartes_simulees.py VERT le 2026-11-15, sections 2, 5, 7, 8). `path` n'a pas été nécessaire pour le rideau : à ajouter avec la première carte qui l'appelle
+- [x] Banc : la sortie du rideau contient `window.VOLETS` avec le décor — preuve : test_cartes_simulees.py section 2b VERT le 2026-11-15 (JSON de `window.VOLETS` relu, décor = celui du persist en lecture brute, ouverture 1 id/type/source ; 4 contrôles). Limite du témoin : il modifie le texte de la page, pas le module
 
 ## A3 — Serveur de la carte simulée
 - [x] Serveur HTTP par carte : fichiers `/sd`, routes Berry (A2), `/cm?cmnd=` de base, 404 net pour le C++ natif non capturé — preuve : outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles), section 2 (accueil, /rideau, /cm Status 5 et 6, Restart refusé, /sd/.. et /up en 404)
@@ -60,7 +60,7 @@ Plus d'alias d'IP : le rideau, seule carte simulée, n'a pas d'IP propre sur le 
 
 ## A8 — Documentation
 - [x] Entrée dans la Carte des documents de CLAUDE.md et section de `outils_docs/README.md` — preuve : CLAUDE.md (entrée `cartes_simulees_web.py`) et README.md § « Cartes simulées (page web) » ; `verifie_references_docs.py` : 0 défaut
-- [ ] Exceptions de longueur déclarées si un fichier dépasse 500 lignes
+- [x] Exceptions de longueur déclarées si un fichier dépasse 500 lignes — preuve : `wc -l` le 2026-11-15, plus gros fichier 271 lignes (cartes_simulees.py), 225 pour la sonde Chrome : aucune exception à déclarer
 
 ## Améliorations restantes
 - [ ] [projet] Wokwi pour S3/P4 si le réseau y devient utilisable

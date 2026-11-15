@@ -175,6 +175,15 @@ def main():
                    "persist modifie : l'accueil rejoue le nouveau nom de la porte")
         finally:
             cs.fichiers_berry_etat.dossier_carte = origine
+    print("2b. window.VOLETS de l'accueil du rideau : JSON relu, decor identique a celui du persist")
+    acc = cs.requete_berry(ENV, "accueil")["corps"]
+    m = re.search(r"window\.VOLETS=(\{.*?\});</script>", acc, re.S)
+    verifie(m is not None, True, "window.VOLETS present dans l'accueil")
+    v = json.loads(m.group(1)) if m else {}
+    decor_persist = re.search(r'"decor"\s*:\s*\[([^\]]*)\]', texte).group(1)
+    verifie(v.get("decor"), re.findall(r'"([^"]+)"', decor_persist), "decor = celui du persist, relu en brut")
+    verifie([o.get("id"), o.get("type"), o.get("source")] if (o := (v.get("ouvertures") or [{}])[0]) else None, [1, "garage", "/rideau?f=position&id=1"], "ouverture 1 : id, type, source")
+    verifie(json.loads(re.search(r"window\.VOLETS=(\{.*?\});</script>", acc.replace("chevrefeuille", "XX"), re.S).group(1)).get("decor"), ["XX", "porte", "pergola"], "temoin : un decor modifie dans la page change la lecture")
     print("8. Scenarios nommes du rideau, appliques par POST /__sim puis lus sur /rideau")
     srv = cs.serveur(ENV, 0)
     threading.Thread(target=srv.serve_forever, daemon=True).start()

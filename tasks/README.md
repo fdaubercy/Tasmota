@@ -19,7 +19,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 |---|---|---|---|---|---|---|
 | [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 80 % (53/68) | 15 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
 | [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ████░░░░░░ 38 % (11/26) | 15 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
-| [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ██████░░░░ 58 % (14/24) | 10 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
+| [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 89 % (34/36) | 2 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 83 % (70/91) | 21 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
@@ -111,18 +111,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
 
-#### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 58 %
+#### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 75 %
 
-- A2 — Moteur Berry (routes réelles) : Bouchons manquants (`tasmota`, `webserver`, `persist` du dossier de la carte, `path`)
-- A2 — Moteur Berry (routes réelles) : Banc : la sortie du rideau contient `window.VOLETS` avec le décor
-- A3 — Serveur de la carte simulée : Valeurs de scénario (ouvert, fermé, maître muet, incohérence) ; position lue par `/rideau?f=position&id=`
 - A4 — Capture et rejeu : Capture d'une carte en ligne (GET uniquement) rangée hors dépôt, secrets masqués
 - A4 — Capture et rejeu : Rejeu des pages natives capturées, avec la date de la capture affichée
 - A4 — Capture et rejeu : Banc sur une carte simulée (jamais le vrai P4 en essai automatique)
 - A7 — Vrai firmware ESP32 classique (essai) : Choisir l'env ESP32 de l'essai ; QEMU via WSL2 ou `idf_tools.py`
 - A7 — Vrai firmware ESP32 classique (essai) : Boot du firmware compilé par la page Build (:7700), jamais par `pio` direct
 - A7 — Vrai firmware ESP32 classique (essai) : Documenter les limites (S3/P4 non couverts)
-- A8 — Documentation : Exceptions de longueur déclarées si un fichier dépasse 500 lignes
 - Amélioration [projet] : Wokwi pour S3/P4 si le réseau y devient utilisable
 - Amélioration [projet] : Alias d'IP (`netsh`, administrateur, retrait à l'arrêt, garde ping/ARP/LWT MQTT) pour simuler une carte à IP propre hors ligne
 - Amélioration [projet] : Simuler le NAPT du maître pour joindre le rideau simulé en 192.168.0.43:8082 depuis un autre appareil (le P4 est en ligne : jamais en alias)
