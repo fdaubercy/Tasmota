@@ -24,6 +24,11 @@
   var VERT = '#3cb04a';
   var GRIS = '#8a8f94';
   var DELAI = 6000;                                        // ms d'incoherence avant le clignotement
+  // Reglages communs a toutes les cartes qui dessinent une facade (aucun persist) :
+  // NUIT.base = opacite du voile au coucher du soleil, NUIT.profonde = opacite ajoutee en pleine nuit (voile maximal = base + profonde, 0 a 1),
+  // NUIT.teinte = couleur du crepuscule (le voile vire au noir en pleine nuit) ; PORTAIL_DECALAGE = secondes entre le depart du vantail droit et du gauche
+  var NUIT = {base: 0.5, profonde: 0.4, teinte: [28, 40, 85]};
+  var PORTAIL_DECALAGE = 5;
   var LARG = {fenetre: 80, porte: 64, garage: 176, trappe: 60, trappeEchelle: 80};
   var POS = {fenetre: 100, trappe: 194, porte: 284};       // x des ouvertures dans la maison (decor 'maison')
 
@@ -418,8 +423,8 @@
       var nuitLongue = (lever - coucher + 1440) % 1440;     // 0 si lever = coucher : pas de division par zero
       if (f > 0 && nuitLongue > 0) p = Math.sin(Math.PI * Math.min(1, ((m - coucher + 1440) % 1440) / nuitLongue));
     }
-    var c = [43, 59, 107].map(function (v, i) { return Math.round(v + ([4, 7, 15][i] - v) * p); });
-    return {o: f * (0.30 + 0.32 * p), p: p, c: 'rgb(' + c.join(',') + ')'};
+    var c = NUIT.teinte.map(function (v, i) { return Math.round(v + ([4, 7, 15][i] - v) * p); });
+    return {o: f * (NUIT.base + NUIT.profonde * p), p: p, c: 'rgb(' + c.join(',') + ')'};
   }
   // Soleil de la carte : reponse de « Status 7 » ({"StatusTIM": {"Local": "AAAA-MM-JJTHH:MM:SS", "Sunrise": "HH:MM", "Sunset": "HH:MM"}}, calcule
   // par le firmware avec la latitude, la longitude et le fuseau du persist) -> minutes locales, lever, coucher ; null si absent ou illisible
@@ -446,9 +451,11 @@
   // Portail de jardin (plan facade-garage-portail-commande A3) : volets de type 'portail1' (un vantail, bouton « simple ») et 'portail2' (deux
   // vantaux, bouton « double »), dessines au premier plan et non dans la rangee des ouvertures. p = {1: % du portail1, 2: % du portail2}.
   // Le vantail droit suit le plus ouvert des deux, le gauche le portail2 seul.
-  function vantaux(p) {
-    var a = borne(Number(p && p[1]) || 0), b = borne(Number(p && p[2]) || 0);
-    return {droit: Math.max(a, b) / 100, gauche: b / 100};
+  // Le 2 vantaux (b %) dure tps secondes en tout : le droit part a 0 s et finit a tps - d, le gauche part a d et finit a tps (d = PORTAIL_DECALAGE)
+  function vantaux(p, tps, decalage) {
+    var a = borne(Number(p && p[1]) || 0), b = borne(Number(p && p[2]) || 0), T = tps > 0 ? tps : 30, d = Math.min(decalage == null ? PORTAIL_DECALAGE : decalage, T / 2);
+    var droit2 = Math.min(100, b * T / (T - d)), gauche = Math.max(0, (b / 100 * T - d) / (T - d) * 100);
+    return {droit: Math.round(Math.max(a, droit2) * 100) / 10000, gauche: Math.round(gauche * 100) / 10000};
   }
   // Feu orange : clignote (1 s allume, 1 s eteint) pendant le mouvement et 1,5 s apres ; t et bouge en ms (bouge null = jamais bouge)
   function feuPortail(t, bouge) {
@@ -568,8 +575,8 @@
     var m = pt(f, 1, 0.5);                                  // moteur au bord libre
     el(g, 'rect', {x: f.dir > 0 ? m[0] - 3 : m[0], y: m[1] - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
   }
-  function portail(svg, W, WV) {
-    var dx = (W - 420) / 2, P = {etat: {1: 0, 2: 0}, g: el(svg, 'g', {'data-portail': '', transform: 'translate(' + dx + ',0)'}), feuAllume: null};
+  function portail(svg, W, WV, tps) {
+    var dx = (W - 420) / 2, P = {tps: tps, etat: {1: 0, 2: 0}, g: el(svg, 'g', {'data-portail': '', transform: 'translate(' + dx + ',0)'}), feuAllume: null};
     var lisse = function (x) { return x * x * (3 - 2 * x); }, top = PV.YB - PV.H - 6 - 28, ym = PV.YB - 6 - PV.H * 0.5;
     decorPortail(el(P.g, 'g', {'pointer-events': 'none'}), dx, WV);
     P.vantail = {};
@@ -585,18 +592,21 @@
     el(P.halo, 'circle', {cx: fx + 4, cy: fy, r: 14, fill: 'rgba(255,150,20,0.28)'});
     el(P.halo, 'circle', {cx: fx + 4, cy: fy, r: 8, fill: 'rgba(255,170,40,0.45)'});
     P.feu = el(P.g, 'ellipse', {cx: fx + 3, cy: fy, rx: 4.2, ry: 5.2, fill: '#8a5a1c', stroke: '#5a3a0c', 'stroke-width': 0.8});
-    el(P.g, 'circle', {cx: 210, cy: ym - 14, r: 8, fill: 'none', stroke: '#444', 'stroke-width': 1.5});
+    P.anneau = el(P.g, 'circle', {cx: 210, cy: ym - 14, r: 8, fill: 'none', stroke: '#444', 'stroke-width': 1.5});      // capteur de fermeture : suit le bord libre du vantail gauche
     P.capteur = el(P.g, 'circle', {cx: 210, cy: ym - 14, r: 4, fill: '#777', stroke: '#222', 'stroke-width': 0.6});
     P.texte = el(P.g, 'text', {x: 210, y: PV.YB - 6 - PV.H - 6, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'});
     P.texte.textContent = '?';
     P.pose = function () {
-      var v = vantaux({1: P.etat[1] * 100, 2: P.etat[2] * 100});
+      var v = vantaux({1: P.etat[1] * 100, 2: P.etat[2] * 100}, P.tps);
       ['gauche', 'droit'].forEach(function (c) {
         var e = P.vantail[c];
         e.g.setAttribute('data-ouverture', String(Math.round(v[c] * 100)));
         while (e.g.firstChild) e.g.removeChild(e.g.firstChild);
         vantailDessin(e.g, {a: PV.AMAX * lisse(v[c]), hx: e.hx, dir: e.sens});
       });
+      var cp = pt({a: PV.AMAX * lisse(v.gauche), hx: PV.XG, dir: 1}, 1, 0.72), ct = pt({a: PV.AMAX * lisse(v.gauche), hx: PV.XG, dir: 1}, 1, 1);
+      [P.anneau, P.capteur].forEach(function (c) { c.setAttribute('cx', cp[0].toFixed(1)); c.setAttribute('cy', cp[1].toFixed(1)); });
+      P.texte.setAttribute('x', cp[0].toFixed(1)); P.texte.setAttribute('y', (ct[1] - 5).toFixed(1));
     };
     P.pose();
     return P;
@@ -679,14 +689,14 @@
     });
     var finition = toit == 'unPan' && !maisonD && decor.indexOf('finition') >= 0;
     var nuitDecor = finition || (maisonD && listeDecor.indexOf('finition') >= 0);     // la maison n'a que la nuit et le bouton, pas la foret ni les cones
-    if (finition) {
+    if (nuitDecor) {
       [['vf_mur', '#5a4a30', 0, 0.22], ['vf_debord', '#000', 0.25, 0], ['vf_cam', '#38bdf8', 0.5, 0], ['vf_lamp', '#fde047', 0.55, 0]].forEach(function (q) {
         var lg = el(defs, 'linearGradient', {id: q[0], x1: 0, y1: 0, x2: 0, y2: 1});
         el(lg, 'stop', {offset: 0, 'stop-color': q[1], 'stop-opacity': q[2]});
         el(lg, 'stop', {offset: 1, 'stop-color': q[1], 'stop-opacity': q[3]});
       });
-      foret(svg);                                           // derriere le toit
     }
+    if (finition) foret(svg);                               // derriere le toit
     var trappe = ouv.some(function (o) { return o.type == 'trappe' || o.type == 'trappeEchelle'; });
     if (maisonD) {
       maisonFond(svg, W, pos);
@@ -732,7 +742,7 @@
       var texte = el(svg, 'text', {x: x + (LARG[o.type] || 64) / 2, y: r[0], 'font-size': 11, 'text-anchor': 'middle',
         style: 'fill:var(--c_txt);stroke:var(--c_bg);stroke-width:3px;paint-order:stroke'});
       texte.textContent = String(o.nom || '').replace(/^volet( roulant)?\s+/i, '') + ' ';
-      var pct = el(texte, 'tspan', {'class': 'vf_pct'}), cause = el(texte, 'tspan', {});
+      var pct = el(texte, 'tspan', {'class': 'vf_pct', style: 'display:none'}), cause = el(texte, 'tspan', {});
       var v = {o: o, g: g, pose: r[1], pct: pct, cause: cause};
       if (o.finsDeCourse && o.type == 'garage') {         // fins de course sur le rail droit : ouverture en haut, fermeture en bas
         var f = o.finsDeCourse, xr = x + LARG.garage + 12;
@@ -746,7 +756,7 @@
     if (maisonD) maisonDevant(svg, pos);
     if (porte) portePleine(svg, x - 20);
     if (perg) pergola(svg, alea, xMur, 44 + 16 * (xMur - 20) / (W - 40), 196);
-    svg.portail = ouvPortail.length ? portail(svg, W, WV) : null;
+    svg.portail = ouvPortail.length ? portail(svg, W, WV, (ouvPortail.filter(function (o) { return o.type == 'portail2'; })[0] || {}).tempsMontee) : null;
     if (svg.portail) {                                      // une entree par volet portail : pose(f) met a jour le vantail, g et textes factices pour pose()
       ouvPortail.forEach(function (o) {
         var g = el(svg.portail.g, 'g', {'data-id': o.id, 'data-ouverture': ''}), tx = el(g, 'text', {style: 'display:none'});
@@ -756,16 +766,17 @@
       });
     }
     if (nuitDecor) {                                        // voile de nuit, puis (garage) les cones par-dessus (ils restent vifs la nuit)
-      svg.nuit = el(svg, 'rect', {x: 0, y: 0, width: WV, height: maisonD ? 214 : (ouvPortail.length ? 320 : 200), fill: 'rgb(43,59,107)', opacity: 0, 'pointer-events': 'none', 'data-nuit': ''});
+      svg.nuit = el(svg, 'rect', {x: 0, y: 0, width: WV, height: maisonD ? 214 : (ouvPortail.length ? 320 : 200), fill: 'rgb(' + NUIT.teinte.join(',') + ')', opacity: 0, 'pointer-events': 'none', 'data-nuit': ''});
       var cone = function (pts, rempl, nom) {
         var c = el(svg, 'polygon', {points: pts, fill: rempl, 'pointer-events': 'none', 'data-cone': nom});
         c.style.opacity = '0'; c.style.transition = 'opacity .5s';
         return c;
       };
-      if (finition && svg.camera) svg.camera.cone = cone('29,62 -20,196 190,196', 'url(#vf_cam)', 'camera');
+      var sol = maisonD ? 196 : (ouvPortail.length ? 304 : 196);                 // les cones descendent jusqu'au sol
+      if (svg.camera) svg.camera.cone = maisonD ? cone('29,84 -70,' + sol + ' 250,' + sol, 'url(#vf_cam)', 'camera') : cone('29,62 -80,' + sol + ' 270,' + sol, 'url(#vf_cam)', 'camera');
       if (finition && svg.lampe) {
         var lc = xMur - 18, ly = 45 + 16 * (lc - 20) / (W - 40) + 22;
-        svg.lampe.cone = cone(lc + ',' + ly + ' ' + (lc - 120) + ',196 ' + (lc + 45) + ',196', 'url(#vf_lamp)', 'lampe');
+        svg.lampe.cone = cone(lc + ',' + ly + ' ' + (lc - 190) + ',' + sol + ' ' + (lc + 80) + ',' + sol, 'url(#vf_lamp)', 'lampe');
       }
     }
     if (nuitDecor) {                                        // bouton Auto, Jour, Nuit en haut a droite ; le mode est garde dans ce navigateur

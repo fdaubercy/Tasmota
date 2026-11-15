@@ -108,3 +108,8 @@ Façade du dépôt (`volets.js`, viewBox 540 x 320) : caméra vers (29, 52), lam
 - 2026-11-15 : création d'après le garage et le portail de jardin (sections 1 à 9). Décisions : nuit selon le lever et le coucher réels du soleil
   (persist : localisation et fuseau) ; portail avec deux zones de clic distinctes (vantail droit = ouvrir un vantail, vantail gauche = ouvrir les deux) ;
   l'arrêt du portail par clic se fait sans confirmation, toute ouverture ou fermeture demande une confirmation.
+- 2026-11-15 (soir) : affinements demandes par l'utilisateur sur le garage, le rideau et le grenier du RDC. Nuit plus sombre et unique pour toutes les
+  cartes, en dur dans `volets.js` (constantes `NUIT` : base 0,5, profonde 0,4, teinte du crepuscule ; voile maximal 0,9) et non dans un persist, pour que le
+  reglage reste identique partout. Cones de la camera et de la lampe elargis et descendus jusqu'au sol, camera de la maison comprise. Aucun pourcentage
+  d'ouverture sur l'image. Portail a deux vantaux : le vantail droit part 5 s avant le gauche (`PORTAIL_DECALAGE`), le capteur de fermeture suit le vantail
+  gauche. Rideau : garage et petite porte seuls, sans pergola du mur. Grenier du RDC : decor `maison` avec `finition` pour la nuit seulement.

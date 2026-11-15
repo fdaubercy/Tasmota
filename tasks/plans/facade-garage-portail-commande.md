@@ -53,12 +53,14 @@ Décisions :
 - [x] Mode Auto, Jour, Nuit forcés ; repli sur l'heure du navigateur signalé ; test avec heure simulée — preuve : test_volets.mjs « 0 echec(s) sur 171 verifications » (soleilDe, modeSuivant, poseMode) ; sonde Chrome scénario « soleil » : midi = pas de voile, 23:30 = voile > 0,55, clic = Jour forcé, mode gardé, carte muette = pas de nuit ; sonde entière VERT. Écart au plan : sans lecture le repli est « jour », pas l'heure du navigateur (le lever dépend du lieu)
 
 ## A6 — Essai sur carte
-- [ ] Compilation par la page Build (:7700), jamais par pio direct ; contrôler que les fichiers `volets.js` et la page sont bien dans l'image
-- [ ] Rendu vu sur le P4 : façade, clics, nuit ; tas et `UfsFree` relevés ; aucune commande réelle du portail sans accord de l'utilisateur
+- [x] Compilation par la page Build (:7700), jamais par pio direct ; contrôler que les fichiers `volets.js` et la page sont bien dans l'image — preuve : l'utilisateur a compilé le P4 (env tasmota32p4-garage-serveur-modbus) par la page Build : journaux erase_upload du 2026-11-15, SUCCESS à 17:18 (14 min 51 s) après commit du persist (17:17) et de l'impulsion (15:48) ; `volets.js` copié puis supprimé du dossier temporaire ; lecture seule de http://192.168.0.43/ le même jour : `window.VOLETS` porte VR2 (portail1, place 4) et VR3 (portail2, place 5) avec leur capteur de fermeture, libellés « Ouverture 1 vantail Portail » et « Ouverture 2 vantaux Portail », `volets.js` servi contient `decorPortail` ; P4 démarré depuis 1 h 20, tas 236 Ko ; `/volets?f=capteurs` répond, capteur de fermeture à OFF (esclave 4 pas encore en ligne). Le `volets.js` du 18:36 (nuit de la maison) n'est pas sur le P4, sans effet pour lui
+- [x] Rendu de la façade vu sur le P4, tas relevé — preuve : capture de la vraie page du P4 envoyée par l'utilisateur le 2026-11-15 (garage, portail fermé avec texte « ouvert » car l'esclave 4 n'est pas en ligne, bouton Auto, voile de nuit) ; tas de 236 Ko lu par `Status 11`
+- [ ] Clics sur le portail et le rideau, `UfsFree`, nuit selon le coucher réel : à voir sur le P4 après l'envoi du nouveau `volets.js` ; aucune commande réelle du portail sans accord de l'utilisateur
 
 ## A7 — Documentation et commit
-- [ ] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, exception des lignes de `volets.js`), `CONSIGNES_VISUELS.md` (journal des affinements) ; `verifie_references_docs.py` vert
-- [ ] Agents avant commit : `controleur-secrets`, `relecteur-pages-web` ; commit `feat(volets): ...`
+- [x] `CLAUDE.md` (exception des lignes de `volets.js` et de sa sonde), `CONSIGNES_VISUELS.md` (journal des affinements) ; `verifie_references_docs.py` vert — preuve : CLAUDE.md : 971 et 754 lignes ; CONSIGNES_VISUELS.md : entrée « 2026-11-15 (soir) » ; `verifie_references_docs.py` : 0 défaut sur 30 documents
+- [ ] `outils_docs/README.md` § « Visuel des volets et réglage de leurs durées » : ajouter le portail, la nuit et les constantes `NUIT` ; fichier modifié par d'autres sessions (non commité), à traiter avec l'utilisateur
+- [x] Agents avant commit : `controleur-secrets`, `relecteur-pages-web` ; commit `feat(volets): ...` — preuve : commits 5e4775878 (portail), 1a2db447e (impulsion), d99b843a4 (noms des relais) et f073b4024 (nuit du grenier du RDC et du rideau), chacun précédé d'un contrôle de secrets sans bloquant ; le lot du soir (nuit plus sombre, cônes, décalage des vantaux) attend ses deux contrôles
 
 ## A8 — Retour au plan atelier-visuels
 - [ ] Passer d'abord par le plan `facade-esclaves-grenier-rdc` (façades de l'esclave 4, du rideau et du grenier du RDC), qui se termine par ce même retour

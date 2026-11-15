@@ -623,16 +623,28 @@ def status7(local):
     return {"StatusTIM": {"UTC": local, "Local": local, "Timezone": 99, "Sunrise": "08:01", "Sunset": "17:04"}}
 
 
-def sonde_soleil(m):
+def sonde_soleil(m, capture=None):
     nuit = "(() => { const n = document.querySelector('#vf [data-nuit]'); return n ? [+n.getAttribute('opacity'), n.getAttribute('fill')] : null; })()"
     Carte.capteurs, Carte.statut7 = {}, status7("2026-11-15T12:00:00")
     verifie(bool(m.ouvre("portail")), True, "soleil : page chargée")
     time.sleep(1.5)
     verifie(m.cdp.js(nuit)[0], 0, "soleil : midi sur la carte : aucun voile de nuit")
     verifie(m.cdp.js("document.querySelector('#vf [data-nuit]').parentNode.querySelectorAll('text')[0] ? 1 : 0"), 1, "soleil : texte du bouton de mode présent")
+    Carte.statut7 = status7("2026-11-15T17:20:00")
+    Carte.capteurs = {"camera": "ON", "lampe": "ON"}
+    verifie(bool(m.ouvre("portail")), True, "soleil : page rechargée à 17:20")
+    verifie(vrai(attend(m.cdp, "+document.querySelector('#vf [data-nuit]').getAttribute('opacity') > 0.45", 6)), True, "soleil : 17:20 (13 min après le coucher) : voile > 0,45")
+    time.sleep(1.2)
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_portail_crepuscule.png"))
     Carte.statut7 = status7("2026-11-15T23:30:00")
+    Carte.capteurs = {"camera": "ON", "lampe": "ON"}
     verifie(bool(m.ouvre("portail")), True, "soleil : page rechargée")
     verifie(vrai(attend(m.cdp, "+document.querySelector('#vf [data-nuit]').getAttribute('opacity') > 0.55", 6)), True, "soleil : 23:30 sur la carte : nuit profonde (voile > 0,55)")
+    time.sleep(1.2)
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_portail_nuit.png"))
+    Carte.capteurs = {}
     m.cdp.js("[...document.querySelectorAll('#vf svg g')].find(g => g.querySelector('title') && /Jour et nuit/.test(g.querySelector('title').textContent)).dispatchEvent(new MouseEvent('click', {bubbles: true})); 1")
     verifie(vrai(attend(m.cdp, "+document.querySelector('#vf [data-nuit]').getAttribute('opacity') === 0", 4)), True, "soleil : clic sur le mode : « Jour » forcé, voile retiré")
     verifie(m.cdp.js("window.localStorage.getItem('volets_nuit')"), "jour", "soleil : le mode est gardé dans le navigateur")
@@ -650,7 +662,8 @@ def sonde_maison_nuit(m, capture):
     verifie(bool(m.ouvre("maison_nuit")), True, "maison nuit : page chargée")
     time.sleep(1.5)
     verifie(m.cdp.js(nuit), [0, 214], "maison nuit : midi sur la carte : voile présent (hauteur 214), opacité 0")
-    verifie(m.cdp.js("document.querySelectorAll('#vf [data-cone]').length"), 0, "maison nuit : aucun cône (propres au garage)")
+    verifie(m.cdp.js("document.querySelectorAll('#vf [data-cone]').length"), 1, "maison nuit : un seul cône, celui de la caméra")
+    verifie(m.cdp.js("[...document.querySelectorAll('#vf .vf_pct')].every(t => getComputedStyle(t).display === 'none')"), True, "maison nuit : aucun pourcentage d'ouverture visible")
     verifie(m.cdp.js("(() => { const g = [...document.querySelectorAll('#vf svg g')].find(x => /cursor:pointer/.test(x.getAttribute('style') || '') && x.querySelector('title') && /Jour et nuit/.test(x.querySelector('title').textContent)); return g && g.querySelector('text').textContent; })()"), "Auto",
             "maison nuit : bouton de mode présent, texte « Auto »")
     for heure, minimum, nom in (("2026-11-15T17:20:00", 0.28, "crépuscule"), ("2026-11-15T23:30:00", 0.55, "nuit profonde")):
@@ -660,6 +673,13 @@ def sonde_maison_nuit(m, capture):
                 "maison nuit : " + heure[11:16] + " sur la carte : voile > " + str(minimum))
         if capture:
             m.cdp.capture(str(Path(capture) / ("facade_maison_" + nom.split()[0] + ".png")))
+    Carte.capteurs = {"camera": "ON"}
+    verifie(bool(m.ouvre("maison_nuit")), True, "maison nuit : page rechargée, caméra allumée")
+    verifie(vrai(attend(m.cdp, "[...document.querySelectorAll('#vf [data-cone]')].every(c => c.style.opacity === '1') && document.querySelectorAll('#vf [data-cone]').length === 1", 6)), True,
+            "maison nuit : caméra allumée : son cône est visible")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_maison_nuit_camera.png"))
+    Carte.capteurs = {"camera": "OFF"}
     verifie(bool(m.ouvre("maison")), True, "maison sans finition : page chargée")
     time.sleep(1.5)
     verifie(m.cdp.js(nuit), None, "maison sans finition : ni voile ni bouton (dessin d'avant)")
@@ -709,7 +729,7 @@ def principal():
         sonde_rideau_capteurs(m, args.capture)
         sonde_maison(m, args.capture)
         sonde_portail(m, args.capture)
-        sonde_soleil(m)
+        sonde_soleil(m, args.capture)
         sonde_maison_nuit(m, args.capture)
         sonde_rideau_nuit(m, args.capture)
         verifie(bool(m.ouvre("sans")), True, "sans curseur : page chargée")
