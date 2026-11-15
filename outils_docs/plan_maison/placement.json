@@ -293,8 +293,12 @@
     "coul": "#868e96"
    }
   },
-  "defaut_ssid": "MAISON = Freebox Server par défaut. Confirmé le 2026-11-15 : la Freebox Server et le répéteur du salon diffusent le même nom MAISON, le persist ne dit pas lequel une carte utilise (à corriger carte par carte dans wifi_manuel, par exemple principal = repeteur_salon, une fois lu le BSSID de la carte)",
-  "wifi_manuel": {},
+  "defaut_ssid": "MAISON = Freebox Server par défaut. Relevé `Status 11` du 2026-11-15 : deux BSSID distincts : celui des cartes proches de la Freebox (signal 100 %) = Freebox Server, celui du P4 du garage = répéteur du salon par élimination (adresses MAC non gardées : dépôt public) ; les cartes éteintes ou sans adresse gardent le défaut Freebox. Confirmé le 2026-11-15 : la Freebox Server et le répéteur du salon diffusent le même nom MAISON, le persist ne dit pas lequel une carte utilise (à corriger carte par carte dans wifi_manuel, par exemple principal = repeteur_salon, une fois lu le BSSID de la carte)",
+  "wifi_manuel": {
+   "garage/tasmota32p4-serveur-modbus": {
+    "principal": "repeteur_salon"
+   }
+  },
   "re_hotes": {
    "SERVEUR-GARAGE": "garage/tasmota32p4-serveur-modbus"
   }

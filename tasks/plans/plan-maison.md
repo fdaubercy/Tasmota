@@ -69,7 +69,7 @@ Décisions de conception (mes choix, à corriger) :
 - [x] Surbrillance au survol d'une carte (maître : tout son réseau), clic = fiche avec liens — preuve : fonctions hl/sel dans la page générée ; non testé au clic dans un navigateur
 - [x] Tuile « Plan de la maison » dans l'annuaire (port 7915, lecture seule) — preuve : `python outils_docs/scripts_python/outils_pc/test_plan_maison_web.py` 5 OK, test_annuaire.py VERT (22 outils)
 - [x] Confirmer avec l'utilisateur : l'appareil réel de MAISON — preuve : réponse de l'utilisateur le 2026-11-15, Freebox Server et répéteur du salon diffusent tous deux MAISON ; note dans `placement.json > wifi.defaut_ssid`
-- [ ] [projet] Rattacher chaque carte à son appareil MAISON réel : lire le BSSID de chaque carte (`Status 11`), puis `wifi_manuel` (ex. principal = repeteur_salon)
+- [x] [projet] Rattacher chaque carte à son appareil MAISON réel — preuve : `Status 11` lu sur 8 cartes le 2026-11-15, deux BSSID ; P4 du garage = répéteur du salon dans `placement.json > wifi.wifi_manuel`, les 9 cartes éteintes ou sans adresse gardent le défaut Freebox (à relire quand elles seront allumées)
 
 ## A9 — Couche chauffage et débits
 - [x] Vue chauffage : PAC (cave), nourrice (bureau), eau chaude PAC -> nourrice, départs vers les pièces chauffées (RDC, 1er hors bureau, chambres du 2e) — preuve : capture Chrome 2026-11-15, sonde « vue chauffage : PAC et nourrice, traits d'eau », données dans placement.json > chauffage (réponses de l'utilisateur)
