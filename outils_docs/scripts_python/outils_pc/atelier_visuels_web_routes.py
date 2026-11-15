@@ -18,6 +18,7 @@
     POST /valide {description (objet), octets? (poids du fond), puce? ("ESP32" par defaut)} -> {erreurs: ["fond.type : ...", ...]},
          liste vide = valide ; 400 si description n'est pas un objet ; corps 1 Mo au plus.
     GET  /suivi?env=              -> {carte: identique | differente | absente | inconnue}
+    GET  /consignes/regles        -> {organes: [{nom, regle}], jour_nuit, clic, par_type} lu A CHAQUE APPEL dans CONSIGNES_VISUELS.md (atelier_visuels_consignes.py)
 Reponses : icones/recherche {icones: [{jeu, nom, licence, permissive, attribution}]} ; icones/svg {svg, licence, auteur, origine} ; icones/garde {chemin, licence} ;
   ia/fournisseurs {fournisseurs, reglages} ; ia/cle {fournisseur, cle: {presente, ...}} ; ia/demande {svg | operations | erreur, quota: {envois_jour, plafond, etat, reprise}} ; ia/quota {envois_jour, plafond, etat, reprise}.
 En plus (serveur) : POST /fond?env=&type= -> {empreinte, octets, avertissement} ; GET /fond?env=&empreinte= ; GET /envs {envs, lieux}.
@@ -30,6 +31,7 @@ import time
 import urllib.error
 import urllib.request
 
+import atelier_visuels_consignes as avc
 import atelier_visuels_ecriture as ave
 import atelier_visuels_ia as ia
 import atelier_visuels_description as avd
@@ -44,7 +46,7 @@ import tapp_envoi
 DELAI_CARTE = 2.5                      # echeance GLOBALE d'une lecture de carte (connexion et corps compris)
 MAX_CORPS_IA = 10 * 1024 * 1024        # corps JSON de /ia/demande, photo en base64 comprise ; 1 Mo pour les autres routes
 CHEMINS_IA = {"/ia/demande"}
-ROUTES_GET = {"/sources", "/etat", "/icones/firmware", "/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
+ROUTES_GET = {"/consignes/regles", "/sources", "/etat", "/icones/firmware", "/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
 ROUTES_POST = {"/icones/garde", "/ia/demande", "/ia/cle", "/ecriture/prevoit", "/ecriture/ecrit",
                "/ecriture/prevoit_retire", "/ecriture/retire", "/valide"}
 HorsLigne = ico.HorsLigne
@@ -117,6 +119,8 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
         return trouve[1], trouve[0]
 
     def get(chemin, q):
+        if chemin == "/consignes/regles":
+            return avc.regles(racine)
         if chemin == "/icones/firmware":
             return ict.charge(racine)
         if chemin == "/icones/recherche":

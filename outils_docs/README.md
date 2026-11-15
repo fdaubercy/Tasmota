@@ -2435,6 +2435,13 @@ Le port 7990 appartient à l'organigramme des plans (`organigramme_plans_web.py`
    `/ecriture/retire`).
 7. **Téléverser** : le lien mène à la page Build (7700, `?env=&depuis=visuel&fichiers=visuel.json,visuel.<type>&redemarrer=1`).
    Le **suivi** compare le `visuel.json` du dépôt à celui de la carte : identique, différente, absente ou inconnue (carte muette).
+8. **Consignes** (2026-11-15, plan `atelier-visuels` A7) : le bouton « Consignes » de l'en-tête ouvre `outils_docs/visuels_accueil/CONSIGNES_VISUELS.md`
+   (`GET /consignes`, texte seul, lecture seule). Un panneau « Consignes » rappelle les règles de l'élément sélectionné : un voyant montre celles du
+   capteur de fermeture, du feu orange, de la lampe et de la caméra, une valeur celle du capteur de fermeture, une liaison celles du garage, du portail
+   et de la commande par clic ; le jour et la nuit s'y ajoutent. Le fichier est **relu à chaque sélection** (`GET /consignes/regles`,
+   `atelier_visuels_consignes.py`) : une règle ajoutée au fichier apparaît sans relancer l'outil. Les règles viennent du tableau de la section « Les organes
+   et leurs règles » et des puces des sections « Commande par clic » et « Jour et nuit » : pour qu'un nouvel organe soit rappelé, il faut l'ajouter à
+   `atelier_visuels_consignes.py::PAR_TYPE`. Bancs `test_atelier_visuels_consignes.py` et `sonde_consignes` de `test_atelier_visuels_page_chrome.py`.
 
 ### Assistant IA (facultatif)
 

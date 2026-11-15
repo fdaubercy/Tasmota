@@ -75,7 +75,7 @@ Décisions :
 - [ ] Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
 
 ## Améliorations restantes
-- [ ] [projet] Brancher la page de l'atelier des visuels sur les consignes (plan atelier-visuels, A7)
+- [x] [projet] Brancher la page de l'atelier des visuels sur les consignes (plan atelier-visuels, A7) — preuve : fait le 2026-11-15, voir atelier-visuels A7 (consignes branchées, bancs verts)
 - [ ] [projet] Même façade animée pour la carte du rideau et l'accueil d'autres lieux
 
 ## Vérification

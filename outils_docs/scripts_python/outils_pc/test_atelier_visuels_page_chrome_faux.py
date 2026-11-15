@@ -60,6 +60,8 @@ def mode_faux(port, depot):
     racine = te.copie(Path(depot), True)
     (racine / "outils_docs/schemas").mkdir(parents=True, exist_ok=True)
     shutil.copy2(te.DEPOT / "outils_docs/schemas/icones_firmware_traces.json", racine / "outils_docs/schemas/icones_firmware_traces.json")
+    (racine / "outils_docs/visuels_accueil").mkdir(parents=True, exist_ok=True)       # consignes lues par le panneau de rappel de la page
+    shutil.copy2(te.DEPOT / "outils_docs/visuels_accueil/CONSIGNES_VISUELS.md", racine / "outils_docs/visuels_accueil/CONSIGNES_VISUELS.md")
     tmp = Path(depot).parent / "faux"
     tmp.mkdir(exist_ok=True)
     svgs = {"camera": "M4 4h16v16H4z", "camera-off": "M2 2l20 20", "fleur": "M1 1h4v4z"}

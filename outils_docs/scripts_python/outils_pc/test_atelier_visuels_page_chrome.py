@@ -312,6 +312,22 @@ def sondes_vivantes(tue=False):
     return int((r.stdout or "0").strip().splitlines()[-1] or 0)
 
 
+def sonde_consignes(cdp):
+    """Consignes (plan atelier-visuels A7) : lien vers le fichier, rappel des regles de l'element selectionne, mis a jour sans recharger la page."""
+    js = cdp.js
+    verifie(js("(function(){var a=document.getElementById('avc-lien');return [a.getAttribute('href'), a.target, a.rel];})()"), ["/consignes", "_blank", "noopener"], "consignes : lien « Consignes » vers le fichier, dans un nouvel onglet sans opener")
+    verifie(js("document.getElementById('avc-rappel').textContent.indexOf('Sélectionnez') === 0"), True, "consignes : aucun element selectionne, invitation a en choisir un")
+    js("AV.elements=[{id:'v1',type:'voyant',x:60,y:60,source:{type:'relais',n:1},style:{}},{id:'l1',type:'liaison',x:10,y:10,x2:100,y2:80,source:{type:'wifi'}}];AV.sim={v1:'on',l1:'active'};AV.selEl='v1';AV.dessine();")
+    verifie(condition(cdp, "/Feu orange/.test(document.getElementById('avc-rappel').textContent)"), True, "consignes : un voyant selectionne affiche la regle du feu orange")
+    verifie(js("(function(){var t=document.getElementById('avc-rappel').textContent;return [/Caméra/.test(t),/Jour et nuit/.test(t),/Portail de jardin/.test(t)];})()"), [True, True, False], "consignes : voyant = organes a voyant et jour et nuit, pas la regle du portail")
+    js("AV.selEl='l1';AV.dessine();")
+    verifie(condition(cdp, "/Portail de jardin/.test(document.getElementById('avc-rappel').textContent)"), True, "consignes : une liaison selectionnee affiche les regles de commande")
+    verifie(js("/Feu orange/.test(document.getElementById('avc-rappel').textContent)"), False, "consignes : la regle du voyant disparait quand on change d'element")
+    js("AV.selEl=null;AV.dessine();AV.elements=[];AV.sim={};AV.change();")
+    verifie(condition(cdp, "document.getElementById('avc-rappel').textContent.indexOf('Sélectionnez') === 0"), True, "consignes : plus d'element selectionne, retour a l'invitation")
+    verifie(js("(async function(){var r=await fetch('/consignes');var t=await r.text();return [r.status,t.indexOf('# Consignes de création')===0];})()"), [200, True], "consignes : le lien sert bien le fichier")
+
+
 def main():
     t = Path(tempfile.mkdtemp(prefix=PREFIXE))
     serveur = chrome = None
@@ -335,6 +351,7 @@ def main():
         cdp.appel("Page.navigate", url=f"http://127.0.0.1:{port}/")
         attend(cdp, "document.readyState === 'complete' && !!window.AV", 20)
         sonde(cdp, port)
+        sonde_consignes(cdp)
         import test_atelier_visuels_page_chrome_faux as faux
         ECHECS.extend(faux.lance(cdp, t))
     finally:

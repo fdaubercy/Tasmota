@@ -117,6 +117,7 @@ JS_ELEMENTS = r"""
   function panneau() {
     var e = sel(), p = $('avp-panel');
     p.hidden = !e;
+    if (AV.rappel) AV.rappel(e);
     if (!e) return;
     $('avp-titre').textContent = e.type === 'voyant' ? 'Voyant ' + e.id : e.type === 'valeur' ? 'Valeur ' + e.id : 'Liaison ' + e.id;
     if (document.activeElement && p.contains(document.activeElement) && document.activeElement.tagName !== 'SELECT') { alerte(e); return; }   // ne pas ecraser la saisie en cours

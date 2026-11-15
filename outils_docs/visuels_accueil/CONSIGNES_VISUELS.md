@@ -52,7 +52,7 @@ Dans la maquette B, le premier plan est rangé **avant** le calque nuit, pour qu
 | Caméra | Boîtier blanc sous le toit, côté treillis gauche, objectif noir, voyant gris éteint, **vert allumé**. |
 | Cônes de couverture | Un cône par appareil allumé (caméra bleu `#38bdf8`, lampe jaune `#fde047`), dégradé vertical opaque vers transparent, **plus large qu'avant** : environ 700 de large pour la caméra et 660 pour la lampe sur une scène de 1200. Pas de cône éteint. Fondu 0,5 s. |
 
-## 5. Commande par clic (proposé, pas encore réalisé)
+## 5. Commande par clic (réalisé le 2026-11-15 dans `volets.js`)
 
 - Caméra et lampe : déjà cliquables dans `volets.js` (confirmation puis `POST /volets` action `camera` ou `lampe`).
 - Rideau : un clic envoie l'appui `toggle` ; le sens est décidé par la carte.
@@ -60,7 +60,7 @@ Dans la maquette B, le premier plan est rangé **avant** le calque nuit, pour qu
 - Petite porte : aucun clic.
 - Toujours une confirmation indiquant ce qui va bouger (portail = sécurité physique), refus si l'état est inconnu ou la carte muette.
 
-## 6. Jour et nuit automatiques (demande du 2026-11-15, pas encore réalisé)
+## 6. Jour et nuit automatiques (demande du 2026-11-15, réalisé le même jour dans `volets.js`)
 
 - Source : la carte, pas l'horloge du navigateur. Le persist porte `localisation` (latitude, longitude) et `fuseauHoraire` (heure d'été et d'hiver) ;
   Tasmota calcule lever et coucher du soleil avec ces valeurs (à confirmer sur la carte par `Status 7`, `Sunrise`, `Sunset`).
@@ -99,7 +99,7 @@ Façade du dépôt (`volets.js`, viewBox 540 x 320) : caméra vers (29, 52), lam
 
 - Ce fichier est la **référence unique** des consignes de création d'un visuel d'accueil (tous lieux, toutes cartes). Il ne se limite pas au garage.
 - La page de l'atelier des visuels (http://127.0.0.1:7985, `atelier_visuels_*.py`) doit **s'y référer** : lien vers ce fichier et rappel des
-  règles qui concernent l'élément en cours d'édition (à réaliser, pas encore fait).
+  règles qui concernent l'élément en cours d'édition (**réalisé le 2026-11-15** : bouton « Consignes » et panneau de rappel, `atelier_visuels_consignes.py`).
 - Les consignes **s'affinent au fil du temps** : ajouter chaque nouvelle règle ici, avec sa date et sa raison, dans le journal ci-dessous, sans
   supprimer les anciennes (barrer ou marquer « remplacée par »).
 

@@ -17,9 +17,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 83 % (57/69) | 12 étapes, 3 améliorations | 2026-11-13 | 2026-11-15 |
+| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 84 % (58/69) | 11 étapes, 3 améliorations | 2026-11-13 | 2026-11-15 |
 | [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) | Chaque page d'accueil montre seulement ce que sa carte dirige : portail seul (esclave 4), garage et porte seuls (rideau), fenêtre de cuisine, porte d'entrée et trappe (grenier du RDC) | actif | ████░░░░░░ 38 % (6/15) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
-| [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ████████░░ 83 % (26/30) | 4 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
+| [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ████████░░ 83 % (26/30) | 4 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
 | [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██████░░░░ 60 % (10/13) | 3 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
 | [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande | actif | █████████░ 85 % (29/34) | 5 étapes, 8 améliorations | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
@@ -77,12 +77,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 83 %
+#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 84 %
 
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
 - A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : La page de l'atelier renvoie à `outils_docs/visuels_accueil/CONSIGNES_VISUELS.md` (consignes générales de création des visuels, qui
 - A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
 - A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
 - A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
@@ -114,7 +113,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Page d'accueil de l'esclave 4 : le portail seul avec son capteur de fermeture : Compilation de l'esclave 4 par la page Build, rendu vu sur la carte avec son capteur de fermeture réel
 - A9 — Retour au plan atelier-visuels : Passer d'abord par le plan `facade-esclaves-grenier-rdc` (façades de l'esclave 4, du rideau et du grenier du RDC), qui se termine par ce même retour
 - A9 — Retour au plan atelier-visuels : Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
-- Amélioration [projet] : Brancher la page de l'atelier des visuels sur les consignes (plan atelier-visuels, A7)
 - Amélioration [projet] : Même façade animée pour la carte du rideau et l'accueil d'autres lieux
 
 #### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 60 %

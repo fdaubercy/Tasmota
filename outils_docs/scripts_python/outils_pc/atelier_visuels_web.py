@@ -7,6 +7,7 @@ UTILISATION
 Routes (le POST exige l'en-tete X-Atelier-Visuels: 1 et la meme origine ; client local : Host local) :
     GET  /          la page          GET /envs     {envs: [{env, lieu, puce}], lieux}
     GET  /lib.js    ImageTracer      GET /visuel.js  data/sd/js/visuel.js (404 s'il n'existe pas encore)
+    GET  /consignes  CONSIGNES_VISUELS.md en texte (lecture seule, relu a chaque requete)
     POST /fond?env=&type=svg|webp|jpg   corps binaire brut, 1 Mo au plus -> {empreinte, octets, avertissement}
     GET  /fond?env=&empreinte=          le fond garde (20 au plus, le plus ancien evince)
 Routes des modules autonomes : atelier_visuels_web_routes.py (icones, IA, ecriture, suivi).
@@ -24,6 +25,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import acces_web
+import atelier_visuels_consignes as avc
 import atelier_visuels_fond as avf
 from annuaire_outils import hote_autorise
 import lieux
@@ -116,6 +118,8 @@ def fabrique_gestionnaire(acces, racine, **injections):
                 if not f.is_file():
                     raise LookupError("introuvable")
                 self._envoie(200, f.read_bytes(), "text/javascript; charset=utf-8")
+            elif url.path == "/consignes":
+                self._envoie(200, avc.texte(racine).encode("utf-8"), "text/plain; charset=utf-8", (("X-Content-Type-Options", "nosniff"),))
             elif url.path == "/fond":
                 env_valide(q.get("env"))
                 with verrou:
