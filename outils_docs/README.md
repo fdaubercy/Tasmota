@@ -2474,6 +2474,12 @@ compté (`quota.json` à côté) ; une réponse « trop de requêtes » passe le
 Bancs : `outils_pc/test_atelier_visuels_*.py` (dont les sondes Chrome `_page_chrome.py` et `_page_chrome_faux.py`),
 `outils_pc/test_atelier_visuels_formes.mjs`, `berry/banc_visuel.py`.
 
+### Icône à la place d'un bouton de relais (étude)
+
+Rapport du 2026-11-15, lecture du code seule, rien d'essayé sur carte : `ICONES_BOUTONS_RELAIS.md` (dans ce dossier). Cinq voies
+comparées (caractère Unicode dans `WebButton`, script Berry sur le bouton natif, icône du visuel d'accueil, bouton Berry complet,
+C++). Recommandation : ajouter le clic à `visuel.js` (voie C) pour une icône posée sur l'organe.
+
 ## Synchro du fork (page web)
 
 La page lance les scripts de synchro (`maintenance/synchronise_fork_tasmota.py`, merge, et sa variante rebase) tels
