@@ -76,6 +76,7 @@ def consigne(params, gardes):
         "Bash : UNE seule commande simple par appel (git status --porcelain, git ls-files, git log, git diff, git hash-object, "
         "git check-ignore, ls, wc, du), sans cd, sans pipe, sans ; ni &&, sans redirection : le depot est deja le dossier courant, "
         "toute commande composee est refusee. Filtre avec Grep/Glob, pas avec grep/head.\n"
+        "Remplis la COUVERTURE du rapport (un element par controle demande : fait, partiel ou non_fait, avec une phrase courte), les limites et les ecartes.\n"
         "Reponds par le rapport JSON demande par ton format de sortie (schema outils_docs/schemas/menage_rapport.schema.json), "
         "sans rien deplacer, supprimer ni ecrire."
     )

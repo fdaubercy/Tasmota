@@ -49,6 +49,33 @@ for libelle, texte in [("avec commentaire", "outils_docs/analyses/ (dossier à c
 propre, err = mr.valide(rapport(prop(action="deplacer", vers="outils_docs/archive")), RACINE)
 verifie((err, propre and propre["propositions"][0]["vers"]), ([], "outils_docs/archive"), "deplacement vers un dossier a creer")
 
+# 1b. couverture, limites, ecartes : structure lisible par la page
+def avec(**kw):
+    r = rapport(prop())
+    r.update(kw)
+    return r
+
+
+propre, err = mr.valide(avec(couverture=[{"controle": "taille", "etat": "non_fait", "note": "wc non lance"},
+                                         {"controle": "reste", "etat": "fait", "note": ""},
+                                         {"controle": "doublon", "etat": "partiel", "note": "dossier data/ seulement"}],
+                            limites=["Un Glob a expire"], ecartes=["Les plans clos"]), RACINE)
+verifie(err, [], "couverture valide : aucune erreur")
+verifie([(c["controle"], c["etat"]) for c in propre["couverture"]], [("taille", "non_fait"), ("reste", "fait"), ("doublon", "partiel")], "couverture conservee")
+verifie((propre["limites"], propre["ecartes"]), (["Un Glob a expire"], ["Les plans clos"]), "limites et ecartes conserves")
+propre, err = mr.valide(rapport(prop()), RACINE)
+verifie((err, propre["couverture"], propre["limites"], propre["ecartes"]), ([], [], [], []), "sans couverture : listes vides, rapport valide (ancien format)")
+for libelle, kw in [("controle inconnu", {"couverture": [{"controle": "tout", "etat": "fait", "note": ""}]}),
+                    ("etat inconnu", {"couverture": [{"controle": "taille", "etat": "peut-etre", "note": ""}]}),
+                    ("controle en double", {"couverture": [{"controle": "taille", "etat": "fait", "note": ""}, {"controle": "taille", "etat": "non_fait", "note": ""}]}),
+                    ("couverture pas une liste", {"couverture": "taille"}),
+                    ("element pas un objet", {"couverture": ["taille"]}),
+                    ("limites pas des textes", {"limites": [1, 2]}),
+                    ("trop de limites", {"limites": ["x"] * 40})]:
+    refuse(avec(**kw), f"couverture invalide refusee : {libelle}")
+propre, err = mr.valide(avec(couverture=[{"controle": "taille", "etat": "non_fait", "note": "ghp_" + "a" * 36}], limites=["mdp = \"secret123\""]), RACINE)
+verifie(("ghp_" + "a" * 36 in json.dumps(propre), "secret123" in json.dumps(propre)), (False, False), "secrets masques dans la couverture et les limites")
+
 # 2. JSON entoure de texte libre, accolades dans une chaine
 sortie = 'Voici le rapport :\n' + json.dumps(rapport(prop(constat="a } b { c"))) + '\nfin'
 propre, err = mr.valide(sortie, RACINE)

@@ -82,7 +82,12 @@ applicable d'un bloc ». Ce que tu n'as pas pu vérifier est dit tel quel. Ne pr
 
 FORMAT DE SORTIE, quand la consigne demande le JSON (lancement par la page) : termine ta réponse par UN objet JSON, sans texte après,
 conforme à `outils_docs/schemas/menage_rapport.schema.json` :
-`{"resume": "...", "non_verifie": "...", "propositions": [{"id": "M1", "categorie": "orphelin|reste|hors_dossier|doublon|taille|poids|vide",
+`{"resume": "...", "couverture": [{"controle": "orphelin|reste|hors_dossier|doublon|taille|poids|vide", "etat": "fait|partiel|non_fait", "note": "raison en une phrase"}], "limites": ["..."], "ecartes": ["..."], "propositions": [{"id": "M1", "categorie": "orphelin|reste|hors_dossier|doublon|taille|poids|vide",
 "chemin": "relatif au depot", "constat": "...", "preuve": "commande et sortie, valeurs sensibles masquees", "action": "supprimer|archiver|deplacer|garder",
 "vers": "chemin exact si deplacer ou archiver, sinon omis", "casserait": "renvois, imports, listes du cenv, bancs", "risque": "faible|moyen|eleve", "en_cours": false}]}`.
+COUVERTURE (obligatoire, c'est ce que l'utilisateur lit en premier) : UN élément par contrôle demandé, sans exception : `fait` si tu l'as mené jusqu'au
+bout, `partiel` si tu l'as mené sur une partie seulement (dis laquelle dans `note`), `non_fait` si tu n'as pas pu (dis pourquoi : budget, délai, commande
+refusée). `note` : UNE phrase courte et concrète, sans jargon de commande (écris « les plus gros fichiers n'ont pas été mesurés », pas « du non lancé »).
+`limites` : au plus 5 phrases courtes sur ce qui a gêné (recherche trop longue, zone non examinée). `ecartes` : au plus 5 phrases courtes sur ce que tu as
+volontairement laissé de côté et pourquoi (plans clos, travail en cours). Pas de bloc de texte : des phrases séparées. Tout le reste va dans `resume`.
 Chemins relatifs au dépôt, sans `..`, jamais de valeur secrète dans `preuve` ni `constat`. Sans la consigne JSON, rends le rapport en tableaux comme avant.

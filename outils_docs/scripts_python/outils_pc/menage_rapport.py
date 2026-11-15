@@ -95,6 +95,38 @@ def _texte(valeur, nom, erreurs, obligatoire=True):
     return masque(valeur[:MAX_TEXTE])
 
 
+ETATS = ("fait", "partiel", "non_fait")
+MAX_LISTE = 20
+
+
+def _liste_textes(valeur, nom, erreurs):
+    if valeur is None:
+        return []
+    if not isinstance(valeur, list) or len(valeur) > MAX_LISTE or not all(isinstance(x, str) for x in valeur):
+        erreurs.append(f"{nom} : liste de {MAX_LISTE} textes au plus attendue")
+        return []
+    return [masque(x[:MAX_TEXTE]) for x in valeur if x.strip()]
+
+
+def _couverture(valeur, erreurs):
+    """Un element par controle : {controle, etat, note}. Absente = ancien format, liste vide."""
+    if valeur is None:
+        return []
+    if not isinstance(valeur, list) or len(valeur) > len(CATEGORIES):
+        erreurs.append(f"couverture : liste de {len(CATEGORIES)} elements au plus attendue")
+        return []
+    propres, vus = [], set()
+    for i, c in enumerate(valeur):
+        if not isinstance(c, dict) or c.get("controle") not in CATEGORIES or c.get("etat") not in ETATS:
+            erreurs.append(f"couverture[{i}] : {{controle in {CATEGORIES}, etat in {ETATS}}} attendu")
+        elif c["controle"] in vus:
+            erreurs.append(f"couverture[{i}] : controle {c['controle']} en double")
+        else:
+            vus.add(c["controle"])
+            propres.append({"controle": c["controle"], "etat": c["etat"], "note": _texte(c.get("note", ""), f"couverture[{i}].note", erreurs, obligatoire=False)})
+    return propres
+
+
 def valide(rapport, racine):
     erreurs = []
     if isinstance(rapport, str):
@@ -146,6 +178,10 @@ def valide(rapport, racine):
         })
     resume = _texte(rapport.get("resume"), "resume", erreurs)
     non_verifie = _texte(rapport.get("non_verifie", ""), "non_verifie", erreurs, obligatoire=False)
+    couverture = _couverture(rapport.get("couverture"), erreurs)
+    limites = _liste_textes(rapport.get("limites"), "limites", erreurs)
+    ecartes = _liste_textes(rapport.get("ecartes"), "ecartes", erreurs)
     if erreurs:
         return None, erreurs
-    return {"resume": resume, "non_verifie": non_verifie, "propositions": propres}, []
+    return {"resume": resume, "non_verifie": non_verifie, "couverture": couverture, "limites": limites, "ecartes": ecartes,
+            "propositions": propres}, []

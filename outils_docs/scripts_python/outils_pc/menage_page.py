@@ -43,6 +43,8 @@ input[type=number],select{font:inherit;padding:5px 7px;border:1px solid var(--bo
 .maintenant{font-size:14px;min-height:2.6em;overflow-wrap:anywhere} .maintenant .o{color:var(--bleu);font-weight:600}
 .pastille{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bleu);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.25}} @media (prefers-reduced-motion:reduce){.pastille{animation:none}}
+.couv-ligne{display:flex;gap:10px;align-items:flex-start;margin:6px 0} .couv-ligne .badge{flex:none;min-width:84px;text-align:center}
+#limites-bloc h3{font-size:13px;margin:10px 0 2px} #limites-bloc ul{margin:0;padding-left:18px} #brut pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
 .avance{margin-top:8px} .barre{height:8px;border-radius:4px;background:var(--piste);overflow:hidden}
 .rempli{height:100%;width:0;background:var(--bleu);transition:width .6s ease}
 .journal{margin-top:8px;max-height:240px;overflow:auto;padding:6px 8px;border:1px solid var(--bord);border-radius:6px;background:var(--champ);
@@ -86,6 +88,13 @@ HTML = """
   <div class="doux petit" id="pct"></div></div>
  <div class="journal" id="journal" tabindex="0" aria-label="Actions de l'agent en direct"></div>
 </section>
+<section class="carte" id="couverture" hidden><h2>Couverture de l'audit <span class="doux petit" id="n-couv"></span></h2>
+ <p class="doux petit">Ce que l'agent a vraiment contrôlé, et ce qu'il n'a pas pu faire.</p>
+ <div id="couv"></div>
+ <div id="limites-bloc"></div>
+ <div class="ligne"><button class="btn" id="b-refaire" hidden>Cocher les contrôles à refaire</button></div>
+ <details id="brut" hidden><summary>Texte brut de l'agent</summary><pre id="brut-texte"></pre></details>
+</section>
 <section class="carte"><h2>Propositions <span class="doux petit" id="n-props"></span></h2>
  <p id="resume" class="doux"></p>
  <div class="ligne">
@@ -95,7 +104,6 @@ HTML = """
  </div>
  <div id="props"><p class="doux">Aucun audit pour le moment.</p></div>
  <details id="encours" hidden><summary>En cours, à ne pas toucher (<span id="n-encours">0</span>)</summary><div id="props-encours"></div></details>
- <p class="doux petit" id="non-verifie"></p>
 </section>
 </div>
 </div>
@@ -104,7 +112,7 @@ HTML = """
 
 JS = r"""
 "use strict";
-var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0, derniere: null};
+var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0, derniere: null, demandes: null, arefaire: []};
 function $(id) { return document.getElementById(id); }
 function vide(n) { while (n.firstChild) n.removeChild(n.firstChild); }
 function el(tag, classe, texte) { var e = document.createElement(tag); if (classe) e.className = classe; if (texte != null) e.textContent = texte; return e; }
@@ -124,12 +132,52 @@ function memo(cle, valeur) {
   return null;
 }
 
+var LIBELLES = {orphelin: "Orphelins : fichiers que plus rien n'utilise", reste: "Restes : .bak, copies, anciens exports",
+  hors_dossier: "Classement : fichiers mal rangés", doublon: "Doublons : fichiers identiques", taille: "Taille : fichiers proches de 500 lignes",
+  poids: "Poids : plus gros fichiers du dépôt", vide: "Dossiers vides et grosses images"};
+var ETATS = {fait: ["faible", "✓ Fait"], partiel: ["moyen", "◐ Partiel"], non_fait: ["eleve", "✗ Non fait"], non_declare: ["", "? Non déclaré"]};
+
+function liste(titre, textes) {
+  var z = $("limites-bloc");
+  if (!textes || !textes.length) return;
+  z.appendChild(el("h3", null, titre));
+  var u = el("ul"); textes.forEach(function (t) { u.appendChild(el("li", null, t)); }); z.appendChild(u);
+}
+function rendCouverture(r) {
+  var z = $("couv"), lb = $("limites-bloc"); vide(z); vide(lb);
+  var cov = r.couverture || [], demandes = S.demandes || [];   // inconnues apres un rechargement : pas de « non declare » devine d'apres les cases du moment
+  var parC = {}; cov.forEach(function (c) { parC[c.controle] = c; });
+  var lignes = Object.keys(LIBELLES).filter(function (k) { return parC[k] || demandes.indexOf(k) >= 0; }).map(function (k) {
+    return parC[k] || {controle: k, etat: "non_declare", note: "L'agent n'a rien dit sur ce contrôle."};
+  });
+  var arefaire = [];
+  lignes.forEach(function (c) {
+    var e = ETATS[c.etat], l = el("div", "couv-ligne");
+    l.appendChild(el("span", "badge " + e[0], e[1]));
+    var t = el("div"); t.appendChild(el("strong", null, LIBELLES[c.controle])); if (c.note) t.appendChild(el("div", "doux", c.note));
+    l.appendChild(t); z.appendChild(l);
+    if (c.etat !== "fait") arefaire.push(c.controle);
+  });
+  var faits = lignes.filter(function (c) { return c.etat === "fait"; }).length;
+  $("n-couv").textContent = lignes.length ? "(" + faits + " contrôle(s) sur " + lignes.length + " menés jusqu'au bout)" : "";
+  liste("Ce qui a gêné l'agent", r.limites); liste("Écarté volontairement", r.ecartes);
+  var b = $("b-refaire"); b.hidden = !arefaire.length; S.arefaire = arefaire;
+  $("brut").hidden = !(r.non_verifie && !cov.length); $("brut-texte").textContent = r.non_verifie || "";
+  $("couverture").hidden = !(lignes.length || (r.limites || []).length || (r.ecartes || []).length || r.non_verifie);
+}
+function refaire() {
+  var a = S.arefaire || [];
+  document.querySelectorAll("#p-cat input").forEach(function (c) { c.checked = a.indexOf(c.value) >= 0; });
+  memorise(); $("b-lance").scrollIntoView({block: "center"});
+  message("", "Contrôles à refaire cochés : relancez l'audit pour les mener (vous pouvez aussi choisir un modèle moins coûteux).");
+}
+
 function cases(conteneur, valeurs, cochees, nom) {
   vide(conteneur);
   valeurs.forEach(function (v) {
     var l = el("label", "ch"), c = document.createElement("input");
     c.type = "checkbox"; c.value = v; c.checked = !cochees || cochees.indexOf(v) >= 0; c.setAttribute("data-groupe", nom);
-    l.appendChild(c); l.appendChild(el("span", null, v)); conteneur.appendChild(l);
+    l.appendChild(c); l.appendChild(el("span", null, (nom === "cat" && LIBELLES[v]) || v)); conteneur.appendChild(l);
   });
 }
 function coches(conteneur) {
@@ -222,7 +270,7 @@ function rend() {
   var r = S.rapport, zone = $("props"), zoneEn = $("props-encours");
   vide(zone); vide(zoneEn);
   if (!r) { zone.appendChild(el("p", "doux", "Aucun audit pour le moment.")); $("encours").hidden = true; $("resume").textContent = "";
-            $("non-verifie").textContent = ""; $("n-props").textContent = ""; $("b-copie").disabled = true; return; }
+            $("couverture").hidden = true; $("n-props").textContent = ""; $("b-copie").disabled = true; return; }
   var cat = $("f-cat").value, risque = $("f-risque").value;
   var tri = r.propositions.filter(function (p) { return (!cat || p.categorie === cat) && (!risque || p.risque === risque); })
     .sort(function (a, b) { return ORDRE[a.risque] - ORDRE[b.risque]; });
@@ -231,7 +279,7 @@ function rend() {
   if (!actives.length) zone.appendChild(el("p", "doux", "Aucune proposition."));
   en.forEach(function (p) { zoneEn.appendChild(propositionVue(p)); });
   $("encours").hidden = !en.length; $("n-encours").textContent = String(en.length);
-  $("resume").textContent = r.resume; $("non-verifie").textContent = r.non_verifie ? "Non vérifié : " + r.non_verifie : "";
+  $("resume").textContent = r.resume; rendCouverture(r);
   $("n-props").textContent = "(" + actives.length + ")"; $("b-copie").disabled = !actives.length;
 }
 
@@ -298,6 +346,7 @@ function lance() {
   if (!(p.anciennete_jours >= 0 && p.anciennete_jours <= 365)) { message("ko", "Ancienneté : un nombre de 0 à 365."); return; }
   api("POST", "/lancer", p).then(function (r) {
     if (!r.ok) { message("ko", r.texte); return; }
+    S.demandes = p.categories;
     S.gen++; S.rapport = null; rend();
     vide($("journal")); S.recu = 0; S.derniere = null; $("suivi").hidden = false; $("suivi").scrollIntoView({block: "nearest"});
     etat();
@@ -320,6 +369,7 @@ function copie() {
 }
 
 $("b-lance").onclick = lance;
+$("b-refaire").onclick = refaire;
 $("b-stop").onclick = arrete;
 $("b-copie").onclick = copie;
 $("f-cat").onchange = $("f-risque").onchange = rend;

@@ -91,6 +91,14 @@ Raison : la version 1 fait confiance aux `Grep` de l'agent ; le serveur ne contr
 - [x] Page : badges « référencé par N fichiers de code/config » et « N documents », « périmée », « modifié : en cours », « risque relevé (agent : …) », listes dépliables des renvois en `textContent`, sonde Chrome mise à jour avec témoin — preuve : menage_page.py::propositionVue (badges, liste des renvois en textContent) ; test_menage_page_chrome.py VERT, témoin verif-sans-code détecté, 0 Chrome sonde_ à +15 s
 - [x] Revue (`relecteur-outils-python`, `relecteur-pages-web`), `controleur-secrets`, commit ; mode d'emploi dans `outils_docs/README.md`, entrée de `CLAUDE.md` — preuve : relecteur-outils-python : 3 points corrigés (erreur git, verrou d'index, hostiles) ; relecteur-pages-web : prêt, 2 remarques reprises ; controleur-secrets sans rien de bloquant ; README et CLAUDE.md à jour, verifie_references_docs 0 défaut
 
+## A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15)
+Raison : le champ « Non vérifié » était un bloc de texte illisible ; et l'audit consommait le crédit API (ANTHROPIC_API_KEY héritée) au lieu de l'abonnement Pro.
+- [x] Rapport structuré : `couverture` (un élément par contrôle : `fait`, `partiel` ou `non_fait`, avec une note), `limites` et `ecartes` (listes de phrases courtes) ; `non_verifie` reste en repli — tests d'abord (`test_menage_rapport.py` : valides, invalides, secrets masqués, contrôle inconnu refusé) — preuve : test_menage_rapport.py VERT (couverture valide, 7 cas refusés, secrets masqués)
+- [x] Agent : consigne et format de sortie (`auditeur-menage.md`, schéma JSON) ; le contrôle d'une catégorie demandée mais non déclarée apparaît « non déclaré » à la page — preuve : auditeur-menage.md et menage_rapport.schema.json mis à jour ; la page affiche « non déclaré » (sonde Chrome)
+- [x] Page : carte « Couverture de l'audit » (un contrôle par ligne avec pastille et raison en français), « Limites », « Écarté volontairement », bouton « Cocher les contrôles à refaire » ; sonde Chrome avec témoin — preuve : test_menage_page_chrome.py VERT, 50+ OK, témoin couv-html rouge, 7 lignes dont les non déclarées
+- [ ] Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
+- [ ] Revue, `controleur-secrets`, commit
+
 ## Améliorations restantes
 - [ ] [projet] Version 2 : application d'un lot depuis la page (selon A7)
 - [ ] [projet] Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles

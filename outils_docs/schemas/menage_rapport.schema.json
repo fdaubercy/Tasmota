@@ -6,7 +6,15 @@
   "required": ["resume", "propositions"],
   "properties": {
     "resume": { "type": "string", "maxLength": 2000 },
-    "non_verifie": { "type": "string", "maxLength": 2000 },
+    "non_verifie": { "type": "string", "maxLength": 2000, "description": "Repli de l'ancien format ; la page affiche couverture, limites et ecartes." },
+    "couverture": {
+      "type": "array", "maxItems": 7,
+      "items": { "type": "object", "required": ["controle", "etat"],
+                 "properties": { "controle": { "enum": ["orphelin", "reste", "hors_dossier", "doublon", "taille", "poids", "vide"] },
+                                 "etat": { "enum": ["fait", "partiel", "non_fait"] }, "note": { "type": "string", "maxLength": 2000 } } }
+    },
+    "limites": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 2000 } },
+    "ecartes": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 2000 } },
     "propositions": {
       "type": "array",
       "maxItems": 500,

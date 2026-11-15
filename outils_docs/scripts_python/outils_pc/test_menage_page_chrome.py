@@ -40,6 +40,7 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
     "verif-sans-code": ("if (v.n_code) vb.appendChild", "if (false) vb.appendChild", "verif : badge code/config sur le fichier cite par config.ini"),
     "detail-html": ('$("detail-texte").textContent = dt;', '$("detail-texte").innerHTML = dt;', "echec : le detail reste du texte"),
     "suivi-cache": ('$("suivi").hidden = !(enCours || j.childNodes.length > 0);', '$("suivi").hidden = true;', "suivi : bloc d'avancement visible, au-dessus des propositions, dans l'ecran"),
+    "couv-html": ('l.appendChild(t); z.appendChild(l);', 'l.appendChild(t); t.innerHTML += c.note; z.appendChild(l);', "couverture : texte de l'agent affiche comme du texte"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -72,7 +73,10 @@ def faux_claude(dossier):
         {"id": "M3", "categorie": "doublon", "chemin": "tasks/encours.md", "constat": "travail en cours", "preuve": "git status",
          "action": "supprimer", "casserait": "tout", "risque": "moyen", "en_cours": True},
     ]
-    rapport = json.dumps({"resume": "3 propositions", "non_verifie": "rien de grave", "propositions": props})
+    rapport = json.dumps({"resume": "3 propositions", "non_verifie": "rien de grave", "propositions": props,
+                          "couverture": [{"controle": "reste", "etat": "fait", "note": "tout vu"},
+                                         {"controle": "taille", "etat": "non_fait", "note": HOSTILE}],
+                          "limites": [HOSTILE], "ecartes": ["les plans clos"]})
     action = {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": HOSTILE_ACTION}}]}}
     f.write_text("import json, os, sys, time\nsys.stdin.buffer.read()\n"
                  "if os.environ.get('FAUX_MENAGE') == 'echec':\n"
@@ -185,6 +189,16 @@ def scenario(m, temoin):
     verifie(cdp.js("document.querySelector('#props .prop .chemin').textContent"), "tasks/README.md", "tri par risque : la faible d'abord")
     verifie(cdp.js("document.getElementById('resume').textContent"), "3 propositions", "resume affiche")
     verifie(cdp.js("document.getElementById('b-copie').disabled"), False, "copier actif avec un rapport")
+    verifie(cdp.js("document.getElementById('couverture').hidden === false && document.querySelectorAll('#couv .couv-ligne').length"), 7,
+            "couverture : une ligne par controle demande (les non declares y figurent)")
+    verifie(cdp.js("Array.prototype.some.call(document.querySelectorAll('#couv .couv-ligne'),function(l){return l.textContent.indexOf('tout vu')>=0 && l.querySelector('.badge').textContent.indexOf('Fait')>=0})"), True, "couverture : pastille « Fait »")
+    verifie(cdp.js("document.querySelectorAll('#couverture img, #couverture b').length === 0 && window.__pwn === undefined"), True,
+            "couverture : texte de l'agent affiche comme du texte")
+    verifie(cdp.js("document.getElementById('limites-bloc').textContent.indexOf('les plans clos') >= 0"), True, "couverture : ecartes affiches")
+    verifie(cdp.js("document.getElementById('b-refaire').hidden"), False, "couverture : bouton « a refaire » present")
+    cdp.js("document.getElementById('b-refaire').click()")
+    verifie(cdp.js("Array.prototype.map.call(document.querySelectorAll('#p-cat input:checked'),function(c){return c.value}).join(',')"), "orphelin,hors_dossier,doublon,taille,poids,vide",
+            "couverture : le bouton coche tous les controles sauf celui qui est fait")
 
     # texte hostile : du texte, jamais du HTML
     verifie(cdp.js("document.querySelectorAll('#props img, #props b').length === 0 && window.__pwn === undefined"), True,
