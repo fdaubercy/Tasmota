@@ -2,7 +2,7 @@
 chantier: build-reparations
 titre: Réparation automatique des pannes de la page Build
 objectif: La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit
-statut: actif
+statut: clos
 cree: 2026-11-14
 maj: 2026-11-15
 famille: build
@@ -130,7 +130,6 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
 - [x] `build_reparations.py::Reparateur._ia` (un seul diagnostic par env et par lancement, jamais un envoi, aucune règle du catalogue, arrêt prioritaire, build étranger refusé), `_ia_garde` (règle ajoutée seulement si la relance réussit), `build_reparations_ia.diagnostique(arret=)` interruptible ; `Serie.lance(ia_auto=)`, `/lancer {ia_auto}` booléen (400) ignoré hors de ce PC, case de la page (`localStorage`) — preuve : build_reparations.py 371->421 lignes, build_serie.py +6, build_web.py +6, build_page.py +1 ; test_build_serie 221 OK / VERT, test_build_web VERT, sonde Chrome VERT (4 contrôles de la case), Chrome sonde_ : 0 orphelin
 - [x] Bancs verts, mutants (garde « un seul appel », garde « jamais un envoi », garde client distant) rouges — preuve : 3 mutants rouges (relance échouée -> 2 appels IA ; upload COM diagnostiqué ; ia_auto transmis à un client distant), fichiers restaurés
 - [x] Défaut constaté sur une vraie panne le 2026-11-15 (la case était cochée, aucune réparation) : `pour_serie` ne branchait pas le diagnostic — preuve : `build_reparations.py::pour_serie` passe `build_reparations_ia.diagnostique` ; test_build_reparations.py « pour_serie : le vrai diagnostic de l'IA est branché », rouge sans le branchement puis vert ; bancs ia et web verts
-- [ ] Nouvel essai réel de la case sur une vraie série (page Build relancée après ce correctif)
 
 ## A6c — Le contrôle de solidification ne s'applique qu'aux envs Berry
 - [x] Faux positif du 2026-11-15 sur `tasmota-cave-lumiere-porte` (ESP8266) : `modules.h` garde les 33 entrées du dernier env Berry, `solidify/` est vide — preuve : `build_serie.py::_lance_pio` ne lance `self.solidification` que si la sortie de pio a montré « Will solidify » (imprimé par le pré-build de tous les envs S3/P4 des journaux 20261114-233607, 20261114-235417, 20261115-083814, avant « Compiling » ; 0 ligne dans le journal de l'ESP8266) ; `test_build_serie.py::test_solidification_vide` (cas « env sans ligne Berry -> non controle »), mutant (condition retirée) rouge, test_build_solidification et test_build_web verts
@@ -143,10 +142,11 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
 - [x] Commit par chemins explicites (modules neufs, bancs, plan, spec, README) — preuve : commits 7f743f8bf, d5ddf60bc, c083c7494 et le commit du correctif de journal
 
 ## A8 — Retour au plan en cours avant ce chantier
-- [ ] Reprendre le plan `facade-garage-capteurs` : A3 (envoi des firmwares compilés le 2026-11-14 et essais sur les cartes : rideau fermé = pastille du bas verte, camera, fins de course) : `/suivi suivre facade-garage-capteurs`
-- [ ] Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs`
+- [x] Reprendre le plan `facade-garage-capteurs` : A3 (envoi des firmwares compilés le 2026-11-14 et essais sur les cartes : rideau fermé = pastille du bas verte, camera, fins de course) : `/suivi suivre facade-garage-capteurs` — preuve : décision de l'utilisateur du 2026-11-15, plan `facade-garage-capteurs` suivi par cette conversation (`/suivi suivre facade-garage-capteurs`)
+- [x] Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs` — preuve : décision de l'utilisateur du 2026-11-15, enchaînement porté par l'action A4 de `facade-garage-capteurs`
 
 ## Améliorations restantes
+- [ ] [projet] Essai réel d'une relance qui réussit après un diagnostic de l'IA, sur une vraie panne (la case était cochée le 2026-11-15, le diagnostic s'est déclenché, la relance a échoué sur un autre défaut corrigé depuis : A6c ; la panne `uv` n'est pas revenue ensuite)
 - [ ] [projet] Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - [ ] [projet] Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur) : à la main d'abord ; si une règle revient, bouton « Copier pour le dépôt » (JSON prêt à coller, règles `ia` seulement, aucune écriture dans le dépôt) ; pas de script de comptage. Mûre = plusieurs succès sur des journaux différents, motif précis, action de la liste fermée (décidé le 2026-11-15)
 

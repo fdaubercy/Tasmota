@@ -1,7 +1,7 @@
 ---
 chantier: build-fin-partitions
 titre: Pastille d'occupation des partitions à la fin d'une compilation (page Build)
-statut: actif
+statut: clos
 cree: 2026-11-15
 maj: 2026-11-15
 objectif: Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic
@@ -30,10 +30,10 @@ la page lit `GET /memoire?env=`. Code dans `outils_pc/build_page_fin_memoire.py`
 ## A4 — Pastille : IRAM du S3 et Flash = app0
 - [x] IRAM de 16384 o d'un ESP32-S3 (cache d'instructions, toujours pleine) : ni rouge ni alerte, ligne gardée avec la mention « cache d'instructions, toujours plein » ; ESP32 classique à IRAM pleine : rouge — preuve : `build_page_fin_memoire.py::fmCache`, sonde `test_build_page_fin_memoire_chrome.py` VERT (cas s3-iram orange, classique-iram rouge), mutant « fmCache renvoie false » rouge
 - [x] « Flash » = occupation d'app0 (sinon `bilan_flash` de pio, sinon somme) ; niveau = partition la plus pleine hors FS (spiffs, littlefs, ffat) et zone de RAM la plus pleine hors cache S3 — preuve : `fmResume`, sonde VERT (S3 app0 87 %, safeboot 93,4 % : « Flash 87 % · RAM 40 % ⚠ » orange ; ESP8266 inchangé)
-- [ ] Essai réel après redémarrage de la page :7700 et une compilation de `tasmota32s3-cave-serveur-rly` (l'utilisateur)
+- [x] Essai réel après redémarrage de la page :7700 et une compilation de `tasmota32s3-cave-serveur-rly` (l'utilisateur) — preuve : 2026-11-15, journal 20261115-124148 (SUCCESS, 9 min) ; relevé app0 87,0 %, safeboot 93,4 %, IRAM 100 % (cache du S3), DIRAM 39,8 % ; l'utilisateur confirme avoir vu la pastille (la couleur affichée n'a pas été relevée ici)
 
 ## A2 — Retour au plan en cours avant ce chantier
-- [ ] Reprendre le plan `build-reparations` : essai réel du diagnostic IA sur le journal `20261115-043620-tasmota-cave-lumiere-porte-compiler.log` (A6, dernière case), case « Relancer après réparation », puis A7 (documentation, relecteurs, essai hors série, commit) : `/suivi suivre build-reparations`
+- [x] Reprendre le plan `build-reparations` : essai réel du diagnostic IA sur le journal `20261115-043620-tasmota-cave-lumiere-porte-compiler.log` (A6, dernière case), case « Relancer après réparation », puis A7 (documentation, relecteurs, essai hors série, commit) : `/suivi suivre build-reparations` — preuve : plan `build-reparations` repris le 2026-11-15 : essai réel du diagnostic IA fait (23 s, règle `attendre 20 s`), case de l'IA livrée (commits d5ddf60bc, c083c7494), A7 cochée (essai hors série 53/53, commit 608c8268c) ; reste dans ce plan un seul essai réel (relance IA réussie sur une vraie panne)
 
 ## Améliorations restantes
 - [ ] [projet] Écart avec le build précédent (variante C : champ `avant` à enregistrer par `build_memoire.enregistre`)
