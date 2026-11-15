@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Portail C v4 : trois propositions d'arche</title>
+<style>
+  body{font-family:verdana,sans-serif;background:#252525;color:#eaeaea;margin:0;padding:12px}
+  h1{font-size:18px} h2{font-size:15px;margin:14px 0 2px} p{font-size:12px;color:#bbb;margin:4px 0 8px}
+  .carte{background:#2f2f2f;border-radius:6px;padding:10px;max-width:860px;margin:0 auto 14px}
+  .barre{position:sticky;top:0;background:#2f2f2f;z-index:3;padding-bottom:4px}
+  svg{width:100%;display:block;background:#bcd3e6;border-radius:4px}
+  button{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;padding:8px 14px;font-size:13px;cursor:pointer;margin:0 6px 6px 0}
+  button.on{background:#0d6b9c;outline:2px solid #fff}
+  label{font-size:12px;margin-right:14px;white-space:nowrap}
+  input[type=number]{width:52px;background:#1d1d1d;color:#eee;border:1px solid #555;border-radius:3px;padding:2px 4px}
+  #etat{font-size:13px;margin:4px 0 0;min-height:18px}
+</style></head><body>
+<div class="carte barre">
+  <h1>Portail C : trois propositions d'arche (même animation pour les trois)</h1>
+  <div id="cmd">
+    <button data-m="ferme" onclick="va('ferme')">Fermer (0 %)</button>
+    <button data-m="simple" onclick="va('simple')">Simple vantail (50 %)</button>
+    <button data-m="double" onclick="va('double')">Double vantail (100 %)</button>
+    <label>Ouverture <input type="number" id="tm" value="30" min="4" max="120"> s</label>
+    <label>Fermeture <input type="number" id="td" value="30" min="4" max="120"> s</label>
+    <label>Rideau <input type="range" id="rid" min="0" max="100" value="0"> <span id="ridv">0 %</span></label>
+    <label>Hauteur portail <input type="range" id="hau" min="80" max="170" value="110"> <span id="hauv">110</span></label>
+  </div>
+  <div id="etat"></div>
+</div>
+<div class="carte" id="cartes"></div>
+
+<script src="../../data/sd/js/volets.js"></script>
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg', AMAX = 92, YH = 190, D = 500, WL = 154, YB = 304, XG = 54, XD = 366, PW = 34;
+  var FACADE = {toit: 'unPan', decor: ['chevrefeuille', 'porte'], camera: {nom: 'Caméra'}, lampe: {nom: 'Lampe'},
+    ouvertures: [{type: 'garage', id: 1, nom: 'Volet Roulant Garage'}]};
+  var CIBLES = {ferme: 0, simple: 50, double: 100};
+  var VARIANTES = [
+    {t: '1. Arche de profil : son plan suit la ligne garage-poteau', d: 'On la voit de biais, comme un cadre aplati le long de la ligne. On la traverse de gauche à droite, depuis la cour vers le jardin. C\'est ma lecture de votre phrase.',
+      p1: [0.10, 0], p2: [0.60, 0], hp: 1.9, hr: 0.8},
+    {t: '2. Arche de face : son plan est parallèle au mur du garage', d: 'On la voit de face, en cintre complet, au milieu de la ligne. On la traverserait en s\'enfonçant vers le fond. À comparer pour que nous soyons d\'accord sur le sens.',
+      p1: [0.34, -0.75], p2: [0.34, 0.75], hp: 1.9, hr: 0.75},
+    {t: '3. Arche en biais (45 degrés)', d: 'Compromis : l\'arche est tournée à mi-chemin entre les deux. Elle s\'ouvre largement vers la cour et reste lisible.',
+      p1: [0.22, -0.6], p2: [0.46, 0.6], hp: 1.9, hr: 0.75}
+  ];
+  var p = 0, tg = 0, run = false, H = 110, rid = 0, mode = null, sale = true, scenes = [];
+
+  function el(par, nom, at) { var e = document.createElementNS(NS, nom); for (var k in at) e.setAttribute(k, at[k]); par.appendChild(e); return e; }
+  function alea(s) { return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
+  function bornes(x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
+  function dur(id) { return Math.max(1, +document.getElementById(id).value || 30); }
+  function lisse(x) { return x * x * (3 - 2 * x); }
+  function feuilleVerte(r) { var c = r(); return c < 0.16 ? '#b4402f' : (c < 0.26 ? '#cf6a44' : (c < 0.55 ? '#356b31' : (c < 0.8 ? '#3f7d3a' : '#2c5a2a'))); }
+  function angles() { return {d: AMAX * lisse(bornes(p / 50)), g: AMAX * lisse(bornes((p - 50) / 50))}; }
+
+  // ---- Portail (vu de face, vantaux qui pivotent vers l'interieur) ----
+  function pt(f, u, v) {
+    var a = f.a * Math.PI / 180, s = 1 / (1 + u * WL * Math.sin(a) / D);
+    var x0 = f.hx + f.dir * u * WL * Math.cos(a), y0 = YB - 6 - H + v * H;
+    return [210 + (x0 - 210) * s, YH + (y0 - YH) * s];
+  }
+  function poly(g, f, liste, at) {
+    at.points = liste.map(function (q) { var c = pt(f, q[0], q[1]); return c[0].toFixed(1) + ',' + c[1].toFixed(1); }).join(' ');
+    return el(g, 'polygon', at);
+  }
+  function ligne(g, f, u0, v0, u1, v1, at) {
+    var a = pt(f, u0, v0), b = pt(f, u1, v1); at.x1 = a[0]; at.y1 = a[1]; at.x2 = b[0]; at.y2 = b[1]; return el(g, 'line', at);
+  }
+  function vantail(g, f) {
+    var i, B = 'rgba(255,255,255,0.6)', tout = [[0, 0], [1, 0], [1, 1], [0, 1]];
+    poly(g, f, tout, {fill: 'none', stroke: 'rgba(60,60,60,0.55)', 'stroke-width': 3.4});
+    poly(g, f, tout, {fill: 'rgba(255,255,255,0.38)', stroke: '#fff', 'stroke-width': 1.5});
+    poly(g, f, [[0.07, 0.08], [0.93, 0.08], [0.93, 0.92], [0.07, 0.92]], {fill: 'none', stroke: B, 'stroke-width': 1});
+    for (i = 0.10; i < 0.56; i += 0.04) ligne(g, f, i, 0.10, i, 0.90, {stroke: B, 'stroke-width': 0.7});
+    poly(g, f, [[0.56, 0.09], [0.67, 0.09], [0.795, 0.91], [0.685, 0.91]], {fill: 'rgba(255,255,255,0.5)', stroke: '#fff', 'stroke-width': 1});
+    for (i = 0; i < 7; i++) {
+      var v0 = 0.11 + i * 0.1143, u0 = 0.685 + i * 0.018;
+      poly(g, f, [[u0, v0], [0.91, v0], [0.91, v0 + 0.06], [u0 + 0.004, v0 + 0.06]], {fill: 'rgba(25,28,32,0.82)'});
+    }
+  }
+  function pilier(g, x) {
+    var top = YB - H - 6 - 28, h = 308 - top, i;
+    el(g, 'rect', {x: x, y: top, width: PW, height: h, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
+    for (i = top + 12; i < 308; i += 13) el(g, 'line', {x1: x, y1: i, x2: x + PW, y2: i, stroke: '#cfc8b0', 'stroke-width': 0.6});
+    el(g, 'rect', {x: x - 3, y: top - 5, width: PW + 6, height: 6, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
+  }
+
+  // ---- Decor ----
+  function sol(svg) {
+    var r = alea(5), i, c = ['#cfcdc6', '#aeaba3', '#dcdad3', '#b9b6ae', '#c4c1b9'];
+    el(svg, 'rect', {x: 0, y: 196, width: 540, height: 110, fill: '#bdbab3'});
+    for (i = 0; i < 520; i++) el(svg, 'ellipse', {cx: r() * 540, cy: 197 + r() * 108, rx: 1 + r() * 2.2, ry: 0.8 + r() * 1.3, fill: c[Math.floor(r() * 5)]});
+    el(svg, 'rect', {x: 0, y: 306, width: 540, height: 14, fill: '#d9d8d2'});
+    el(svg, 'line', {x1: 0, y1: 306, x2: 540, y2: 306, stroke: '#9a9992', 'stroke-width': 1});
+  }
+  function haie(svg) {                                                    // photinia au fond, derriere le grillage
+    var r = alea(23), i, x, y, g = el(svg, 'g', {});
+    for (i = 0; i < 560; i++) {
+      x = 452 + r() * 90; y = 50 + r() * 175;
+      if ((x - 500) * (x - 500) / 2900 + (y - 140) * (y - 140) / 9500 > 1.1) continue;
+      el(g, 'ellipse', {cx: x, cy: y, rx: 4.5, ry: 2.8, fill: feuilleVerte(r), transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+  }
+  function grillage(svg) {                                                // demarre au poteau, longe le trottoir, mailles epaisses
+    var g = el(svg, 'g', {}), pat = el(el(g, 'defs', {}), 'pattern', {id: 'mailles', width: 13, height: 13, patternUnits: 'userSpaceOnUse'}), x;
+    el(pat, 'rect', {width: 13, height: 13, fill: 'rgba(200,205,210,0.10)'});
+    el(pat, 'path', {d: 'M0,0 H13 M0,0 V13', stroke: '#6f7479', 'stroke-width': 2, fill: 'none'});
+    el(g, 'rect', {x: 400, y: 190, width: 140, height: 114, fill: 'url(#mailles)'});
+    el(g, 'rect', {x: 400, y: 187, width: 140, height: 5, fill: '#5f6469'});
+    el(g, 'rect', {x: 400, y: 300, width: 140, height: 4, fill: '#5f6469'});
+    for (x = 400; x < 540; x += 46) el(g, 'rect', {x: x, y: 187, width: 4.5, height: 117, fill: '#5f6469'});
+  }
+
+  // Ligne garage-poteau : t = 0 au coin du mur (loin, petit), t = 1 au poteau (pres, grand) ; off = decalage lateral en metres
+  function sur(t, off, hm) {
+    var k = 0.55 + 0.45 * t, u = 78 * k;
+    return {x: 404 + 40 * t + off * u, y: 200 + 104 * t - hm * u, k: k, u: u};
+  }
+  function jasmin(g, r, pts) {
+    pts.forEach(function (q, i) {
+      var dense = q.dense == null ? 1 : q.dense;
+      for (var c = 0; c < 3; c++) {
+        if (r() > dense) continue;
+        el(g, 'circle', {cx: q.x + (r() - 0.5) * 9 * q.k, cy: q.y + (r() - 0.5) * 9 * q.k, r: (1.5 + r() * 1.5) * q.k, fill: r() < 0.45 ? '#fbfbf2' : (r() < 0.5 ? '#3f7d3a' : '#5f9a48')});
+      }
+    });
+  }
+  function arche(svg, v) {
+    var g = el(svg, 'g', {}), r = alea(41), i, n = 60, th, f, pts = [], bois = [], P1 = v.p1, P2 = v.p2, base1, base2;
+    var lerp = function (a, b, s) { return a + (b - a) * s; };
+    for (i = 0; i <= 8; i++) bois.push(sur(P1[0], P1[1], v.hp * i / 8));                       // poteau 1
+    for (i = 0; i <= n; i++) {
+      th = Math.PI * i / n; f = (1 - Math.cos(th)) / 2;
+      bois.push(sur(lerp(P1[0], P2[0], f), lerp(P1[1], P2[1], f), v.hp + v.hr * Math.sin(th)));
+    }
+    for (i = 8; i >= 0; i--) bois.push(sur(P2[0], P2[1], v.hp * i / 8));                         // poteau 2
+    var ep = 8 * sur(P1[0], 0, 0).k;
+    el(g, 'polyline', {points: bois.map(function (q) { return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' '), fill: 'none', stroke: '#7a5a43', 'stroke-width': ep, 'stroke-linejoin': 'round'});
+    bois.forEach(function (q, j) {                                                               // jasmin des deux cotes, plus clairseme au sommet
+      var haut = j > 8 && j < 8 + n + 1 && Math.abs(j - 8 - n / 2) < n * 0.18;
+      q.dense = haut ? 0.35 : 1;
+      jasmin(g, r, [q]);
+    });
+  }
+  function arbuste(svg, t, off, seed) {                                                       // arbuste de 1,5 m
+    var g = el(svg, 'g', {}), r = alea(seed), c = sur(t, off, 0), hh = 1.5 * c.u, rx = 0.5 * c.u, i, x, y;
+    for (i = 0; i < 90; i++) {
+      x = c.x + (r() - 0.5) * 2 * rx; y = c.y - r() * hh;
+      if (Math.abs(x - c.x) > rx * (0.55 + 0.7 * Math.sin(Math.PI * Math.min(1, (c.y - y) / hh + 0.1)))) continue;
+      el(g, 'ellipse', {cx: x, cy: y, rx: 5 * c.k, ry: 3 * c.k, fill: ['#2c5a2a', '#356b31', '#3f7d3a', '#4f9444'][Math.floor(r() * 4)], transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+    el(g, 'rect', {x: c.x - 1.5, y: c.y - 6 * c.k, width: 3, height: 6 * c.k, fill: '#5b4a2e'});
+  }
+
+  function scene(zone, v) {
+    var svg = Volets.dessine(zone, FACADE), s = {};
+    s.rideau = svg.volets && svg.volets[0];
+    svg.setAttribute('viewBox', '0 0 540 320');
+    sol(svg); haie(svg); arche(svg, v); arbuste(svg, 0.74, 0.1, 7); arbuste(svg, 0.93, 0.1, 19); grillage(svg);
+    s.dyn = el(svg, 'g', {});
+    return s;
+  }
+
+  function render(s) {
+    var d = s.dyn;
+    while (d.firstChild) d.removeChild(d.firstChild);
+    var a = angles(), G = {a: a.g, hx: XG, dir: 1}, Dd = {a: a.d, hx: XD, dir: -1};
+    var ferme = p < 0.5, col = ferme ? '#38d66b' : '#ff9a1f', ym = YB - 6 - H * 0.5, mg, mr, gg = el(d, 'g', {});
+    vantail(gg, G); vantail(gg, Dd);
+    pilier(d, 20); pilier(d, XD);
+    mg = pt(G, 1, 0.5); mr = pt(Dd, 1, 0.5);
+    el(d, 'rect', {x: mg[0] - 3, y: ym - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
+    el(d, 'rect', {x: mr[0], y: ym - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
+    el(d, 'circle', {cx: 210, cy: ym - 14, r: 8, fill: 'none', stroke: col, 'stroke-width': 1.5});
+    el(d, 'circle', {cx: 210, cy: ym - 14, r: 4, fill: col, stroke: '#222', 'stroke-width': 0.6});
+    el(d, 'text', {x: 210, y: YB - 6 - H - 6, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'}).textContent = ferme ? 'fermé ✔' : 'ouvert';
+  }
+
+  function etat() {
+    var a = angles(), txt = run ? (tg > p ? 'ouvre' : 'ferme') : (p == tg ? 'à l\'arrêt (cible atteinte)' : 'arrêté en route');
+    document.getElementById('etat').textContent = 'Position ' + Math.round(p) + ' % · ' + txt + ' · gauche ' + Math.round(a.g) + '° · droit ' + Math.round(a.d) + '° · capteur de fermeture : ' + (p < 0.5 ? 'contact fermé' : 'contact ouvert');
+    Array.prototype.forEach.call(document.querySelectorAll('#cmd button'), function (b) { b.className = (b.dataset.m == mode && (run || p != tg)) ? 'on' : ''; });
+  }
+
+  window.va = function (m) {
+    var t = CIBLES[m];
+    if (run && tg == t) run = false;
+    else if (!run && tg == t && p != t) run = true;
+    else { tg = t; run = p != t; }
+    mode = m; sale = true;
+  };
+  function lit(id, f, suffixe) { document.getElementById(id).oninput = function () { f(+this.value); document.getElementById(id + 'v').textContent = this.value + (suffixe || ''); sale = true; }; }
+  lit('rid', function (x) { rid = x; }, ' %');
+  lit('hau', function (x) { H = x; });
+
+  var cont = document.getElementById('cartes');
+  VARIANTES.forEach(function (v) {
+    cont.insertAdjacentHTML('beforeend', '<h2>' + v.t + '</h2><p>' + v.d + '</p><div></div>');
+    scenes.push(scene(cont.lastChild, v));
+  });
+  var h = location.hash, g = function (k) { var m = h.match(new RegExp(k + '=(\\d+)')); return m ? +m[1] : null; };
+  if (g('r') != null) { rid = g('r'); document.getElementById('rid').value = rid; document.getElementById('ridv').textContent = rid + ' %'; }
+  if (g('p') != null) p = tg = g('p');
+
+  var t0 = performance.now();
+  function pas(t) {
+    var dt = Math.min(0.1, (t - t0) / 1000); t0 = t;
+    if (run) {
+      var vv = 100 / dur(tg > p ? 'tm' : 'td') * dt;
+      p = Math.abs(tg - p) <= vv ? tg : p + (tg > p ? vv : -vv);
+      if (p == tg) run = false;
+      sale = true;
+    }
+    if (sale) { scenes.forEach(function (s) { render(s); if (s.rideau) s.rideau.pose(rid / 100); }); etat(); sale = false; }
+    requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+})();
+</script></body></html>

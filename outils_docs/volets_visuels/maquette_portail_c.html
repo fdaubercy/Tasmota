@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Portail C : ouverture simple et double vantail</title>
+<style>
+  body{font-family:verdana,sans-serif;background:#252525;color:#eaeaea;margin:0;padding:12px}
+  h1{font-size:18px} p{font-size:12px;color:#bbb;margin:4px 0 10px}
+  .carte{background:#2f2f2f;border-radius:6px;padding:10px;max-width:760px;margin:0 auto}
+  svg{width:100%;display:block;background:#bcd3e6;border-radius:4px}
+  button{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;padding:8px 14px;font-size:13px;cursor:pointer;margin:0 6px 6px 0}
+  button.on{background:#0d6b9c;outline:2px solid #fff}
+  label{font-size:12px}
+  #etat{font-size:13px;margin:8px 0 0;min-height:18px}
+</style></head><body>
+<div class="carte">
+  <h1>Portail, proposition C : ouverture simple et double</h1>
+  <div id="cmd">
+    <button data-m="ferme" onclick="va('ferme')">Fermer</button>
+    <button data-m="simple" onclick="va('simple')">Ouvrir : simple vantail (droit)</button>
+    <button data-m="double" onclick="va('double')">Ouvrir : double vantail</button>
+    <label>Rideau <input type="range" id="rid" min="0" max="100" value="0"> <span id="ridv">0 %</span></label>
+  </div>
+  <div id="zone"></div>
+  <p id="etat"></p>
+  <p>Ajours des deux vantaux : même escalier de 5 barres, élargi d'environ 30 % par rapport à la maquette précédente, reproduit en miroir par rapport à la fente. Capteur de fermeture dans la fente : vert = contact fermé (deux vantaux fermés), orange = au moins un vantail ouvert.</p>
+</div>
+
+<script src="../../data/sd/js/volets.js"></script>
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg', Y0 = 204, GH = 52, W = 191, DUREE = 3;      // DUREE : secondes pour ouvrir un vantail
+  var FACADE = {toit: 'unPan', decor: ['chevrefeuille', 'porte', 'pergola'], camera: {nom: 'Caméra'}, lampe: {nom: 'Lampe'},
+    ouvertures: [{type: 'garage', id: 1, nom: 'Volet Roulant Garage'}]};
+  var cible = {g: 0, d: 0}, cour = {g: 0, d: 0}, mode = 'ferme', rid = 0;
+
+  function el(par, nom, at) { var e = document.createElementNS(NS, nom); for (var k in at) e.setAttribute(k, at[k]); par.appendChild(e); return e; }
+
+  function pilier(g, x) {
+    var h = GH * 1.3, y = Y0 - h;
+    el(g, 'rect', {x: x, y: y, width: 16, height: h, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
+    for (var yy = y + 10; yy < Y0; yy += 10) el(g, 'line', {x1: x, y1: yy, x2: x + 16, y2: yy, stroke: '#cfc8b0', 'stroke-width': 0.6});
+    el(g, 'rect', {x: x - 2, y: y - 4, width: 20, height: 5, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
+  }
+
+  // Vantail translucide de x0 à x0 + 191 ; escalier d'ajours près de la fente : 5 barres, la plus longue en haut, jamais collé au bord
+  function vantail(g, x0, cote) {
+    var top = Y0 - GH, v = el(g, 'g', {}), i, n = 5, hh = (GH - 12) / n - 2.2;
+    el(v, 'rect', {x: x0, y: top, width: W, height: GH, fill: 'rgba(255,255,255,0.28)', stroke: '#fff', 'stroke-width': 1.6});
+    for (i = 10; i < W; i += 11) el(v, 'line', {x1: x0 + i, y1: top + 2, x2: x0 + i, y2: Y0 - 2, stroke: 'rgba(255,255,255,0.55)', 'stroke-width': 0.8});
+    el(v, 'rect', {x: x0, y: top, width: W, height: 3, fill: 'rgba(255,255,255,0.6)'});
+    for (i = 0; i < n; i++) {
+      var l = 44 - i * 5;                                                              // longueur de la barre i (34 - 4 i auparavant)
+      el(v, 'rect', {x: cote == 'g' ? x0 + W - 8 - l : x0 + 8, y: top + 6 + i * (hh + 2.2), width: l, height: hh, fill: 'rgba(35,39,43,0.78)'});
+    }
+    return v;
+  }
+
+  var g, gl, gd, led, halo, txt;
+  function dessine() {
+    var svg = Volets.dessine(document.getElementById('zone'), FACADE);
+    window.rideau = svg.volets && svg.volets[0];
+    svg.setAttribute('viewBox', '0 0 420 216');
+    el(svg, 'rect', {x: 0, y: 196, width: 420, height: 20, fill: '#8d8d8b'});
+    g = el(svg, 'g', {});
+    gl = el(g, 'g', {}); gd = el(g, 'g', {});
+    vantail(gl, 16, 'g'); vantail(gd, 213, 'd');
+    var y = Y0 - GH * 0.62;
+    el(gd, 'rect', {x: 213, y: y, width: 3.5, height: 13, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});    // contact : suit le vantail droit
+    el(g, 'rect', {x: 203.5, y: y, width: 3.5, height: 13, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});   // aimant : vantail gauche
+    halo = el(g, 'circle', {cx: 210, cy: y - 6, r: 7, fill: 'none', 'stroke-width': 1.5});
+    led = el(g, 'circle', {cx: 210, cy: y - 6, r: 3.4, stroke: '#222', 'stroke-width': 0.6});
+    txt = el(g, 'text', {x: 210, y: Y0 - GH * 1.3 - 10, 'font-size': 8, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.4px;paint-order:stroke'});
+    pilier(g, 0); pilier(g, 404);
+  }
+
+  function pose() {
+    var s = function (a, hx) { return 'translate(' + hx + ',0) scale(' + (1 - 0.88 * a) + ',1) translate(' + (-hx) + ',0)'; };
+    gd.setAttribute('transform', s(cour.d, 404));
+    gl.setAttribute('transform', s(cour.g, 16));
+    var ferme = cour.g < 0.01 && cour.d < 0.01, col = ferme ? '#38d66b' : '#ff9a1f';
+    led.setAttribute('fill', col); halo.setAttribute('stroke', col);
+    txt.textContent = ferme ? 'fermé ✔' : 'ouvert';
+    var ouv = (cour.g > 0.01) + (cour.d > 0.01);
+    document.getElementById('etat').textContent = 'Vantail gauche ' + Math.round(cour.g * 100) + ' % · vantail droit ' + Math.round(cour.d * 100) + ' % · capteur de fermeture : ' +
+      (ferme ? 'contact fermé' : 'contact ouvert') + (ouv == 1 ? ' (simple vantail)' : (ouv == 2 ? ' (double vantail)' : ''));
+  }
+
+  window.va = function (m) {
+    mode = m;
+    cible = {g: m == 'double' ? 1 : 0, d: m == 'ferme' ? 0 : 1};
+    Array.prototype.forEach.call(document.querySelectorAll('#cmd button'), function (b) { b.className = b.dataset.m == m ? 'on' : ''; });
+  };
+  document.getElementById('rid').oninput = function () { rid = +this.value; document.getElementById('ridv').textContent = this.value + ' %'; };
+
+  dessine();
+  var h = (location.hash.match(/m=(\w+)/) || [])[1], hr = (location.hash.match(/r=(\d+)/) || [])[1];
+  if (hr != null) { rid = +hr; document.getElementById('rid').value = hr; document.getElementById('ridv').textContent = hr + ' %'; }
+  if (h) { va(h); cour = {g: cible.g, d: cible.d}; }
+  var t0 = performance.now();
+  function pas(t) {
+    var m = (t - t0) / 1000 / DUREE; t0 = t;
+    ['g', 'd'].forEach(function (k) { var d = cible[k] - cour[k]; cour[k] = Math.abs(d) <= m ? cible[k] : cour[k] + (d > 0 ? m : -m); });
+    pose();
+    if (window.rideau) window.rideau.pose(rid / 100);
+    requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+})();
+</script></body></html>

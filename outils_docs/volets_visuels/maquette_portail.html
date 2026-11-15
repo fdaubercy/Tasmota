@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Maquette : portail devant le garage</title>
+<style>
+  body{font-family:verdana,sans-serif;background:#252525;color:#eaeaea;margin:0;padding:12px}
+  h1{font-size:18px} h2{font-size:15px;margin:22px 0 4px} p{font-size:12px;margin:2px 0 8px;color:#bbb}
+  .ligne{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+  .carte{background:#2f2f2f;border-radius:6px;padding:8px;width:520px;max-width:100%}
+  .carte svg{width:100%;display:block;background:#bcd3e6;border-radius:4px}
+  img{width:520px;max-width:100%;border-radius:4px;display:block}
+  .cmd{position:sticky;top:0;background:#252525;padding:6px 0;z-index:2}
+  button{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;padding:6px 12px;font-size:13px;cursor:pointer;margin-right:6px}
+  label{font-size:12px;margin-left:10px}
+</style></head><body>
+<h1>Portail devant le garage : 4 propositions (état courant + photo)</h1>
+<div class="cmd">
+  Portail : <button onclick="va(0)">Fermé</button><button onclick="va(50)">Moitié (vantail droit)</button><button onclick="va(100)">Entier (2 vantaux)</button>
+  <label>Rideau <input type="range" id="rid" min="0" max="100" value="0"> <span id="ridv">0 %</span></label>
+</div>
+
+<div class="ligne">
+  <div class="carte"><h2>Photo réelle</h2><img src="photo_portail.jpg" alt="photo"><p>Piliers à chapeau gris, deux vantaux PVC blancs, fente centrale, ajours en escalier dans le vantail gauche.</p></div>
+  <div class="carte"><h2>0. Image actuelle du serveur (sans portail)</h2><div id="s0"></div><p>Façade, rideau, porte, treillis, pergola, caméra et lanterne existent déjà. Manquent : piliers et portail.</p></div>
+</div>
+<div class="ligne" id="props"></div>
+
+<script src="../../data/sd/js/volets.js"></script>
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg', Y0 = 204;                   // sol du portail (devant le pied du mur, y = 196)
+  var FACADE = {toit: 'unPan', decor: ['chevrefeuille', 'porte', 'pergola'], camera: {nom: 'Caméra'}, lampe: {nom: 'Lampe'},
+    ouvertures: [{type: 'garage', id: 1, nom: 'Volet Roulant Garage'}]};
+  var PROPS = [
+    {t: 'A. Fidèle à la photo', d: 'Piliers à chapeau, vantaux PVC à lames verticales, ajours en escalier à gauche. Hauteur 52 : cache le bas du rideau, comme sur la photo. Battant (vu de face, le vantail se raccourcit vers son pilier).', gh: 52, style: 'fidele', mode: 'battant'},
+    {t: 'B. Compact', d: 'Même portail réduit à 34 : le rideau reste lisible. Lames horizontales simplifiées. Battant.', gh: 34, style: 'compact', mode: 'battant'},
+    {t: 'C. Fantôme', d: 'Vantaux translucides (contour et lames visibles, rideau visible derrière) : la lecture des deux animations ne se gêne jamais. Battant.', gh: 52, style: 'fantome', mode: 'battant'},
+    {t: 'D. Coulissant', d: 'Si le portail coulisse au lieu de pivoter : chaque vantail glisse vers son pilier et sort du cadre. Même fente, même capteur.', gh: 46, style: 'fidele', mode: 'coulissant'}
+  ];
+  var etat = {p: 0, cible: 0, r: 0}, vues = [];
+
+  function el(par, nom, at) { var e = document.createElementNS(NS, nom); for (var k in at) e.setAttribute(k, at[k]); par.appendChild(e); return e; }
+
+  function pilier(g, x, gh) {                                           // pilier de blocs beige à chapeau gris
+    var h = gh * 1.3, y = Y0 - h;
+    el(g, 'rect', {x: x, y: y, width: 16, height: h, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
+    for (var yy = y + 10; yy < Y0; yy += 10) el(g, 'line', {x1: x, y1: yy, x2: x + 16, y2: yy, stroke: '#cfc8b0', 'stroke-width': 0.6});
+    el(g, 'rect', {x: x - 2, y: y - 4, width: 20, height: 5, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
+  }
+
+  // Vantail de x0 à x0 + 191 ; 'coteFente' : 'd' (la fente est à sa droite) ou 'g'
+  function vantail(g, x0, gh, p, coteFente) {
+    var top = Y0 - gh, w = 191, fant = p.style == 'fantome', i, v = el(g, 'g', {});
+    el(v, 'rect', {x: x0, y: top, width: w, height: gh, fill: fant ? 'rgba(255,255,255,0.28)' : '#f7f7f5', stroke: fant ? '#fff' : '#c9ccce', 'stroke-width': 1.6});
+    for (i = 10; i < w; i += 11) el(v, 'line', {x1: x0 + i, y1: top + 2, x2: x0 + i, y2: Y0 - 2, stroke: fant ? 'rgba(255,255,255,0.55)' : '#e3e5e6', 'stroke-width': 0.8});
+    el(v, 'rect', {x: x0, y: top, width: w, height: 3, fill: fant ? 'rgba(255,255,255,0.6)' : '#e9ebec'});
+    if (p.style == 'fidele' && coteFente == 'd') {                      // ajours en escalier, près de la fente (vantail gauche)
+      var n = 5, hh = (gh - 14) / n - 2;
+      for (i = 0; i < n; i++) el(v, 'rect', {x: x0 + w - 42 + i * 4, y: top + 8 + i * (hh + 2), width: 34 - i * 4, height: hh, fill: '#23272b'});
+    }
+    if (p.style == 'compact' || p.style == 'fantome') {
+      for (i = 0; i < 3; i++) el(v, 'rect', {x: x0 + (coteFente == 'd' ? w - 40 : 8), y: top + 7 + i * (gh - 14) / 3, width: 32, height: 4, fill: fant ? 'rgba(35,39,43,0.55)' : '#9aa0a5'});
+    }
+    return v;
+  }
+
+  // Capteur de fermeture dans la fente : aimant sur le bord du vantail gauche, contact (reed) sur le bord du vantail droit.
+  function capteur(g, gd, p) {
+    var y = Y0 - p.gh * 0.62;
+    el(gd, 'rect', {x: 213, y: y, width: 3.5, height: 13, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});   // contact, suit le vantail droit
+    var fixe = el(g, 'g', {'data-capteur': ''});
+    el(fixe, 'rect', {x: 203.5, y: y, width: 3.5, height: 13, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});  // aimant, vantail gauche
+    var halo = el(fixe, 'circle', {cx: 210, cy: y - 6, r: 7, fill: 'none', 'stroke-width': 1.5});
+    var led = el(fixe, 'circle', {cx: 210, cy: y - 6, r: 3.4, stroke: '#222', 'stroke-width': 0.6});
+    var txt = el(g, 'text', {x: 210, y: Y0 - p.gh - (p.gh * 0.3 + 8) - 8 + 0, 'font-size': 8, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.4px;paint-order:stroke'});
+    txt.setAttribute('y', Y0 - p.gh * 1.3 - 10);
+    return {led: led, halo: halo, txt: txt};
+  }
+
+  function portail(svg, p) {
+    svg.setAttribute('viewBox', '0 0 420 216');
+    el(svg, 'rect', {x: 0, y: 196, width: 420, height: 20, fill: '#8d8d8b'});
+    var g = el(svg, 'g', {'data-portail': ''});
+    var gl = el(g, 'g', {}), gd = el(g, 'g', {});
+    var vg = vantail(gl, 16, p.gh, p, 'd'), vd = vantail(gd, 213, p.gh, p, 'g');
+    var cap = capteur(g, gd, p);
+    pilier(g, 0, p.gh); pilier(g, 404, p.gh);
+    var info = el(g, 'text', {x: 210, y: 214, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#222'});
+    return {gl: gl, gd: gd, cap: cap, info: info, p: p};
+  }
+
+  // pos 0..100 : 0 à 50 le vantail droit s'ouvre seul, 50 à 100 le gauche le rejoint
+  function pose(v, pos) {
+    var ar = Math.min(1, pos / 50), al = Math.max(0, (pos - 50) / 50), P = v.p, tr = function (a, hx, sens) {
+      return P.mode == 'coulissant' ? 'translate(' + (sens * a * 200) + ',0)'
+        : 'translate(' + hx + ',0) scale(' + (1 - 0.88 * a) + ',1) translate(' + (-hx) + ',0)';
+    };
+    v.gd.setAttribute('transform', tr(ar, 404, 1));
+    v.gl.setAttribute('transform', tr(al, 16, -1));
+    var ferme = pos < 1;
+    v.cap.led.setAttribute('fill', ferme ? '#38d66b' : '#ff9a1f');
+    v.cap.halo.setAttribute('stroke', ferme ? '#38d66b' : '#ff9a1f');
+    v.cap.txt.textContent = ferme ? 'fermé ✔' : 'ouvert';
+    v.info.textContent = 'Portail ' + Math.round(pos) + ' % : ' + (pos < 1 ? 'fermé' : (pos < 99 ? 'vantail droit ouvert' : 'ouvert en entier')) + ' · capteur de fermeture : ' + (ferme ? 'contact fermé' : 'contact ouvert');
+  }
+
+  function facade(conteneur) {
+    var svg = Volets.dessine(conteneur, FACADE);
+    svg.setAttribute('style', 'display:block');
+    return svg;
+  }
+
+  var s0 = facade(document.getElementById('s0'));
+  PROPS.forEach(function (p) {
+    var c = document.createElement('div'); c.className = 'carte';
+    c.innerHTML = '<h2>' + p.t + '</h2><div></div><p>' + p.d + '</p>';
+    document.getElementById('props').appendChild(c);
+    var svg = facade(c.children[1]), v = portail(svg, p);
+    v.rideau = svg.volets && svg.volets[0];
+    vues.push(v);
+  });
+  window.va = function (c) { etat.cible = c; };
+  document.getElementById('rid').oninput = function () { etat.r = +this.value; document.getElementById('ridv').textContent = this.value + ' %'; };
+  var h = (location.hash.match(/p=(\d+)/) || [])[1], hr = (location.hash.match(/r=(\d+)/) || [])[1];
+  if (h != null) etat.p = etat.cible = +h;
+  if (hr != null) { etat.r = +hr; document.getElementById('rid').value = hr; }
+  var t0 = performance.now();
+  function pas(t) {
+    var dt = (t - t0) / 1000; t0 = t;
+    var d = etat.cible - etat.p, m = 25 * dt;                           // 100 % en 4 s
+    etat.p = Math.abs(d) <= m ? etat.cible : etat.p + (d > 0 ? m : -m);
+    vues.forEach(function (v) { pose(v, etat.p); if (v.rideau) v.rideau.pose(etat.r / 100); });
+    if (s0.volets && s0.volets[0]) s0.volets[0].pose(etat.r / 100);
+    requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+})();
+</script></body></html>

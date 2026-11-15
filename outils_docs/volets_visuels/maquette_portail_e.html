@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Portail C v3 : arches de jasmin, grillage, photinia, volet à paramétrer</title>
+<style>
+  body{font-family:verdana,sans-serif;background:#252525;color:#eaeaea;margin:0;padding:12px}
+  h1{font-size:18px} p{font-size:12px;color:#bbb;margin:4px 0 10px}
+  .carte{background:#2f2f2f;border-radius:6px;padding:10px;max-width:860px;margin:0 auto}
+  svg{width:100%;display:block;background:#bcd3e6;border-radius:4px}
+  button{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;padding:8px 14px;font-size:13px;cursor:pointer;margin:0 6px 6px 0}
+  button.on{background:#0d6b9c;outline:2px solid #fff}
+  label{font-size:12px;margin-right:14px;white-space:nowrap}
+  input[type=number]{width:52px;background:#1d1d1d;color:#eee;border:1px solid #555;border-radius:3px;padding:2px 4px}
+  #etat{font-size:13px;margin:8px 0 0;min-height:18px}
+  pre{background:#1d1d1d;border-radius:4px;padding:8px;font-size:12px;color:#cde;overflow:auto}
+</style></head><body>
+<div class="carte">
+  <h1>Portail C : le portail comme un volet roulant à paramétrer</h1>
+  <div id="cmd">
+    <button data-m="ferme" onclick="va('ferme')">Fermer (0 %)</button>
+    <button data-m="simple" onclick="va('simple')">Simple vantail (50 %)</button>
+    <button data-m="double" onclick="va('double')">Double vantail (100 %)</button><br>
+    <label>Durée ouverture (tempsMontee) <input type="number" id="tm" value="30" min="4" max="120"> s</label>
+    <label>Durée fermeture (tempsDescente) <input type="number" id="td" value="30" min="4" max="120"> s</label><br>
+    <label>Rideau <input type="range" id="rid" min="0" max="100" value="0"> <span id="ridv">0 %</span></label>
+    <label>Hauteur du portail <input type="range" id="hau" min="80" max="170" value="110"> <span id="hauv">110</span></label>
+  </div>
+  <div id="zone"></div>
+  <p id="etat"></p>
+  <p>Même bouton, même cible : un appui pendant le mouvement arrête le portail, un second appui le fait repartir vers la même cible. Un autre bouton change de cible. Position 0 à 50 % : le vantail droit pivote ; 50 à 100 % : le gauche prend le relais ; au retour, le gauche se ferme d'abord. Chaque vantail démarre et s'arrête en douceur.</p>
+  <p>Bloc à ajouter au persist comme nouveau volet (proposition, rien n'est écrit dans le dépôt) :</p>
+  <pre id="bloc"></pre>
+</div>
+
+<script src="../../data/sd/js/volets.js"></script>
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg', AMAX = 92, YH = 190, D = 500, WL = 162, YB = 304, XG = 46, XD = 374;
+  var FACADE = {toit: 'unPan', decor: ['chevrefeuille', 'porte'], camera: {nom: 'Caméra'}, lampe: {nom: 'Lampe'},
+    ouvertures: [{type: 'garage', id: 1, nom: 'Volet Roulant Garage'}]};
+  var CIBLES = {ferme: 0, simple: 50, double: 100};
+  var p = 0, tg = 0, run = false, H = 110, rid = 0, dyn, rideau, sale = true, mode = null;
+
+  function el(par, nom, at) { var e = document.createElementNS(NS, nom); for (var k in at) e.setAttribute(k, at[k]); par.appendChild(e); return e; }
+  function alea(s) { return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
+  function bornes(x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
+  function dur(id) { return Math.max(1, +document.getElementById(id).value || 30); }
+  function lisse(x) { return x * x * (3 - 2 * x); }
+  function feuilleVerte(r) { var c = r(); return c < 0.16 ? '#b4402f' : (c < 0.26 ? '#cf6a44' : (c < 0.55 ? '#356b31' : (c < 0.8 ? '#3f7d3a' : '#2c5a2a'))); }
+
+  // Angle de chaque vantail d'apres la position du volet : le droit de 0 a 50 %, le gauche de 50 a 100 %
+  function angles() { return {d: AMAX * lisse(bornes(p / 50)), g: AMAX * lisse(bornes((p - 50) / 50))}; }
+
+  function pt(f, u, v) {
+    var a = f.a * Math.PI / 180, s = 1 / (1 + u * WL * Math.sin(a) / D);
+    var x0 = f.hx + f.dir * u * WL * Math.cos(a), y0 = YB - 6 - H + v * H;
+    return [210 + (x0 - 210) * s, YH + (y0 - YH) * s];
+  }
+  function poly(g, f, liste, at) {
+    at.points = liste.map(function (q) { var c = pt(f, q[0], q[1]); return c[0].toFixed(1) + ',' + c[1].toFixed(1); }).join(' ');
+    return el(g, 'polygon', at);
+  }
+  function ligne(g, f, u0, v0, u1, v1, at) {
+    var a = pt(f, u0, v0), b = pt(f, u1, v1); at.x1 = a[0]; at.y1 = a[1]; at.x2 = b[0]; at.y2 = b[1]; return el(g, 'line', at);
+  }
+
+  function vantail(g, f) {
+    var i, B = 'rgba(255,255,255,0.6)', tout = [[0, 0], [1, 0], [1, 1], [0, 1]];
+    poly(g, f, tout, {fill: 'none', stroke: 'rgba(60,60,60,0.55)', 'stroke-width': 3.4});               // liseré sombre : le blanc se lit sur sol clair
+    poly(g, f, tout, {fill: 'rgba(255,255,255,0.38)', stroke: '#fff', 'stroke-width': 1.5});
+    poly(g, f, [[0.07, 0.08], [0.93, 0.08], [0.93, 0.92], [0.07, 0.92]], {fill: 'none', stroke: B, 'stroke-width': 1});
+    for (i = 0.10; i < 0.56; i += 0.04) ligne(g, f, i, 0.10, i, 0.90, {stroke: B, 'stroke-width': 0.7});
+    poly(g, f, [[0.56, 0.09], [0.67, 0.09], [0.795, 0.91], [0.685, 0.91]], {fill: 'rgba(255,255,255,0.5)', stroke: '#fff', 'stroke-width': 1});
+    for (i = 0; i < 7; i++) {
+      var v0 = 0.11 + i * 0.1143, u0 = 0.685 + i * 0.018;
+      poly(g, f, [[u0, v0], [0.91, v0], [0.91, v0 + 0.06], [u0 + 0.004, v0 + 0.06]], {fill: 'rgba(25,28,32,0.82)'});
+    }
+  }
+
+  function pilier(g, x) {
+    var top = YB - H - 6 - 28, h = 308 - top, i;
+    el(g, 'rect', {x: x, y: top, width: 26, height: h, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
+    for (i = top + 12; i < 308; i += 13) el(g, 'line', {x1: x, y1: i, x2: x + 26, y2: i, stroke: '#cfc8b0', 'stroke-width': 0.6});
+    el(g, 'rect', {x: x - 3, y: top - 5, width: 32, height: 6, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
+  }
+
+  // Sol : tapis de pierre gris clair (cailloux liés), trottoir en béton devant le portail
+  function sol(svg) {
+    var r = alea(5), i, c = ['#cfcdc6', '#aeaba3', '#dcdad3', '#b9b6ae', '#c4c1b9'];
+    el(svg, 'rect', {x: 0, y: 196, width: 540, height: 110, fill: '#bdbab3'});
+    for (i = 0; i < 520; i++) el(svg, 'ellipse', {cx: r() * 540, cy: 197 + r() * 108, rx: 1 + r() * 2.2, ry: 0.8 + r() * 1.3, fill: c[Math.floor(r() * 5)]});
+    el(svg, 'rect', {x: 0, y: 306, width: 540, height: 14, fill: '#d9d8d2'});
+    el(svg, 'line', {x1: 0, y1: 306, x2: 540, y2: 306, stroke: '#9a9992', 'stroke-width': 1});
+  }
+
+  // Haie de photinia (feuillage vert sombre, jeunes pousses rouges) et grillage rigide gris devant
+  function haie(svg) {
+    var r = alea(23), i, x, y, g = el(svg, 'g', {});
+    for (i = 0; i < 520; i++) {
+      x = 466 + r() * 78; y = 60 + r() * 170;
+      if ((x - 506) * (x - 506) / 2000 + (y - 150) * (y - 150) / 8200 > 1.1) continue;                 // contour arrondi du massif
+      el(g, 'ellipse', {cx: x, cy: y, rx: 4.5, ry: 2.8, fill: feuilleVerte(r), transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+    var pat = el(el(g, 'defs', {}), 'pattern', {id: 'grillage', width: 8, height: 8, patternUnits: 'userSpaceOnUse'});
+    el(pat, 'rect', {width: 8, height: 8, fill: 'rgba(210,214,218,0.12)'});
+    el(pat, 'path', {d: 'M0,0 H8 M0,0 V8', stroke: '#8d9297', 'stroke-width': 0.9, fill: 'none'});
+    el(g, 'rect', {x: 466, y: 172, width: 74, height: 96, fill: 'url(#grillage)'});
+    for (x = 466; x < 540; x += 37) el(g, 'rect', {x: x - 1.5, y: 166, width: 3.5, height: 104, fill: '#6f7479'});
+    el(g, 'rect', {x: 466, y: 170, width: 74, height: 3, fill: '#6f7479'});
+    for (i = 0; i < 90; i++) {                                                                           // quelques feuilles devant le grillage
+      x = 470 + r() * 70; y = 164 + r() * 60;
+      el(g, 'ellipse', {cx: x, cy: y, rx: 4, ry: 2.6, fill: feuilleVerte(r), transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+  }
+
+  // Pergola : suite d'arches le long de la ligne qui va du coin du mur vers le portail ; jasmin blanc qui monte des deux cotes
+  function pergola(svg) {
+    var g = el(svg, 'g', {}), r = alea(41), n = 4, k, t, apex = [];
+    for (k = 0; k < n; k++) {
+      t = k / (n - 1);
+      var cx = 416 + 30 * t, base = 200 + 102 * t, w = 26 + 54 * t, h = 96 + 62 * t, s = 0.6 + 0.4 * t, rr = w / 2, top = base - h;
+      var d = 'M' + (cx - rr) + ',' + base + ' L' + (cx - rr) + ',' + (top + rr) + ' A' + rr + ',' + rr + ' 0 0 1 ' + (cx + rr) + ',' + (top + rr) + ' L' + (cx + rr) + ',' + base;
+      el(g, 'path', {d: d, fill: 'none', stroke: '#7a5a43', 'stroke-width': 6 * s});
+      apex.push([cx, top]);
+      [-1, 1].forEach(function (cote) {
+        var m = Math.round(14 + 8 * t), j, q, px, py, a, c;
+        for (j = 0; j < m; j++) {
+          q = j / (m - 1);
+          if (q < 0.62) { px = cx + cote * rr; py = base - (base - top - rr) * (q / 0.62) - 2; }
+          else { a = Math.PI * (q - 0.62) / 0.38 * 0.42; px = cx + cote * rr * Math.cos(a); py = top + rr - rr * Math.sin(a); }
+          for (c = 0; c < 2; c++) el(g, 'circle', {cx: px + (r() - 0.5) * 9 * s, cy: py + (r() - 0.5) * 9 * s, r: (1.5 + r() * 1.5) * s, fill: r() < 0.45 ? '#fbfbf2' : (r() < 0.5 ? '#3f7d3a' : '#5f9a48')});
+        }
+      });
+    }
+    for (k = 0; k < n - 1; k++) el(g, 'line', {x1: apex[k][0], y1: apex[k][1], x2: apex[k + 1][0], y2: apex[k + 1][1], stroke: '#6e5038', 'stroke-width': 2.4});
+  }
+
+  function scene() {
+    var svg = Volets.dessine(document.getElementById('zone'), FACADE);
+    rideau = svg.volets && svg.volets[0];
+    svg.setAttribute('viewBox', '0 0 540 320');
+    sol(svg); haie(svg); pergola(svg);
+    dyn = el(svg, 'g', {});
+    return svg;
+  }
+
+  function render() {
+    while (dyn.firstChild) dyn.removeChild(dyn.firstChild);
+    var a = angles(), G = {a: a.g, hx: XG, dir: 1}, Dd = {a: a.d, hx: XD, dir: -1};
+    var ferme = p < 0.5, col = ferme ? '#38d66b' : '#ff9a1f', ym = YB - 6 - H * 0.5, mg, mr;
+    var gg = el(dyn, 'g', {});
+    vantail(gg, G); vantail(gg, Dd);
+    pilier(dyn, 20); pilier(dyn, 374);
+    mg = pt(G, 1, 0.5); mr = pt(Dd, 1, 0.5);
+    el(dyn, 'rect', {x: mg[0] - 3, y: ym - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
+    el(dyn, 'rect', {x: mr[0], y: ym - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
+    el(dyn, 'circle', {cx: 210, cy: ym - 14, r: 8, fill: 'none', stroke: col, 'stroke-width': 1.5});
+    el(dyn, 'circle', {cx: 210, cy: ym - 14, r: 4, fill: col, stroke: '#222', 'stroke-width': 0.6});
+    el(dyn, 'text', {x: 210, y: YB - 6 - H - 6, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'}).textContent = ferme ? 'fermé ✔' : 'ouvert';
+    var etat = run ? (tg > p ? 'ouvre' : 'ferme') : (p == tg ? 'à l\'arrêt (cible atteinte)' : 'arrêté en route');
+    document.getElementById('etat').textContent = 'Position ' + Math.round(p) + ' % · ' + etat + ' · gauche ' + Math.round(a.g) + '° · droit ' + Math.round(a.d) + '° · capteur de fermeture : ' + (ferme ? 'contact fermé' : 'contact ouvert');
+    Array.prototype.forEach.call(document.querySelectorAll('#cmd button'), function (b) { b.className = (b.dataset.m == mode && (run || p != tg)) ? 'on' : ''; });
+  }
+
+  window.va = function (m) {
+    var t = CIBLES[m];
+    if (run && tg == t) run = false;                         // meme bouton pendant le mouvement : arret
+    else if (!run && tg == t && p != t) run = true;          // meme bouton a l'arret en route : on repart
+    else { tg = t; run = p != t; }
+    mode = m; sale = true;
+  };
+  function lit(id, f, suffixe) { document.getElementById(id).oninput = function () { f(+this.value); document.getElementById(id + 'v').textContent = this.value + (suffixe || ''); sale = true; }; }
+  lit('rid', function (v) { rid = v; }, ' %');
+  lit('hau', function (v) { H = v; });
+  function bloc() {
+    document.getElementById('bloc').textContent = '"VR4": {\n  "nom": "Portail",\n  "id": 4,\n  "tempsMontee": ' + dur('tm') + ',\n  "tempsDescente": ' + dur('td') + '\n  // position 0 = fermé, 50 = simple vantail, 100 = double vantail\n}';
+  }
+  document.getElementById('tm').oninput = document.getElementById('td').oninput = bloc;
+
+  scene(); bloc();
+  var h = location.hash, g = function (k) { var m = h.match(new RegExp(k + '=(\\d+)')); return m ? +m[1] : null; };
+  if (g('r') != null) { rid = g('r'); document.getElementById('rid').value = rid; document.getElementById('ridv').textContent = rid + ' %'; }
+  if (g('h') != null) { H = g('h'); document.getElementById('hau').value = H; document.getElementById('hauv').textContent = H; }
+  if (g('p') != null) p = tg = g('p');
+
+  var t0 = performance.now();
+  function pas(t) {
+    var dt = Math.min(0.1, (t - t0) / 1000); t0 = t;
+    if (run) {
+      var v = 100 / dur(tg > p ? 'tm' : 'td') * dt;
+      p = Math.abs(tg - p) <= v ? tg : p + (tg > p ? v : -v);
+      if (p == tg) run = false;
+      sale = true;
+    }
+    if (sale) { render(); if (rideau) rideau.pose(rid / 100); sale = false; }
+    requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+})();
+</script></body></html>
