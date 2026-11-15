@@ -22,6 +22,7 @@ Décisions :
   (crépuscule bleu léger, nuit noire vers le milieu). Repli sur l'heure du navigateur si la carte ne répond pas, signalé à l'écran.
 - Portail : deux zones de clic distinctes (vantail droit = un vantail, vantail gauche = les deux) ; arrêt sans confirmation, toute ouverture,
   fermeture ou reprise avec confirmation et rappel de sécurité. Rideau : clic = ouvrir ou fermer après confirmation. Petite porte : aucun clic.
+- Sécurité de la commande par clic (2026-11-15) : le P4 n'a pas de mot de passe web (WEB_PASSWORD vide) et `apiHTTP` vaut ON (contrôle du Referer retiré) ; une page tierce du réseau local peut donc envoyer `POST /volets action=volet`. Décision de l'utilisateur : **ne rien changer** (risque accepté, déjà vrai pour la lampe et la caméra). Aucun ordre réel au portail ou au rideau lancé par Claude sans accord explicite de l'utilisateur.
 - La lampe n'est pas liée à la nuit : elle reste commandée à la main.
 - Piste pour l'heure du soleil sans toucher au Berry solidifié : `Status 7` de la carte donne `Sunrise` et `Sunset` (à confirmer sur la carte avant de s'y fier).
 
