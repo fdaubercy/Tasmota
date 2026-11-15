@@ -15,13 +15,103 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 57 plans : 27 actif, 1 en-pause, 29 clos.
 
+### Attendent un geste hors de Claude (plans actifs)
+
+Étiquette déduite d'un mot de l'étape : `à vous` = confirmation ou choix, `sur carte` = essai ou envoi sur le matériel.
+
+- [sur carte] [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
+- [sur carte] [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
+- [à vous] [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
+- [à vous] [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) — A1 — Relever l'existant avant de dessiner : Demander à l'utilisateur une photo de la porte d'entrée, de la fenêtre de cuisine et de la trappe si l'ajustement du grenier du RDC l'exige
+- [à vous] [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) — A2 — Esclave 4 : la page montre le portail seul : Persist de l'esclave 4 : bloc `drivers.voletRoulants.facade` (`activation` ON, `decor`), volets portail 1 et 2 en lecture seule ; accord de l'utilisateur avant d'écrire le persist
+- [sur carte] [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) — A6 — Retour au plan atelier-visuels : Reprendre `tasks/plans/atelier-visuels.md` (83 %) : étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
+- [à vous] [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — A6 — Essai sur carte : Clics sur le portail et le rideau, `UfsFree`, nuit selon le coucher réel : à voir sur le P4 après l'envoi du nouveau `volets.js` ; aucune commande réelle du portail sans accord de l'utilisateur
+- [sur carte] [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — A8 — Page d'accueil de l'esclave 4 : le portail seul avec son capteur de fermeture : Compilation de l'esclave 4 par la page Build, rendu vu sur la carte avec son capteur de fermeture réel
+- [sur carte] [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — A9 — Retour au plan atelier-visuels : Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
+- [sur carte] [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — A4 — Essai réel et clôture : Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin
+- [à vous] [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
+- [à vous] [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) — A2 — Liens dérivés des persist : Exceptions et confirmations manuelles dans `placement.json` : `ip_cartes`, `etiquettes`, `liens_manuels` faits ; reste l'avertissement quand la dérivation et la saisie divergent
+- [sur carte] [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) — A10 — Icône de lien et débits en direct : Essai réel de la lecture des débits sur la carte `tasmota32s3-serveur-debits-pac` (derrière le NAPT de l'écran, port 8080), non fait
+- [sur carte] [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — A4 — Capture et rejeu : Banc sur une carte simulée (jamais le vrai P4 en essai automatique)
+- [sur carte] [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — A7 — Vrai firmware ESP32 classique (essai) : Choisir l'env ESP32 de l'essai ; QEMU via WSL2 ou `idf_tools.py`
+- [sur carte] [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
+- [sur carte] [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
+- [à vous] [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — A7 — Essais réels et décision sur la version 2 : Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan
+- [à vous] [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15) : Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20) — bancs verts (debits, lvgl, systeme, demarrage, tests atelier, sonde Chrome) ; essai sur carte restant (A20)
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A20) ; commit
+- [à vous] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire (page à ajouter
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Compilation par la page Build ; essai sur chaque carte (avec A20)
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Essai : un bouton ajouté à l'écran des débits dans l'atelier, généré dans les deux interfaces, écrit
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai du `display.ini` (A12, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
+- [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
+- [à vous] [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — A2 — Matériel et câblage : Recherche d'un module tout-en-un vendu en ligne (demande du 2026-11-09) : ESP32-S3 (N16R8 de préférence) + écran tactile intégré + GPIO accessibles pour les 6 débitmètres (au moins 6 entrées libres hors broches de l'écran, de la PSRAM et du démarrage), alimentation 5 V ; comparatif (référence, prix, broches libres, pilote d'écran pris en charge par Tasmota/HASPmota, boîtier) contre la solution actuelle S3 DevKit + ILI9488 séparés, choix laissé à l'utilisateur
+- [à vous] [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — A2 — Matériel et câblage : PAC = **Daikin Altherma haute température** (utilisateur, 2026-11-08 ; photo : 1re génération grise, `EKHBRD` + `EKHTS` + `ERRQ`/`ERSQ` probable, guide § 2.1 ter) : modèle exact lu sur la plaque ; débit minimal de la notice (12 L/min sur Altherma 3 H HT, 20 L/min sur ETBH/ETBX16) et ΔT réglé (radiateurs : 10 K fixe, 8 K si `[2-0C]` = 2 ; la pompe module son débit pour le tenir). Plage du capteur à reconfirmer : part de chaque radiateur × débit minimal de la PAC ≥ 1 L/min (≈ 1,7 L/min pour 1 400 W sur ~10 kW) ; seul un robinet thermostatique qui ferme passe sous le seuil (guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`, § 2.1 bis)
+- [à vous] [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — A2 — Matériel et câblage : Facteur K confirmé à réception (référence lue sur l'étiquette ; volume connu passé dans un capteur : impulsions / litres × 60)
+- [sur carte] [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — A8 — Étude : deux S3, acquisition et affichage séparés (demande du 2026-11-09) : Réalisation par le plan `tasks/plans/debits-deux-cartes.md` (lecture groupée, push UDP, carte d'affichage, mise en service) ; à sa clôture, revenir ici : A2 (niveaux, K à réception), A5 (page web de l'acquisition), A6 (essai de charge), A7 (pose et étalonnage)
+- [sur carte] [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — A9 — Essai sur carte (écran branché) : Flash de l'écran (USB, effacer puis téléverser) ; `TasmotaSlaveModBus1` et `modules.ecranCave` de la cave à ON, persist renvoyé à chaud
+- [à vous] [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — A9 — Essai sur carte (écran branché) : Chaque touche commute son relais ; redémarrage après confirmation ; aucune commutation au redémarrage de l'écran ni du serveur (journal syslog)
+- [sur carte] [Façade du garage (P4 et carte du rideau) : fins de course animées, porte, chèvrefeuille, pergola et jasmin](plans/facade-garage-capteurs.md) — A4 — Retour au plan initial : Reprendre le plan `ecran-cave-vues-commandes` (A8 compilation, A9 essai sur carte) : `/suivi suivre ecran-cave-vues-commandes`
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A5 — Compilation et mise en service : À la réception de la carte : flash série, `Status 5`, volets en marche à vide (relais seuls), puis moteur recâblé.
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A6 — Cave S3 : identité d'essai : Reprendre les améliorations restantes du plan `cave-s3-waveshare` (compilation, port COM, câblage DI3/DI4,
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A9 — Écran Waveshare 7B pour le serveur relais de la cave : `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A10 — Range extender maître sur la cave S3 : `banc_demarrage.py` ; compilation par la page Build ; essai sur carte (AP visible, NAPT : un client du point
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Réalisation, bancs, sondes, essais sur carte : par A14 (plan dédié)
+- [sur carte] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A13 — Réglage des durées de montée et de descente par les boutons : Réalisation, bancs, essais sur carte : par A14 (plan dédié)
+- [à vous] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : `config_decodee.json` est dans le dossier de la carte (choix de l'utilisateur) : il ne doit jamais partir en flash.
+- [à vous] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Essai réel sur .45 puis .42, avec l'accord de l'utilisateur : sauvegarde, copie modifiée (un texte, une Rule),
+- [à vous] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Langue (anglais aujourd'hui) et version : passer en français et à jour ? Décision de l'utilisateur, taille à vérifier.
+- [à vous] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi, `Status 0`, timers et Rules relus,
+- [à vous] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi (OTA possible sur 4 Mo),
+- [à vous] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : Env créé par copie du NOUS du jardin (diff montré, accord de l'utilisateur), hors build en cours ; `test_lieux.py`,
+- [à vous] [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi, `Status 0`, relais commandé une
+- [sur carte] [Visuel des volets sur la page d'accueil et réglage des durées par les boutons](plans/visuel-reglage-volets.md) — A10 — Façade du rideau du garage (demande du 2026-11-12) : Essai sur carte : dessin qui suit la porte pendant une course du P4 ; P4 injoignable -> grisé, position des fins de course
+- [sur carte] [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
+- [sur carte] [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
+- [à vous] [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — A7 — Retour au plan « debitmetres-chauffage » : Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)
+- [sur carte] [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Essai sur la carte (avec A6) : image, couleurs, tactile, rétroéclairage, stabilité avec le Wi-Fi, relevé RS485
+- [à vous] [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Polices : Roboto Condensed TTF sous /sd/polices par FreeType (choix du 2026-11-11), a verifier sur la carte AVEC et SANS carte SD : chemin vu par LVGL (`lvbe_fopen` -> `lv_zip_ufsp`), RAM et PSRAM de FreeType (4 tailles), rendu, place en flash pendant le premier rangement sans SD (~290 Ko : original + copie)
+- [sur carte] [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Vérifier sur la carte, avec l'utilisateur : le sens du PWM de luminosité (registre 0x05 de l'expandeur, clé persist de l'inversion à corriger au besoin), l'adresse 0x5D du tactile GT911, les couleurs de la dalle
+- [sur carte] [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — A9 — Atelier des écrans (plan `atelier-ecrans`) : Plan `atelier-ecrans` réalisé et clos (`statut: clos`) — preuve attendue : essai réel de son action A10
+- [sur carte] [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) — A5 — Sur la carte (avec le matériel) : Favori du téléphone vers `/equilibrage` : la page s'ouvre (relais) ; « Garder les puissances sur la carte » puis rechargement depuis un autre appareil : puissances retrouvées ; schéma sur les débits réels en suivi direct
+- [sur carte] [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) — A6 — Build et essai sur les cartes : Relevé ModBus 4708 vu au sniffeur ou dans le log du P4 (valeur = tension de la sonde de la cuve en mV) — bloqué : ADS1115 débranché avec la sonde (`I2CScan` : « No devices found » sur la cuve, 2026-11-09) ; sans lui `cuveFonctions.montageSonde` rend nil, la tension recalculée reste « -,-- » sur la cuve même, en simulation comprise. À refaire sonde et ADS1115 rebranchés
+- [sur carte] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A1 — FTP sur les deux voies : Sur carte : FTP joignable par l'IP Ethernet. Sources : écoute sur toutes les interfaces (`WiFiServer` sans adresse imposée). Essai possible sans flash : câble sur le P4 (`Ethernet` ON, `UfsFTP` 2, relevé du 2026-11-02 : IP Ethernet 0.0.0.0, donc pas de lien)
+- [sur carte] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A1 — FTP sur les deux voies : Sur carte, Wi-Fi client coupé : lister et transférer un fichier en mode passif, avec un client qui suit l'adresse annoncée
+- [sur carte] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A2 — Trous de l'UDP, du Range Extender et des autres modules en Ethernet : `udpFonctions.ipSTA` chez un esclave en Ethernet : "" = « toutes les interfaces » (`udpFonctions.be::envoiUDP`) ; essai d'envoi réel à faire sur carte (code fait le 2026-11-08 : socket liée à l'IP Ethernet, test_discovery « esclave en Ethernet » OK ; reste l'essai)
+- [à vous] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : `configGlobal_voieReseau` : ne plus forcer le Range Extender à OFF, retirer `activationAvantEthernet` (annule la décision du 2026-11-02, à la demande de l'utilisateur) ; banc_boot cas 6-7 adaptés
+- [sur carte] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Essai sur carte : un esclave sur le point d'accès joint le broker MQTT par le câble (trafic vu sortir par l'Ethernet, câble seul branché) ; `RgxPort` joignable depuis le LAN
+- [sur carte] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Essai P4 : le C6 tient-il le point d'accès avec le Wi-Fi client coupé ?
+- [sur carte] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A4 — Deux adresses IP facultatives et accès par le nom : Essai : `ping SERVEUR-RLY-CAVE.local` depuis le PC, sur les deux voies
+- [sur carte] [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — A5 — Repli automatique sur le Wi-Fi si l'Ethernet tombe : Essais sur carte : câble débranché puis rebranché (l'événement `ETH#Connected` vient-il en IP fixe ?), état des relais au retour (`PowerOnState`), point d'accès actif (redémarrage en plus par `xdrv_58`)
+- [sur carte] [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) — A2 — Lot 2 : ruban en AUTO/MANUEL avec bouton poussoir sur la cuve : Bouton physique de la cuve (GPIO7) essayé sur la carte : appui court = allume/éteint, appui long = couleur suivante (MANUEL), double appui = retour AUTO
+- [sur carte] [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) — A3 — Lot 3 : pilotage du ruban depuis le maître P4 : « Couleur suivante » depuis le P4 observée sur la carte (`RubanEsclave1 suivante`, puis relevé du mode MANUEL)
+- [sur carte] [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) — A3 — Lot 3 : pilotage du ruban depuis le maître P4 : Bouton physique du maître (`bouton2`, GPIO22, appui long 15) essayé sur la carte
+- [sur carte] [Sniffeur I2C (ESP32-S3 dédié + outil PC de l'annuaire)](plans/sniffeur-i2c.md) — A6 — Mode maître au banc (composant isolé) : Firmware : ordres `MW`/`MR`/`MWR` -> arrêt de l'écoute, Wire sur les mêmes broches, réponse `M`, retour à l'écoute ; refus `M ok=0 err=bus_actif` si un front de SCL a été vu dans les 2 dernières secondes ; banc Unity du refus — codé (d9747da91, `main.cpp::ordre_maitre`), refus testé côté PC seulement : à vérifier sur carte en A8, pas de banc C++ du refus
+- [à vous] [Sniffeur I2C (ESP32-S3 dédié + outil PC de l'annuaire)](plans/sniffeur-i2c.md) — A8 — Validation sur matériel (avec l'utilisateur) : Broches 4/5 confirmées sur la sérigraphie du DevKit ; flash du firmware hors build ; ligne `I` reçue
+- [sur carte] [Sniffeur I2C (ESP32-S3 dédié + outil PC de l'annuaire)](plans/sniffeur-i2c.md) — A8 — Validation sur matériel (avec l'utilisateur) : Vitesse : 100 kHz sans perte ; essai 400 kHz (source à trouver : réglage de vitesse Tasmota si disponible, sinon 2e ESP32) -> limite constatée affichée dans la page et l'Aide
+- [sur carte] [Sniffeur I2C (ESP32-S3 dédié + outil PC de l'annuaire)](plans/sniffeur-i2c.md) — A10 — Voie MQTT pour l'envoi par la carte (demande du 2026-10-31) : Essai réel : lecture d'un registre d'un esclave par MQTT, trame vue dans le fil (avec A8)
+- [sur carte] [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) — A1 — Décisions à prendre (aucun code) : P8.10 — Attendre esp-hosted-mcu#19 avant tout ESP-NOW sur le P4 ; pas de C6 reflashé (corrige T2 ; cote G, effort nul, risque dec)
+- [sur carte] [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) — A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.3 — Signaler la régression T10 à l'amont après un essai (corrige T10 ; cote D, effort faible, risque nul)
+- [sur carte] [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) — A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.4 — Essai borné ESP-NOW entre deux S3 (QuickEspNow) : latence, pertes, coexistence, tas (corrige T3-T9 ; cote S, effort moyen, risque faible)
+- [à vous] [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — A1 — Essai sur table du PHY Ethernet, avant tout code : Avec l'accord de l'utilisateur, P4 près de la box, câble branché : `Status 5` (état de départ) et `Ethernet` / `EthType` / `EthAddress` relevés
+- [à vous] [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — A5 — Bouton Ethernet dans la page Configuration : `web_add_config_button` et route `/ethernet` dans `data/fs/controleWeb.be` (handlers `controleWeb.be:371`), bouton absent si `!carteAvecEthernet()`, confirmation JS « la carte va redémarrer » avant le POST
+- [sur carte] [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — A5 — Bouton Ethernet dans la page Configuration : Test au banc (ou bouchon webserver) : bouton émis sur le P4, absent sur une S3 ; POST `bascule` appelle `reglageEthernet`
+- [à vous] [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — A7 — Build et téléversement du P4, option à OFF : Aucun build en cours ; build + téléversement du P4 par l'utilisateur (ou avec son accord, page Build :7700) ; fichiers réécrits par le build commités (chore)
+- [à vous] [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — A8 — Option à ON : `ReglageGlobal Ethernet ON` (accord de l'utilisateur) → un seul redémarrage, `Status 5` : Ethernet .50, STA .43
+- [à vous] [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — A8 — Option à ON : Bouton de la page Configuration : état affiché, bascule OFF puis ON confirmée
+- [à vous] [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — A9 — Mesure du routage et débranchement du câble : Résultat consigné (spec §6 + README) ; si le trafic reste sur la STA ou varie : noté, chantier poursuivi sans correctif (décision du 2026-10-26)
+
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
 | [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 84 % (58/69) | 11 étapes, 3 améliorations | 2026-11-13 | 2026-11-15 |
 | [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) | Chaque page d'accueil montre seulement ce que sa carte dirige : portail seul (esclave 4), garage et porte seuls (rideau), fenêtre de cuisine, porte d'entrée et trappe (grenier du RDC) | actif | ████░░░░░░ 38 % (6/15) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
 | [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ████████░░ 83 % (26/30) | 4 étapes | 2026-11-15 | 2026-11-15 |
 | [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██████░░░░ 60 % (10/13) | 3 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
-| [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande | actif | █████████░ 89 % (33/37) | 4 étapes, 4 améliorations | 2026-11-15 | 2026-11-15 |
+| [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande | actif | █████████░ 92 % (35/38) | 3 étapes, 3 améliorations | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 88 % (38/41) | 3 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
@@ -79,8 +169,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 #### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 84 %
 
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
+- [sur carte] A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
+- [sur carte] A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
 - A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
 - A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
 - A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
@@ -88,7 +178,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
 - A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
 - A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
-- A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
+- [à vous] A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
 - A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
 - Amélioration [projet] : Commander un relais en cliquant son voyant (spec § 3, non-objectif)
 - Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
@@ -97,47 +187,45 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 #### [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) — 38 %
 
 - A1 — Relever l'existant avant de dessiner : Lister ce qui est en trop ou faux sur chacune (par ex. éléments du garage ou du portail vus depuis le rideau, trappe ou porte du grenier mal placées)
-- A1 — Relever l'existant avant de dessiner : Demander à l'utilisateur une photo de la porte d'entrée, de la fenêtre de cuisine et de la trappe si l'ajustement du grenier du RDC l'exige
+- [à vous] A1 — Relever l'existant avant de dessiner : Demander à l'utilisateur une photo de la porte d'entrée, de la fenêtre de cuisine et de la trappe si l'ajustement du grenier du RDC l'exige
 - A2 — Esclave 4 : la page montre le portail seul : Module de façade de l'esclave 4, sur le modèle de `controleRideau.be::facade` (route de position, page d'accueil, `volets.js`), sans driver de volets ; fichiers ajoutés à `custom_files_upload` de son env et exclus des autres
 - A2 — Esclave 4 : la page montre le portail seul : Mode `portail seul` de `volets.js` : un décor sans maison ni garage, pergola à deux arches conservée, aucun volet de rangée ; banc `test_volets.mjs` et sonde Chrome
-- A2 — Esclave 4 : la page montre le portail seul : Persist de l'esclave 4 : bloc `drivers.voletRoulants.facade` (`activation` ON, `decor`), volets portail 1 et 2 en lecture seule ; accord de l'utilisateur avant d'écrire le persist
+- [à vous] A2 — Esclave 4 : la page montre le portail seul : Persist de l'esclave 4 : bloc `drivers.voletRoulants.facade` (`activation` ON, `decor`), volets portail 1 et 2 en lecture seule ; accord de l'utilisateur avant d'écrire le persist
 - A4 — Grenier du RDC : adapter la représentation à ses modules : Reprendre la façade `maison` d'après A1 : fenêtre de cuisine (volet roulant), porte d'entrée, trappe du grenier à leur place réelle, sans élément d'une autre carte
 - A5 — Mise en service : Relecture : `controleur-secrets` (seul, avant commit), `relecteur-pages-web`, `verificateur-solidification` si un `.be` de `data/fs` change ; commit `feat(volets): ...`
 - A5 — Mise en service : Compilation par la page Build (:7700) des envs touchés (esclave 4, rideau, grenier du RDC) et envoi des fichiers du FS ; rendu vu sur chaque carte
-- A6 — Retour au plan atelier-visuels : Reprendre `tasks/plans/atelier-visuels.md` (83 %) : étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
+- [sur carte] A6 — Retour au plan atelier-visuels : Reprendre `tasks/plans/atelier-visuels.md` (83 %) : étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
 - Amélioration [projet] : Même démarche pour les autres cartes à volets (grenier du 2e étage)
 
 #### [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — 83 %
 
-- A6 — Essai sur carte : Clics sur le portail et le rideau, `UfsFree`, nuit selon le coucher réel : à voir sur le P4 après l'envoi du nouveau `volets.js` ; aucune commande réelle du portail sans accord de l'utilisateur
-- A8 — Page d'accueil de l'esclave 4 : le portail seul avec son capteur de fermeture : Compilation de l'esclave 4 par la page Build, rendu vu sur la carte avec son capteur de fermeture réel
+- [à vous] A6 — Essai sur carte : Clics sur le portail et le rideau, `UfsFree`, nuit selon le coucher réel : à voir sur le P4 après l'envoi du nouveau `volets.js` ; aucune commande réelle du portail sans accord de l'utilisateur
+- [sur carte] A8 — Page d'accueil de l'esclave 4 : le portail seul avec son capteur de fermeture : Compilation de l'esclave 4 par la page Build, rendu vu sur la carte avec son capteur de fermeture réel
 - A9 — Retour au plan atelier-visuels : Passer d'abord par le plan `facade-esclaves-grenier-rdc` (façades de l'esclave 4, du rideau et du grenier du RDC), qui se termine par ce même retour
-- A9 — Retour au plan atelier-visuels : Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
+- [sur carte] A9 — Retour au plan atelier-visuels : Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
 
 #### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 60 %
 
-- A4 — Essai réel et clôture : Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin
+- [sur carte] A4 — Essai réel et clôture : Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin
 - A4 — Essai réel et clôture : Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
-- A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
+- [à vous] A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
 - Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
 
-#### [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) — 89 %
+#### [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) — 92 %
 
-- A2 — Liens dérivés des persist : Exceptions et confirmations manuelles dans `placement.json` : `ip_cartes`, `etiquettes`, `liens_manuels` faits ; reste l'avertissement quand la dérivation et la saisie divergent
-- A5 — Lisibilité des liens : Liens entre pièces et entre étages : faisceau par bus plutôt qu'une ligne par esclave — cinq propositions dessinées dans `outils_docs/plan_maison/propositions_faisceau.html`, choix en attente (préférence : C, colonne centrale)
-- A8 — Wi-Fi, box, relais et répéteurs, survol, tuile annuaire : Confirmer avec l'utilisateur : l'appareil réel de MAISON pour chaque module (déduit : Freebox Server), répéteur salon sans SSID identifié
-- A10 — Icône de lien et débits en direct : Essai réel de la lecture des débits sur la carte `tasmota32s3-serveur-debits-pac` (derrière le NAPT de l'écran, port 8080), non fait
+- [à vous] A2 — Liens dérivés des persist : Exceptions et confirmations manuelles dans `placement.json` : `ip_cartes`, `etiquettes`, `liens_manuels` faits ; reste l'avertissement quand la dérivation et la saisie divergent
+- A8 — Wi-Fi, box, relais et répéteurs, survol, tuile annuaire : [projet] Rattacher chaque carte à son appareil MAISON réel : lire le BSSID de chaque carte (`Status 11`), puis `wifi_manuel` (ex. principal = repeteur_salon)
+- [sur carte] A10 — Icône de lien et débits en direct : Essai réel de la lecture des débits sur la carte `tasmota32s3-serveur-debits-pac` (derrière le NAPT de l'écran, port 8080), non fait
 - Amélioration [projet] : Dessiner un vrai plan à l'échelle des pièces (si l'utilisateur fournit les dimensions ou un plan)
 - Amélioration [projet] : Clic sur une pièce -> sa page d'accueil ou sa façade animée (`volets.js`) ; les pastilles ont déjà leur icône de lien
-- Amélioration [projet] : Corriger les rattachements Wi-Fi : appareil réel de MAISON pour chaque carte (défaut Freebox Server, faux pour certaines), répéteur du salon sans SSID identifié (`wifi_manuel`)
 - Amélioration [projet] : Plan à l'échelle des pièces, si l'utilisateur fournit les dimensions ou un plan
 
 #### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 75 %
 
 - A4 — Capture et rejeu : Capture d'une carte en ligne (GET uniquement) rangée hors dépôt, secrets masqués
 - A4 — Capture et rejeu : Rejeu des pages natives capturées, avec la date de la capture affichée
-- A4 — Capture et rejeu : Banc sur une carte simulée (jamais le vrai P4 en essai automatique)
-- A7 — Vrai firmware ESP32 classique (essai) : Choisir l'env ESP32 de l'essai ; QEMU via WSL2 ou `idf_tools.py`
+- [sur carte] A4 — Capture et rejeu : Banc sur une carte simulée (jamais le vrai P4 en essai automatique)
+- [sur carte] A7 — Vrai firmware ESP32 classique (essai) : Choisir l'env ESP32 de l'essai ; QEMU via WSL2 ou `idf_tools.py`
 - A7 — Vrai firmware ESP32 classique (essai) : Boot du firmware compilé par la page Build (:7700), jamais par `pio` direct
 - A7 — Vrai firmware ESP32 classique (essai) : Documenter les limites (S3/P4 non couverts)
 - Amélioration [projet] : Wokwi pour S3/P4 si le réseau y devient utilisable
@@ -147,16 +235,16 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 #### [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — 90 %
 
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Objet `qrcode` du catalogue : bouton qui affiche le QR code en surimpression pendant `delai_s` (défaut 30), texte
-- A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
+- [sur carte] A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Commit
-- A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
+- [sur carte] A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
 
 #### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 88 %
 
 - A7 — Essais réels et décision sur la version 2 : Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés
-- A7 — Essais réels et décision sur la version 2 : Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan
-- A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15) : Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
+- [à vous] A7 — Essais réels et décision sur la version 2 : Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan
+- [à vous] A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15) : Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
 - Amélioration [projet] : Version 2 : application d'un lot depuis la page (selon A7)
 - Amélioration [projet] : Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles
 
@@ -164,30 +252,30 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un) — débits fait (qrcode.json, autoexec, cenv) ; cave non faite (autre session)
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave : — débits fait : page 5 de ecran.json, pages.jsonl et ecranLvgl.be régénérés, bouton 205 ; cave non faite
-- A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20) — bancs verts (debits, lvgl, systeme, demarrage, tests atelier, sonde Chrome) ; essai sur carte restant (A20)
-- A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A20) ; commit
+- [sur carte] A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20) — bancs verts (debits, lvgl, systeme, demarrage, tests atelier, sonde Chrome) ; essai sur carte restant (A20)
+- [sur carte] A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A20) ; commit
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Icônes de la page Système : glyphes du firmware (`clock-outline`, `wifi`, `thermometer`…) et PNG pour celles qui manquent
-- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire (page à ajouter
-- A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Compilation par la page Build ; essai sur chaque carte (avec A20)
+- [à vous] A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire (page à ajouter
+- [sur carte] A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Compilation par la page Build ; essai sur chaque carte (avec A20)
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Carte d'affichage joignable : 192.168.0.51 muette depuis le 2026-11-12 (alimentation, Wi-Fi ; avec
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Firmware de la carte postérieur à 5c3291884 (`ecranFonctions.be` déplacé dans `data/fs`) : `Status 2` comparé à la
-- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Essai : un bouton ajouté à l'écran des débits dans l'atelier, généré dans les deux interfaces, écrit
+- [sur carte] A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Essai : un bouton ajouté à l'écran des débits dans l'atelier, généré dans les deux interfaces, écrit
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Capture réelle depuis l'atelier (« Capture de la carte ») : image identique à l'écran, mémoire PSRAM prise par
-- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai du `display.ini` (A12, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
+- [sur carte] A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai du `display.ini` (A12, déplacé ici le 2026-11-13) : envoi du `display.ini`, `DisplayReinit` ou `Restart 1`,
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Ligne non JSON d'un `pages.jsonl` importé (A13, demande du 2026-11-13) : lu dans `lv_haspmota.be::HASPmota._load`,
-- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
-- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
+- [sur carte] A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Essai des objets du palier 2 (venu d'A14, demande du 2026-11-13) : un objet de chaque type sur l'écran des débits
+- [sur carte] A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Commit des fichiers de l'essai (description, interfaces générées, remarques éventuelles)
 - A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : [utilisateur] Vue de droite : taper `/suivi suivre debits-deux-cartes` puis `/suivi suivre atelier-ecrans` ; à cocher
-- A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
+- [sur carte] A20 — Livraison de l'écran des débits (sur la carte, avec l'utilisateur) : Retour au plan `debits-deux-cartes` : cocher son action A9 avec la preuve de l'essai, passer ce plan en `statut: clos`
 - Amélioration [projet] : Propositions de réglages des `display.ini` par Claude d'après les notes de terrain (`<nom>.notes.md`)
 
 #### [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) — 60 %
 
 - A2 — Matériel et câblage : Niveaux mesurés à réception sur une voie montée (haut ≈ 3,3 V, bas < 0,8 V)
 - A2 — Matériel et câblage : Largeur de la carte S3 achetée compatible avec le bornier DNDINS3 (25,4 ou 28 mm, 44 broches)
-- A2 — Matériel et câblage : Recherche d'un module tout-en-un vendu en ligne (demande du 2026-11-09) : ESP32-S3 (N16R8 de préférence) + écran tactile intégré + GPIO accessibles pour les 6 débitmètres (au moins 6 entrées libres hors broches de l'écran, de la PSRAM et du démarrage), alimentation 5 V ; comparatif (référence, prix, broches libres, pilote d'écran pris en charge par Tasmota/HASPmota, boîtier) contre la solution actuelle S3 DevKit + ILI9488 séparés, choix laissé à l'utilisateur
-- A2 — Matériel et câblage : PAC = **Daikin Altherma haute température** (utilisateur, 2026-11-08 ; photo : 1re génération grise, `EKHBRD` + `EKHTS` + `ERRQ`/`ERSQ` probable, guide § 2.1 ter) : modèle exact lu sur la plaque ; débit minimal de la notice (12 L/min sur Altherma 3 H HT, 20 L/min sur ETBH/ETBX16) et ΔT réglé (radiateurs : 10 K fixe, 8 K si `[2-0C]` = 2 ; la pompe module son débit pour le tenir). Plage du capteur à reconfirmer : part de chaque radiateur × débit minimal de la PAC ≥ 1 L/min (≈ 1,7 L/min pour 1 400 W sur ~10 kW) ; seul un robinet thermostatique qui ferme passe sous le seuil (guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`, § 2.1 bis)
-- A2 — Matériel et câblage : Facteur K confirmé à réception (référence lue sur l'étiquette ; volume connu passé dans un capteur : impulsions / litres × 60)
+- [à vous] A2 — Matériel et câblage : Recherche d'un module tout-en-un vendu en ligne (demande du 2026-11-09) : ESP32-S3 (N16R8 de préférence) + écran tactile intégré + GPIO accessibles pour les 6 débitmètres (au moins 6 entrées libres hors broches de l'écran, de la PSRAM et du démarrage), alimentation 5 V ; comparatif (référence, prix, broches libres, pilote d'écran pris en charge par Tasmota/HASPmota, boîtier) contre la solution actuelle S3 DevKit + ILI9488 séparés, choix laissé à l'utilisateur
+- [à vous] A2 — Matériel et câblage : PAC = **Daikin Altherma haute température** (utilisateur, 2026-11-08 ; photo : 1re génération grise, `EKHBRD` + `EKHTS` + `ERRQ`/`ERSQ` probable, guide § 2.1 ter) : modèle exact lu sur la plaque ; débit minimal de la notice (12 L/min sur Altherma 3 H HT, 20 L/min sur ETBH/ETBX16) et ΔT réglé (radiateurs : 10 K fixe, 8 K si `[2-0C]` = 2 ; la pompe module son débit pour le tenir). Plage du capteur à reconfirmer : part de chaque radiateur × débit minimal de la PAC ≥ 1 L/min (≈ 1,7 L/min pour 1 400 W sur ~10 kW) ; seul un robinet thermostatique qui ferme passe sous le seuil (guide `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`, § 2.1 bis)
+- [à vous] A2 — Matériel et câblage : Facteur K confirmé à réception (référence lue sur l'étiquette ; volume connu passé dans un capteur : impulsions / litres × 60)
 - A5 — Affichage sur l'écran TFT et page web : Page web de la carte : 6 lignes nommées (`web_sensor`) ; lignes natives des compteurs bruts et du `FlowRateMeter` jugées sur la vraie page (gardées ou masquées), avec l'utilisateur
 - A6 — Essai de charge sur banc : Générateur : second ESP32 en `PwmFrequency` sur 6 sorties câblées aux entrées de la carte (fait AVANT l'achat des 5 autres capteurs)
 - A6 — Essai de charge sur banc : Paliers 11, 55, 275 Hz (1, 5 et 25 L/min), puis 1 000 et 2 000 Hz par voie : impulsions comptées contre envoyées (écart < 0,5 %)
@@ -197,7 +285,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A7 — Pose, étalonnage et documentation : Débit de la PAC relevé APRÈS la pose : au-dessus de son minimum constructeur, aucun défaut de débit sur une semaine
 - A7 — Pose, étalonnage et documentation : Contrôle de cohérence : somme des 6 débits contre le débit de la PAC, K corrigé par `ReglageDebits` si besoin
 - A7 — Pose, étalonnage et documentation : Commit par `/commite`
-- A8 — Étude : deux S3, acquisition et affichage séparés (demande du 2026-11-09) : Réalisation par le plan `tasks/plans/debits-deux-cartes.md` (lecture groupée, push UDP, carte d'affichage, mise en service) ; à sa clôture, revenir ici : A2 (niveaux, K à réception), A5 (page web de l'acquisition), A6 (essai de charge), A7 (pose et étalonnage)
+- [sur carte] A8 — Étude : deux S3, acquisition et affichage séparés (demande du 2026-11-09) : Réalisation par le plan `tasks/plans/debits-deux-cartes.md` (lecture groupée, push UDP, carte d'affichage, mise en service) ; à sa clôture, revenir ici : A2 (niveaux, K à réception), A5 (page web de l'acquisition), A6 (essai de charge), A7 (pose et étalonnage)
 - A9 — Retour au plan « equilibrage-par-la-carte » : Reprendre `tasks/plans/equilibrage-par-la-carte.md` : son A5 (FS envoyé par la page Build, bouton « Équilibrage » depuis le téléphone, favori vers `/equilibrage`, puissances retrouvées depuis un autre appareil, tas mesuré avant et après)
 - Amélioration [projet] : Carte porteuse PCB pour la nourrice (skill `pcb-tasmota`)
 - Amélioration [projet] : Historique et page `/graphiques` des 6 débits : plan `tasks/plans/historique-debits.md` (actif : A1 à A3 faits, historique activé et compilé le 2026-11-08, commit `c8c21131f` ; reste l'essai sur la carte, A4)
@@ -207,8 +295,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 #### [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) — 87 %
 
 - A8 — Intégration, non-régression, compilation : Compilation par la page Build : cave, écran (et débits, garage si `data/fs` solidifié touché) ; journaux SUCCESS — fait en partie le 2026-11-13 : serveur de la cave SUCCESS (journal 20261113-084134, 77 min, avant le correctif de `controleCommandesEcran.be`) ; écran interrompu (page arrêtée par l'utilisateur à 11:18) ; débits et garage non lancés
-- A9 — Essai sur carte (écran branché) : Flash de l'écran (USB, effacer puis téléverser) ; `TasmotaSlaveModBus1` et `modules.ecranCave` de la cave à ON, persist renvoyé à chaud
-- A9 — Essai sur carte (écran branché) : Chaque touche commute son relais ; redémarrage après confirmation ; aucune commutation au redémarrage de l'écran ni du serveur (journal syslog)
+- [sur carte] A9 — Essai sur carte (écran branché) : Flash de l'écran (USB, effacer puis téléverser) ; `TasmotaSlaveModBus1` et `modules.ecranCave` de la cave à ON, persist renvoyé à chaud
+- [à vous] A9 — Essai sur carte (écran branché) : Chaque touche commute son relais ; redémarrage après confirmation ; aucune commutation au redémarrage de l'écran ni du serveur (journal syslog)
 - A9 — Essai sur carte (écran branché) : Broker coupé : valeurs grisées, touches refusées ; RS485 seul, puis Wi-Fi seul
 - A9 — Essai sur carte (écran branché) : Marche manuelle de la pompe : flotteurs ignorés, réactivés à l'arrêt et après la minuterie
 - A9 — Essai sur carte (écran branché) : Veille, réveil sans action, luminosité
@@ -221,62 +309,62 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A3 — Sur la carte : Compilation par la page Build : P4 (vrPages solidifié), carte du rideau, RDC, et les trois envs du plan
 - A3 — Sur la carte : Rideau fermé : capteur de fermeture vert ; ouvert : capteur d'ouverture vert ; sinon correspondance ON/OFF inversée à corriger
 - A3 — Sur la carte : Pastilles qui changent pendant une manœuvre ; clignotement si un capteur ne suit pas
-- A4 — Retour au plan initial : Reprendre le plan `ecran-cave-vues-commandes` (A8 compilation, A9 essai sur carte) : `/suivi suivre ecran-cave-vues-commandes`
+- [sur carte] A4 — Retour au plan initial : Reprendre le plan `ecran-cave-vues-commandes` (A8 compilation, A9 essai sur carte) : `/suivi suivre ecran-cave-vues-commandes`
 - Amélioration [projet] : Horodatage du dernier contact par esclave ModBus, pour griser les pastilles quand la carte du rideau est muette
 
 #### [Deux envs, serveur du grenier du RDC (volets) et Sonoff de la porte de la cave ; identité de la cave S3](plans/envs-grenier-rdc-sonoff-cave.md) — 43 %
 
-- A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
+- [sur carte] A3 — Brochage et volets : Relais CH1-CH4 par le TCA9554 (`tca9554.dat` du dossier de la carte), interverrouillage montée/descente par volet. Fait en A2 sur le papier (CH1-CH6, `Interlock 1,2 3,4 5,6` corrigé dans `vrFonctions.be`) : à cocher après l'essai à vide sur la carte.
 - A3 — Brochage et volets : Boutons DI1-DI4, DHT22 sur GPIO21 ; classeur `Brochage GPIO - tasmota32s3-rdc-grenier.xlsx` par
 - A3 — Brochage et volets : Durées d'ouverture et de fermeture du volet de la porte reprises du Sonoff Dual R3 (lecture seule de .46 :
 - A4 — Identification des volets sur MQTT : Faire valider par l'utilisateur la réponse du Contexte (volets natifs Shutter1/Shutter2 sous `rdc/grenier`, noms,
 - A4 — Identification des volets sur MQTT : Recenser ce qui vise `volet/entree` aujourd'hui (Node-RED du Pi, Alexa, Home Assistant) et la liste des
 - A5 — Compilation et mise en service : Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille de l'image et du FS.
-- A5 — Compilation et mise en service : À la réception de la carte : flash série, `Status 5`, volets en marche à vide (relais seuls), puis moteur recâblé.
+- [sur carte] A5 — Compilation et mise en service : À la réception de la carte : flash série, `Status 5`, volets en marche à vide (relais seuls), puis moteur recâblé.
 - A5 — Compilation et mise en service : Sonoff Dual R3 (.46) éteint et retiré AVANT la mise sous tension du grenier (même IP .46) ; automatisations basculées ; env `tasmota32-rdc-vr-porte` gardé ou
-- A6 — Cave S3 : identité d'essai : Reprendre les améliorations restantes du plan `cave-s3-waveshare` (compilation, port COM, câblage DI3/DI4,
+- [sur carte] A6 — Cave S3 : identité d'essai : Reprendre les améliorations restantes du plan `cave-s3-waveshare` (compilation, port COM, câblage DI3/DI4,
 - A7 — Retour en production de la cave S3 : Le jour du remplacement, sur ordre de l'utilisateur : passer l'identité de la cave S3 à 192.168.0.48 et
 - A7 — Retour en production de la cave S3 : Ancienne carte ESP32 éteinte AVANT la mise sous tension de la S3 (même IP, même client MQTT).
 - A7 — Retour en production de la cave S3 : Contrôle : Node-RED, Telegram et le Sonoff .45 (A8) voient la cave comme avant ; `lieux.py` range ses messages
 - A7 — Retour en production de la cave S3 : Écran de la cave (demande du 2026-11-13) : dans `data/cave/tasmota32s3-ecran/_persist.json`,
 - A8 — Sonoff ESP8285 de la porte de la cave, lumières de la cave (192.168.0.45) : Réglages du Sonoff par `Backlog` et `Rule` en console seulement (pas d'`autoexec.bat` possible), proposés puis
 - A9 — Écran Waveshare 7B pour le serveur relais de la cave : Dépend du plan `debits-deux-cartes` A8 : le code d'écran générique (`ecranFonctions`, veille, luminosité, polices)
-- A9 — Écran Waveshare 7B pour le serveur relais de la cave : `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
+- [sur carte] A9 — Écran Waveshare 7B pour le serveur relais de la cave : `banc_demarrage.py`, `verifie_berry.py`, agent `relecteur-berry`, compilation par la page Build ; essai sur carte.
 - A10 — Range extender maître sur la cave S3 : Ports d'accès aux esclaves : `<ip cave>:<8080 + id - 1>` par `RoutageRangeExtender` ; id réservé pour l'écran 7B
 - A10 — Range extender maître sur la cave S3 : Le point d'accès exige le Wi-Fi : la voie Ethernet (A6, améliorations) ne doit pas le couper.
-- A10 — Range extender maître sur la cave S3 : `banc_demarrage.py` ; compilation par la page Build ; essai sur carte (AP visible, NAPT : un client du point
+- [sur carte] A10 — Range extender maître sur la cave S3 : `banc_demarrage.py` ; compilation par la page Build ; essai sur carte (AP visible, NAPT : un client du point
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Faire valider le garde-fou et la table des relais (Sonoff : `POWER1` lumière, `POWER2` porte ; serveur : `POWER3`
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Vérifier sur le Tasmota 12.0.2 du Sonoff qu'un déclencheur compare bien à `%var1%` (`Power1#State!=%var1%`) :
 - A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Sonoff : retirer de la Rule1 les deux règles `Power1#State` qui publient `POWER3` (la Rule1 garde le bouton, la
-- A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
-- A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Réalisation, bancs, sondes, essais sur carte : par A14 (plan dédié)
-- A13 — Réglage des durées de montée et de descente par les boutons : Réalisation, bancs, essais sur carte : par A14 (plan dédié)
+- [sur carte] A11 — Lien MQTT entre la porte de la cave et le serveur de la cave, garde-fou contre l'écho : Essai, avec preuve dans le sniffeur MQTT (:7100) : allumage depuis la porte, depuis la cave (bouton, puis écran si
+- [sur carte] A12 — Visuel des volets sur la page d'accueil (toutes les cartes à volets) : Réalisation, bancs, sondes, essais sur carte : par A14 (plan dédié)
+- [sur carte] A13 — Réglage des durées de montée et de descente par les boutons : Réalisation, bancs, essais sur carte : par A14 (plan dédié)
 - A14 — Réaliser le visuel et le réglage des durées (plan dédié `visuel-reglage-volets`) : Taper `/suivi suivre visuel-reglage-volets` et exécuter ce plan de A1 à sa dernière action
 - A14 — Réaliser le visuel et le réglage des durées (plan dédié `visuel-reglage-volets`) : Plan `visuel-reglage-volets` clos (100 %, `statut: clos`), puis retour ici : cocher les étapes restantes d'A12 et d'A13
 - A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Aucun fichier de FS ajouté à la compilation ni à l'envoi (demande de l'utilisateur) : pas de pré-script ni de
-- A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : `config_decodee.json` est dans le dossier de la carte (choix de l'utilisateur) : il ne doit jamais partir en flash.
+- [à vous] A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : `config_decodee.json` est dans le dossier de la carte (choix de l'utilisateur) : il ne doit jamais partir en flash.
 - A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Taille de l'image comparée au 1 Mo ; mise à jour en OTA (tasmota.bin ~620 Ko ne tient pas à côté de l'ancien) :
-- A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Essai réel sur .45 puis .42, avec l'accord de l'utilisateur : sauvegarde, copie modifiée (un texte, une Rule),
+- [à vous] A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Essai réel sur .45 puis .42, avec l'accord de l'utilisateur : sauvegarde, copie modifiée (un texte, une Rule),
 - A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Classement par lieu des messages : `lieux.py::identites` ne lit que les persists ; sans persist, ces cartes ne sont
 - A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Lien avec les autres cartes : MQTT et Rules seulement (A11 pour la porte) ; la discovery Berry est impossible.
 - A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Timers de la TV (demande de l'utilisateur, 2026-11-12 : « il faut sauvegarder les timers ») : 1 à 9 armés, tous les
-- A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Langue (anglais aujourd'hui) et version : passer en français et à jour ? Décision de l'utilisateur, taille à vérifier.
+- [à vous] A15 — Modules ESP8266/ESP8285 sans Berry (1 Mo) : questions et essais : Langue (anglais aujourd'hui) et version : passer en français et à jour ? Décision de l'utilisateur, taille à vérifier.
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Faire dire par l'utilisateur pourquoi la carte est muette (éteinte pour l'hiver, prise coupée, répéteur KuWFi
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Sauvegarde par l'onglet « Sauvegarde configuration » (HTTP ; MQTT masqué pour un ESP8266), page Build redémarrée
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Relevé de la carte en lecture seule : `Status 0`, `Template`, `Module`, `GPIO`, `Timers`, `Rule1` à `Rule3`, `Emulation`,
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille de l'image comparée au 1 Mo (les deux
 - A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Recenser ce qui vise `jardin/pompe_piscine` (Node-RED du Pi, Alexa par l'émulation, Home Assistant, Telegram) avant
-- A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi, `Status 0`, timers et Rules relus,
+- [à vous] A16 — Pompe de la piscine (192.168.0.40) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi, `Status 0`, timers et Rules relus,
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Contrôle de faisabilité AVANT l'env : aucun ESP32 classique du dépôt ne compile `USE_WIFI_RANGE_EXTENDER` (S3 de la
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Sauvegarde par l'onglet « Sauvegarde configuration » (HTTP), page Build redémarrée avant ; `/_persist.json` de la
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : `.dmp` décodé en `config_decodee.json` (mots de passe masqués), comme .42 et .45 ; template « NOUS B2T » vérifié
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Compilation par la page Build (:7700), SUCCESS lu en fin de journal, taille comparée à la partition de 4 Mo.
 - A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Recenser ce qui vise `jardin/projecteur_led` (Node-RED, Alexa, Home Assistant) avant tout changement d'identité.
-- A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi (OTA possible sur 4 Mo),
+- [à vous] A17 — Projecteur du jardin (192.168.0.41) : sauvegarde, env, mise en service : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi (OTA possible sur 4 Mo),
 - A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : À la réception (firmware d'origine du vendeur, Tasmota ou Tuya ?) : connexion au point d'accès de la carte,
-- A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : Env créé par copie du NOUS du jardin (diff montré, accord de l'utilisateur), hors build en cours ; `test_lieux.py`,
+- [à vous] A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : Env créé par copie du NOUS du jardin (diff montré, accord de l'utilisateur), hors build en cours ; `test_lieux.py`,
 - A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : Compilation par la page Build, SUCCESS lu en fin de journal.
-- A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi, `Status 0`, relais commandé une
+- [à vous] A18 — Projecteur du barbecue : copie de l'env du NOUS du jardin (A17) : Mise en service, avec l'accord de l'utilisateur : sauvegarde « avant flash », envoi, `Status 0`, relais commandé une
 - Amélioration [projet] : Ethernet W5500 de la carte du grenier du RDC (`ReglageGlobal VoieReseau ethernet`) si un câble arrive au grenier.
 - Amélioration [projet] : Alias Berry lisible par volet (`VoletPorte`, `VoletCuisine`) si l'utilisateur le veut (A4).
 - Amélioration [projet] : Resynchroniser les deux lampes de la cave à la reconnexion MQTT d'une des cartes (`Mqtt#Connected`).
@@ -290,27 +378,27 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Essais sur carte : Durées mesurées recopiées dans les persists du dépôt, si l'utilisateur le demande
 - A9 — Revenir au plan d'origine `envs-grenier-rdc-sonoff-cave` : Passer ce plan à `statut: clos`, puis cocher A14 et les étapes de réalisation d'A12 et d'A13 du plan d'origine, avec preuve
 - A9 — Revenir au plan d'origine `envs-grenier-rdc-sonoff-cave` : Taper `/suivi suivre envs-grenier-rdc-sonoff-cave` et reprendre à sa prochaine étape
-- A10 — Façade du rideau du garage (demande du 2026-11-12) : Essai sur carte : dessin qui suit la porte pendant une course du P4 ; P4 injoignable -> grisé, position des fins de course
+- [sur carte] A10 — Façade du rideau du garage (demande du 2026-11-12) : Essai sur carte : dessin qui suit la porte pendant une course du P4 ; P4 injoignable -> grisé, position des fins de course
 - Amélioration [projet] : Corriger en amont la boucle sans accolades de `CmndShutterButton` (`ShutterButton<x> 0`) : proposition à
 
 #### [Débits de la nourrice sur deux cartes, acquisition esclave et affichage maître](plans/debits-deux-cartes.md) — 62 %
 
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
+- [sur carte] A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Compilation des deux envs par la page Build, SUCCESS lu en fin de journal, flash de l'acquisition < 80 % ; acquisition flashée en premier (USB, « Effacer puis téléverser »), puis l'affichage
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : RS485 seul (Wi-Fi de l'acquisition coupé) : les 6 débits sur l'écran au rythme du relevé ; push seul (câble débranché) : écran à jour ≤ 2 s après la fin d'une fenêtre ; les deux coupés : « inconnu » après 2 fenêtres
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Affichage redémarré : l'acquisition revient seule sur le point d'accès, aucun redémarrage de sa part, compteurs continus ; tas des deux cartes mesuré avant et après une heure
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Téléphone sur `ECRAN-DEBITS-PAC-GATEWAY` : Internet par le NAPT ; page d'équilibrage par `http://192.168.0.51:8080/equilibrage` depuis le Wi-Fi maison ; MQTT des deux cartes reçu
-- A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
+- [sur carte] A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Garage : grille ModBus repassée (`testeur_udp`, onglet « Grille ModBus ») après le prochain flash d'une carte du garage, aucun écart
 - A6 — Mise en service sur les deux cartes (avec l'utilisateur) : Commit par `/commite`
-- A7 — Retour au plan « debitmetres-chauffage » : Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)
+- [à vous] A7 — Retour au plan « debitmetres-chauffage » : Cocher l'étape « Réalisation par le plan `tasks/plans/debits-deux-cartes.md` » de l'action A8 de `tasks/plans/debitmetres-chauffage.md` (preuve : commit de A6), passer ce plan en `statut: clos`, puis reprendre `debitmetres-chauffage` où il attend : A2 (niveaux mesurés, K confirmé à réception, PAC), A5 (page web de la carte des débits), A6 (essai de charge, sur l'acquisition sans écran), A7 (pose et étalonnage)
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Modèle `outils_docs/schemas/modele_persist.json` (fait en partie le 2026-11-11 : `extinction`, `luminosite`, `pwmInverse` dans `metier.cles_propres`, tests de l'assistant VERT) : ajouter les nouvelles clés d'écran (luminosité, gradation de la veille) quand le pilote les crée, par « Mettre à jour le modèle » de la page 7900 (demande du 2026-11-11) ; le bloc `ecran` du modèle reste le défaut générique (ILI9488 SPI, OFF)
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Interface LVGL pur en Berry (même maquette, objets LVGL, courbe possible par `lv.chart`) ; banc VERT
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : `banc_demarrage` des deux variantes (haspmota et lvgl), quand `ecranHaspmota.be` et `ecranLvgl.be` existeront
-- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Essai sur la carte (avec A6) : image, couleurs, tactile, rétroéclairage, stabilité avec le Wi-Fi, relevé RS485
+- [sur carte] A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Essai sur la carte (avec A6) : image, couleurs, tactile, rétroéclairage, stabilité avec le Wi-Fi, relevé RS485
 - A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Solidifier le code d'écran générique et stable (veille, luminosité, chargement de l'interface : module `ecranFonctions` séparé du code des débits) : liste validée par l'utilisateur, module déplacé dans `data/fs`, ajouté au `custom_berry_solidify` des seuls envs à écran, `banc_demarrage` vert, compilation par la page Build (demande du 2026-11-11) (déplacement dans data/fs fait le 2026-11-12, plan ecran-cave-vues-commandes A1 ; solidification faite le 2026-11-13 : liste `berry_commun.ecran` dans `custom_berry_solidify` des deux envs à écran, `.bec` retiré des autoexec, `solidifie_et_compile_berry.py` et `banc_demarrage` VERTS ; reste la compilation par la page Build, que l'utilisateur lancera)
-- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Polices : Roboto Condensed TTF sous /sd/polices par FreeType (choix du 2026-11-11), a verifier sur la carte AVEC et SANS carte SD : chemin vu par LVGL (`lvbe_fopen` -> `lv_zip_ufsp`), RAM et PSRAM de FreeType (4 tailles), rendu, place en flash pendant le premier rangement sans SD (~290 Ko : original + copie)
-- A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Vérifier sur la carte, avec l'utilisateur : le sens du PWM de luminosité (registre 0x05 de l'expandeur, clé persist de l'inversion à corriger au besoin), l'adresse 0x5D du tactile GT911, les couleurs de la dalle
+- [à vous] A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Polices : Roboto Condensed TTF sous /sd/polices par FreeType (choix du 2026-11-11), a verifier sur la carte AVEC et SANS carte SD : chemin vu par LVGL (`lvbe_fopen` -> `lv_zip_ufsp`), RAM et PSRAM de FreeType (4 tailles), rendu, place en flash pendant le premier rangement sans SD (~290 Ko : original + copie)
+- [sur carte] A8 — Carte d'affichage sur le Waveshare ESP32-S3-Touch-LCD-7B (module acheté, 1024 × 600) : Vérifier sur la carte, avec l'utilisateur : le sens du PWM de luminosité (registre 0x05 de l'expandeur, clé persist de l'inversion à corriger au besoin), l'adresse 0x5D du tactile GT911, les couleurs de la dalle
 - A9 — Atelier des écrans (plan `atelier-ecrans`) : Suivre le plan : taper `/suivi suivre atelier-ecrans` ; revenir ici : `/suivi suivre debits-deux-cartes`
-- A9 — Atelier des écrans (plan `atelier-ecrans`) : Plan `atelier-ecrans` réalisé et clos (`statut: clos`) — preuve attendue : essai réel de son action A10
+- [sur carte] A9 — Atelier des écrans (plan `atelier-ecrans`) : Plan `atelier-ecrans` réalisé et clos (`statut: clos`) — preuve attendue : essai réel de son action A10
 - Amélioration [projet] : Rétroéclairage gradué automatiquement par une mesure de lumière (ADC de l'expandeur ou GPIO6)
 - Amélioration [projet] : Fenêtre de mesure transmise par l'acquisition (évite la recopie à la main sur l'affichage)
 - Amélioration [projet] : Défaut de l'ancien chemin `Count` > 1 (`[v, 0, …]`) corrigé pour toutes les cartes, avec la grille du garage
@@ -322,7 +410,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 #### [Page d'équilibrage de la nourrice servie par la carte des débits, débits lus en direct](plans/equilibrage-par-la-carte.md) — 83 %
 
 - A5 — Sur la carte (avec le matériel) : FS envoyé par la page Build ; bouton « Équilibrage » de l'accueil ouvert depuis le téléphone ; « Lire les débits » = valeurs de l'accueil ; suivi direct ; tas mesuré avant et après la première ouverture
-- A5 — Sur la carte (avec le matériel) : Favori du téléphone vers `/equilibrage` : la page s'ouvre (relais) ; « Garder les puissances sur la carte » puis rechargement depuis un autre appareil : puissances retrouvées ; schéma sur les débits réels en suivi direct
+- [sur carte] A5 — Sur la carte (avec le matériel) : Favori du téléphone vers `/equilibrage` : la page s'ouvre (relais) ; « Garder les puissances sur la carte » puis rechargement depuis un autre appareil : puissances retrouvées ; schéma sur les débits réels en suivi direct
 
 #### [Historique et page /graphiques des 6 débits de la nourrice](plans/historique-debits.md) — 75 %
 
@@ -332,7 +420,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 #### [Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve](plans/jauges-cuve.md) — 98 %
 
-- A6 — Build et essai sur les cartes : Relevé ModBus 4708 vu au sniffeur ou dans le log du P4 (valeur = tension de la sonde de la cuve en mV) — bloqué : ADS1115 débranché avec la sonde (`I2CScan` : « No devices found » sur la cuve, 2026-11-09) ; sans lui `cuveFonctions.montageSonde` rend nil, la tension recalculée reste « -,-- » sur la cuve même, en simulation comprise. À refaire sonde et ADS1115 rebranchés
+- [sur carte] A6 — Build et essai sur les cartes : Relevé ModBus 4708 vu au sniffeur ou dans le log du P4 (valeur = tension de la sonde de la cuve en mV) — bloqué : ADS1115 débranché avec la sonde (`I2CScan` : « No devices found » sur la cuve, 2026-11-09) ; sans lui `cuveFonctions.montageSonde` rend nil, la tension recalculée reste « -,-- » sur la cuve même, en simulation comprise. À refaire sonde et ADS1115 rebranchés
 - Amélioration [projet] : Factoriser le chargeur ECharts commun à `graphiques.js` et `cuve.js` si l'essai est adopté — REPORTÉ par décision de l'utilisateur (2026-11-09) : à faire avec le prochain flash qu'on aura de toute façon à faire sur ces cartes (mise à jour d'ECharts ou de liquidfill, firmware à recompiler pour une autre raison), pas pour lui seul ; en attendant, garde-fou du banc ci-dessous. Coût : 4 copies (`cuve.js`, `graphiques.js`, `graphiques_moteur.js` pour liquidfill, `pages_graphiques.js`), un fichier commun touche 3 modules SOLIDIFIÉS (`graphiquesFonctions`, `cuvePageFonctions`, `pagesGraphiques`) -> firmware à recompiler sur chaque carte à graphiques (P4 : `CfgHolder` 1608 -> 1609, réglages remis à l'usine)
 
 #### [Page web « Build et téléversement » (port 7700, tuile de l'annuaire)](plans/page-build-televersement.md) — 100 %
@@ -342,28 +430,28 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 #### [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) — 47 %
 
-- A1 — FTP sur les deux voies : Sur carte : FTP joignable par l'IP Ethernet. Sources : écoute sur toutes les interfaces (`WiFiServer` sans adresse imposée). Essai possible sans flash : câble sur le P4 (`Ethernet` ON, `UfsFTP` 2, relevé du 2026-11-02 : IP Ethernet 0.0.0.0, donc pas de lien)
-- A1 — FTP sur les deux voies : Sur carte, Wi-Fi client coupé : lister et transférer un fichier en mode passif, avec un client qui suit l'adresse annoncée
-- A2 — Trous de l'UDP, du Range Extender et des autres modules en Ethernet : `udpFonctions.ipSTA` chez un esclave en Ethernet : "" = « toutes les interfaces » (`udpFonctions.be::envoiUDP`) ; essai d'envoi réel à faire sur carte (code fait le 2026-11-08 : socket liée à l'IP Ethernet, test_discovery « esclave en Ethernet » OK ; reste l'essai)
+- [sur carte] A1 — FTP sur les deux voies : Sur carte : FTP joignable par l'IP Ethernet. Sources : écoute sur toutes les interfaces (`WiFiServer` sans adresse imposée). Essai possible sans flash : câble sur le P4 (`Ethernet` ON, `UfsFTP` 2, relevé du 2026-11-02 : IP Ethernet 0.0.0.0, donc pas de lien)
+- [sur carte] A1 — FTP sur les deux voies : Sur carte, Wi-Fi client coupé : lister et transférer un fichier en mode passif, avec un client qui suit l'adresse annoncée
+- [sur carte] A2 — Trous de l'UDP, du Range Extender et des autres modules en Ethernet : `udpFonctions.ipSTA` chez un esclave en Ethernet : "" = « toutes les interfaces » (`udpFonctions.be::envoiUDP`) ; essai d'envoi réel à faire sur carte (code fait le 2026-11-08 : socket liée à l'IP Ethernet, test_discovery « esclave en Ethernet » OK ; reste l'essai)
 - A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : `xdrv_58_range_extender.ino` : montage du point d'accès si `WL_CONNECTED` OU `EthernetHasIP()` ; DNS pris sur l'Ethernet ; `RgxPort` sur l'IP Ethernet si la STA est absente ; modification minimale (fichier de l'amont, conflit possible à la synchro)
 - A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Ordre au démarrage : `WifiDisable` ne doit pas couper un point d'accès déjà monté (`WifiSetMode(WIFI_OFF)`, garde `wifi_down`)
-- A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : `configGlobal_voieReseau` : ne plus forcer le Range Extender à OFF, retirer `activationAvantEthernet` (annule la décision du 2026-11-02, à la demande de l'utilisateur) ; banc_boot cas 6-7 adaptés
+- [à vous] A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : `configGlobal_voieReseau` : ne plus forcer le Range Extender à OFF, retirer `activationAvantEthernet` (annule la décision du 2026-11-02, à la demande de l'utilisateur) ; banc_boot cas 6-7 adaptés
 - A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Compilation de la cave S3 et du P4 par la page Build
-- A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Essai sur carte : un esclave sur le point d'accès joint le broker MQTT par le câble (trafic vu sortir par l'Ethernet, câble seul branché) ; `RgxPort` joignable depuis le LAN
-- A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Essai P4 : le C6 tient-il le point d'accès avec le Wi-Fi client coupé ?
+- [sur carte] A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Essai sur carte : un esclave sur le point d'accès joint le broker MQTT par le câble (trafic vu sortir par l'Ethernet, câble seul branché) ; `RgxPort` joignable depuis le LAN
+- [sur carte] A3 — Esclaves en Wi-Fi quand le maître est en Ethernet : Essai P4 : le C6 tient-il le point d'accès avec le Wi-Fi client coupé ?
 - A4 — Deux adresses IP facultatives et accès par le nom : Clé facultative `serveur.IPEthernet` (même forme que `serveur.IP`) ; absente = même IP qu'en Wi-Fi ; schéma du persist régénéré
 - A4 — Deux adresses IP facultatives et accès par le nom : `ReglageGlobal VoieReseau` sans argument : répond aussi l'IP en service et le nom `<hostname>.local`
 - A4 — Deux adresses IP facultatives et accès par le nom : Page Build : OTA par `WIFI_IP_ADDRESS` (`build_envs.py`), donc une carte à IP Ethernet distincte n'est pas jointe : accepter le nom `.local` ou l'IP Ethernet
 - A4 — Deux adresses IP facultatives et accès par le nom : Mode d'emploi dans `outils_docs/README.md`
-- A4 — Deux adresses IP facultatives et accès par le nom : Essai : `ping SERVEUR-RLY-CAVE.local` depuis le PC, sur les deux voies
-- A5 — Repli automatique sur le Wi-Fi si l'Ethernet tombe : Essais sur carte : câble débranché puis rebranché (l'événement `ETH#Connected` vient-il en IP fixe ?), état des relais au retour (`PowerOnState`), point d'accès actif (redémarrage en plus par `xdrv_58`)
+- [sur carte] A4 — Deux adresses IP facultatives et accès par le nom : Essai : `ping SERVEUR-RLY-CAVE.local` depuis le PC, sur les deux voies
+- [sur carte] A5 — Repli automatique sur le Wi-Fi si l'Ethernet tombe : Essais sur carte : câble débranché puis rebranché (l'événement `ETH#Connected` vient-il en IP fixe ?), état des relais au retour (`PowerOnState`), point d'accès actif (redémarrage en plus par `xdrv_58`)
 - Amélioration [projet] : `tasks/plans/cave-s3-waveshare.md` : l'essai de `VoieReseau` à réception de la carte reprend les essais de ce plan
 
 #### [Ruban WS2812 de la cuve en AUTO/MANUEL et carte cuve v0.2](plans/ruban-cuve.md) — 77 %
 
-- A2 — Lot 2 : ruban en AUTO/MANUEL avec bouton poussoir sur la cuve : Bouton physique de la cuve (GPIO7) essayé sur la carte : appui court = allume/éteint, appui long = couleur suivante (MANUEL), double appui = retour AUTO
-- A3 — Lot 3 : pilotage du ruban depuis le maître P4 : « Couleur suivante » depuis le P4 observée sur la carte (`RubanEsclave1 suivante`, puis relevé du mode MANUEL)
-- A3 — Lot 3 : pilotage du ruban depuis le maître P4 : Bouton physique du maître (`bouton2`, GPIO22, appui long 15) essayé sur la carte
+- [sur carte] A2 — Lot 2 : ruban en AUTO/MANUEL avec bouton poussoir sur la cuve : Bouton physique de la cuve (GPIO7) essayé sur la carte : appui court = allume/éteint, appui long = couleur suivante (MANUEL), double appui = retour AUTO
+- [sur carte] A3 — Lot 3 : pilotage du ruban depuis le maître P4 : « Couleur suivante » depuis le P4 observée sur la carte (`RubanEsclave1 suivante`, puis relevé du mode MANUEL)
+- [sur carte] A3 — Lot 3 : pilotage du ruban depuis le maître P4 : Bouton physique du maître (`bouton2`, GPIO22, appui long 15) essayé sur la carte
 - A5 — Avant de commander la carte : Tension laissée au capteur de niveau (~11 V, ~8 V sur une voie 4-20 mA) vérifiée avec sa référence et sa voie — question à reposer à l'utilisateur
 - A5 — Avant de commander la carte : Mesurer le DevKit ESP32-S3 et les modules (entraxes des broches)
 - A5 — Avant de commander la carte : Vérifier la hauteur des fusibles MF-R dans le boîtier
@@ -382,31 +470,31 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 #### [Sniffeur I2C (ESP32-S3 dédié + outil PC de l'annuaire)](plans/sniffeur-i2c.md) — 72 %
 
-- A6 — Mode maître au banc (composant isolé) : Firmware : ordres `MW`/`MR`/`MWR` -> arrêt de l'écoute, Wire sur les mêmes broches, réponse `M`, retour à l'écoute ; refus `M ok=0 err=bus_actif` si un front de SCL a été vu dans les 2 dernières secondes ; banc Unity du refus — codé (d9747da91, `main.cpp::ordre_maitre`), refus testé côté PC seulement : à vérifier sur carte en A8, pas de banc C++ du refus
+- [sur carte] A6 — Mode maître au banc (composant isolé) : Firmware : ordres `MW`/`MR`/`MWR` -> arrêt de l'écoute, Wire sur les mêmes broches, réponse `M`, retour à l'écoute ; refus `M ok=0 err=bus_actif` si un front de SCL a été vu dans les 2 dernières secondes ; banc Unity du refus — codé (d9747da91, `main.cpp::ordre_maitre`), refus testé côté PC seulement : à vérifier sur carte en A8, pas de banc C++ du refus
 - A7 — Intégration : annuaire, cible Custom, tâche VS Code, documentation : Tâche VS Code « Outil : sniffeur I2C (http://127.0.0.1:7350) » (`${env:USERPROFILE}`), lancée une fois — tâche écrite (d7e7ca9f6), sa ligne de commande vérifiée (page 200) ; reste à la lancer par Tasks: Run Task
-- A8 — Validation sur matériel (avec l'utilisateur) : Broches 4/5 confirmées sur la sérigraphie du DevKit ; flash du firmware hors build ; ligne `I` reçue
+- [à vous] A8 — Validation sur matériel (avec l'utilisateur) : Broches 4/5 confirmées sur la sérigraphie du DevKit ; flash du firmware hors build ; ligne `I` reçue
 - A8 — Validation sur matériel (avec l'utilisateur) : Une carte du parc branchée (3 fils) : `I2CScan` + une lecture connue -> mêmes adresses et valeurs dans le fil que dans le log de la carte
 - A8 — Validation sur matériel (avec l'utilisateur) : Captures réelles remplacent les trames PROVISOIRE des bancs (A4), bancs verts
-- A8 — Validation sur matériel (avec l'utilisateur) : Vitesse : 100 kHz sans perte ; essai 400 kHz (source à trouver : réglage de vitesse Tasmota si disponible, sinon 2e ESP32) -> limite constatée affichée dans la page et l'Aide
+- [sur carte] A8 — Validation sur matériel (avec l'utilisateur) : Vitesse : 100 kHz sans perte ; essai 400 kHz (source à trouver : réglage de vitesse Tasmota si disponible, sinon 2e ESP32) -> limite constatée affichée dans la page et l'Aide
 - A8 — Validation sur matériel (avec l'utilisateur) : Lecture par la carte (A5) et lecture au banc d'un composant isolé (A6) vues dans le fil
 - A9 — Clôture : `tasks/README.md` à jour (`node .claude/hooks/index_plans.mjs --verifier`), plan `statut: clos`
 - A9 — Clôture : Commits relus, push du sha relu
-- A10 — Voie MQTT pour l'envoi par la carte (demande du 2026-10-31) : Essai réel : lecture d'un registre d'un esclave par MQTT, trame vue dans le fil (avec A8)
+- [sur carte] A10 — Voie MQTT pour l'envoi par la carte (demande du 2026-10-31) : Essai réel : lecture d'un registre d'un esclave par MQTT, trame vue dans le fil (avec A8)
 - Amélioration [projet] : Voie 2 : firmware Raspberry Pi Pico (PIO) parlant le même protocole, `I puce=rp2040`
 
 #### [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) — 91 %
 
 - A1 — Décisions à prendre (aucun code) : P8.5 — ESP-NOW côté P4 : passerelle S3, ou ESP-NOW réservé aux S3 (après P8.4) (corrige T2 ; cote G, effort —, risque dec)
-- A1 — Décisions à prendre (aucun code) : P8.10 — Attendre esp-hosted-mcu#19 avant tout ESP-NOW sur le P4 ; pas de C6 reflashé (corrige T2 ; cote G, effort nul, risque dec)
+- [sur carte] A1 — Décisions à prendre (aucun code) : P8.10 — Attendre esp-hosted-mcu#19 avant tout ESP-NOW sur le P4 ; pas de C6 reflashé (corrige T2 ; cote G, effort nul, risque dec)
 - A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.1 — Ne pas retenir TasMesh pour le garage (corrige T1, T2 ; cote S, effort nul, risque nul)
 - A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.2 — TasMesh seulement pour de futurs capteurs ESP8266 sur batterie, broker ESP32/S3 (corrige T1 ; cote S, effort faible, risque faible)
-- A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.3 — Signaler la régression T10 à l'amont après un essai (corrige T10 ; cote D, effort faible, risque nul)
-- A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.4 — Essai borné ESP-NOW entre deux S3 (QuickEspNow) : latence, pertes, coexistence, tas (corrige T3-T9 ; cote S, effort moyen, risque faible)
+- [sur carte] A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.3 — Signaler la régression T10 à l'amont après un essai (corrige T10 ; cote D, effort faible, risque nul)
+- [sur carte] A13 — Radio : ESP-NOW et TasMesh (exploration) : P8.4 — Essai borné ESP-NOW entre deux S3 (QuickEspNow) : latence, pertes, coexistence, tas (corrige T3-T9 ; cote S, effort moyen, risque faible)
 - Amélioration [projet] : Ré-audit ciblé après les lots retenus (même grille, mêmes preuves), à noter dans `tasks/plans/audit-berry.md`
 
 #### [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) — 0 %
 
-- A1 — Essai sur table du PHY Ethernet, avant tout code : Avec l'accord de l'utilisateur, P4 près de la box, câble branché : `Status 5` (état de départ) et `Ethernet` / `EthType` / `EthAddress` relevés
+- [à vous] A1 — Essai sur table du PHY Ethernet, avant tout code : Avec l'accord de l'utilisateur, P4 près de la box, câble branché : `Status 5` (état de départ) et `Ethernet` / `EthType` / `EthAddress` relevés
 - A1 — Essai sur table du PHY Ethernet, avant tout code : `Ethernet 1` (redémarre) puis `Status 5` → bloc `StatusNET.Ethernet` avec une IP DHCP, `EthType` = 1
 - A1 — Essai sur table du PHY Ethernet, avant tout code : .43 (STA) répond toujours, cuve et rideau joignables ; état remis comme au départ
 - A1 — Essai sur table du PHY Ethernet, avant tout code : Résultat consigné dans la spec (§3) ; si le PHY ne monte pas : arrêt du chantier et diagnostic (`superpowers:systematic-debugging`)
@@ -424,22 +512,22 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A4 — `ReglageGlobal Ethernet [ON\|OFF]` : `globalFonctions.reglageEthernet` + branche `ETHERNET` dans `reglageGlobal` (`globalFonctions.be:667`, réponse `{"ReglageGlobal": …}` comme `ModeConnexion`) + ligne d'aide
 - A4 — `ReglageGlobal Ethernet [ON\|OFF]` : Tests verts + témoin (ordre persist/commande inversé dans une copie → test rouge) ; `verifie_berry` sans avertissement de charte
 - A4 — `ReglageGlobal Ethernet [ON\|OFF]` : Commit `feat(berry): ReglageGlobal Ethernet ON\|OFF`
-- A5 — Bouton Ethernet dans la page Configuration : `web_add_config_button` et route `/ethernet` dans `data/fs/controleWeb.be` (handlers `controleWeb.be:371`), bouton absent si `!carteAvecEthernet()`, confirmation JS « la carte va redémarrer » avant le POST
-- A5 — Bouton Ethernet dans la page Configuration : Test au banc (ou bouchon webserver) : bouton émis sur le P4, absent sur une S3 ; POST `bascule` appelle `reglageEthernet`
+- [à vous] A5 — Bouton Ethernet dans la page Configuration : `web_add_config_button` et route `/ethernet` dans `data/fs/controleWeb.be` (handlers `controleWeb.be:371`), bouton absent si `!carteAvecEthernet()`, confirmation JS « la carte va redémarrer » avant le POST
+- [sur carte] A5 — Bouton Ethernet dans la page Configuration : Test au banc (ou bouchon webserver) : bouton émis sur le P4, absent sur une S3 ; POST `bascule` appelle `reglageEthernet`
 - A5 — Bouton Ethernet dans la page Configuration : Commit `feat(web): bouton Ethernet dans Configuration`
 - A6 — `/discovery` : IP STA du maître : Test écrit avant (`test_discovery.be` ou banc voisin) : fiche `config` avec `ip` .50 et `hn` `SERVEUR-GARAGE-eth` + fiche `maitre` `IPAddress` .43 sous la même MAC → bouton vers .43, port distant 10043, `SERVEUR-GARAGE.local` ; sans fiche `maitre` → suffixe `-eth` retiré
 - A6 — `/discovery` : IP STA du maître : Correction dans `discoveryFonctions.be:743-749` ; test vert + témoin (ancien code → rouge)
 - A6 — `/discovery` : IP STA du maître : Inventaire en lecture des usages Berry de l'IP/nom réseau (`config.ip`, `config.hn`, `NetworkAddress`…) consigné dans la spec §5.6 ; corrections éventuelles → « Améliorations restantes »
 - A6 — `/discovery` : IP STA du maître : Relecture des `.be` modifiés par l'agent `relecteur-berry` ; commit `fix(berry): /discovery annonce l IP Wi-Fi du maitre quand l Ethernet est actif`
-- A7 — Build et téléversement du P4, option à OFF : Aucun build en cours ; build + téléversement du P4 par l'utilisateur (ou avec son accord, page Build :7700) ; fichiers réécrits par le build commités (chore)
+- [à vous] A7 — Build et téléversement du P4, option à OFF : Aucun build en cours ; build + téléversement du P4 par l'utilisateur (ou avec son accord, page Build :7700) ; fichiers réécrits par le build commités (chore)
 - A7 — Build et téléversement du P4, option à OFF : Un seul redémarrage dû à `Ethernet 0`, puis plus aucun (log syslog `CONTROLE_GENERAL`) ; `Ethernet` = OFF
 - A7 — Build et téléversement du P4, option à OFF : Non-régression : cuve et rideau joignables (8081/8082), `/discovery` correcte, ModBus vers la cuve OK sur 10 min (log `modbus`)
-- A8 — Option à ON : `ReglageGlobal Ethernet ON` (accord de l'utilisateur) → un seul redémarrage, `Status 5` : Ethernet .50, STA .43
+- [à vous] A8 — Option à ON : `ReglageGlobal Ethernet ON` (accord de l'utilisateur) → un seul redémarrage, `Status 5` : Ethernet .50, STA .43
 - A8 — Option à ON : .43 et .50 répondent ; cuve et rideau joignables par le point d'accès et par `RgxPort` ; `/discovery` vers .43
-- A8 — Option à ON : Bouton de la page Configuration : état affiché, bascule OFF puis ON confirmée
+- [à vous] A8 — Option à ON : Bouton de la page Configuration : état affiché, bascule OFF puis ON confirmée
 - A9 — Mesure du routage et débranchement du câble : Instrument choisi (lecture seule) et témoin : interface de sortie de MQTT (.5) et syslog (.3) relevée sur 3 démarrages
 - A9 — Mesure du routage et débranchement du câble : Câble débranché option ON : P4 joignable en .43, pas de redémarrage pendant 10 min ; câble rebranché : .50 revient
-- A9 — Mesure du routage et débranchement du câble : Résultat consigné (spec §6 + README) ; si le trafic reste sur la STA ou varie : noté, chantier poursuivi sans correctif (décision du 2026-10-26)
+- [à vous] A9 — Mesure du routage et débranchement du câble : Résultat consigné (spec §6 + README) ; si le trafic reste sur la STA ou varie : noté, chantier poursuivi sans correctif (décision du 2026-10-26)
 - A10 — Documentation et remontage : `outils_docs/README.md` : plan d'adressage (.50 = Ethernet du Serveur de Garage), mode d'emploi `ReglageGlobal Ethernet` et bouton, résultat de A9
 - A10 — Documentation et remontage : `CLAUDE.md` § « Carte des documents » : spec et plan ajoutés ; commit `docs: Ethernet du P4`
 - A10 — Documentation et remontage : P4 remonté au garage, état final (ON ou OFF) choisi par l'utilisateur ; `statut: clos`
@@ -450,23 +538,23 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A1 — Prouver que l'env compile et tient en mémoire (P1) : Aucun `pio run`/scons en cours juste avant (garde_build, Win32_Process)
 - A1 — Prouver que l'env compile et tient en mémoire (P1) : Env compilé via la page « Build et téléversement » (7700), sans téléversement
 - A1 — Prouver que l'env compile et tient en mémoire (P1) : Taille du firmware relevée contre la partition app de 3 904 Kio
-- A1 — Prouver que l'env compile et tient en mémoire (P1) : Après un premier flash : tas libre interne et PSRAM relevés (`Status 4`, `BRY: GC`)
+- [sur carte] A1 — Prouver que l'env compile et tient en mémoire (P1) : Après un premier flash : tas libre interne et PSRAM relevés (`Status 4`, `BRY: GC`)
 - A2 — Ports et état de la bascule (P2, P4) : `upload_port`/`monitor_port` de l'env changés (COM3 est la cuve) ou commentés
 - A2 — Ports et état de la bascule (P2, P4) : État réel des relais de la carte en ligne relevé juste avant la bascule
-- A2 — Ports et état de la bascule (P2, P4) : État voulu des relais au premier démarrage de la S3 décidé et appliqué après le flash
+- [à vous] A2 — Ports et état de la bascule (P2, P4) : État voulu des relais au premier démarrage de la S3 décidé et appliqué après le flash
 - A3 — Topics, consommateurs et messages retenus (P3, P8) : Consommateurs de `cave/serveur-rly-cave` inventoriés sur le Pi (Node-RED, Grafana, Influx, autres)
 - A3 — Topics, consommateurs et messages retenus (P3, P8) : Flux Telegram importé et réglé (token, broker) pour `cave/serveur-rly-cave-v2`
 - A3 — Topics, consommateurs et messages retenus (P3, P8) : Messages retenus de l'ancien topic et LWT `-v2` effacés après la bascule
 - A3 — Topics, consommateurs et messages retenus (P3, P8) : Groupe `tasmotas/cave` : carte en ligne vérifiée ; commentaires de l'env corrigés
-- A4 — Rôle réseau de la cave (P5) : Décision : la cave est-elle « maître » UDP / Range Extender / discovery / FTP ?
+- [à vous] A4 — Rôle réseau de la cave (P5) : Décision : la cave est-elle « maître » UDP / Range Extender / discovery / FTP ?
 - A4 — Rôle réseau de la cave (P5) : Si non : les 4 blocs à OFF dans `data/cave/tasmota32s3-serveur-rly/_persist.json`, banc de démarrage mis à jour
 - A4 — Rôle réseau de la cave (P5) : Si oui : raison consignée dans le commentaire de l'env
 - A5 — Alerte de la pompe (P6, P10) : Capteurs de niveau câblés et activés (GPIO 2/15), ou limite consignée
-- A5 — Alerte de la pompe (P6, P10) : `EtatPompe`, `AcquittePompe` et `ALERTE_POMPE` essayés sur la carte
+- [sur carte] A5 — Alerte de la pompe (P6, P10) : `EtatPompe`, `AcquittePompe` et `ALERTE_POMPE` essayés sur la carte
 - A5 — Alerte de la pompe (P6, P10) : Banc de la relance de sécurité écrit (`finTimerRelai`, `relanceRelai`, `acquitteRelance`)
 - A5 — Alerte de la pompe (P6, P10) : Une seule copie de `controlePompeVideCave.be` retenue
 - A6 — Allègement de l'env (P7, P9, P11) : Base `tasmota32s3-base-N16R8-sans-ecran` et `SET_ESP32_STACK_SIZE` essayés, taille comparée à A1
-- A6 — Allègement de l'env (P7, P9, P11) : `leds` retiré de la solidification, ou conservé par choix
+- [à vous] A6 — Allègement de l'env (P7, P9, P11) : `leds` retiré de la solidification, ou conservé par choix
 - A6 — Allègement de l'env (P7, P9, P11) : `fsMqtt` chargé par l'autoexec de la cave si l'envoi de fichiers par MQTT est voulu
 - A6 — Allègement de l'env (P7, P9, P11) : Persist nettoyé : `TasmotaSlaveModBus2`, `diverses.historique.grafana`, `ledPower`
 - Amélioration [projet] : Vérifier si un 2e « maître » (id 0) perturbe la table discovery du P4

@@ -26,10 +26,17 @@ export function lignes(dossierPlans) {
 
 // Ce qui reste d'un plan : etapes et ameliorations non cochees (vide = plan entierement realise).
 function restes(a) {
-  const etapes = a.actions.flatMap(act => act.etapes.filter(e => !e.fait).map(e => `${act.id} — ${act.titre} : ${e.texte}`))
+  const etapes = a.actions.flatMap(act => act.etapes.filter(e => !e.fait).map(e => ({ texte: e.texte, ligne: `${act.id} — ${act.titre} : ${e.texte}` })))
   const amelio = a.ameliorations.filter(x => !x.fait).map(x => `Amélioration [${x.portee}] : ${x.texte}`)
   return { etapes, amelio }
 }
+// Ce qui attend un geste hors de Claude, deduit de mots du texte de l'etape (indicatif : un mot-cle, pas une preuve).
+export function blocage(texte) {
+  if (/confirm|décid|décis|choix|accord|à valider|demander à/i.test(texte)) return "à vous"
+  if (/sur (la |une |le |les )?(carte|P4|cuve|esclave|écran|matériel)|essai|à voir|câblage|flash/i.test(texte)) return "sur carte"
+  return ""
+}
+const marque = s => s.texte ? (blocage(s.texte) ? `[${blocage(s.texte)}] ${s.ligne}` : s.ligne) : s
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`
 
 export function bloc(dossierPlans) {
@@ -39,7 +46,7 @@ export function bloc(dossierPlans) {
       .map(s => `${plans.filter(p => p.a.meta.statut === s).length} ${s}`).join(", ") + ".", "",
     "| Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |",
     "|---|---|---|---|---|---|---|"]
-  const notes = []
+  const notes = [], attente = []
   for (const { nom, a } of plans) {
     const m = a.meta
     const avance = a.global == null ? "—" : `${barre(a.global)} ${a.global} % (${a.fait}/${a.total})`
@@ -48,9 +55,12 @@ export function bloc(dossierPlans) {
       .filter(Boolean).join(", ")
     r.push(`| [${cellule(a.titre || nom)}](plans/${nom}) | ${cellule(m.objectif) || "_à renseigner (clé `objectif:`)_"} ` +
            `| ${cellule(m.statut) || "?"} | ${avance} | ${reste || "—"} | ${cellule(m.cree) || "—"} | ${cellule(m.maj) || "—"} |`)
+    if (m.statut === "actif") for (const s of etapes) if (blocage(s.texte)) attente.push(`- [${blocage(s.texte)}] [${cellule(a.titre || nom)}](plans/${nom}) — ${cellule(s.ligne)}`)
     if (reste) notes.push("", `#### [${cellule(a.titre || nom)}](plans/${nom}) — ${a.global ?? "?"} %`, "",
-                          ...[...etapes, ...amelio].map(s => `- ${cellule(s)}`))
+                          ...[...etapes, ...amelio].map(s => `- ${cellule(marque(s))}`))
   }
+  if (attente.length) r.splice(4, 0, "### Attendent un geste hors de Claude (plans actifs)", "",
+    "Étiquette déduite d'un mot de l'étape : `à vous` = confirmation ou choix, `sur carte` = essai ou envoi sur le matériel.", "", ...attente, "")
   if (notes.length) r.push("", "### Points restants des plans non terminés", ...notes)
   r.push("", FIN)
   return r.join("\n")
