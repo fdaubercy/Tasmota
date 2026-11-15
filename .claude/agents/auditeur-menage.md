@@ -71,6 +71,7 @@ proposition par fichier ou par dossier entier (chemin = le dossier, vers = son n
 
 COMMANDES BASH : une seule commande simple par appel, sans `cd` (le dépôt est le dossier courant), sans pipe, sans `;`, `&&` ni redirection ;
 une commande composée est refusée par la page. Filtre avec Grep et Glob.
+PLUSIEURS MOTIFS OU NOMS ACCENTUÉS : n'utilise jamais Bash pour cela (`wc`, `ls` ou `du` sur un chemin accentué ou avec plusieurs motifs sont refusés). Utilise Grep (plusieurs motifs : une alternative `a|b`, ou un appel par motif) et Glob (noms accentués) ; Bash ne sert qu'aux commandes git et à `wc -l` sur un seul chemin ASCII.
 
 Pour CHAQUE proposition : chemin, constat avec la preuve (commande et sortie), action suggérée (supprimer / archiver /
 déplacer vers / garder), **ce que ça casserait** (renvois `fichier::fonction` des docs, imports d'un module voisin,

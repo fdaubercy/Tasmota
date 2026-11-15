@@ -74,6 +74,7 @@ HTML = """
   <label class="champ"><span>Travail « en cours » : modifié ou touché depuis moins de (jours)</span><input type="number" id="p-jours" min="0" max="365" value="3"></label>
   <label class="champ"><span>Modèle</span><select id="p-modele"></select></label>
   <label class="champ"><span>Effort</span><select id="p-effort"></select></label>
+  <label class="champ"><span>Budget estimé de l'audit (1 à 20, quota de l'abonnement)</span><input type="number" id="p-budget" min="1" max="20" value="8"></label>
   <div class="ligne"><button class="btn prim" id="b-lance">Lancer l'audit</button><button class="btn" id="b-stop" disabled>Arrêter</button></div>
   <div class="etat" id="etat" role="status">Prêt.</div>
   <details class="detail" id="detail" hidden><summary>Détail technique (texte d'origine de claude, en anglais)</summary><pre id="detail-texte"></pre></details>
@@ -189,7 +190,7 @@ function remplitSelect(s, valeurs, choisie) {
 
 function parametres() {
   return {zone: coches($("p-zone")), categories: coches($("p-cat")), anciennete_jours: parseInt($("p-jours").value, 10),
-          modele: $("p-modele").value, effort: $("p-effort").value};
+          modele: $("p-modele").value, effort: $("p-effort").value, budget: parseInt($("p-budget").value, 10)};
 }
 function comptes() {
   [["p-zone", "n-zone"], ["p-cat", "n-cat"]].forEach(function (g) {
@@ -205,12 +206,12 @@ function chargeOptions() {
     var m = memo("params") || r.donnees.defauts;
     cases($("p-zone"), r.donnees.zones, m.zone, "zone");
     cases($("p-cat"), r.donnees.categories, m.categories, "cat");
-    $("p-jours").value = m.anciennete_jours;
+    $("p-jours").value = m.anciennete_jours; $("p-budget").value = m.budget || 8;
     remplitSelect($("p-modele"), r.donnees.modeles, m.modele);
     remplitSelect($("p-effort"), r.donnees.efforts, m.effort);
     var f = $("f-cat"); r.donnees.categories.forEach(function (c) { var o = el("option", null, c); o.value = c; f.appendChild(o); });
     ["p-zone", "p-cat"].forEach(function (id) { $(id).onchange = memorise; });
-    ["p-jours", "p-modele", "p-effort"].forEach(function (id) { $(id).onchange = memorise; });
+    ["p-jours", "p-budget", "p-modele", "p-effort"].forEach(function (id) { $(id).onchange = memorise; });
     comptes();
   });
 }
@@ -349,6 +350,7 @@ function etat() {
 function lance() {
   var p = parametres();
   if (!p.zone.length || !p.categories.length) { message("ko", "Cochez au moins un dossier et un contrôle."); return; }
+  if (!(p.budget >= 1 && p.budget <= 20)) { message("ko", "Budget : un nombre de 1 à 20."); return; }
   if (!(p.anciennete_jours >= 0 && p.anciennete_jours <= 365)) { message("ko", "Ancienneté : un nombre de 0 à 365."); return; }
   api("POST", "/lancer", p).then(function (r) {
     if (!r.ok) { message("ko", r.texte); return; }

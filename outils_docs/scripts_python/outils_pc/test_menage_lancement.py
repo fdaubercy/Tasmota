@@ -75,9 +75,13 @@ for libelle, brut in [("zone inconnue", {"zone": ["/etc"]}), ("zone vide", {"zon
                       ("categorie inconnue", {"categories": ["tout"]}), ("anciennete negative", {"anciennete_jours": -1}),
                       ("anciennete trop grande", {"anciennete_jours": 9999}), ("anciennete booleenne", {"anciennete_jours": True}),
                       ("anciennete texte", {"anciennete_jours": "3; rm -rf"}), ("modele libre", {"modele": "opus --dangerously-skip-permissions"}),
-                      ("effort inconnu", {"effort": "extreme"})]:
+                      ("effort inconnu", {"effort": "extreme"}), ("budget nul", {"budget": 0}), ("budget enorme", {"budget": 500}),
+                      ("budget texte", {"budget": "8; x"})]:
     p, e = ml.parametres(brut)
     verifie((p is None, bool(e)), (True, True), f"parametres refuses : {libelle}")
+
+verifie(ml.parametres({"budget": 5})[0]["budget"], 5, "budget choisi conserve")
+verifie(ml.parametres({})[0]["budget"], ml.BUDGET_DEFAUT, "budget par defaut")
 
 # 2. succes : rapport valide, options de lecture seule, consigne avec les gardes
 trace = Path(tempfile.mkdtemp()) / "trace.json"

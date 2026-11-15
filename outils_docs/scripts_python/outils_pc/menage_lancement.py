@@ -26,7 +26,8 @@ import menage_rapport
 import menage_verification
 
 DELAI = 900
-BUDGET_USD = "3"
+BUDGET_DEFAUT = 8              # USD estimes (plafond de claude -p), pas de l'argent avec l'abonnement : du quota
+BUDGET_MAX = 20
 ZONES = ("data", "outils_docs", "tasks", ".claude", "docs", "lib/libesp32/berry_custom")
 MAX_ACTIVITE = 300
 MODELES = ("sonnet", "opus", "haiku")
@@ -35,7 +36,7 @@ AGENT = "auditeur-menage"
 BASH_LECTURE = ["Bash(git status:*)", "Bash(git log:*)", "Bash(git ls-files:*)", "Bash(git diff:*)", "Bash(git hash-object:*)",
                 "Bash(git check-ignore:*)", "Bash(ls:*)", "Bash(wc:*)", "Bash(du:*)"]
 OPTIONS = ["-p", "--agent", AGENT, "--tools", "Read,Grep,Glob,Bash", "--permission-mode", "dontAsk", "--strict-mcp-config",
-           "--no-session-persistence", "--disable-slash-commands", "--output-format", "stream-json", "--verbose", "--max-budget-usd", BUDGET_USD,
+           "--no-session-persistence", "--disable-slash-commands", "--output-format", "stream-json", "--verbose", "--max-budget-usd", str(BUDGET_DEFAUT),
            "--disallowed-tools", "Write", "Edit", "NotebookEdit", "--allowed-tools"] + BASH_LECTURE
 
 
@@ -52,6 +53,9 @@ def parametres(brut):
     jours = brut.get("anciennete_jours", 3)
     if isinstance(jours, bool) or not isinstance(jours, int) or not 0 <= jours <= 365:
         erreurs.append("anciennete_jours : entier de 0 a 365")
+    budget = brut.get("budget", BUDGET_DEFAUT)
+    if isinstance(budget, bool) or not isinstance(budget, int) or not 1 <= budget <= BUDGET_MAX:
+        erreurs.append(f"budget : entier de 1 a {BUDGET_MAX}")
     modele = brut.get("modele", "sonnet")
     if modele not in MODELES:
         erreurs.append(f"modele : {MODELES}")
@@ -61,7 +65,7 @@ def parametres(brut):
     if erreurs:
         return None, erreurs
     return {"zone": sorted(set(zone)), "categories": sorted(set(categories)), "anciennete_jours": jours,
-            "modele": modele, "effort": effort}, []
+            "modele": modele, "effort": effort, "budget": budget}, []
 
 
 def consigne(params, gardes):
@@ -232,7 +236,9 @@ class Audit:
         programme = self.programme or ([shutil.which("claude")] if shutil.which("claude") else None)
         if not programme:
             return "echec", "claude introuvable dans le PATH", None
-        options = OPTIONS + ["--model", params["modele"], "--effort", params["effort"], "--settings", str(reglages_sans_hooks())]
+        options = list(OPTIONS)
+        options[options.index("--max-budget-usd") + 1] = str(params["budget"])
+        options += ["--model", params["modele"], "--effort", params["effort"], "--settings", str(reglages_sans_hooks())]
         try:
             # Pas de cle API heritee : elle passerait avant l'abonnement claude.ai et l'audit serait facture sur son credit.
             env = {k: v for k, v in os.environ.items() if k not in CLES_API}
