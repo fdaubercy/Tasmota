@@ -178,7 +178,7 @@ les zones vivent dans le réglage de l'outil, pas sur la carte.
 - [x] `test_atelier_visuels_web.py` écrit : `GET /envs` liste les envs par lieu ; `POST /fond` sans en-tête `X-…` = 403 ;
   corps de 1 Mo + 1 = 413 ; type inconnu = 400 ; SVG malveillant = 400 avec le message ; fond gardé relu par
   `GET /fond` octet pour octet ; 21e fond = le plus ancien évincé — preuve : test_atelier_visuels_web.py VERT code 0, serveur arrete en fin de banc
-- [ ] Tests lancés : rouges
+- [x] Tests lancés : rouges — preuve : test_atelier_visuels_fond.py et test_atelier_visuels_web.py lancés sur une copie temporaire sans atelier_visuels_fond.py ni atelier_visuels_web.py (2026-11-15) : ModuleNotFoundError, code 1 ; verts avec les modules ; les tests ayant été écrits après les modules, le rouge sur comportement est prouvé par les mutants (6 KO nettoyage neutralisé, 6 mutants de la relecture)
 - [x] `atelier_visuels_fond.py`, `atelier_visuels_web.py` (squelette de `tapp_web.py`), page et JS écrits selon la
   maquette choisie en A1 ; tests verts — preuve : atelier_visuels_page.py + _page_js.py (disposition A, 3 colonnes, theme sombre/clair), test_atelier_visuels_web.py VERT, test_atelier_visuels_page_chrome.py VERT
 - [x] Editeur de formes (module `atelier_visuels_page_formes*.py`) : rectangle, polygone, 10 gabarits, motifs briques/tuiles/lames, couleur mediane, aimantation 8 px, annuler/retablir 100 pas, zones effacer/garder, `AV.svg()` propre — preuve : test_atelier_visuels_page_formes.py VERT (31 verifications node, SVG sans perte par nettoie_svg) ; liaison DOM non essayee (sonde Chrome a faire)

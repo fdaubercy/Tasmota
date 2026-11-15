@@ -17,9 +17,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 78 % (51/68) | 17 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
+| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 79 % (52/68) | 16 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
 | [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ████░░░░░░ 38 % (11/26) | 15 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
-| [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | █████░░░░░ 54 % (13/24) | 11 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
+| [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ██████░░░░ 58 % (14/24) | 10 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 89 % (34/36) | 2 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 83 % (70/91) | 21 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
@@ -70,11 +70,10 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 78 %
+#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 79 %
 
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
 - A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
-- A5 — Outil 7985 : squelette, import de la photo, deux modes de fond, poids : Tests lancés : rouges
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur
 - A6 — Points chauds, sources et aperçu par le vrai moteur : Tests lancés : rouges ; modules écrits ; tests verts
@@ -113,9 +112,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
 
-#### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 54 %
+#### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 58 %
 
-- A1 — Inventaire des envs simulables : Pour chaque env : modules Berry chargés (autoexec) et routes déclarées — FAIT pour les modules : `cartes_simulees.py::modules_autoexec`, relus en brut par la section 6 (outils_pc/test_cartes_simulees.py VERT le 2026-11-14 (67 contrôles)) ; 2 cartes sans module (cave-serveur-rly, garage-serveur-modbus : autoexec d'ancien format, à vérifier) ; RESTE les routes, déclarées pour le rideau seulement (`MODULES_BERRY`)
 - A2 — Moteur Berry (routes réelles) : Bouchons manquants (`tasmota`, `webserver`, `persist` du dossier de la carte, `path`)
 - A2 — Moteur Berry (routes réelles) : Banc : la sortie du rideau contient `window.VOLETS` avec le décor
 - A3 — Serveur de la carte simulée : Valeurs de scénario (ouvert, fermé, maître muet, incohérence) ; position lue par `/rideau?f=position&id=`
