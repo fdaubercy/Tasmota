@@ -11,26 +11,20 @@ concurrency:
 
 jobs:
 
-  # --- Controle : tous les envs du cenv sont dans la matrice (la liste ecrite a la main avait pris du retard) ---
-  verifie-matrice:
+  # --- Choix des envs : cenv moins outils_docs/compilations_nuit/envs_github.json (page « Taches planifiees ») ---
+  choix:
     runs-on: ubuntu-latest
+    outputs:
+      matrice: ${{ steps.m.outputs.matrice }}
+      nombre: ${{ steps.m.outputs.nombre }}
     steps:
       - uses: actions/checkout@v6
-      - name: Comparer le cenv et la matrice custom-images
-        run: |
-          python - <<'EOF'
-          import re, sys
-          cenv = set(re.findall(r'^\[env:([^\]]+)\]', open('platformio_tasmota_cenv.ini', encoding='utf-8').read(), re.M))
-          wf = open('.github/workflows/build_custom.yml', encoding='utf-8').read()
-          bloc = re.search(r'^  custom-images:.*?steps:', wf, re.M | re.S).group(0)
-          matrice = set(re.findall(r'^\s+- (\S+)\s*$', bloc, re.M)) - {'ubuntu-latest'}
-          manque, en_trop = sorted(cenv - matrice), sorted(matrice - cenv)
-          print('envs du cenv :', len(cenv), '- matrice :', len(matrice))
-          if manque or en_trop:
-              print('MANQUENT dans la matrice :', manque)
-              print('INCONNUS du cenv :', en_trop)
-              sys.exit(1)
-          EOF
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - id: m
+        name: Calculer la matrice
+        run: python outils_docs/scripts_python/maintenance/matrice_github.py
 
   # --- Environnements Tasmota de base (ESP32 S3 / P4) ---
   base-images:
@@ -70,36 +64,13 @@ jobs:
 
   # --- Environnements personnalisés (platformio_tasmota_cenv.ini) ---
   custom-images:
+    needs: choix
+    if: needs.choix.outputs.nombre != '0'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false         # tente tous les variants même si l'un échoue
       matrix:
-        variant:
-          - tasmota32s3-base-N16R8
-          - tasmota32p4-base-wifi6
-          - tasmota32p4-base-devkit
-          - tasmota32p4r3-base-devkit
-          - tasmota32-cave-serveur-rly
-          - tasmota32-rdc-vr-porte
-          - tasmota32-bureau-interrupteur-energie
-          - tasmota32s3-etage2-grenier
-          - tasmota32p4-garage-serveur-modbus
-          - tasmota32s3-garage-serveur-modbus
-          - tasmota32s3-garage-capteurs-cuve-modbus
-          - tasmota32s3-garage-rideau-garage-modbus
-          - tasmota32s3-garage-portail-jardin-modbus
-          - tasmota32-base
-          - tasmota32s3-base-N16R8-sans-ecran
-          - tasmota32-jardin-projecteur-led
-          - tasmota32s3-cave-serveur-rly
-          - tasmota32s3-cave-ecran
-          - tasmota32s3-rdc-grenier
-          - tasmota32s3-bureau-serveur-debits-pac
-          - tasmota32s3-bureau-ecran-debits-pac
-          - tasmota-base-1M
-          - tasmota-jardin-pompe-piscine
-          - tasmota-cave-lumiere-porte
-          - tasmota-rdc-tv-salon
+        variant: ${{ fromJSON(needs.choix.outputs.matrice) }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6

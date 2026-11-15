@@ -138,6 +138,40 @@ def evenements_fin(port, depuis, delai=30):
     return lus
 
 
+def pid_vivant(pid):
+    """True si le processus `pid` existe encore (Windows : STILL_ACTIVE = 259)."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+        noyau = ctypes.windll.kernel32
+        poignee = noyau.OpenProcess(0x1000, False, pid)           # PROCESS_QUERY_LIMITED_INFORMATION
+        if not poignee:
+            return False
+        code = ctypes.c_ulong()
+        ok = noyau.GetExitCodeProcess(poignee, ctypes.byref(code))
+        noyau.CloseHandle(poignee)
+        return bool(ok) and code.value == 259
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def en_cours(dossier):
+    """Numero du compilation_nuit.py vivant (fichier `en_cours.json`), sinon None. Un fichier perime (processus mort) est ignore."""
+    try:
+        pid = int(json.loads((Path(dossier) / "en_cours.json").read_text(encoding="utf-8"))["pid"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return pid if pid_vivant(pid) else None
+
+
 def purge(dossier, jours=CONSERVE_JOURS):
     limite = time.time() - jours * 86400
     for f in Path(dossier).glob("resultat-*.json"):
@@ -155,7 +189,14 @@ def execute(config, dossier, dry_run=False, maintenant=None, pause=10):
     resultat = {"debut": maintenant.isoformat(timespec="seconds"), "port": port, "envs": [], "refus": None, "fin": None}
     nom = f"resultat-{maintenant:%Y%m%d-%H%M%S}.json"
 
+    verrou = {"pris": False}
+
     def termine(code, **champs):
+        if verrou["pris"]:                                           # jamais le verrou d'un AUTRE lancement
+            try:
+                (Path(dossier) / "en_cours.json").unlink()
+            except OSError:
+                pass
         resultat.update(champs, code=code)
         ecrit_atomique(Path(dossier) / nom, resultat)
         ecrit_atomique(Path(dossier) / "dernier.json", resultat)
@@ -164,6 +205,9 @@ def execute(config, dossier, dry_run=False, maintenant=None, pause=10):
 
     if not config["actif"]:
         return 3, {**resultat, "refus": "desactive"}                 # rien d'ecrit : une tache desactivee ne laisse pas de trace
+    autre = en_cours(dossier)
+    if autre and not dry_run:                                        # tache planifiee et lancement manuel ne tournent jamais ensemble
+        return termine(2, refus=f"une compilation de nuit est deja en cours (processus {autre})")
     if not repond(port) and not demarre_page(port, Path(dossier).parent / "consoles"):
         return termine(2, refus="la page Build ne repond pas et n'a pas pu etre demarree")
     code, envs = appel(port, "/envs")
@@ -176,6 +220,8 @@ def execute(config, dossier, dry_run=False, maintenant=None, pause=10):
         return termine(2, refus="aucun env a compiler")
     if dry_run:
         return 0, resultat
+    ecrit_atomique(Path(dossier) / "en_cours.json", {"pid": os.getpid(), "debut": resultat["debut"]})
+    verrou["pris"] = True
     code, etat = appel(port, "/execution")                           # numero du dernier evenement AVANT le lancement
     if code != 200 or not isinstance(etat, dict):
         return termine(2, refus=f"/execution illisible (code {code}) : {etat}")

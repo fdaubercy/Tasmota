@@ -173,6 +173,36 @@ finally:
     cn.demarre_page = original_demarre
 verifie("page absente : code 2", code == 2 and "ne repond pas" in res["refus"])
 
+# 7e. verrou : un autre compilation_nuit.py VIVANT -> refus sans rien lancer ; fichier perime -> ignore ; libere en fin de run
+import subprocess
+import os
+enfant = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+try:
+    f = Faux({"a": "succes"})
+    dossier = tempfile.mkdtemp()
+    Path(dossier, "en_cours.json").write_text(json.dumps({"pid": enfant.pid}), encoding="utf-8")
+    code, res = cn.execute({**cn.CONFIG_DEFAUT, "port": f.port}, dossier, pause=0.01)
+    verifie("verrou vivant : code 2, motif, rien lance", code == 2 and "deja en cours" in res["refus"] and f.lance is None)
+    verifie("verrou vivant : le verrou de l'autre n'est PAS supprime", Path(dossier, "en_cours.json").exists()
+            and json.loads(Path(dossier, "en_cours.json").read_text(encoding="utf-8"))["pid"] == enfant.pid)
+    f.ferme()
+finally:
+    enfant.kill()
+    enfant.wait()
+f = Faux({"a": "succes", "b": "succes", "c": "succes"})
+dossier = tempfile.mkdtemp()
+Path(dossier, "en_cours.json").write_text(json.dumps({"pid": enfant.pid}), encoding="utf-8")   # pid maintenant mort
+code, res = cn.execute({**cn.CONFIG_DEFAUT, "port": f.port}, dossier, pause=0.01)
+verifie("verrou perime (processus mort) : ignore, la nuit tourne", code == 0 and f.lance is not None)
+verifie("verrou libere en fin de run", not Path(dossier, "en_cours.json").exists())
+f.ferme()
+f = Faux({}, refus="un build est en cours")
+dossier = tempfile.mkdtemp()
+code, res = cn.execute({**cn.CONFIG_DEFAUT, "port": f.port}, dossier, pause=0.01)
+verifie("verrou libere aussi apres un refus de la page", code == 2 and not Path(dossier, "en_cours.json").exists())
+f.ferme()
+verifie("pid_vivant : soi-meme oui, absurde non", cn.pid_vivant(os.getpid()) and not cn.pid_vivant(0) and not cn.pid_vivant("x") and not cn.pid_vivant(-4))
+
 # 8. config absente ou illisible : valeurs par defaut
 d = tempfile.mkdtemp()
 (Path(d) / "config.json").write_text("{pas du json", encoding="utf-8")
