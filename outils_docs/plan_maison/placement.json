@@ -1,5 +1,5 @@
 {
- "_note": "Placement des cartes. Les liens et les rôles maître/esclave sont DERIVES des _persist.json (ipMaitre, typeComm, id ModBus). ip_cartes tranche une IP portée par deux cartes ; etiquettes = marque libre sur une pastille ; liens_manuels = exceptions {type: serie|udp, de: maitre, vers: esclave}.",
+ "_note": "Placement des cartes. Les liens et les rôles maître/esclave sont DERIVES des _persist.json (ipMaitre, typeComm, id ModBus). ip_cartes tranche une IP portée par deux cartes ; etiquettes = marque libre sur une pastille ; liens_manuels = exceptions {type: serie|udp, de: maitre, vers: esclave}. wifi.appareils = box, relais et répéteurs (SSID -> appareil, lus dans serveur.wifi.reseau1/reseau2 ; reseau1 = principal, reseau2 = secours ; un SSID '<hote>-GATEWAY' = Range Extender du maître de ce nom) ; wifi_manuel = {carte: {principal, secours}} pour corriger.",
  "niveaux": [
   {
    "nom": "Grenier 2e étage",
@@ -250,5 +250,53 @@
  "liens_manuels": [],
  "broker": {
   "nom": "Pi SERVEUR-BUREAU"
+ },
+ "wifi": {
+  "appareils": {
+   "freebox": {
+    "nom": "Freebox Server",
+    "piece": "bureau",
+    "ssid": [
+     "MAISON",
+     "MAISON_5GHz"
+    ],
+    "coul": "#7048e8"
+   },
+   "relais_facade": {
+    "nom": "Relais Wi-Fi façade",
+    "piece": "cuisine",
+    "ssid": [
+     "Relai Wifi 2.4G KuWFi"
+    ],
+    "coul": "#0b7285"
+   },
+   "repeteur_garage": {
+    "nom": "Répéteur Wi-Fi garage",
+    "piece": "garage",
+    "ssid": [
+     "Repeteur Wifi 2.4G KuWFi"
+    ],
+    "coul": "#a61e4d"
+   },
+   "relais_cave": {
+    "nom": "Relais Wi-Fi cave",
+    "piece": "cave",
+    "ssid": [
+     "Relai Wifi Cave"
+    ],
+    "coul": "#5c940d"
+   },
+   "repeteur_salon": {
+    "nom": "Répéteur Wi-Fi salon",
+    "piece": "salon",
+    "ssid": [],
+    "coul": "#868e96"
+   }
+  },
+  "defaut_ssid": "MAISON ou MAISON_5GHz = Freebox Server par défaut : trois points d'accès diffusent MAISON, le persist ne dit pas lequel (à corriger dans wifi_manuel)",
+  "wifi_manuel": {},
+  "re_hotes": {
+   "SERVEUR-GARAGE": "garage/tasmota32p4-serveur-modbus"
+  }
  }
 }

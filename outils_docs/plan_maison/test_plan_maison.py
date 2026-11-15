@@ -61,6 +61,30 @@ verifie("auto-reference ignoree", l5 == [] and e5 == {})
 (l6, m6, e6), _ = derive({"liens_manuels": [{"type": "udp", "de": "x/m", "vers": "x/e"}]}, {})
 verifie("lien manuel", len(l6) == 1 and m6 == {"x/m"} and "x/e" in e6)
 
+# Wi-Fi : principal/secours, appareil par SSID, Range Extender par SSID '<hote>-GATEWAY', SSID inconnu ignore, hote ambigu signale
+def wi(ssids, hote=""):
+    return {**info(), "ssids": ssids, "hote": hote}
+
+
+cw = {"wifi": {"appareils": {"fb": {"ssid": ["MAISON"]}, "rp": {"ssid": ["REP"]}}}}
+winf = {"m": wi(["MAISON", "REP"], "SRV"), "e": wi(["SRV-GATEWAY", "MAISON"], "ESC"), "t": wi(["iPhone", "MAISON"], "TEL")}
+err = io.StringIO()
+with contextlib.redirect_stderr(err):
+    w = g.derive_wifi(cw, winf)
+vue = {(x["kind"], x["rang"], x["de"], x["vers"]) for x in w}
+verifie("wifi : principal vers l'appareil du SSID", ("ap", 0, "ap:fb", "m") in vue and ("ap", 1, "ap:rp", "m") in vue)
+verifie("wifi : esclave sur le Range Extender du maitre, secours sur la box", ("re", 0, "m", "e") in vue and ("ap", 1, "ap:fb", "e") in vue)
+verifie("wifi : SSID inconnu (telephone) ignore", not any(x[3] == "t" and x[1] == 0 for x in vue) and ("ap", 1, "ap:fb", "t") in vue)
+with contextlib.redirect_stderr(err):
+    w2 = g.derive_wifi(cw, {**winf, "m2": wi([], "SRV")})
+verifie("wifi : hote ambigu -> avertissement, pas de lien RE", "ambigu" in err.getvalue() and not any(x["kind"] == "re" for x in w2))
+with contextlib.redirect_stderr(err):
+    w3 = g.derive_wifi({**cw, "wifi": {**cw["wifi"], "re_hotes": {"SRV": "m"}}}, {**winf, "m2": wi([], "SRV")})
+verifie("wifi : re_hotes tranche l'ambiguite", any(x["kind"] == "re" and x["de"] == "m" for x in w3))
+with contextlib.redirect_stderr(err):
+    w4 = g.derive_wifi({**cw, "wifi": {**cw["wifi"], "wifi_manuel": {"t": {"principal": "rp"}}}}, winf)
+verifie("wifi : wifi_manuel corrige", ("ap", 0, "ap:rp", "t") in {(x["kind"], x["rang"], x["de"], x["vers"]) for x in w4})
+
 # page reelle : generee sans avertissement, une pastille par carte, chaque lien dans les deux vues coherentes
 r = subprocess.run([sys.executable, str(ICI / "genere_plan_maison.py")], capture_output=True, text=True, encoding="utf-8",
                    env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"})

@@ -48,7 +48,7 @@ Décisions de conception (mes choix, à corriger) :
 ## A5 — Lisibilité des liens
 - [x] Routage en coudes — preuve : `python outils_docs/plan_maison/genere_plan_maison.py` -> « 18 cartes, 10 traits de lien, 3 maîtres, 5 esclaves » sans avertissement, rendu relu en capture Chrome le 2026-11-15 orthogonaux depuis des ancres sur les bords, sans passer sous une pastille (cas P4 -> portail du garage)
 - [ ] Liens entre pièces et entre étages : faisceau par bus plutôt qu'une ligne par esclave
-- [ ] Surbrillance au survol d'un maître : tout son réseau (esclaves et sens) ; clic : fiche avec liste des liens
+- [x] Surbrillance au survol d'un maître : tout son réseau (esclaves et sens) ; clic : fiche avec liste des liens
 
 ## A6 — Autres informations sur la page
 - [x] Bascule vue plan / vue réseau (topologie : broker MQTT, P4, esclaves, PC) sans changer de données — preuve : `genere_plan_maison.py` sans avertissement, vue réseau relue en capture Chrome le 2026-11-15 (broker 192.168.0.5:1883 lu dans les persist)
@@ -63,8 +63,15 @@ Décisions de conception (mes choix, à corriger) :
 - [x] Section du `outils_docs/README.md` et entrée de la carte des documents de `CLAUDE.md` (arrêt libre, hors build) — preuve : section « Plan de la maison » du README et ligne de la carte des documents de CLAUDE.md
 - [ ] Contrôle de secrets avant commit (la page affiche IP, topics, jamais de mot de passe) puis commit en français sans accents
 
+## A8 — Wi-Fi, box, relais et répéteurs, survol, tuile annuaire
+- [x] Vue Wi-Fi : box, relais et répéteurs placés dans leurs pièces ; rattachement principal (reseau1) et secours (reseau2, masqué par défaut) lus dans les persist, SSID -> appareil — preuve : vue relue en capture Chrome le 2026-11-15, banc test_plan_maison.py (cas wifi)
+- [x] Range Extender du maître : signalétique à part (rail rose double), SSID « <hote>-GATEWAY » -> carte maître — preuve : capture Chrome, 5 esclaves rattachés, banc test_plan_maison.py
+- [x] Surbrillance au survol d'une carte (maître : tout son réseau), clic = fiche avec liens — preuve : fonctions hl/sel dans la page générée ; non testé au clic dans un navigateur
+- [x] Tuile « Plan de la maison » dans l'annuaire (port 7915, lecture seule) — preuve : `python outils_docs/scripts_python/outils_pc/test_plan_maison_web.py` 5 OK, test_annuaire.py VERT (22 outils)
+- [ ] Confirmer avec l'utilisateur : l'appareil réel de MAISON pour chaque module (déduit : Freebox Server), répéteur salon sans SSID identifié
+
 ## Améliorations restantes
-- [ ] [projet] Tuile « Plan de la maison » dans l'annuaire des outils (page servie sur un port libre, lecture seule)
+- [x] [projet] Tuile « Plan de la maison » dans l'annuaire des outils (page servie sur un port libre, lecture seule)
 - [ ] [projet] Dessiner un vrai plan à l'échelle des pièces (si l'utilisateur fournit les dimensions ou un plan)
 - [ ] [projet] Lier la page aux façades animées (`volets.js`) : clic sur une pièce -> sa page d'accueil
 - [ ] [conversation] Confirmer les placements incertains de A1

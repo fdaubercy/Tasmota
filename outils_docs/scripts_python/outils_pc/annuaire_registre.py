@@ -336,6 +336,16 @@ OUTILS = [
         [_port("http", 7930)],
         "http",
         "Console capturée : " + CONSOLE.format("icones_catalogue") + "."),
+    Outil(
+        "plan_maison", "Plan de la maison", "Plan de la maison", GROUPES[5],
+        "Où sont les cartes Tasmota : par pièce, liens ModBus et UDP, maîtres, MQTT et Wi-Fi.",
+        "Page web en lecture seule, régénérée à chaque ouverture d'après les persist des cartes et placement.json : plan par pièce, vue réseau "
+        "(broker MQTT, maîtres et esclaves), vue Wi-Fi (box, relais, répéteurs, Range Extender des maîtres). Seul paramètre ici : le port de la page "
+        "(7915). Rien n'est écrit, aucune requête réseau avant le bouton « Tester les cartes » : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/plan_maison_web.py",
+        [_port("http", 7915)],
+        "http",
+        "Console capturée : " + CONSOLE.format("plan_maison") + "."),
 ]
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.

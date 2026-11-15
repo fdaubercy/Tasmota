@@ -2625,6 +2625,10 @@ Arrêter une sonde : bouton à deux clics, accepté seulement pour un numéro pr
 
 `placement.json` porte ce que les persist ne disent pas : pièces et position, carte -> pièce, libellés, `ip_cartes` (arbitre une IP portée par deux cartes), `etiquettes`, `liens_manuels`, nom du broker. Une carte de `data/` sans placement, un lien orphelin, une pièce qui déborde ou une IP ambiguë sont signalés sur stderr. Le bouton « Tester les cartes » interroge les IP au clic seulement. Aucun appel réseau à la génération, jamais pendant un build.
 
+Vue Wi-Fi : `placement.json` > `wifi.appareils` (box, relais, répéteurs placés dans leurs pièces, SSID -> appareil). Le réseau principal (`reseau1`) est un trait plein de la couleur de l'appareil, le secours (`reseau2`) un pointillé masqué par défaut, le Range Extender du maître (SSID `<hote>-GATEWAY`) un rail rose double. MAISON est diffusé par plusieurs points d'accès : le persist ne dit pas lequel, la Freebox Server est le défaut, `wifi.wifi_manuel` corrige. Le survol d'une carte met en évidence ses voisines.
+
+Tuile « Plan de la maison » de l'annuaire (groupe Dépôt et références, port 7915, `outils_pc/plan_maison_web.py`, lecture seule, page régénérée à chaque ouverture, banc `outils_pc/test_plan_maison_web.py`).
+
 Banc : `python outils_docs/plan_maison/test_plan_maison.py` (code 0 = vert). Plan : `tasks/plans/plan-maison.md`.
 
 ## Les devices Tasmota développées :
