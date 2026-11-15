@@ -48,7 +48,7 @@ liens: menage-page
 - [x] Bouton « Rouvrir un rapport » dans la page : liste des rapports sauvegardés, bandeau « rapport du <date>, contre-vérifié maintenant », mêmes cases et même bloc de lot qu'après un audit ; sonde Chrome avec témoin (ouverture d'un rapport sans relancer d'audit, cases visibles) — preuve : test_menage_page_chrome.py VERT (1332 vérifications), témoins rouvre-sans-affichage, rouvre-lot-garde, rouvre-appliquees-gardees, rouvre-sans-attente détectés ; indicateur « Ouverture… » ajouté après constat de l utilisateur (ouverture longue sans retour visuel) ; garde de l aperçu tardif passée à un compteur de génération
 
 ## A5 — Essai réel et clôture
-- [ ] Essai réel sur 1 ou 2 propositions choisies par l'utilisateur (candidats proposés : les deux fichiers verrou Word `~$…docx` de `outils_docs/Electronique/Connecteur ModBus/`), `git restore` ensuite si besoin — preuve : sortie de `git status`
+- [x] Essai réel sur 1 ou 2 propositions choisies par l'utilisateur (candidats proposés : les deux fichiers verrou Word `~$…docx` de `outils_docs/Electronique/Connecteur ModBus/`), `git restore` ensuite si besoin — preuve : sortie de `git status` — preuve : essai réel du 2026-11-15 par la page, 2 suppressions appliquées (git rm des deux fichiers verrou Word ~$…docx de Connecteur ModBus) puis gardées par l'utilisateur ; git status : 2 lignes D, aucun commit par la page ; au passage : contrôle des renvois résumé en une phrase et bouton Annuler cette application (commit 9fa901709), demandés après l'essai
 - [ ] Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
 
 ## A6 — Retour au plan précédent (menage-page)
