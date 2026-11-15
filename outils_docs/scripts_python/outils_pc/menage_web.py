@@ -171,7 +171,7 @@ def fabrique_gestionnaire(acces, etat):
                 debut_liste = e["appels"] - len(e["activite"])          # rang absolu de la 1re entree gardee
                 self._json({"etat": e["etat"], "message": e["message"], "debut": e["debut"], "fin": e["fin"],
                             "propositions": None if r is None else len(r["propositions"]),
-                            "appels": e["appels"], "progression": e["progression"],
+                            "appels": e["appels"], "progression": e["progression"], "detail": e["detail"],
                             "activite": e["activite"][max(0, depuis - debut_liste):]})
             elif chemin == "/rapport":
                 r = etat.rapport()

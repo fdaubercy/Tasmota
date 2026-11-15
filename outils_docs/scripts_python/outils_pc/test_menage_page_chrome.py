@@ -10,6 +10,7 @@ Python de PlatformIO : <~/.platformio/penv/Scripts/python.exe> outils_docs/scrip
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -37,6 +38,7 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
     "journal-html": ("l.appendChild(document.createTextNode(a.detail));", "l.insertAdjacentHTML('beforeend', a.detail);",
                      "journal : l'action hostile reste du texte"),
     "verif-sans-code": ("if (v.n_code) vb.appendChild", "if (false) vb.appendChild", "verif : badge code/config sur le fichier cite par config.ini"),
+    "detail-html": ('$("detail-texte").textContent = dt;', '$("detail-texte").innerHTML = dt;', "echec : le detail reste du texte"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -71,7 +73,11 @@ def faux_claude(dossier):
     ]
     rapport = json.dumps({"resume": "3 propositions", "non_verifie": "rien de grave", "propositions": props})
     action = {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": HOSTILE_ACTION}}]}}
-    f.write_text("import json, sys, time\nsys.stdin.buffer.read()\nprint(json.dumps(" + repr(action) + "), flush=True)\ntime.sleep(4)\n"
+    f.write_text("import json, os, sys, time\nsys.stdin.buffer.read()\n"
+                 "if os.environ.get('FAUX_MENAGE') == 'echec':\n"
+                 "    print(json.dumps({'type': 'result', 'is_error': True, 'result': 'Credit balance is too low <b>x</b>'}), flush=True)\n"
+                 "    sys.stderr.write('warning: ANTHROPIC_API_KEY is set'); sys.exit(1)\n"
+                 "print(json.dumps(" + repr(action) + "), flush=True)\ntime.sleep(4)\n"
                  "print(json.dumps({'type': 'result', 'is_error': False, 'result': " + repr(rapport) + "}))\n", encoding="utf-8")
     return f
 
@@ -150,7 +156,7 @@ def scenario(m, temoin):
 
     cdp.js("document.querySelectorAll('#p-zone input').forEach(function(c){c.checked=false})")
     clic(cdp, "b-lance")
-    verifie("Cochez" in (cdp.js("document.getElementById('etat').textContent") or ""), True, "aucun dossier coche : refus cote page")
+    verifie(bool(attend(cdp, "document.getElementById('etat').textContent.indexOf('Cochez') >= 0", 5)), True, "aucun dossier coche : refus cote page")
     cdp.js("document.querySelectorAll('#p-zone input').forEach(function(c){c.checked=true})")
 
     clic(cdp, "b-lance")
@@ -208,6 +214,19 @@ def scenario(m, temoin):
     verifie(cdp.js("document.getElementById('n-gardes').textContent"), "(1)", "compteur des gardes")
     clic_bouton(cdp, "#gardes", "Retirer", 0)
     verifie(bool(attend(cdp, "document.querySelectorAll('#props .prop').length === 1", 10)), True, "retirer : la proposition revient")
+
+    # echec de claude : la raison en francais d'abord, le texte anglais d'origine en detail depliable (en texte)
+    os.environ["FAUX_MENAGE"] = "echec"
+    try:
+        clic(cdp, "b-lance")
+        verifie(bool(attend(cdp, "document.getElementById('etat').textContent.indexOf('a échoué') >= 0", 20)), True, "echec : l'interface annonce l'echec")
+        verifie(cdp.js("document.getElementById('etat').textContent.indexOf('crédit') >= 0 && document.getElementById('etat').textContent.indexOf('Credit balance') < 0"), True,
+                "echec : la raison est en francais, sans l'anglais brut")
+        verifie(cdp.js("document.getElementById('detail').hidden === false && document.getElementById('detail-texte').textContent.indexOf('Credit balance') >= 0"), True,
+                "echec : le detail technique d'origine est disponible")
+        verifie(cdp.js("document.querySelectorAll('#detail b').length"), 0, "echec : le detail reste du texte")
+    finally:
+        os.environ.pop("FAUX_MENAGE", None)
 
     # theme
     cdp.js("var c=document.getElementById('theme'); c.checked=!c.checked; c.dispatchEvent(new Event('change',{bubbles:true}))")

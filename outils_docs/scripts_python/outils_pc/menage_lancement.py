@@ -81,6 +81,41 @@ def consigne(params, gardes):
     )
 
 
+MAX_DETAIL = 1200
+# (motif sur le texte d'erreur en minuscules, cause en francais) : la 1re cause trouvee est la raison de l'echec
+CAUSES = [
+    (("credit balance", "insufficient credit", "billing"),
+     "Le crédit du compte API est épuisé : claude refuse de travailler. Rechargez le crédit sur console.anthropic.com, ou retirez la variable "
+     "d'environnement ANTHROPIC_API_KEY pour utiliser votre abonnement claude.ai."),
+    (("invalid api key", "authentication_error", "invalid x-api-key", "please run /login", "not logged in", "oauth token", "401"),
+     "Claude a refusé la connexion : la clé API ou la session est invalide ou expirée. Reconnectez-vous (/login dans claude) ou corrigez la variable "
+     "d'environnement ANTHROPIC_API_KEY."),
+    (("limit reached", "usage limit", "rate limit", "rate_limit", "429", "quota"),
+     "Limite d'utilisation de claude atteinte : réessayez plus tard (l'heure de reprise figure dans le détail technique) ou choisissez un modèle moins gourmand."),
+    (("overloaded", "529", "503", "service unavailable"),
+     "Les serveurs de claude sont surchargés ou indisponibles : réessayez dans quelques minutes."),
+]
+CONTEXTES = [
+    (("anthropic_api_key",), "Une clé API (ANTHROPIC_API_KEY) est définie dans l'environnement de cette page : claude l'utilise à la place de votre "
+                             "connexion claude.ai, et les connecteurs de votre compte sont désactivés. Si elle est invalide ou sans crédit, l'audit échoue."),
+    (("not been trusted", "hastrustdialogaccepted"), "Claude Code n'a pas encore approuvé ce dossier : il ignore les autorisations de .claude/settings.json "
+                                                     "(l'audit garde les siennes). Pour l'approuver, ouvrez claude une fois dans le dépôt et acceptez la confiance."),
+]
+
+
+def explique_echec(code, erreur, resultat=""):
+    """(message en francais avec la raison, detail technique d'origine borne) pour un echec de claude."""
+    brut = " ".join(x for x in (str(resultat or "").strip(), str(erreur or "").strip()) if x)
+    bas = brut.lower()
+    cause = next((c for motifs, c in CAUSES if any(m in bas for m in motifs)), None)
+    contexte = [c for motifs, c in CONTEXTES if any(m in bas for m in motifs)]
+    if cause is None:
+        cause = f"claude s'est arrêté avec une erreur (code {code}) sans dire pourquoi en clair."
+        if contexte:
+            cause += " Les avertissements ci-dessous sont les seuls indices."
+    return " ".join([cause] + contexte), brut[-MAX_DETAIL:]
+
+
 def _resultat(d):
     """Texte de l'evenement final de claude (dict deja decode)."""
     if not isinstance(d, dict):
@@ -125,7 +160,7 @@ class Audit:
     def __init__(self, racine, builds_en_cours, programme=None, delai=DELAI, gardes=lambda: []):
         self.racine, self.builds_en_cours, self.programme, self.delai, self.gardes = Path(racine), builds_en_cours, programme, delai, gardes
         self._verrou = threading.Lock()
-        self._etat = {"etat": "repos", "message": "", "rapport": None, "debut": None, "fin": None, "activite": [], "appels": 0, "progression": 0}
+        self._etat = {"etat": "repos", "message": "", "rapport": None, "debut": None, "fin": None, "activite": [], "appels": 0, "progression": 0, "detail": ""}
         self._proc = None
         self._arret = False
 
@@ -148,7 +183,7 @@ class Audit:
             if self._etat["etat"] == "en_cours":
                 return False, "un audit est deja en cours"
             self._etat = {"etat": "en_cours", "message": "audit en cours", "rapport": None, "debut": time.time(), "fin": None,
-                           "activite": [], "appels": 0, "progression": 0}
+                           "activite": [], "appels": 0, "progression": 0, "detail": ""}
             self._arret = False
         threading.Thread(target=self._fil, args=(params,), daemon=True).start()
         return True, "audit lance"
@@ -222,8 +257,12 @@ class Audit:
                 t.join(10)
         if self._arret:
             return "echec", "audit arrete par l'utilisateur", None
-        if p.returncode != 0:
-            return "echec", f"claude a echoue (code {p.returncode}) : " + (erreur[0] if erreur else b"").decode("utf-8", "replace")[-300:], None
+        sortie_erreur = (erreur[0] if erreur else b"").decode("utf-8", "replace")
+        resultat = str((finale[-1] if finale else {}).get("result") or "") if finale and (p.returncode != 0 or finale[-1].get("is_error")) else ""
+        if p.returncode != 0 or (finale and finale[-1].get("is_error")):
+            message, detail = explique_echec(p.returncode, sortie_erreur, resultat)
+            self._pose(detail=detail)
+            return "echec", message, None
         try:
             texte = _resultat(finale[-1] if finale else None)
         except ValueError as e:

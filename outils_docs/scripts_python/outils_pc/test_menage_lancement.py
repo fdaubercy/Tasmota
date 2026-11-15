@@ -32,6 +32,9 @@ elif mode == "erreur":
     print(json.dumps({"is_error": True, "result": "limite atteinte"}))
 elif mode == "code1":
     sys.stderr.write("boum"); sys.exit(1)
+elif mode == "echec_anglais":
+    print(json.dumps({"type": "result", "is_error": True, "result": "Credit balance is too low"}), flush=True)
+    sys.stderr.write("warning: workspace has not been trusted"); sys.exit(1)
 elif mode == "lent":
     time.sleep(60)
 elif mode == "flux":
@@ -95,12 +98,36 @@ verifie(("data/vieux.txt" in t["entree"], "anciennete_jours = 5" in t["entree"],
 del os.environ["FAUX_TRACE"]
 
 # 3. echecs
-for mode, attendu in [("invalide", "rapport refuse"), ("pasjson", "rapport refuse"), ("erreur", "claude a rendu une erreur"),
-                      ("code1", "claude a echoue")]:
+for mode, attendu in [("invalide", "rapport refuse"), ("pasjson", "rapport refuse"), ("erreur", "claude s'est arrêté avec une erreur"),
+                      ("code1", "claude s'est arrêté avec une erreur (code 1)")]:
     a = audit(mode)
     a.lance({})
     e = attend(a)
     verifie((e["etat"], attendu in e["message"], e["rapport"]), ("echec", True, None), f"echec propre : {mode}")
+
+# 3b. echecs de claude expliques en francais, avec la raison (le texte anglais brut va dans `detail`)
+CAPTURE = ('Ignoring 22 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once '
+           'and accept the trust dialog, or set projects["C:/Users/exemple/Documents/Depot"].hasTrustDialogAccepted: true in C:\\Users\\fdaub\\.claude.json.\n'
+           '⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization\'s connectors')
+for libelle, code, err, res, attendus in [
+        ("capture de l'utilisateur", 1, CAPTURE, "", ["clé API", "ANTHROPIC_API_KEY", "dossier"]),
+        ("credit epuise", 1, "", "Credit balance is too low", ["crédit", "épuisé"]),
+        ("cle refusee", 1, "", "Invalid API key · Please run /login", ["refus", "connexion"]),
+        ("limite d'utilisation", 1, "", "5-hour limit reached ∙ resets 3pm", ["Limite d'utilisation"]),
+        ("serveur surcharge", 1, "", "API Error: 529 overloaded_error", ["surchargé"]),
+        ("cause inconnue", 7, "boum", "", ["code 7"])]:
+    m, d = ml.explique_echec(code, err, res)
+    verifie(all(x in m for x in attendus), True, f"echec explique en francais : {libelle}")
+    verifie(("not been trusted" in m or "Credit balance" in m or "Invalid API" in m), False, f"echec explique : pas d'anglais brut dans le message ({libelle})")
+    verifie(isinstance(d, str) and len(d) <= 1200, True, f"echec explique : detail technique borne ({libelle})")
+m, d = ml.explique_echec(1, CAPTURE, "")
+verifie(("hasTrustDialogAccepted" in d, "ANTHROPIC_API_KEY" in d), (True, True), "le detail technique garde le texte d'origine")
+m, d = ml.explique_echec(1, "", "Credit balance is too low" + " x" * 800)
+verifie(len(d) <= 1200, True, "detail tronque")
+a = audit("echec_anglais")
+a.lance({})
+e = attend(a)
+verifie((e["etat"], "crédit" in e["message"], "Credit balance" in e.get("detail", "")), ("echec", True, True), "echec de bout en bout : message en francais, detail anglais conserve")
 
 # 4. build en cours : refus, rien de lance
 appels = []

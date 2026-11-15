@@ -38,6 +38,7 @@ label.ch input{margin-top:3px;flex:none}
 .champ{display:block;margin:8px 0} .champ span{display:block;font-size:12px;color:var(--doux);margin-bottom:2px}
 input[type=number],select{font:inherit;padding:5px 7px;border:1px solid var(--bord);border-radius:5px;background:var(--champ);color:var(--texte);width:100%}
 .etat{padding:8px 10px;border-radius:6px;background:var(--piste);margin-top:8px;overflow-wrap:anywhere}
+.detail{margin-top:8px} .detail pre{max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin:6px 0 0}
 .avance{margin-top:8px} .barre{height:8px;border-radius:4px;background:var(--piste);overflow:hidden}
 .rempli{height:100%;width:0;background:var(--bleu);transition:width .6s ease}
 .journal{margin-top:8px;max-height:240px;overflow:auto;padding:6px 8px;border:1px solid var(--bord);border-radius:6px;background:var(--champ);
@@ -69,6 +70,7 @@ HTML = """
   <label class="champ"><span>Effort</span><select id="p-effort"></select></label>
   <div class="ligne"><button class="btn prim" id="b-lance">Lancer l'audit</button><button class="btn" id="b-stop" disabled>Arrêter</button></div>
   <div class="etat" id="etat" role="status">Prêt.</div>
+  <details class="detail" id="detail" hidden><summary>Détail technique (texte d'origine de claude, en anglais)</summary><pre id="detail-texte"></pre></details>
   <div class="avance" id="avance" hidden><div class="barre" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="barre"><div class="rempli" id="rempli"></div></div>
    <div class="doux petit" id="pct"></div></div>
   <div class="journal" id="journal" hidden tabindex="0" aria-label="Actions de l'agent en direct"></div>
@@ -256,6 +258,8 @@ function etat() {
     if (!r.ok) { message("ko", r.texte); return; }
     var e = r.donnees, enCours = e.etat === "en_cours";
     journalise(e);
+    var dt = e.etat === "echec" ? (e.detail || "") : "";
+    $("detail").hidden = !dt; $("detail-texte").textContent = dt;
     $("b-lance").disabled = enCours; $("b-stop").disabled = !enCours;
     if (enCours) {
       var s = e.debut ? Math.max(0, Math.round(Date.now() / 1000 - e.debut)) : 0;
@@ -264,7 +268,7 @@ function etat() {
     } else {
       if (S.scrute) { clearInterval(S.scrute); S.scrute = null; }
       if (e.etat === "fini") { message("ok", "Audit terminé : " + e.message + "."); chargeRapport(); }
-      else if (e.etat === "echec") message("ko", e.message);
+      else if (e.etat === "echec") message("ko", "L'audit a échoué. " + e.message);
       else message("", "Prêt.");
     }
   });
