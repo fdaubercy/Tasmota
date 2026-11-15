@@ -17,6 +17,7 @@ import json
 import os
 import re
 import shutil
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,6 +28,7 @@ from build_progression import ETAPE_COMPILATION, ETAPE_FS, ETAPE_LIENS, ETAPE_PR
 BASE = Path(__file__).resolve().parents[2] / "schemas" / "reparations_build.json"
 LIGNES_FIN = 50                      # la correspondance ne regarde que la fin du journal (borne le cout d'un motif lent)
 # action -> parametres requis (nom -> type) ; toute autre action est refusee
+VERROU_CATALOGUE = threading.Lock()      # lecture-modification-ecriture de reparations.json (ajout IA, suppression de la page)
 ACTIONS = {"attendre": {"secondes": (int, float)}, "libere_verrou": {}, "vide_build": {}}
 ETAPES_TOUTES = "toutes"
 # jamais upload / erase_upload : un envoi n'est pas relance (spec, « Ce qu'une reparation relance »)
@@ -215,8 +217,8 @@ class Reparateur:
             if not self.traite(ligne, action, cible, rendu[3], journal, rendu[2]):
                 return rendu
 
-    def traite(self, ligne, action, cible, etape, journal, extrait) -> bool:
-        """Vrai = la regle a ete appliquee, relancer la meme etape."""
+    def traite(self, ligne, action, cible, etape, journal, extrait, regle=None) -> bool:
+        """Vrai = la regle a ete appliquee, relancer la meme etape. `regle` impose une regle (diagnostic de l'IA, A6)."""
         env = ligne.env
         self._clos(False, "la relance a encore échoué")
         if cible.split()[-1:] not in ([], ["buildfs"]):   # un envoi n'est jamais relance (drvset, carte effacee)
@@ -224,11 +226,13 @@ class Reparateur:
         nom = ETAPES_SUIVI.get(etape)
         if nom is None or self.serie._arrete_demande():
             return False
-        regle = cherche(self.regles, journal, nom, env)
+        regle = regle or cherche(self.regles, journal, nom, env)
         if regle is None:
             return False
         fin = "\n".join(journal.splitlines()[-LIGNES_FIN:])
         m = regle._re.search(fin)
+        if m is None:
+            return False
         reconnue = fin[fin.rfind("\n", 0, m.start()) + 1:].split("\n", 1)[0]
         signature, cle = (regle.id, reconnue), (env, action, cible)
         vus = self._signatures.setdefault(cle, set())
@@ -269,12 +273,13 @@ class Reparateur:
     def ajoute_regle_locale(self, regle):
         """Valide puis ecrit `regle` (dict) dans le catalogue local (meme id remplace) ; rend la Regle."""
         r = _valide(regle)
-        data = _lit(self.chemin_local, False) or {}
-        data["regles"] = [d for d in data.get("regles", []) if not (isinstance(d, dict) and d.get("id") == r.id)] + [regle]
-        self.chemin_local.parent.mkdir(parents=True, exist_ok=True)
-        provisoire = self.chemin_local.with_suffix(".tmp")
-        provisoire.write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding="utf-8")
-        os.replace(provisoire, self.chemin_local)
+        with VERROU_CATALOGUE:
+            data = _lit(self.chemin_local, False) or {}
+            data["regles"] = [d for d in data.get("regles", []) if not (isinstance(d, dict) and d.get("id") == r.id)] + [regle]
+            self.chemin_local.parent.mkdir(parents=True, exist_ok=True)
+            provisoire = self.chemin_local.with_suffix(".tmp")
+            provisoire.write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding="utf-8")
+            os.replace(provisoire, self.chemin_local)
         self.regles = [x for x in self.regles if x.id != r.id] + [r]
         return r
 

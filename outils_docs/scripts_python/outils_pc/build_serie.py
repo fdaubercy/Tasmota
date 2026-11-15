@@ -200,6 +200,7 @@ class Serie:
         self.publie_fiches = _publie_fiches              # remplace par un faux dans le banc
         self.fabrique_reparateur = build_reparations.pour_serie   # un Reparateur par lancement (faux dans le banc)
         self.reparateur = None
+        self.derniers_echecs = {}                       # env -> {ligne, action, etape, actions non reussies} (diagnostic par l'IA, A6)
 
     # -- evenements -------------------------------------------------------------------------------------
 
@@ -527,6 +528,7 @@ class Serie:
     def _execute_env(self, ligne, actions, precedent=None):
         """Un env ; `precedent` : env precedent de la serie sur le meme port COM (pause avant l'envoi)."""
         env, debut = ligne.env, time.monotonic()
+        self.derniers_echecs.pop(env, None)
         self._ajoute("debut", env, actions=actions, methode=ligne.methode, port=ligne.port, ip=ligne.ip)
         statuts = {a: "annulee" for a in actions}
         plan = self._plan(ligne, actions, pause=precedent is not None)
@@ -562,6 +564,8 @@ class Serie:
             else:
                 statuts.update({a: "echec" for a in couvre})
             self._ajoute("echec", env, action=action, motif=motif, extrait=extrait)
+            self.derniers_echecs[env] = {"ligne": ligne, "action": action, "etape": etape,
+                                         "actions": [a for a in actions if statuts[a] != "succes"]}
             resultat = "arrete" if self._arrete_demande(immediat=True) or self.reparateur.interrompue else "echec"
             break
         if drvset and resultat == "succes":

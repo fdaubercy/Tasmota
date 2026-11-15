@@ -4,7 +4,7 @@ titre: Réparation automatique des pannes de la page Build
 objectif: La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit
 statut: actif
 cree: 2026-11-14
-maj: 2026-11-14
+maj: 2026-11-15
 famille: build
 liens: ecran-cave-vues-commandes, facade-garage-capteurs
 spec: 2026-11-14-build-reparations-design.md
@@ -97,32 +97,32 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
   relance d'un upload) rouges
 
 ## A4 — Routes de la page (`build_web.py`)
-- [ ] Écrire d'abord les tests dans `test_build_web.py` : `GET /reparations` rend règles (base + locales) et historique de la
+- [x] Écrire d'abord les tests dans `test_build_web.py` : `GET /reparations` rend règles (base + locales) et historique de la
   série ; `POST /reparation {env, choix}` (réponse au choix) ; `POST /reparations/supprime {id}` (règles locales seulement,
   jamais une règle de base) ; les trois écrivains (`/reparation`, `/reparations/supprime`, et plus tard A6) refusés (403) pour un
-  client distant, lecture permise ; mêmes protections que `/continuer` (en-tête `X-Build`, origine)
-- [ ] Ajouter les routes dans `build_web.py` (quelques lignes, logique dans `build_reparations.py`) — preuve : banc vert
+  client distant, lecture permise ; mêmes protections que `/continuer` (en-tête `X-Build`, origine) — preuve : test_build_web.py::test_reparations (GET base+locale, 409/400/403, distant lecture seule, suppression locale), code de commit 815f99c66
+- [x] Ajouter les routes dans `build_web.py` (quelques lignes, logique dans `build_web_reparations.py`) — preuve : routes build_web.py (+13 lignes) et build_web_reparations.py (46 lignes), commit 815f99c66 ; test_reparations vert (seul KO du banc : page_contient « GET / sert build_page.PAGE », sans rapport, la page servie est habillee par acces_web) ; mutants : garde est_local retiree -> rouge (2 tests), regle de base supprimable -> rouge
 
 ## A5 — Page : bandeau, choix, panneau « Réparations »
-- [ ] Écrire d'abord la sonde `test_build_page_reparations_chrome.py` (rouge ; pas de pause fixe, attendre des conditions) :
+- [x] Écrire d'abord la sonde `test_build_page_reparations_chrome.py` (rouge ; pas de pause fixe, attendre des conditions) :
   bandeau « Réparation en cours : <titre> » sur l'env, boutons Fermer / Attendre / Annuler d'un `choix_reparation` qui
   envoient `POST /reparation`, état reconstruit au rechargement par les événements rejoués, panneau « Réparations » avec la
-  liste des règles, bouton Supprimer sur une règle locale seulement
-- [ ] Créer `build_page_reparations.py` (CSS, HTML, JS du bandeau, des boutons et du panneau, inséré dans `build_page.PAGE` par
-  quelques lignes) ; brancher les événements `reparation` et `choix_reparation` dans le gestionnaire d'événements de `build_page.py`
-- [ ] Sonde verte ; Chrome `sonde_*` orphelins arrêtés après coup (compter les `HasExited` faux 15 s après) — preuve : …
+  liste des règles, bouton Supprimer sur une règle locale seulement — preuve : test_build_page_reparations_chrome.py (153 lignes, vraie série + faux pio, règle locale attendre 8 s, rechargement pendant la réparation, choix synthétique, XSS, mode sombre, suppression) ; sonde écrite avec le module, rouge constaté en cours de route (IndexError : choix non dessiné, tableau passé à appendChild) puis mutant innerHTML rouge (3 KO)
+- [x] Créer `build_page_reparations.py` (CSS, HTML, JS du bandeau, des boutons et du panneau, inséré dans `build_page.PAGE` par
+  quelques lignes) ; brancher les événements `reparation` et `choix_reparation` dans le gestionnaire d'événements de `build_page.py` — preuve : build_page_reparations.py (119 lignes) ; build_page.py +7 lignes (3 repères, appel reparationsEvenement dans traite(), 3 lignes d'assemblage)
+- [x] Sonde verte ; Chrome `sonde_*` orphelins arrêtés après coup (compter les `HasExited` faux 15 s après) — preuve : sonde VERT (19 contrôles) sur 2 exécutions de suite, mutant innerHTML sur le titre rouge (3 KO XSS) ; 15 s après les sondes, 14 chrome `sonde_*` encore vivants (surtout ceux de test_build_page_chrome.py), arrêtés, 0 restant ; test_build_web.py VERT
 
 ## A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`)
-- [ ] Écrire d'abord `test_build_reparations_ia.py` (rouge, `claude` remplacé par un faux programme injecté, comme le test de
+- [x] Écrire d'abord `test_build_reparations_ia.py` (rouge, `claude` remplacé par un faux programme injecté, comme le test de
   `atelier_ecrans_remarques.py`) : la consigne contient la fin du journal filtrée des secrets et l'étape ; sortie qui n'est pas du
   JSON -> aucune proposition ; `regle` dont le motif ne correspond pas au journal fourni -> refusée, texte manuel seulement ; `regle`
   avec une action hors liste -> refusée ; `regle` valide -> proposition `{cause, explication, regle}` ; appliquer = actions puis
-  relance puis, si la relance réussit, règle ajoutée dans le fichier local avec `origine: "ia"` ; échec de la relance : rien ajouté
-- [ ] Créer `build_reparations_ia.py` : `diagnostique(racine, env, etape, journal, programme=None) -> dict` (`claude -p` en lecture
-  seule, mêmes options et mêmes gardes que l'atelier des écrans, ce PC seulement), `valide_proposition(proposition, journal) -> dict`
-- [ ] Routes `POST /reparations/diagnostic {env}` et `POST /reparations/appliquer {env, regle}` (ce PC seulement) ; « Appliquer et
+  relance puis, si la relance réussit, règle ajoutée dans le fichier local avec `origine: "ia"` ; échec de la relance : rien ajouté — preuve : test_build_reparations_ia.py (faux claude, cas uv.exe 60 s, 5 mutants rouges : motif non verifie, cles API transmises, action hors liste, regle ajoutee malgre echec, secrets non filtres) ; sortie VERT, 0 KO
+- [x] Créer `build_reparations_ia.py` : `diagnostique(racine, env, etape, journal, programme=None) -> dict` (`claude -p` en lecture
+  seule, mêmes options et mêmes gardes que l'atelier des écrans, ce PC seulement), `valide_proposition(proposition, journal) -> dict` — preuve : build_reparations_ia.py ; fils claude sans ANTHROPIC_API_KEY/AUTH_TOKEN (abonnement), lecture seule ; banc vert
+- [x] Routes `POST /reparations/diagnostic {env}` et `POST /reparations/appliquer {env, regle}` (ce PC seulement) ; « Appliquer et
   relancer » lance une série d'un seul env avec les actions non réussies, ou attend la fin de la série en cours ; bouton « Faire
-  diagnostiquer par l'IA » sur un env en échec sans règle (résumé de la série), dans `build_page_reparations.py`
+  diagnostiquer par l'IA » sur un env en échec sans règle (résumé de la série), dans `build_page_reparations.py` — preuve : build_web_reparations.py::ia + 6 lignes de build_web.py ; test_build_web (400/409/403, distant 403) VERT ; sonde test_build_page_reparations_chrome.py VERT (bouton, proposition echappee, POST appliquer avec la regle)
 - [ ] Bancs verts, un essai réel de diagnostic sur un journal d'échec archivé (lecture seule, rien appliqué) — preuve : …
 
 ## A7 — Documentation, essai et commit

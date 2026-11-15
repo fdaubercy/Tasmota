@@ -166,6 +166,7 @@ PAGE = r"""<!doctype html>
 /*CSS_FICHIERS*/
 /*CSS_MEMOIRE*/
 /*CSS_DEFAUT*/
+/*CSS_REPARATIONS*/
 /*CSS_SAUVEGARDE*/
 /*CSS_AIDE*/
 /*CSS_LIEUX*/
@@ -250,6 +251,7 @@ PAGE = r"""<!doctype html>
   <section id="suivi" class="carte" aria-live="polite">
     <h2>Suivi</h2>
     <div id="bandeaux"></div>
+<!--REPARATIONS-->
     <div id="blocs" class="blocs"></div>
     <div id="recap"></div>
     <div id="suivi-vide" class="vide">Aucun lancement depuis le démarrage de l'outil.</div>
@@ -737,6 +739,7 @@ function traite(e) {
   var rejeu = typeof e.n === "number" && e.n <= rejeuJusqua;
   traiteEvenement(e, rejeu);
   fichiersEvenement(e, rejeu);       // onglet Fichiers : avancement du lancement parti de lui
+  reparationsEvenement(e);           // bandeaux de reparation (build_page_reparations.py)
   if (rejeu && e.n === rejeuJusqua) finRejeu();
 }
 
@@ -1198,6 +1201,7 @@ $("son").onchange = function () {
 /*JS_FICHIERS*/
 /*JS_MEMOIRE*/
 /*JS_DEFAUT*/
+/*JS_REPARATIONS*/
 /*JS_SAUVEGARDE*/
 /*JS_LIEUX_COMMUN*/
 /*JS_LIEUX*/
@@ -1241,3 +1245,6 @@ import build_page_lieux                             # noqa: E402 - bascule « Cl
 PAGE = PAGE.replace("/*CSS_LIEUX*/", build_page_lieux.CSS).replace("/*JS_LIEUX*/", build_page_lieux.JS)
 import lieux                                    # noqa: E402 - remplitParLieu, commun aux listes de cartes (memoire, sauvegarde)
 PAGE = PAGE.replace("/*JS_LIEUX_COMMUN*/", lieux.JS)
+import build_page_reparations                    # noqa: E402 - bandeau, choix et panneau « Réparations » (plan build-reparations A5)
+PAGE = (PAGE.replace("/*CSS_REPARATIONS*/", build_page_reparations.CSS).replace("<!--REPARATIONS-->", build_page_reparations.HTML)
+        .replace("/*JS_REPARATIONS*/", build_page_reparations.JS))

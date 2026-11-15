@@ -38,6 +38,8 @@ Routes (les POST exigent l'en-tete X-Build: 1 et la meme origine) :
     POST /continuer  {env, choix: continuer | passer} : reponse a la pause « rebranchez la carte » (409 si
                      aucune pause en cours ou si elle attend un autre env, 400 si choix invalide)
     GET  /reparations regles (base + locales, origine, supprimable) et reparations de la serie ; lecture permise a distance
+    POST /reparations/diagnostic {env} et /reparations/appliquer {env, regle} : diagnostic par l'IA et application (ce PC
+                     seulement, 403 sinon ; 409 env sans echec reparable)
     POST /reparation {env, choix: fermer | attendre | annuler} : reponse a un choix de reparation (400 choix invalide,
                      409 aucune demande ouverte) ; POST /reparations/supprime {id} : retire une regle LOCALE (409 si
                      de base, 400 si inconnue) ; ces deux POST : ce PC seulement (403 pour un client distant)
@@ -274,6 +276,11 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
             else:
                 build_web_reparations.supprime(dossier, str(demande.get("id") or ""))
             return {"ok": True}
+        if chemin in ("/reparations/diagnostic", "/reparations/appliquer"):   # claude -p, relance : ce PC seulement
+            if not acces_web.est_local(client):
+                raise PermissionError("réservé à ce PC")
+            return build_web_reparations.ia(chemin, demande, serie, racine,
+                                            lambda env: journal_env(dossier, env, etat["debut"]))
         if chemin == "/memoire/analyser":                  # relit le dernier build, sans pio : permis pendant un build
             env = str(demande.get("env") or "")
             try:

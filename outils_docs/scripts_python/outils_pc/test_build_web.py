@@ -185,7 +185,7 @@ def manques_page(texte):
 def test_page_contient(b):
     statut, texte = b.requete("GET", "/")
     verifie((statut, manques_page(texte)), (200, []), "page_contient : actions, familles, X-Build, routes, mentions")
-    verifie(texte == build_web.page(), True, "page_contient : GET / sert build_page.PAGE")
+    verifie(texte == b.acces.habille(build_web.page()), True, "page_contient : GET / sert build_page.PAGE")
     verifie(b.requete("GET", "/?env=x&depuis=atelier&fichiers=..%2Fa")[1] == texte, True, "page_contient : lien de l'atelier -> meme page")
     # temoin : la page provisoire ne doit PAS passer le controle (sinon il ne mesure rien)
     verifie(len(manques_page(build_web.PAGE_PROVISOIRE)) > 10, True, "page_contient : temoin, page provisoire refusee")
@@ -713,10 +713,18 @@ def test_reparations(b):
     verifie([b.requete("POST", "/reparations/supprime", {"id": base[0]["id"]})[0],
              b.requete("POST", "/reparations/supprime", {"id": "inconnue"})[0]], [409, 400],
             "reparations/supprime : regle de base refusee (409), inconnue 400")
+    verifie([b.requete("POST", "/reparations/diagnostic", {"env": "a b"})[0],
+             b.requete("POST", "/reparations/diagnostic", {"env": A})[0],
+             b.requete("POST", "/reparations/appliquer", {"env": A, "regle": {}})[0],
+             b.requete("POST", "/reparations/diagnostic", {"env": A}, entetes={})[0]], [400, 409, 409, 403],
+            "reparations/diagnostic et appliquer : env invalide 400, env sans echec 409 (claude jamais lance), sans X-Build 403")
     vrai = acces_web.est_local
     acces_web.est_local = lambda adresse: False                                 # client distant avec le jeton
     try:
         cookie = {"X-Build": "1", "Cookie": f"{b.acces.cookie}={b.acces.jeton}"}
+        verifie([b.requete("POST", "/reparations/diagnostic", {"env": A}, entetes=cookie)[0],
+                 b.requete("POST", "/reparations/appliquer", {"env": A, "regle": {}}, entetes=cookie)[0]], [403, 403],
+                "reparations : diagnostic et application refuses a un client distant")
         verifie([b.requete("GET", "/reparations", entetes={k: v for k, v in cookie.items() if k == "Cookie"})[0],
                  b.requete("POST", "/reparation", {"env": A, "choix": "fermer"}, entetes=cookie)[0],
                  b.requete("POST", "/reparations/supprime", {"id": "essai-local"}, entetes=cookie)[0]], [200, 403, 403],
