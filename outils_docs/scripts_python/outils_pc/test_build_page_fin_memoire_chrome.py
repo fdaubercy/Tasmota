@@ -78,6 +78,34 @@ def sonde(m, capture):
         s.attend(cdp, f"document.querySelector('.bloc[data-bloc=\"{env}\"] .fm-pastille')", 10)
         cas[pc] = cdp.js(PASTILLES)[env]["classe"].split()[-1]
     s.verifie(cas, {89: "fm-pastille", 90: "o", 94: "o", 95: "r"}, "seuils : orange des 90 %, rouge des 95 %")
+    # ESP8266 : releve sans partitions, bilan de pio (bilan_flash + RAM) ; releve vide : pas de pastille
+    base8266 = {"date": 1.0, "date_build": 1.0, "csv": "", "flash": None, "notes": [], "journal": "", "partitions": []}
+    r8 = {}
+    for env, bilan, ram in (("e8266-vert", (718867, 1023984), (43800, 81920)), ("e8266-orange", (940 * Ko, 1000 * Ko), (43800, 81920)),
+                            ("e8266-rouge", (718867, 1023984), (78000, 81920)), ("e8266-vide", None, None)):
+        rel = dict(base8266, env=env, ram=[{"zone": "RAM", "utilise": ram[0], "total": ram[1]}] if ram else [])
+        if bilan:
+            rel["bilan_flash"] = {"utilise": bilan[0], "taille": bilan[1]}
+        (dossier / f"{env}.json").write_text(json.dumps(rel), encoding="utf-8")
+        s.injecte(cdp, [{"type": "debut", "env": None, "actions": ["compiler"], "lignes": [{"env": env, "methode": "com", "port": "", "ip": ""}]},
+                        {"type": "debut", "env": env, "actions": ["compiler"], "methode": "com", "port": ""},
+                        {"type": "fin_env", "env": env, "resultat": "succes", "statuts": {"compiler": "succes"}, "secondes": 1}])
+        if bilan:
+            s.attend(cdp, f"document.querySelector('.bloc[data-bloc=\"{env}\"] .fm-pastille')", 10)
+        else:
+            s.attend(cdp, f"document.querySelector('.bloc[data-bloc=\"{env}\"]')", 10)
+        r8[env] = cdp.js(PASTILLES)[env]
+        if env == "e8266-vert":
+            cdp.js("document.querySelector('.bloc[data-bloc=\"e8266-vert\"] .fm-pastille').click()")
+            s.attend(cdp, "document.querySelector('.fm-fenetre')", 5)
+            f = cdp.js(FENETRE)
+            s.verifie((f["partitions"], f["ruban"]), (["firmware", "RAM"], 1), "ESP8266 : fenetre avec firmware et RAM, un seul bloc de ruban")
+            cdp.js("document.querySelector('.fm-voile').click()")
+            s.attend(cdp, "!document.querySelector('.fm-fenetre')", 5)
+    s.verifie({e: (p and [p["texte"], p["classe"].split()[-1]]) for e, p in r8.items()},
+              {"e8266-vert": ["Flash 70 % · RAM 53 %", "fm-pastille"], "e8266-orange": ["Flash 94 % · RAM 53 % ⚠", "o"],
+               "e8266-rouge": ["Flash 70 % · RAM 95 % ⚠", "r"], "e8266-vide": None},
+              "ESP8266 sans partitions : pastille d'apres le bilan de pio, seuils, releve vide sans pastille")
     # retour a la serie de A, B, C
     s.injecte(cdp, evenements)
     s.attend(cdp, "document.querySelectorAll('.fm-pastille').length === 3", 10)

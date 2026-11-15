@@ -119,10 +119,9 @@ def analyse(racine, env, journaux):
     m = _TAILLE_FLASH.match(flash)
     res = {"env": env, "date": time.time(), "csv": csv, "flash": int(m.group(1)) * 1024 * 1024 if m else None,
            "partitions": [], "ram": [], "journal": "", "date_build": None, "notes": []}
-    if not csv or not (racine / csv).is_file():
-        res["notes"].append(f"table de partitions introuvable ({csv or 'non definie'})")
-        return res
-    res["partitions"] = lit_csv((racine / csv).read_text(encoding="utf-8", errors="replace"))
+    sans_table = not csv or not (racine / csv).is_file()
+    if not sans_table:
+        res["partitions"] = lit_csv((racine / csv).read_text(encoding="utf-8", errors="replace"))
     chemin, texte = journal_compilation(journaux, env)
     build = racine / ".pio" / "build" / env
     if chemin:
@@ -130,7 +129,16 @@ def analyse(racine, env, journaux):
         res["ram"] = lit_table_memoire(texte)
         if not res["ram"] and (r := _RAM.search(texte)):
             res["ram"] = [{"zone": "RAM", "utilise": int(r.group(1)), "total": int(r.group(2))}]
-    else:
+    if sans_table:
+        # ESP8266 : pas de table de partitions ; le bilan de pio donne le firmware (`bilan_flash`, lu par la pastille)
+        if chemin:
+            f = _FLASH.search(texte)
+            res["bilan_flash"] = {"utilise": int(f.group(1)), "taille": int(f.group(2))}
+            res["notes"].append("pas de table de partitions (ESP8266) : occupation lue dans le bilan de pio")
+        else:
+            res["notes"].append(f"table de partitions introuvable ({csv or 'non definie'})")
+        return res
+    if not chemin:
         res["notes"].append("aucun journal de compilation reussie : compiler l'env pour mesurer app0 et la RAM")
     for p in res["partitions"]:
         p["utilise"], p["estime"] = None, False
@@ -176,6 +184,8 @@ def resume(dossier):
             nom = {"ota_0": "app0", "spiffs": "FS"}.get(part.get("sous_type"))
             if nom and part.get("utilise") is not None:
                 zones[nom] = {"u": part["utilise"], "t": part["taille"], "estime": bool(part.get("estime"))}
+        if "app0" not in zones and (b := a.get("bilan_flash")):
+            zones["app0"] = {"u": b["utilise"], "t": b["taille"], "estime": False}
         ram = a.get("ram", [])
         diram = next((z for z in ram if z["zone"] == "DIRAM"), next((z for z in ram if z["zone"] == "RAM"), None))
         if diram:

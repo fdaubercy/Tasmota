@@ -59,7 +59,19 @@ extends                 = env:base-essai
 
 [env:sans-table]
 board                   = carte-absente
+
+[env:esp8266-essai]
+board                   = esp01_1m
+
+[env:esp8266-ansi]
+board                   = esp01_1m
 """
+JOURNAL_8266 = """Checking size .pio\\build\\x\\firmware.elf
+RAM:   [=====     ]  53.5% (used 43800 bytes from 81920 bytes)
+Flash: [=======   ]  70.2% (used 718867 bytes from 1023984 bytes)
+======================== [SUCCESS] Took 100.00 seconds ========================
+"""
+JOURNAL_8266_ANSI = JOURNAL_8266.replace("RAM:", "[0mRAM:").replace("Flash:", "[0mFlash:")
 CSV = """# Name,   Type, SubType, Offset,  Size, Flags
 nvs,      data, nvs,     0x9000,  0x5000,
 otadata,  data, ota,     0xe000,  0x2000,
@@ -76,6 +88,7 @@ MUTANTS = {
     "identite non controlee": ('if ":" in adresse:', "if False:"),
     "FS : libre pris pour occupe": ('(taille - libre) * 1024', "libre * 1024"),
     "resume : DIRAM ignoree": ('z["zone"] == "DIRAM"', 'z["zone"] == "IRAM"'),
+    "ESP8266 : ligne Flash non lue": ('res["bilan_flash"] = {"utilise": int(f.group(1))', 'res["bilan_flash"] = {"utilise": 0'),
     "offset vide non aligne": ('alignement = 0x10000 if cols[1] == "app" else 0x1000', "alignement = 1"),
 }
 
@@ -176,6 +189,22 @@ def cas(m):
 
         r2 = m.analyse(d, "sans-table", j)
         verifie("env sans table : note, aucune partition", not r2["partitions"] and r2["notes"])
+        verifie("env sans table, sans journal : releve vide comme avant", r2["bilan_flash"] is None if "bilan_flash" in r2 else True)
+        (j / "20261115-070540-esp8266-essai-compiler.log").write_text(JOURNAL_8266, encoding="utf-8")
+        (j / "20261115-070541-esp8266-ansi-compiler.log").write_text(JOURNAL_8266_ANSI, encoding="utf-8")
+        for env in ("esp8266-essai", "esp8266-ansi"):
+            r8 = m.analyse(d, env, j)
+            verifie(f"{env} : bilan Flash et RAM de pio, sans partitions",
+                    (r8["partitions"], r8.get("bilan_flash"), r8["ram"]) ==
+                    ([], {"utilise": 718867, "taille": 1023984}, [{"zone": "RAM", "utilise": 43800, "total": 81920}]))
+            verifie(f"{env} : note informative", r8["notes"] and "bilan de pio" in r8["notes"][0])
+        m.enregistre(d, "esp8266-essai", m.analyse(d, "esp8266-essai", j))
+        verifie("resume : app0 et RAM d'un ESP8266", m.resume(d)["esp8266-essai"] ==
+                {"app0": {"u": 718867, "t": 1023984, "estime": False}, "DIRAM": {"u": 43800, "t": 81920, "estime": False}})
+        (j / "20261115-070540-esp8266-essai-compiler.log").write_text("pas de bilan\n[SUCCESS]\n", encoding="utf-8")
+        r8 = m.analyse(d, "esp8266-essai", j)
+        verifie("ESP8266 sans les deux lignes : releve vide, note d'avant", (r8["partitions"], r8["ram"], "bilan_flash" in r8, r8["notes"][0].startswith("table de partitions introuvable")) ==
+                ([], [], False, True))
         try:
             m.analyse(d, "inconnu", j)
             verifie("env inconnu : LookupError", False)

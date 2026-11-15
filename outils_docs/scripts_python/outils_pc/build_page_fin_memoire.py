@@ -33,8 +33,13 @@ function fmNiveau(pc) { return pc >= 95 ? "r" : pc >= 90 ? "o" : ""; }
 function fmPc(u, t) { return t ? 100 * u / t : 0; }
 function fmKo(o) { var k = o / 1024; return k >= 1024 ? (k / 1024).toFixed(2).replace(".", ",") + " Mo" : Math.round(k) + " Ko"; }
 // Chiffres de la pastille : null si aucune partition mesuree (pas de pastille)
+// Partitions du detail : la table de l'env, sinon (ESP8266) le seul firmware du bilan de pio
+function fmParts(a) {
+  var b = a && a.bilan_flash;
+  return (a && a.partitions && a.partitions.length) ? a.partitions : (b ? [{nom: "firmware", utilise: b.utilise, taille: b.taille}] : []);
+}
 function fmResume(a) {
-  var mes = ((a && a.partitions) || []).filter(function (p) { return p.utilise != null && p.taille; });
+  var mes = fmParts(a).filter(function (p) { return p.utilise != null && p.taille; });
   if (!mes.length) return null;
   var u = 0, t = 0, pire = 0;
   mes.forEach(function (p) { u += p.utilise; t += p.taille; pire = Math.max(pire, fmPc(p.utilise, p.taille)); });
@@ -67,7 +72,7 @@ function finMemoireLigne(nom, u, t, estime) {
 function finMemoireOuvre(env) {
   var a = FM[env], res = a && fmResume(a);
   if (!res) return;
-  var parts = a.partitions, somme = parts.reduce(function (s, p) { return s + p.taille; }, 0);
+  var parts = fmParts(a), somme = parts.reduce(function (s, p) { return s + p.taille; }, 0);
   var fenetre = h("div", {"class": "fm-fenetre", role: "dialog", "aria-modal": "true", "aria-label": "Occupation des partitions de " + env},
     h("h2", {}, h("span", {texte: env}), h("span", {"class": "fm-pastille " + res.niveau, texte: res.texte})));
   parts.concat((a.ram || []).map(function (z) { return {nom: z.zone, utilise: z.utilise, taille: z.total}; })).forEach(function (p) {
