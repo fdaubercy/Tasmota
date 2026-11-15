@@ -132,6 +132,9 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
 - [x] Défaut constaté sur une vraie panne le 2026-11-15 (la case était cochée, aucune réparation) : `pour_serie` ne branchait pas le diagnostic — preuve : `build_reparations.py::pour_serie` passe `build_reparations_ia.diagnostique` ; test_build_reparations.py « pour_serie : le vrai diagnostic de l'IA est branché », rouge sans le branchement puis vert ; bancs ia et web verts
 - [ ] Nouvel essai réel de la case sur une vraie série (page Build relancée après ce correctif)
 
+## A6c — Le contrôle de solidification ne s'applique qu'aux envs Berry
+- [x] Faux positif du 2026-11-15 sur `tasmota-cave-lumiere-porte` (ESP8266) : `modules.h` garde les 33 entrées du dernier env Berry, `solidify/` est vide — preuve : `build_serie.py::_lance_pio` ne lance `self.solidification` que si la sortie de pio a montré « Will solidify » (imprimé par le pré-build de tous les envs S3/P4 des journaux 20261114-233607, 20261114-235417, 20261115-083814, avant « Compiling » ; 0 ligne dans le journal de l'ESP8266) ; `test_build_serie.py::test_solidification_vide` (cas « env sans ligne Berry -> non controle »), mutant (condition retirée) rouge, test_build_solidification et test_build_web verts
+
 ## A7 — Documentation, essai et commit
 - [x] `outils_docs/README.md` (§ « Build et téléversement (page web) » : réparations, catalogue, liste blanche, panneau), `CLAUDE.md`
   (carte des documents : les modules neufs), `tasks/README.md` régénéré ; `verifie_references_docs.py` sans renvoi faux — preuve : README.md § « Réparation automatique des pannes », CLAUDE.md (carte des documents, exceptions build_page/build_serie/build_web) ; verifie_references_docs.py : 0 défaut ; tasks/README.md non régénéré ici
@@ -145,7 +148,7 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
 
 ## Améliorations restantes
 - [ ] [projet] Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
-- [ ] [projet] Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
+- [ ] [projet] Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur) : à la main d'abord ; si une règle revient, bouton « Copier pour le dépôt » (JSON prêt à coller, règles `ia` seulement, aucune écriture dans le dépôt) ; pas de script de comptage. Mûre = plusieurs succès sur des journaux différents, motif précis, action de la liste fermée (décidé le 2026-11-15)
 
 ## Vérification
 Bancs `test_build_reparations*.py`, `test_build_serie.py`, `test_build_web.py`, sonde `test_build_page_reparations_chrome.py` ;

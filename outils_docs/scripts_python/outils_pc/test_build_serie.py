@@ -1001,6 +1001,12 @@ def test_solidification_vide():
         ev = m.lance([com(A, "COM1")], {"upload"})
         verifie({e["env"]: e["statuts"] for e in du_type(ev, "fin_env")}.get(A), {"upload": "succes"},
                 "solidification_vide : temoin, .h plein -> upload mene au bout")
+    with tempfile.TemporaryDirectory() as t:     # env sans Berry (ESP8266) : modules.h perime d'un autre env, pas de controle
+        m = Montage(t, {A: {"upload": {"lignes": lignes[:1] + lignes[3:4] + lignes[5:]}}})
+        berry_custom(m.racine, plein=False)
+        ev = m.lance([com(A, "COM1")], {"upload"})
+        verifie({e["env"]: e["statuts"] for e in du_type(ev, "fin_env")}.get(A), {"upload": "succes"},
+                "solidification_vide : env sans ligne Berry -> non controle")
     with tempfile.TemporaryDirectory() as t:
         m = Montage(t, {A: {"buildfs": {"lignes": lignes[:4] + lignes[5:]}}})
         berry_custom(m.racine, plein=False)

@@ -701,6 +701,7 @@ class Serie:
                 return False, f"pio introuvable ou non lançable : {erreur}", [], suivi.etape
             self._proc = proc
         refus, controle, avant = "", action in COMPILENT, ""   # solidification controlee une fois, si le firmware est lie
+        berry = False   # « Will solidify » : imprime par le pre-build des seuls envs Berry (ESP8266 : modules.h perime)
         with proc, self._journal(env, action, commande) as journal:
             if note:
                 journal.write(note + "\n")
@@ -710,6 +711,7 @@ class Serie:
                     # solidify-from-url.py fait quit() (code 0) : pio dirait « SUCCESS » sans rien avoir construit
                     refus = f"pré-build interrompu : {avant or texte}"
                 avant = texte
+                berry = berry or "Will solidify" in texte
                 journal.write(brut.rstrip("\r\n") + "\n")
                 self._ajoute("ligne", env, action=action, texte=texte)
                 ev = suivi.ligne(brut)
@@ -721,7 +723,7 @@ class Serie:
                         # Pre-build fini (solidification comprise) : un module vide ferait echouer l'edition des
                         # liens a la toute fin ; on arrete pio tout de suite (build_solidification).
                         controle = False
-                        manquants = self.solidification(self.racine)
+                        manquants = self.solidification(self.racine) if berry else []
                         if manquants:
                             refus = build_solidification.motif(manquants)
                             journal.write(f"--- {refus} : pio arrêté par la page\n")
