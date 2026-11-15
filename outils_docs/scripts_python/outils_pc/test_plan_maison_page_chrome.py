@@ -132,7 +132,7 @@ def scenario(cdp, url):
     verifie(cdp.js("document.getElementById('etat-debits').textContent.indexOf('total 5,90') > 0"), True, "debits : total dans la ligne d'etat")
     web.lit_url = lambda u: (_ for _ in ()).throw(OSError("timed out"))
     cdp.js("document.getElementById('b-debits').click()")
-    verifie(bool(attend(cdp, "document.getElementById('etat-debits').textContent.indexOf('impossible') > 0", 10)), True, "debits : carte muette -> message d'erreur lisible")
+    verifie(bool(attend(cdp, "document.getElementById('etat-debits').textContent.indexOf('injoignable') >= 0", 10)), True, "debits : carte muette -> message d'erreur lisible")
     cdp.js("document.getElementById('b-plan').click()")
     verifie(cdp.js("getComputedStyle(document.getElementById('b-debits')).display"), "none", "debits : bouton masque hors vue chauffage")
 
