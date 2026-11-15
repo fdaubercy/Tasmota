@@ -208,7 +208,7 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   erreurs du validateur
   - [x] Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur — preuve : 24c094059, a7a0e4b88 (README)
 - [x] Tests lancés : rouges ; modules écrits ; tests verts — preuve : avant les routes le banc échouait sur GET /etat (404) ; sans le correctif de profondeur il échoue (409 au lieu de 400) ; vert avec tout (2026-11-15)
-- [ ] Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
+- [x] Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API — preuve : essai réel du 2026-11-15 (api.iconify.design, aucune clé) : recherche « camera » en 3,3 s, 47 résultats dans 11 collections, licence présente sur chacun (MIT, Apache-2.0, 6 en CC-BY-4.0 avec attribution), un SVG récupéré (material-symbols:camera, 516 o, sans script) ; limites de l'API non relevées dans la documentation officielle
   Iconify et noter ses limites ; routes `GET /icones/recherche?q=` et `GET /icones/svg?jeu=&nom=` (hôte fixe, jeu et nom
   validés par expression régulière, délai court, hors ligne = message clair) ; licence de la collection lue et affichée,
   permissives d'office, CC BY avec confirmation, autres masquées ; SVG nettoyé par `nettoie_svg` ; cache hors dépôt ; ligne
