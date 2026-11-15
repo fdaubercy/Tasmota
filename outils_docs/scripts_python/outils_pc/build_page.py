@@ -544,11 +544,15 @@ function majCasesFs() {
   var coches = envsCoches();
   var parFirmware = televerse(actionsCochees()) && coches.length > 0 && coches.every(function (e) {
     return choix[e.nom].methode === "com" && e.fs_avec_firmware; });
+  // Aucun env coché n'a de partition FS (ESP8266 1M) : mklittlefs échouerait (LFS_ERR_INVAL), cases grisées.
+  var aucunFs = coches.length > 0 && coches.every(function (e) { return e.sans_fs; });
   ["buildfs", "uploadfs"].forEach(function (a) {
     var cf = caseAction(a);
-    if (parFirmware) cf.checked = false;
-    cf.disabled = parFirmware;
-    cf.parentNode.classList.toggle("doux", parFirmware);
+    if (parFirmware || aucunFs) cf.checked = false;
+    cf.disabled = parFirmware || aucunFs;
+    cf.parentNode.classList.toggle("doux", parFirmware || aucunFs);
+    if (aucunFs) { cf.parentNode.title = "Aucun file system sur cette carte (ESP8266 1M) : " +
+      coches.map(function (e) { return e.nom; }).join(", "); return; }
     cf.parentNode.title = parFirmware ? "Inutile ici : le téléversement par câble construit le file system " +
       "(custom_files_upload) et l'écrit avec le firmware, pour chaque env coché" : "";
   });

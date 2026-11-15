@@ -353,6 +353,15 @@ def test_fs_avec_firmware():
     verifie(envs.get("tasmota-pompe"), False, "fs_avec_firmware : ESP8266 (pas de post_esp32) -> faux")
 
 
+def test_sans_fs_robuste():
+    """platformio.ini sans [common] (fork, faux depot) : liste_envs ne plante pas, sans_fs reste faux."""
+    with tempfile.TemporaryDirectory() as t:
+        r = Path(t)
+        (r / "platformio_tasmota_cenv.ini").write_text("[env:tasmota-x]\nbuild_flags = -D FIRMWARE_X\n", encoding="utf-8")
+        (r / "platformio.ini").write_text("[platformio]\nboards_dir = boards\n", encoding="utf-8")
+        verifie([e.sans_fs for e in be.liste_envs(r)], [False], "sans_fs : [common] absent -> faux, sans exception")
+
+
 def test_vrais_fichiers():
     """Lecture seule des vrais .ini."""
     envs = {e.nom: e for e in be.liste_envs(RACINE)}
@@ -368,6 +377,10 @@ def test_vrais_fichiers():
     verifie((e.port, e.port_herite), ("COM11", True), "reel : serveur-modbus -> COM11 herite")
     verifie(envs["tasmota-jardin-pompe-piscine"].ota_possible, False, "reel : pompe piscine (ESP8266) sans OTA")
     verifie(envs["tasmota32-cave-serveur-rly"].port, "COM11", "reel : cave -> COM11 (commentaire de fin)")
+    verifie((envs["tasmota-jardin-pompe-piscine"].sans_fs, envs["tasmota32"].sans_fs, envs["tasmota32p4-garage-serveur-modbus"].sans_fs),
+            (True, False, False), "reel : sans_fs vrai pour la pompe (ESP8266 1M), faux pour tasmota32 et le P4")
+    if "tasmota-cave-lumiere-porte" in envs:
+        verifie(envs["tasmota-cave-lumiere-porte"].sans_fs, True, "reel : lumiere de la cave (ESP8266 1M) sans file system")
     verifie((getattr(envs["tasmota32s3-garage-capteurs-cuve-modbus"], "fs_avec_firmware", None),
              getattr(envs["tasmota32p4-garage-serveur-modbus"], "fs_avec_firmware", None),
              getattr(envs["tasmota32"], "fs_avec_firmware", None),
@@ -438,6 +451,7 @@ def principal():
     test_ip_comme_original()
     test_ecriture()
     test_fs_avec_firmware()
+    test_sans_fs_robuste()
     test_vrais_fichiers()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

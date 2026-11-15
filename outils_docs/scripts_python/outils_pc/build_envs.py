@@ -38,6 +38,7 @@ class Env:
     fs_avec_firmware: bool = False   # un upload firmware par cable flashe aussi le FS (voir _fs_avec_firmware)
     fichiers_berry: bool = False     # env propose par la page « Fichiers Berry par env » (ESP32 du cenv)
     ip_source: str = ""              # "h" (WIFI_IP_ADDRESS) | "maitre" (esclave joint par le range extender) | ""
+    sans_fs: bool = False            # la carte n'a pas de partition FS (ESP8266 1M / 512k) : ni buildfs ni uploadfs (voir _sans_fs)
 
 
 def _lit_ini(chemin):
@@ -123,6 +124,24 @@ def _fs_avec_firmware(toutes, section, ota):
     return any(l and not l.startswith((";", "#")) and "no_files" not in l for l in lignes)
 
 
+SANS_FS = re.compile(r"eagle\.flash\.(?:512k|1m)\.ld")    # scripts de liens a _FS_start = _FS_end (taille 0)
+
+
+def _sans_fs(racine, toutes, section):
+    """Vrai si le script de liens de l'env ne reserve aucun file system : mklittlefs echoue alors par
+    LFS_ERR_INVAL (buildfs de tasmota-cave-lumiere-porte, ESP8266 1M, 2026-11-14). `board_build.ldscript` de
+    l'env l'emporte, sinon celui du JSON de la carte (boards/<board>.json). Carte ou JSON introuvable : faux."""
+    script = _valeur(toutes, section, "board_build.ldscript")
+    if not script:
+        try:
+            nom = _valeur(toutes, section, "board") or _lit_ini(racine / "platformio.ini").get("common", "board")   # [env] -> ${common.board}
+            carte = json.loads((racine / "boards" / f"{nom}.json").read_text(encoding="utf-8"))
+            script = carte["build"]["arduino"]["ldscript"]
+        except (OSError, ValueError, KeyError, TypeError, configparser.Error):    # [common] ou board absents
+            return False
+    return bool(SANS_FS.fullmatch(script.strip()))
+
+
 def _port(toutes, chaine):
     for i, nom in enumerate(chaine):
         valeur = (toutes[nom].get("upload_port") or "").strip()
@@ -196,7 +215,7 @@ def liste_envs(racine):
         envs.append(Env(nom, famille, sous_groupe, port, herite, ip,
                         ota_possible, firmware, ecrivable, _fs_avec_firmware(toutes, section, ota),
                         ecrivable and any(s.startswith("env:tasmota32") for s in chaine),   # regle de envs_proposes
-                        source if ip else ""))
+                        source if ip else "", not ota and _sans_fs(racine, toutes, section)))   # un ESP32 a toujours une partition FS
     return envs
 
 

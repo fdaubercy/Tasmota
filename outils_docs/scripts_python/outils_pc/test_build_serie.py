@@ -1009,6 +1009,22 @@ def test_solidification_vide():
                 "solidification_vide : buildfs (pas d'edition des liens) non controle")
 
 
+def test_sans_fs():
+    """Carte sans partition FS (ESP8266 1M, board lu dans platformio.ini [common] puis boards/<board>.json) :
+    buildfs / uploadfs sont sautes (mklittlefs echoue par LFS_ERR_INVAL, tasmota-cave-lumiere-porte 2026-11-14).
+    Temoin : un env ESP32 de la meme serie garde son buildfs."""
+    with tempfile.TemporaryDirectory() as t:
+        m = Montage(t)
+        (m.racine / "platformio.ini").write_text("[common]\nboard = esp8266_1M\n", encoding="utf-8")
+        (m.racine / "boards").mkdir()
+        (m.racine / "boards" / "esp8266_1M.json").write_text(
+            '{"build": {"arduino": {"ldscript": "eagle.flash.1m.ld"}}}', encoding="utf-8")
+        m.lance([com(P8266), com(A)], {"compiler", "buildfs"})
+        verifie([a["argv"] for a in m.appels()],
+                [["run", "-e", P8266], ["run", "-e", A], ["run", "-e", A, "-t", "buildfs"]],
+                "sans_fs : ESP8266 1M compile sans buildfs ; temoin ESP32 garde son buildfs")
+
+
 def test_fs_par_firmware():
     """L'envoi serie du firmware d'un env a custom_files_upload ecrit aussi le FS (post_esp32) : buildfs /
     uploadfs coches ne lancent pas de pio run a part et suivent le sort de cet envoi. Temoin : env sans
@@ -1416,7 +1432,7 @@ def principal():
                  test_journal_ecrit, test_reference_o_memorisee, test_reference_estimee, test_rappel_fichiers_modifies,
                  test_refus_double_lancement, test_uploadfs_ota, test_garde_build_importable,
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
-                 test_solidification_vide, test_fs_par_firmware, test_pause_fs_par_firmware, test_data_dir_avant_pio,
+                 test_solidification_vide, test_sans_fs, test_fs_par_firmware, test_pause_fs_par_firmware, test_data_dir_avant_pio,
                  test_uploadfs_ota_identite, test_fichiers_ota, test_fichiers_mqtt, test_pourcent_global_envoi,
                  test_publication_fiches, test_reparations):
         test()

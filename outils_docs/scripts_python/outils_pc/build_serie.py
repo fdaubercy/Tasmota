@@ -194,6 +194,7 @@ class Serie:
         self._envoi = False                              # un envoi vers une carte est en vol (envoi_en_cours)
         self._pause = None                               # pause « rebranchez la carte » : {env, port, precedent, choix}
         self._fs_par_firmware = set()                    # envs dont l'envoi serie du firmware ecrit aussi le FS (controle)
+        self._sans_fs = set()                            # envs sans partition FS (ESP8266 1M) : buildfs / uploadfs sautes
         self._choix = {}                                 # action « fichiers » : liste, recharger_berry, redemarrer
         self._publier = False                            # case « Publier les fiches QR » (etiquettes A11)
         self.publie_fiches = _publie_fiches              # remplace par un faux dans le banc
@@ -283,6 +284,7 @@ class Serie:
         par_mqtt = (fichiers or {}).get("transport") == "mqtt"     # par le broker : pas d'adresse de la carte
         connus = {e.nom: e for e in build_envs.liste_envs(self.racine)}
         self._fs_par_firmware = {nom for nom, e in connus.items() if e.fs_avec_firmware}   # lu par _plan
+        self._sans_fs = {nom for nom, e in connus.items() if e.sans_fs}                    # lu par _plan
         vus, ports = set(), {}
         for ligne in lignes:
             nom = ligne.env
@@ -293,6 +295,8 @@ class Serie:
                 motifs.append(f"{nom} : environnement inconnu")
                 continue
             motifs += [f"{nom} : {m}" for m in build_partitions.motifs_envoi(self.racine, nom, actions, ligne.methode)]
+            if nom in self._sans_fs and set(actions) <= {"buildfs", "uploadfs", "fichiers"}                     and all(l.env in self._sans_fs for l in lignes):      # serie mixte : _plan saute le FS de cet env
+                motifs.append(f"{nom} : aucun file system sur cette carte (ESP8266 1M ou 512k), rien à construire ni à téléverser")
             if ligne.methode not in ("com", "ota"):
                 motifs.append(f"{nom} : méthode invalide {ligne.methode!r}")
             elif envoi and ligne.methode == "com":
@@ -503,9 +507,10 @@ class Serie:
                 plan.append(("ota_firmware", "upload", "", ["upload"], ["upload"]))
         elif "compiler" in actions:
             plan.append(("pio", "compiler", "", ["compiler"], ["compiler"]))
-        if "buildfs" in actions and not par_firmware:
+        sans_fs = ligne.env in self._sans_fs             # pas de partition FS : mklittlefs echoue (LFS_ERR_INVAL), FS saute
+        if "buildfs" in actions and not par_firmware and not sans_fs:
             plan.append(("pio", "buildfs", "buildfs", ["buildfs"], ["buildfs"]))
-        if "uploadfs" in actions and not par_firmware:
+        if "uploadfs" in actions and not par_firmware and not sans_fs:
             if ligne.methode == "com":
                 plan.append(("pio", "uploadfs", "uploadfs", ["uploadfs"], ["uploadfs"]))
             else:
