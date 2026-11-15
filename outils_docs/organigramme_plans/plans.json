@@ -949,8 +949,8 @@
    ],
    "cree": "2026-11-13",
    "maj": "2026-11-15",
-   "pct": 80,
-   "etapes": "57/71",
+   "pct": 79,
+   "etapes": "57/72",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/atelier-visuels.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-13-atelier-visuels-accueil-design.md"
@@ -991,8 +991,8 @@
    ],
    "cree": "2026-11-14",
    "maj": "2026-11-15",
-   "pct": 68,
-   "etapes": "19/28",
+   "pct": 85,
+   "etapes": "29/34",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/build-reparations.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-14-build-reparations-design.md"
@@ -1051,8 +1051,8 @@
    ],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 38,
-   "etapes": "5/13",
+   "pct": 56,
+   "etapes": "9/16",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/build-fin-partitions.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/aucune"
@@ -1073,9 +1073,28 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 0,
-   "etapes": "0/24",
+   "pct": 86,
+   "etapes": "24/28",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/compilations-nuit.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "facade-garage-portail-commande",
+   "titre": "Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil",
+   "objectif": "Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel",
+   "statut": "actif",
+   "famille": "graphiques-ecrans",
+   "parent": "facade-garage-capteurs",
+   "liens": [
+    "atelier-visuels",
+    "visuel-reglage-volets"
+   ],
+   "specs": [],
+   "cree": "2026-11-15",
+   "maj": "2026-11-15",
+   "pct": 73,
+   "etapes": "16/22",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/facade-garage-portail-commande.md",
    "urls_spec": []
   },
   {
@@ -1094,6 +1113,24 @@
    "pct": 17,
    "etapes": "2/12",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-appliquer.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "sondes-en-cours",
+   "titre": "Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel",
+   "objectif": "Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin",
+   "statut": "actif",
+   "famille": "methode",
+   "parent": "",
+   "liens": [
+    "compilations-nuit"
+   ],
+   "specs": [],
+   "cree": "2026-11-15",
+   "maj": "2026-11-15",
+   "pct": 71,
+   "etapes": "12/17",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/sondes-en-cours.md",
    "urls_spec": []
   }
  ]

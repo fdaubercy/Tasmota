@@ -405,3 +405,31 @@ gardes ; entree ecrite a la main, pas par le script.
 -   `099f97d4c` Remove support for versions below v9.1
 -   `e163e4d40` Remove support for versions below v9.1
 -   `3f9983d10` Fix possible webcolor buffer OoB
+
+## 2026-11-15 08:36 — 21 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**11 commit(s) ● a lire de pres.**
+
+- ● `e4a9660a9` Matter: bound SubscribeRequest data-version filter memory (#25160)
+- ● `b3e526968` Matter: add optional "Lights delayed on" setting (#25162)
+- ● `03e2b5005` Matter: add Doorbell (0x0148) device type as a Button plugin (#25187)
+- ● `84b93b017` make Berry bytesmaxsize  configureable with BERRY_MAX_BYTES_SIZE_PSRAM (#25250)
+-   `f8e855cc8` WifiManager: keep its pages on ESP32 while it is active (#25183)
+-   `748e79fe6` Update change logs
+- ● `ece565f3e` Matter fix subscriptions (#25255)
+- ● `bb078e875` Matter fix various bugs (#25256)
+-   `f1b7cb13d` Add device location and local pose stored as JSON in file system or persistant space (#25244)
+-   `99907bd8f` Update change logs
+-   `f1ad8adae` OpenTherm: use RMT on ESP32, add ot_report cmd (#25254)
+-   `9dceb398d` Fix AHT20/AHT30 stale readings with deep sleep (#25258)
+-   `dc8adfd75` Update change logs
+- ● `6aadc3f17` Matter security improvements (#25261)
+- ● `76754d11b` Addition of wrapper function for esp_sleep_get_wakeup_cause() with mapping to Berry as tasmota.wakeup_cause() (#25251)
+- ● `bac166f61` Matter fix various comments (#25262)
+- ● `7f888a616` Matter subscriptions fix (#25259)
+- ● `ccf8ff854` Matter align Illuminance to Matter standard (#25264)
+-   `0a8e654b2` Update change logs
+-   `815753ab7` Add GPIOViewer labels to GPIOs using web app v2.3.4 (#25257)
+-   `3e7e1ea12` Drop GPIO's labelled "None"

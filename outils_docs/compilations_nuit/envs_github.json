@@ -1,3 +1,5 @@
 {
-  "exclus": []
+  "exclus": [
+    "tasmota32-rdc-vr-porte"
+  ]
 }

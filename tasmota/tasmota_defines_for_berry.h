@@ -422,6 +422,7 @@
 #define D_INDEX "Index"
 #define D_ENTER_COMMAND "Saisir une commande"
 #define D_FLOWRATEMETER_NAME "Débit"
+#define D_CMND_LOCATION "Location"
 #define USE_MGS 
 #define MQTT_GRPTOPIC "tasmotas/cave"
 #define USE_SUNRISE 
@@ -664,6 +665,7 @@
 #define BE_LV_WIDGET_ROLLER 
 #define WIFI_SCAN_AT_RESTART false
 #define USE_BERRY_CRYPTO_AES_GCM 
+#define D_CMND_LOCATIONCLEAR "LocationClear"
 #define D_NEOPOOL_RELAY "Relais"
 #define D_LD2410_PIN_STATE "État de la broche de sortie"
 #define D_JSON_UV_INDEX "UvIndex"
@@ -1255,7 +1257,7 @@
 #define __SIZEOF_WINT_T__ 4
 #define D_AP "AP"
 #define __FLT32X_DIG__ 15
-#define D_JSON_ZIGBEE_NAMES "Names"
+#define D_CMND_LOCATIONROT "LocationRot"
 #define D_SENSOR_ADE7953_IRQ "ADE7953 IRq"
 #define D_JSON_SCANNING "Scanning"
 #define D_CMND_STATETEXT "StateText"
@@ -2020,6 +2022,7 @@
 #define USE_ALPINEJS 
 #define D_NEOPOOL_MACH_UVSCENIC "UVScenic"
 #define MQTT_SOCKET_TIMEOUT 4
+#define D_JSON_ZIGBEE_NAMES "Names"
 #define D_FREE_PROGRAM_SPACE "Espace programme libre"
 #define WIFI_NO_SLEEP false
 #define __FLT_HAS_INFINITY__ 1
@@ -2162,6 +2165,7 @@
 #define USE_ZIGBEE_AUTOBIND_HEATDEMAND 10
 #define D_JSON_UV_LEVEL "UvLevel"
 #define D_JSON_FLASHSIZE "FlashSize"
+#define USE_LOCATION 
 #define D_UNIT_MILLISECOND "ms"
 #define D_CMND_SHUTTER_OPENTIME "OpenDuration"
 #define D_PRFX_I2S "I2S"
@@ -2404,7 +2408,7 @@
 #define D_LOG_ZIGBEE "ZIG: "
 #define D_CMND_WEBBUTTON "WebButton"
 #define USE_SM2335 
-#define D_FREE_MEMORY "Mémoire libre"
+#define D_CMND_LOCATIONSCALE "LocationScale"
 #define D_DISTANCE "Distance"
 #define D_COLOR_RED "Rouge"
 #define MQTT_CLIENT_ID "SERVEUR-RLY-CAVE-V2"
@@ -2532,6 +2536,7 @@
 #define __cpp_namespace_attributes 201411L
 #define D_WEB_ADMIN_PASSWORD "Mot de passe Web Admin"
 #define D_SENSOR_AZ_TX "AZ Tx"
+#define BERRY_MAX_BYTES_SIZE_PSRAM (1024 * 1024)
 #define MQTT_LOG_LEVEL LOG_LEVEL_DEBUG
 #define D_LOG_RESULT "RSL: "
 #define USE_HRE 
@@ -2669,6 +2674,7 @@
 #define D_SO_ZIGBEE_NAMETOPIC "NameTopic"
 #define D_JSON_VERSION "Version"
 #define D_EXPORT "Export"
+#define D_JSON_LOCATION "Location"
 #define D_NA "N/A"
 #define __FLT64_HAS_DENORM__ 1
 #define D_CMND_ZIGBEE_MAP "Map"
@@ -2717,7 +2723,7 @@
 #define D_AS3935_ON "Actif"
 #define USER_CONFIG_OVERRIDE_POST_PROCESS 
 #define D_SENSOR_I2C_SER_RX "I2C Ser RX"
-#define D_RESPONSE_SENT "Réponse envoyée"
+#define D_FREE_MEMORY "Mémoire libre"
 #define BE_LV_WIDGET_QRCODE 
 #define D_FAILED_TO_SEND_RESPONSE "Échec d'envoi réponse"
 #define D_JSON_MOTOR_MIS "setMIS"
@@ -3043,6 +3049,7 @@
 #define D_UNIT_WATT "W"
 #define D_STATUS5_NETWORK "NET"
 #define D_CMND_RFCODE "Code"
+#define D_RESPONSE_SENT "Réponse envoyée"
 #define D_CMND_VEML6075_INTTIME "inttime"
 #define D_JSON_SUCCESSFUL "Successful"
 #define D_LIGHT "Lumière"

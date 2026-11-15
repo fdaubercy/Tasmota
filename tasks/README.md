@@ -13,15 +13,17 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-53 plans : 27 actif, 1 en-pause, 25 clos.
+55 plans : 29 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) | Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic | actif | █████░░░░░ 47 % (5/8) | 3 étapes, 5 améliorations | 2026-11-15 | 2026-11-15 |
-| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ███████░░░ 72 % (19/26) | 7 étapes, 2 améliorations | 2026-11-14 | 2026-11-15 |
-| [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | actif | ░░░░░░░░░░ 0 % (0/19) | 19 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
+| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 83 % (57/69) | 12 étapes, 3 améliorations | 2026-11-13 | 2026-11-15 |
+| [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) | Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic | actif | ███████░░░ 67 % (9/11) | 2 étapes, 5 améliorations | 2026-11-15 | 2026-11-15 |
+| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | █████████░ 88 % (24/26) | 2 étapes, 2 améliorations | 2026-11-14 | 2026-11-15 |
+| [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | actif | █████████░ 87 % (22/24) | 2 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
+| [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ███████░░░ 71 % (16/20) | 4 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██░░░░░░░░ 20 % (2/11) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
-| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 84 % (57/68) | 11 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
+| [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) | Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin | actif | ████████░░ 81 % (12/15) | 3 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 88 % (38/41) | 3 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
@@ -73,10 +75,27 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) — 47 %
+#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 83 %
 
-- A1 — Pastille et fenêtre de détail : Essai réel après une vraie compilation depuis la page :7700 (l'utilisateur, aucun build lancé ici)
-- A3 — Envs ESP8266 : pastille d'après le bilan de pio : Essai réel : le relevé de `tasmota-cave-lumiere-porte` n'est régénéré qu'à la prochaine compilation depuis la page :7700
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : La page de l'atelier renvoie à `outils_docs/visuels_accueil/CONSIGNES_VISUELS.md` (consignes générales de création des visuels, qui
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
+- A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
+- A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
+- A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
+- A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
+- A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
+- Amélioration [projet] : Commander un relais en cliquant son voyant (spec § 3, non-objectif)
+- Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
+- Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
+
+#### [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) — 67 %
+
+- A4 — Pastille : IRAM du S3 et Flash = app0 : Essai réel après redémarrage de la page :7700 et une compilation de `tasmota32s3-cave-serveur-rly` (l'utilisateur)
 - A2 — Retour au plan en cours avant ce chantier : Reprendre le plan `build-reparations` : essai réel du diagnostic IA sur le journal `20261115-043620-tasmota-cave-lumiere-porte-compiler.log` (A6, dernière case), case « Relancer après réparation », puis A7 (documentation, relecteurs, essai hors série, commit) : `/suivi suivre build-reparations`
 - Amélioration [projet] : Écart avec le build précédent (variante C : champ `avant` à enregistrer par `build_memoire.enregistre`)
 - Amélioration [projet] : Accessibilité de la fenêtre : focus à l'ouverture, retour à la pastille, piège de Tab (relecteur-pages-web, 2026-11-15)
@@ -84,41 +103,28 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Couleurs de `FM_COUL` et du voile : variables CSS du thème au lieu de valeurs en dur
 - Amélioration [projet] : Sonde : filtre `ERR_CONNECTION_REFUSED` trop large, test de classe `fm-alerte` laxiste
 
-#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 72 %
+#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 88 %
 
-- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Bancs verts, un essai réel de diagnostic sur un journal d'échec archivé (lecture seule, rien appliqué)
-- A7 — Documentation, essai et commit : `outils_docs/README.md` (§ « Build et téléversement (page web) » : réparations, catalogue, liste blanche, panneau), `CLAUDE.md`
-- A7 — Documentation, essai et commit : Relecteurs `relecteur-pages-web` (page et routes, sécurité : fermeture de processus, clients distants, XSS du journal) puis
-- A7 — Documentation, essai et commit : Essai réel hors série de production : un fichier du dépôt tenu ouvert par un script de test pendant un faux build (pas de vrai
-- A7 — Documentation, essai et commit : Commit par chemins explicites (module neufs, bancs, plan, spec, README)
 - A8 — Retour au plan en cours avant ce chantier : Reprendre le plan `facade-garage-capteurs` : A3 (envoi des firmwares compilés le 2026-11-14 et essais sur les cartes : rideau fermé = pastille du bas verte, camera, fins de course) : `/suivi suivre facade-garage-capteurs`
 - A8 — Retour au plan en cours avant ce chantier : Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs`
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
-- Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
+- Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur) : à la main d'abord ; si une règle revient, bouton « Copier pour le dépôt » (JSON prêt à coller, règles `ia` seulement, aucune écriture dans le dépôt) ; pas de script de comptage. Mûre = plusieurs succès sur des journaux différents, motif précis, action de la liste fermée (décidé le 2026-11-15)
 
-#### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 0 %
+#### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 87 %
 
-- A1 — Voie GitHub fiable : Diagnostiquer l'absence de lancements (`gh api repos/fdaubercy/Tasmota/actions/workflows`, état « disabled_inactivity » ?) et réactiver
-- A1 — Voie GitHub fiable : `build_custom.yml` : matrice des 25 envs (liste lue de `platformio_tasmota_cenv.ini`), ajouter un contrôle qui échoue si un env manque
-- A1 — Voie GitHub fiable : Vérifier que le build GitHub reflète la config réelle (`platformio_override.ini` de l'échantillon vs dépôt) et noter l'écart
-- A1 — Voie GitHub fiable : Un lancement `workflow_dispatch` complet, lu jusqu'au bout (SUCCESS/FAILED par env)
-- A2 — Voie PC (tâche Windows qui pilote la page Build) : Script `maintenance/compilation_nuit.py` : refuse si un build tourne (garde existante), démarre la page Build si absente, `POST /lancer` (compiler seulement, sans port), attend la fin, écrit un résumé JSON par env
-- A2 — Voie PC (tâche Windows qui pilote la page Build) : Journal et résultat dans `%LOCALAPPDATA%\outils_tasmota\compilations_nuit\` (30 jours)
-- A2 — Voie PC (tâche Windows qui pilote la page Build) : Enregistrement de la tâche planifiée Windows (`schtasks`, réveil du PC optionnel), sans droits administrateur
-- A2 — Voie PC (tâche Windows qui pilote la page Build) : Banc `test_compilation_nuit.py` (faux serveur de build : refus pendant un build, échec d'un env, reprise)
-- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : `taches_planifiees_web.py` + `_page.py` + cible Custom détachée + tuile de l'annuaire (groupe Déploiement) + tâche VS Code
-- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : Liste des deux voies : activée ou non, prochaine exécution, dernier résultat, durée, envs en échec avec lien vers le journal
-- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : Lecture GitHub par `gh` (derniers runs), lecture PC par le dossier de résultats ; sondes hors ligne tolérées
-- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : Bancs et sonde Chrome
-- A4 — Tuile : activer, désactiver, paramétrer : Bouton activer / désactiver pour GitHub (`gh workflow enable\|disable`) et pour le PC (`schtasks /change /enable\|/disable`), état relu après chaque geste
-- A4 — Tuile : activer, désactiver, paramétrer : Paramètres : heure, envs cochés (ceux de la page Build), modification écrite dans le workflow (diff puis commit demandé) et dans la tâche Windows
-- A4 — Tuile : activer, désactiver, paramétrer : Bouton « Lancer maintenant » (GitHub : `workflow_dispatch`, PC : refus si un build tourne)
-- A4 — Tuile : activer, désactiver, paramétrer : Écritures atomiques avec diff préalable, refus pendant un build, accès comme les autres outils (`acces_web.py`)
-- A4 — Tuile : activer, désactiver, paramétrer : Bancs des gestes (faux `gh` et faux `schtasks`) et sonde Chrome
-- A5 — Documentation et mémoire : Carte des documents de `CLAUDE.md`, mode d'emploi dans `outils_docs/README.md`, vérification `verifie_references_docs.py`
+- A4 — Tuile : activer, désactiver, paramétrer : Valider sur GitHub qu'un env EXCLU (`envs_github.json` poussé avec un seul nom) disparaît de la matrice, puis remettre la liste vide (le banc local le prouve, pas encore GitHub)
 - A5 — Documentation et mémoire : Essai réel d'une nuit complète sur chaque voie, résultat relu le matin
 - Amélioration [projet] : Alerte Telegram si le plugin se connecte
 - Amélioration [projet] : Comparer la taille Flash/RAM d'une nuit à l'autre
+
+#### [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — 71 %
+
+- A6 — Essai sur carte : Compilation par la page Build (:7700), jamais par pio direct ; contrôler que les fichiers `volets.js` et la page sont bien dans l'image
+- A6 — Essai sur carte : Rendu vu sur le P4 : façade, clics, nuit ; tas et `UfsFree` relevés ; aucune commande réelle du portail sans accord de l'utilisateur
+- A7 — Documentation et commit : `outils_docs/README.md`, `CLAUDE.md` (carte des documents, exception des lignes de `volets.js`), `CONSIGNES_VISUELS.md` (journal des affinements) ; `verifie_references_docs.py` vert
+- A7 — Documentation et commit : Agents avant commit : `controleur-secrets`, `relecteur-pages-web` ; commit `feat(volets): ...`
+- Amélioration [projet] : Brancher la page de l'atelier des visuels sur les consignes (plan atelier-visuels, A7)
+- Amélioration [projet] : Même façade animée pour la carte du rideau et l'accueil d'autres lieux
 
 #### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 20 %
 
@@ -133,22 +139,13 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
 - Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
 
-#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 84 %
+#### [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) — 81 %
 
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
-- A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
-- A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
-- A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
-- A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
-- A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
-- Amélioration [projet] : Commander un relais en cliquant son voyant (spec § 3, non-objectif)
-- Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
-- Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
+- A2 — Branchement des bancs : Les autres bancs et sondes (test_taches_planifiees_*, test_compilation_nuit.py : fichiers tenus par d'autres sessions, laissés)
+- A7 — Essai réel : Ouvrir la page pendant une vraie série de sondes de l'utilisateur et vérifier l'avancement affiché (non fait : aucun lancement hors de cette session)
+- A7 — Essai réel : Mesurer le coût du relevé PowerShell sous charge et décider s'il faut un relevé en tâche de fond
+- Amélioration [projet] : Brancher `suit()` dans les autres bancs `test_*.py` au fil des usages
+- Amélioration [projet] : Afficher l'avancement d'un banc qui annonce son `total` (aujourd'hui la barre n'existe que si `suit(total=N)` est appelé)
 
 #### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 75 %
 

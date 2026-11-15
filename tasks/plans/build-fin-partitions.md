@@ -20,12 +20,12 @@ la page lit `GET /memoire?env=`. Code dans `outils_pc/build_page_fin_memoire.py`
 - [x] Sonde Chrome écrite d'abord, rouge avant le code — preuve : test_build_page_fin_memoire_chrome.py, « sonde : deroulement » KO avant branchement
 - [x] Module `build_page_fin_memoire.py` + branchement dans `build_page.py` — preuve : sonde VERT (13 contrôles)
 - [x] Seuils, XSS, Échap, clic dehors, thèmes clair et sombre, env sans relevé — preuve : contrôles de la sonde, mutants rouges (seuil, innerHTML)
-- [ ] Essai réel après une vraie compilation depuis la page :7700 (l'utilisateur, aucun build lancé ici)
+- [x] Essai réel après une vraie compilation depuis la page :7700 (l'utilisateur, aucun build lancé ici) — preuve : 2026-11-15, pastille affichée après la compilation de `tasmota-cave-lumiere-porte` (ESP8266) et, plus tôt, de `tasmota32s3-cave-serveur-rly` (capture : fenêtre de détail, IRAM du S3 puis corrigée) ; la pastille S3 après correctif (orange, Flash = app0) reste à revoir
 
 ## A3 — Envs ESP8266 : pastille d'après le bilan de pio
 - [x] Relevé sans table de partitions : `build_memoire.py::analyse` lit « Flash: » et « RAM: » du journal et pose `bilan_flash` {utilise, taille} + zone « RAM », `partitions` reste vide (l'onglet Mémoire n'y voit pas de faux firmware éditable) — preuve : test_build_memoire.py VERT (cas esp8266-essai / esp8266-ansi / sans les deux lignes), mutant « ESP8266 : ligne Flash non lue » tué
 - [x] Pastille et détail : `build_page_fin_memoire.py::fmParts` (repli sur `bilan_flash`) — preuve : test_build_page_fin_memoire_chrome.py VERT (pastille 70 %/94 %/95 %, relevé vide sans pastille, fenêtre « firmware » + RAM), mutant JS rouge
-- [ ] Essai réel : le relevé de `tasmota-cave-lumiere-porte` n'est régénéré qu'à la prochaine compilation depuis la page :7700
+- [x] Essai réel : le relevé de `tasmota-cave-lumiere-porte` n'est régénéré qu'à la prochaine compilation depuis la page :7700 — preuve : 2026-11-15, compilation du journal 20261115-121727 (SUCCESS, 14 min) : relevé `bilan_flash` 721795 / 1023984 (70,5 %), RAM 43860 / 81920 (53,5 %), note « pas de table de partitions (ESP8266) » ; l'utilisateur confirme avoir vu la pastille « Flash … · RAM … » sur la ligne de l'env
 
 ## A4 — Pastille : IRAM du S3 et Flash = app0
 - [x] IRAM de 16384 o d'un ESP32-S3 (cache d'instructions, toujours pleine) : ni rouge ni alerte, ligne gardée avec la mention « cache d'instructions, toujours plein » ; ESP32 classique à IRAM pleine : rouge — preuve : `build_page_fin_memoire.py::fmCache`, sonde `test_build_page_fin_memoire_chrome.py` VERT (cas s3-iram orange, classique-iram rouge), mutant « fmCache renvoie false » rouge
