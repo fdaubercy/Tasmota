@@ -563,6 +563,9 @@
   #define USE_SUNRISE                            // Add support for Sunrise and sunset tools (+16k)
     #define SUNRISE_DAWN_ANGLE DAWN_NORMAL       // Select desired Dawn Angle from (DAWN_NORMAL, DAWN_CIVIL, DAWN_NAUTIC, DAWN_ASTRONOMIC)
 
+// -- Location ------------------------------------
+#define USE_LOCATION                             // Add support for device location (Latitude/Longitude/Altitude) and local pose (x/y/z + rotation) (+2k code)
+
 // -- Ping ----------------------------------------
 //  #define USE_PING                                 // Enable Ping command (+2k code)
 
@@ -760,6 +763,7 @@
 //  #define USE_AHT1x                              // [I2cDriver43] Enable AHT10/15 humidity and temperature sensor (I2C address 0x38, 0x39) (+0k8 code)
 //  #define USE_AHT2x                              // [I2cDriver43] Enable AHT20/AM2301B instead of AHT1x humidity and temperature sensor (I2C address 0x38) (+0k8 code)
 //  #define USE_AHT3x                              // [I2cDriver43] Enable AHT30 humidity and temperature sensor (I2C address 0x38) (+0k8 code)
+//    #define USE_AHT_DIAG                         //   Add AHT20/AHT30 diagnostics (AHT2XDiag) to the sensor JSON
 //  #define USE_WEMOS_MOTOR_V1                     // [I2cDriver44] Enable Wemos motor driver V1 (I2C addresses 0x2D - 0x30) (+0k7 code)
 //    #define WEMOS_MOTOR_V1_ADDR  0x30            // Default I2C address 0x30
 //    #define WEMOS_MOTOR_V1_FREQ  1000            // Default frequency
@@ -1296,6 +1300,9 @@
   #define USE_BERRY_PYTHON_COMPAT                // Enable by default `import python_compat`
   #define USE_BERRY_TIMEOUT             4000     // Timeout in ms, will raise an exception if running time exceeds this timeout
   #define USE_BERRY_PSRAM                        // Allocate Berry memory in PSRAM if PSRAM is connected - this might be slightly slower but leaves main memory intact
+  #ifndef BERRY_MAX_BYTES_SIZE_PSRAM
+    #define BERRY_MAX_BYTES_SIZE_PSRAM  (1024 * 1024) // Max size in bytes for Berry bytes() objects when PSRAM is available
+  #endif
   #define USE_BERRY_IRAM                         // Allocate some data structures in IRAM (which is usually unused) when possible and if no PSRAM is available
   #define USE_BERRY_FAST_LOOP_SLEEP_MS  5        // Minimum time in milliseconds to before calling again `tasmota.fast_loop()`, a smaller value will consume more CPU (min 1ms)
   // #define USE_BERRY_DEBUG                        // Compile Berry bytecode with line number information, makes exceptions easier to debug. Adds +8% of memory consumption for compiled code
