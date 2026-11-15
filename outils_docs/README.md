@@ -2380,6 +2380,9 @@ Le port 7990 appartient à l'organigramme des plans (`organigramme_plans_web.py`
 ### Assistant IA (facultatif)
 
 Propose un dessin ou des opérations à partir d'une photo. Trois fournisseurs : `claude_local` (`claude -p` en lecture
+   Aperçu en direct et contrôle : `GET /etat?env=&chemins=` lit `/visuel?f=etat` de la carte (délai de 3 s) et rend `{etat: "connu", relais, mesures, liaisons}`
+   ou `{etat: "inconnu"}` (carte muette ou sans la route, en moins de 3,5 s) ; seules les mesures numériques sortent, jamais un texte ni une clé secrète ;
+   `POST /valide {description, octets?, puce?}` rend `{erreurs: [...]}` (liste vide = valide, mêmes règles que `cas_visuel.json`). La page se replie sans ces routes.
 seule), `ollama` (modèle local, rien ne sort du PC) et `api_externe` (API de type « chat completions », url, modèle et clé
 de l'utilisateur). Un fournisseur externe n'est appelé qu'après un **avertissement confirmé** : la photo part chez un tiers,
 même par l'abonnement Claude. La photo n'existe que dans un dossier temporaire hors dépôt. Les clés sont dans
