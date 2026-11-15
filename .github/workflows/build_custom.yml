@@ -11,45 +11,8 @@ concurrency:
 
 jobs:
 
-  # --- Safeboot (obligatoire avant les images ESP32) ---
-  safeboot-images:
-    runs-on: ubuntu-latest
-    continue-on-error: true    # un échec safeboot ne bloque pas les jobs suivants
-    strategy:
-      fail-fast: false
-      matrix:
-        variant:
-          - tasmota32-safeboot
-          - tasmota32s3-safeboot
-          - tasmota32p4-safeboot
-          - tasmota32p4r3-safeboot
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: "latest"
-          enable-cache: false
-      - name: Install dependencies
-        run: |
-          uv pip install --system pioarduino
-          cp ./platformio_override_sample.ini ./platformio_override.ini
-      - name: Run PlatformIO
-        env:
-          PYTHONIOENCODING: utf-8
-          PYTHONUTF8: '1'
-        run: platformio run -e ${{ matrix.variant }}
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: ${{ matrix.variant }}
-          path: ./build_output
-
   # --- Environnements Tasmota de base (ESP32 S3 / P4) ---
   base-images:
-    needs: safeboot-images
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false         # tente tous les variants même si l'un échoue
@@ -72,13 +35,6 @@ jobs:
         run: |
           uv pip install --system pioarduino
           cp ./platformio_override_sample.ini ./platformio_override.ini
-      - name: Download safeboot firmwares
-        continue-on-error: true   # pas bloquant si les artefacts safeboot sont absents
-        uses: actions/download-artifact@v8
-        with:
-          pattern: tasmota32*-safeboot
-          merge-multiple: true
-          path: ./firmware/firmware
       - name: Run PlatformIO
         env:
           PYTHONIOENCODING: utf-8
@@ -93,7 +49,6 @@ jobs:
 
   # --- Environnements personnalisés (platformio_tasmota_cenv.ini) ---
   custom-images:
-    needs: safeboot-images
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false         # tente tous les variants même si l'un échoue
@@ -137,13 +92,6 @@ jobs:
         run: |
           uv pip install --system pioarduino
           cp ./platformio_override_sample.ini ./platformio_override.ini
-      - name: Download safeboot firmwares
-        continue-on-error: true   # pas bloquant si les artefacts safeboot sont absents
-        uses: actions/download-artifact@v8
-        with:
-          pattern: tasmota32*-safeboot
-          merge-multiple: true
-          path: ./firmware/firmware
       - name: Run PlatformIO
         env:
           PYTHONIOENCODING: utf-8
