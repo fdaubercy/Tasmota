@@ -1079,3 +1079,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     rideau du garage rejoué par les vrais modules Berry (`berry.exe`, bouchons) avec la position du P4 lue en lecture seule (`Status 10`). Une carte qui répond (le P4)
     n'est JAMAIS simulée (409) ; MQTT jamais connecté ; pas d'alias d'IP. Rien n'est écrit dans le dépôt. Bancs `test_cartes_simulees.py`, `test_cartes_simulees_web.py`,
     sonde `test_cartes_simulees_page_chrome.py`, `build/test_cible_cartes_simulees.py`. Mode d'emploi : `outils_docs/README.md` § « Cartes simulées (page web) ».
+  - `icones_catalogue_web.py` (+ `icones_catalogue.py`, `icones_catalogue_page.py`, `build/cible_icones_catalogue.py`) — page « Catalogue d'icônes » http://127.0.0.1:7930
+    (2026-11-15, plan `tasks/plans/atelier-ecrans.md` A18 ; tuile de l'annuaire, groupe Ateliers, lecture seule, aucune route POST ; tâche VS Code ; cible Custom détachée,
+    `NOM_CIBLE` icones_catalogue). Glyphes MDI du firmware (`outils_docs/schemas/icones_firmware.json`, police locale), usages relevés dans `ecran.json`, `pages.jsonl` et les `.be`,
+    PNG de `data/` et `outils_docs/atelier_ecrans/images/`, sources de `ICONES_IMAGES_SOURCES.md`, codes absents du firmware. Bancs `test_icones_catalogue.py` (18 mutants),
+    `test_icones_catalogue_web.py`, sonde `test_icones_catalogue_page_chrome.py`, `build/test_cible_icones_catalogue.py`. Mode d'emploi : `outils_docs/README.md` § « Catalogue d'icônes (page web) ».

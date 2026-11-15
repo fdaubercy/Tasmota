@@ -297,6 +297,16 @@
             "args": ["-u", "outils_docs/scripts_python/outils_pc/cartes_simulees_web.py", "--http", "7940"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Catalogue d'icones : glyphes du firmware, PNG du depot et sites libres (lecture seule).
+            // Aussi cible Custom « Catalogue d'icones (page web) ».
+            "label": "Outil : catalogue d'icones (http://127.0.0.1:7930)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/icones_catalogue_web.py", "--http", "7930"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

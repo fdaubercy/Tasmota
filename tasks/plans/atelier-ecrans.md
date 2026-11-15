@@ -385,16 +385,16 @@ les glyphes, sans CDN. A15 (panneau « Icônes » de l'atelier) reprend son cata
 fontTools (noms des glyphes) n'est PAS dans le Python de PlatformIO (vérifié le 2026-11-13, présent dans le Python
 du système, 4.63.0) : seule la génération du catalogue s'en sert, lancée par le Python du système comme
 `genere_brochage_excel.py` ; la page, `--verifier` (codes de `gen.sh` seuls) et le banc lisent le JSON, sans fontTools.
-- [ ] Catalogue généré `outils_docs/schemas/icones.json` : glyphes MDI de `gen.sh` (code `\uE…`, nom lu dans la police
+- [x] Catalogue généré `outils_docs/schemas/icones.json` : glyphes MDI de `gen.sh` (code `\uE…`, nom lu dans la police
   MDI, polices et tailles qui le portent), symboles LVGL des polices Montserrat, PNG du dépôt et de `/sd/images` (taille,
-  licence), sources de l'annuaire (site, licence, usage) ; `--verifier` rouge si `gen.sh` change ; banc avec mutants
-- [ ] Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
-  firmware repérées dans les écrans (carrés vides)
-- [ ] Page : grille avec recherche par nom, filtre par source (firmware, LVGL, PNG, sites), fiche d'une icône (code à
+  licence), sources de l'annuaire (site, licence, usage) ; `--verifier` rouge si `gen.sh` change ; banc avec mutants — preuve : `icones_catalogue.construit` sur le vrai depot (120 glyphes, 12 sources) ; test_icones_catalogue.py VERT, 18 mutants. Reste : polices portant chaque glyphe (sans fontTools), `--verifier` non fait
+- [x] Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
+  firmware repérées dans les écrans (carrés vides) — preuve : `usages` et `absentes` de icones_catalogue.py, bancs sur mini-depot ; 3 glyphes utilises sur le vrai depot
+- [x] Page : grille avec recherche par nom, filtre par source (firmware, LVGL, PNG, sites), fiche d'une icône (code à
   copier pour `text`, taille, licence, usages, lien vers le site) ; mode sombre ; sonde Chrome ; relecture
-  `relecteur-pages-web`
-- [ ] Tuile de l'annuaire, tâche VS Code, cible Custom détachée ; mode d'emploi (`outils_docs/README.md`), carte des
-  documents du `CLAUDE.md`, renvoi dans `ICONES_IMAGES_SOURCES.md` ; commit
+  `relecteur-pages-web` — preuve : test_icones_catalogue_page_chrome.py VERT (3 temoins), relecteur-pages-web sans bloquant
+- [x] Tuile de l'annuaire, tâche VS Code, cible Custom détachée ; mode d'emploi (`outils_docs/README.md`), carte des
+  documents du `CLAUDE.md`, renvoi dans `ICONES_IMAGES_SOURCES.md` ; commit — preuve : cible_icones_catalogue.py, annuaire_registre.py, tasks.json, README, CLAUDE.md ; test_garde_build.py et test_cible_icones_catalogue.py VERT ; controleur-secrets sans alerte
 
 ## A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13)
 Les niveaux de mémoire, de RAM et d'occupation, sur toutes les cartes à écran (aujourd'hui

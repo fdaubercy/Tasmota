@@ -2163,6 +2163,22 @@ Le catalogue `outils_docs/schemas/icones_firmware.json` vient de `lib/libesp32_l
 synchro du fork, `python outils_docs/scripts_python/outils_pc/genere_icones_firmware.py --verifier` (Python système,
 fontTools) dit s'il est à refaire, sans `--verifier` il le réécrit.
 
+### Catalogue d'icônes (page web)
+
+Page de consultation, **lecture seule** (aucune route POST, rien n'est écrit), http://127.0.0.1:7930 : tuile « Catalogue d'icônes »
+de l'annuaire (groupe Ateliers), tâche VS Code « Outil : catalogue d'icones (http://127.0.0.1:7930) », cible Custom détachée
+« Catalogue d'icones (page web) » (`build/cible_icones_catalogue.py`, `pio run` : jamais pendant un build) ou
+`python outils_docs/scripts_python/outils_pc/icones_catalogue_web.py [--http 7930] [--local] [--sans-navigateur]`.
+Plan `tasks/plans/atelier-ecrans.md` A18. Le catalogue est recalculé à chaque ouverture par `outils_pc/icones_catalogue.py::construit` :
+les 120 glyphes de `outils_docs/schemas/icones_firmware.json` (dessinés par la police MDI locale, aucun CDN, aucune requête externe), les
+PNG de `data/` et de `outils_docs/atelier_ecrans/images/` (taille lue dans l'en-tête, poids) et les sites de l'annuaire
+`ICONES_IMAGES_SOURCES.md` (sections 1 à 3, avec licence). Recherche par nom, filtre par source (Firmware, PNG, Sites). Un clic sur un glyphe
+ouvre sa fiche : code à copier pour l'attribut `text` (`\uE335`) avec le bouton Copier, nom et code MDI, lien pictogrammers.com, polices
+(`montserrat-28` recommandé), et ses usages (fichiers de `ecran.json`, `pages.jsonl` et des `.be` de `data/` qui portent son code, 20 au plus).
+« Absentes du firmware » : codes `U+E000` à `U+F8FF` utilisés dans ces fichiers mais absents du catalogue (carré vide à l'écran).
+Pas de fontTools ici : la génération du catalogue reste `genere_icones_firmware.py`. Bancs `outils_pc/test_icones_catalogue.py` (mini-dépôt, mutants),
+`test_icones_catalogue_web.py`, sonde Chrome `test_icones_catalogue_page_chrome.py` (témoins), `build/test_cible_icones_catalogue.py`.
+
 ### Importer un pages.jsonl écrit à la main
 
 Une carte dont le dossier a un `pages.jsonl` montre, sous « + page », le bouton **Importer le pages.jsonl de la carte**.
@@ -2364,6 +2380,9 @@ Le port 7990 appartient à l'organigramme des plans (`organigramme_plans_web.py`
    **liaison** de type `modbus_serie`, `modbus_esclave` (id d'esclave), `esclave` (adresse MAC, UDP ou range extender) ou
    `wifi`. Les listes viennent du persist de la carte (lu en lecture seule, secrets jamais envoyés à la page) ; `GET /sources`.
    `seuil_s` règle l'âge au-delà duquel une liaison ModBus est dite muette.
+   Aperçu en direct et contrôle : `GET /etat?env=&chemins=` lit `/visuel?f=etat` de la carte (délai de 3 s) et rend `{etat: "connu", relais, mesures, liaisons}`
+   ou `{etat: "inconnu"}` (carte muette ou sans la route, en moins de 3,5 s) ; seules les mesures numériques sortent, jamais un texte ni une clé secrète ;
+   `POST /valide {description, octets?, puce?}` rend `{erreurs: [...]}` (liste vide = valide, mêmes règles que `cas_visuel.json`). La page se replie sans ces routes.
 4. **Icônes** : recherche en ligne sur Iconify (hôte fixe `api.iconify.design`), licence affichée ; les licences
    permissives passent, les CC BY demandent une confirmation d'attribution à la conservation, le reste est masqué.
 5. **Export** : SVG à télécharger, code SVG, fragment HTML autonome (un petit script en ligne bascule l'état au clic),
@@ -2380,9 +2399,6 @@ Le port 7990 appartient à l'organigramme des plans (`organigramme_plans_web.py`
 ### Assistant IA (facultatif)
 
 Propose un dessin ou des opérations à partir d'une photo. Trois fournisseurs : `claude_local` (`claude -p` en lecture
-   Aperçu en direct et contrôle : `GET /etat?env=&chemins=` lit `/visuel?f=etat` de la carte (délai de 3 s) et rend `{etat: "connu", relais, mesures, liaisons}`
-   ou `{etat: "inconnu"}` (carte muette ou sans la route, en moins de 3,5 s) ; seules les mesures numériques sortent, jamais un texte ni une clé secrète ;
-   `POST /valide {description, octets?, puce?}` rend `{erreurs: [...]}` (liste vide = valide, mêmes règles que `cas_visuel.json`). La page se replie sans ces routes.
 seule), `ollama` (modèle local, rien ne sort du PC) et `api_externe` (API de type « chat completions », url, modèle et clé
 de l'utilisateur). Un fournisseur externe n'est appelé qu'après un **avertissement confirmé** : la photo part chez un tiers,
 même par l'abonnement Claude. La photo n'existe que dans un dossier temporaire hors dépôt. Les clés sont dans

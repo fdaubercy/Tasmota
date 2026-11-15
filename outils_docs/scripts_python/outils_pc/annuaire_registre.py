@@ -303,6 +303,16 @@ OUTILS = [
         [_port("http", 7985)],
         "http",
         "Console capturée : " + CONSOLE.format("atelier_visuels") + "."),
+    Outil(
+        "icones_catalogue", "Catalogue d'icones", "Catalogue d'icônes", GROUPES[4],
+        "Glyphes du firmware, PNG du dépôt et sites d'icônes libres : recherche, fiche et code à copier.",
+        "Page web en lecture seule : grille des glyphes Material Design embarqués (dessinés par la police MDI du dépôt), code à copier "
+        "pour l'attribut text, usages dans les écrans et les .be, PNG du dépôt, sites libres avec leur licence, icônes utilisées mais absentes "
+        "du firmware. Seul paramètre ici : le port de la page (7930). Rien n'est écrit : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/icones_catalogue_web.py",
+        [_port("http", 7930)],
+        "http",
+        "Console capturée : " + CONSOLE.format("icones_catalogue") + "."),
 ]
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.

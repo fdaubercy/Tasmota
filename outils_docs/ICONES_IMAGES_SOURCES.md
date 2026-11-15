@@ -73,3 +73,6 @@ la maquette de la cave les montre en chargeant la police MDI officielle (`@mdi/f
 
 Garder la licence de la collection à côté de tout fichier copié dans le dépôt (même règle que les polices de
 `outils_docs/atelier_ecrans/polices/`).
+
+Ces sources, les glyphes du firmware et les PNG du dépôt sont consultables sur la page « Catalogue d'icônes » de l'annuaire
+(http://127.0.0.1:7930, lecture seule) : `outils_docs/README.md` § « Catalogue d'icônes (page web) ».
