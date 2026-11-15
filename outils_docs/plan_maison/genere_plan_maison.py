@@ -112,6 +112,30 @@ def derive_wifi(conf, infos):
     return res
 
 
+def adresse(cle, infos, maitre_de):
+    """Page web d'une carte : son IP si le persist en donne une, sinon (esclave derriere le NAPT d'un maitre) <IP maitre>:<8080 + id - 1>
+    comme build_envs.py::adresse_par_maitre ; "" si inconnue."""
+    ok = lambda ip: bool(re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", ip or ""))
+    i = infos[cle]
+    if ok(i["ip"]):
+        return f"http://{i['ip']}/"
+    m = maitre_de.get(cle)
+    if m and ok(infos[m]["ip"]) and isinstance(i["re_id"], int) and i["re_id"] > 0:
+        return f"http://{infos[m]['ip']}:{8080 + i['re_id'] - 1}/"
+    return ""
+
+
+def adresse_debits():
+    """URL de la carte d'acquisition des debits (placement.json > chauffage.acquisition) ; "" si inconnue. Cible FIXE, jamais fournie par un client."""
+    conf = json.loads((ICI / "placement.json").read_text(encoding="utf-8"))
+    cle = conf.get("chauffage", {}).get("acquisition", "")
+    if cle not in conf["cartes"]:
+        return ""
+    infos = {c: lit(c) for c in conf["cartes"]}
+    liens, _, _ = derive(conf, infos)
+    return adresse(cle, infos, {ln["vers"]: ln["de"] for ln in liens})
+
+
 def triangle(x, y, dx, dy, t=8):
     """Pointe de fleche en (x, y) dirigee vers (dx, dy) (vecteur unitaire)."""
     px, py = -dy, dx
@@ -119,8 +143,10 @@ def triangle(x, y, dx, dy, t=8):
             f'{x - dx * t * 1.6 - px * t * .7:.0f},{y - dy * t * 1.6 - py * t * .7:.0f}"/>')
 
 
-def etiquette(pts, texte):
+def etiquette(pts, texte, lbl=None):
     """Texte au milieu du plus long segment (halo de la couleur du fond) ; rien si aucun segment n'a 20 px."""
+    if lbl and texte:
+        return f'<text class="lbl lg" x="{lbl[0]:.0f}" y="{lbl[1] + 3.5:.0f}">{html.escape(texte)}</text>'
     seg = max(zip(pts, pts[1:]), key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
     (a, b), (c, d) = seg
     if abs(a - c) + abs(b - d) < 20 or not texte:
@@ -128,7 +154,7 @@ def etiquette(pts, texte):
     return f'<text class="lbl" x="{(a + c) / 2:.0f}" y="{(b + d) / 2 + 3.5:.0f}" text-anchor="middle">{html.escape(texte)}</text>'
 
 
-def svg_lien(ln, pts, liens):
+def svg_lien(ln, pts, liens, lbl=None, texte=None):
     """(ordre de dessin, svg) d'un lien le long de la polyligne pts ; le pointille clair passe au-dessus du trait plein."""
     d = "M" + " L".join(f"{x:.0f},{y:.0f}" for x, y in pts)
     (x1, y1), (x2, y2) = pts[-2], pts[-1]
@@ -139,10 +165,25 @@ def svg_lien(ln, pts, liens):
     retour = triangle(u2, v2, (u2 - u1) / m, (v2 - v1) / m, 6)
     attr = f'data-de="{html.escape(ln["de"])}" data-vers="{html.escape(ln["vers"])}"'
     if ln["type"] == "serie":
-        return 0, f'<g class="lien serie" data-type="serie" {attr}><path d="{d}"/>{pointe}{etiquette(pts, ln["etiquette"])}</g>'
+        return 0, f'<g class="lien serie" data-type="serie" {attr}><path d="{d}"/>{pointe}{etiquette(pts, ln["etiquette"] if texte is None else texte, lbl)}</g>'
     if any(k["type"] == "serie" and k["de"] == ln["de"] and k["vers"] == ln["vers"] for k in liens):
         return 2, f'<g class="lien udp sur-serie" data-type="udp" {attr}><path d="{d}"/>{retour}</g>'
-    return 1, f'<g class="lien udp seul" data-type="udp" {attr}><path d="{d}"/>{pointe}{retour}{etiquette(pts, ln["etiquette"])}</g>'
+    return 1, f'<g class="lien udp seul" data-type="udp" {attr}><path d="{d}"/>{pointe}{retour}{etiquette(pts, ln["etiquette"] if texte is None else texte, lbl)}</g>'
+
+
+def colonne(a, b, salles):
+    """Liens entre deux pieces empilees : tronc dans le couloir entre la 1re et la 2e colonne de pastilles, branches a angle droit.
+    Retourne (points, position de l'etiquette) ou None si la geometrie ne s'y prete pas (pieces non alignees, 3e colonne)."""
+    if a["piece"] == b["piece"] or a["col"] > 1 or b["col"] > 1:
+        return None
+    oa, ob = a["x"] - a["col"] * (CW + GAPX), b["x"] - b["col"] * (CW + GAPX)
+    sa, sb = salles[a["piece"]], salles[b["piece"]]
+    if abs(oa - ob) > 1 or not (sb["bas"] <= sa["haut"] or sa["bas"] <= sb["haut"]):
+        return None
+    xt = oa + CW + GAPX / 2
+    ym = (sa["haut"] + sb["bas"]) / 2 if sb["bas"] <= sa["haut"] else (sa["bas"] + sb["haut"]) / 2
+    pts = [(a["x"] + (CW if a["col"] == 0 else 0), a["cy"]), (xt, a["cy"]), (xt, b["cy"]), (b["x"] + (CW if b["col"] == 0 else 0), b["cy"])]
+    return [p for k, p in enumerate(pts) if k == 0 or p != pts[k - 1]], (xt + 6, ym)
 
 
 def route(a, b, salles):
@@ -180,8 +221,12 @@ def svg_carte(cle, x, y, m):
         deco = (f'<circle class="idb" cx="{x + CW - 14}" cy="{y + 14}" r="9"/>'
                 f'<text class="idt" x="{x + CW - 14}" y="{y + 18}">{html.escape(str(m["id"]))}</text>')
     if m.get("re_n"):
-        deco += f'<text class="re" x="{x + CW - 18}" y="{y + CH - 5}" text-anchor="end">📶 RE ×{m["re_n"]}</text>'
+        deco += f'<text class="re" x="{x + CW - 40}" y="{y + CH - 5}" text-anchor="end">📶 RE ×{m["re_n"]}</text>'
     etat = f'<circle class="etat" cx="{x + CW - 9}" cy="{y + CH - 8}" r="4"/>' if m["url"] else ""
+    if m["url"]:
+        etat += (f'<a class="lk" href="{html.escape(m["url"])}" target="_blank" rel="noopener" aria-label="Ouvrir la page web de la carte">'
+                 f'<title>Ouvrir la page web de la carte</title><circle cx="{x + CW - 27}" cy="{y + CH - 8}" r="8"/>'
+                 f'<path d="M{x + CW - 30},{y + CH - 5} L{x + CW - 24},{y + CH - 11} M{x + CW - 29},{y + CH - 11} H{x + CW - 24} V{y + CH - 6}"/></a>')
     url = f' data-url="{html.escape(m["url"])}"' if m["url"] else ""
     return (f'<g class="{m["cls"]}" data-id="{html.escape(cle)}"{url} tabindex="0"><rect x="{x}" y="{y}" width="{CW}" height="{CH}" rx="5"/>'
             f'<rect x="{x + 3}" y="{y + 6}" width="4" height="{CH - 12}" rx="2" fill="{m["coul"]}"/>'
@@ -264,6 +309,7 @@ def construit():
 
     wifi = derive_wifi(conf, infos)
     relie = {c for ln in liens for c in (ln["de"], ln["vers"])}
+    maitre_de = {ln["vers"]: ln["de"] for ln in liens}
     metas = {}
     for cle, c in conf["cartes"].items():
         i = infos[cle]
@@ -278,10 +324,9 @@ def construit():
             role, badge = "", ""
         etiq = conf.get("etiquettes", {}).get(cle, "")
         autonome = cle not in relie and not role
-        sous = puce + (" · autonome" if autonome else "") + (f" · {etiq.split(' (')[0]}" if etiq else "")
-        ip_ok = re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", i["ip"] or "")
+        sous = puce + (" · autonome" if autonome and not etiq else "") + (f" · {etiq.split(' (')[0]}" if etiq else "")
         metas[cle] = {"libelle": c["libelle"], "sous": sous, "badge": badge, "id": esclaves.get(cle), "role": role, "puce": puce,
-                      "coul": PUCE_COUL.get(puce, "#888"), "etiq": etiq, "mqtt": i["mqtt"], "url": f"http://{i['ip']}/" if ip_ok else "",
+                      "coul": PUCE_COUL.get(puce, "#888"), "etiq": etiq, "mqtt": i["mqtt"], "url": adresse(cle, infos, maitre_de),
                       "re_n": len({ln["vers"] for ln in liens if ln["de"] == cle}), "cls": "carte" + (" maitre" if badge == "etoile" else "") + (" autonome" if autonome else "")}
 
     pieces, ordre, pos, salles, out_p = {}, {}, {}, {}, []
@@ -310,11 +355,19 @@ def construit():
             pos[cle] = {"piece": pid, "col": col, "row": row, "x": x, "y": y, "cx": x + CW / 2, "cy": y + CH / 2}
 
     out_l = []
+    groupes_etiq = set()
     for ln in liens:
         if ln["de"] not in pos or ln["vers"] not in pos:
             print("AVERTISSEMENT : lien vers une carte non placee :", ln, file=sys.stderr)
             continue
-        out_l.append(svg_lien(ln, route(pos[ln["de"]], pos[ln["vers"]], salles), liens))
+        c = colonne(pos[ln["de"]], pos[ln["vers"]], salles)
+        texte = None
+        if c:        # une seule etiquette pour le tronc partage : « id 2 · id 4 »
+            cle_g = (ln["de"], pos[ln["vers"]]["piece"], ln["type"])
+            texte = "" if cle_g in groupes_etiq else " · ".join(k["etiquette"] for k in liens if k["type"] == ln["type"] and k["de"] == ln["de"]
+                                                                  and k["vers"] in pos and pos[k["vers"]]["piece"] == cle_g[1])
+            groupes_etiq.add(cle_g)
+        out_l.append(svg_lien(ln, c[0] if c else route(pos[ln["de"]], pos[ln["vers"]], salles), liens, c[1] if c else None, texte))
     out_l = [s for _, s in sorted(out_l, key=lambda t: t[0])]
     out_c = [svg_carte(cle, p["x"], p["y"], metas[cle]) for cle, p in pos.items()]
     aps = conf.get("wifi", {}).get("appareils", {})
@@ -354,7 +407,8 @@ def construit():
                 vus[pid] = k + 1
                 ex, ey = niv["x"] + pc["x"] + pc["w"] / 2 + k * 30 - 15 * (vus[pid] > 1), niv["y"] + 12
                 out_ch.append(f'<g class="lien chl" data-de="ch:nourrice" data-vers="{pid}"><path class="dep" d="M{nx + 59},{ny + 10} L{ex:.0f},{ey}"/>'
-                              f'<circle cx="{ex:.0f}" cy="{ey}" r="9"/><text class="dn" x="{ex:.0f}" y="{ey + 3.5}" text-anchor="middle">{dep["debit"]}</text></g>')
+                              f'<circle cx="{ex:.0f}" cy="{ey}" r="9"/><text class="dn" x="{ex:.0f}" y="{ey + 3.5}" text-anchor="middle">{dep["debit"]}</text>'
+                              f'<text class="dv" data-d="{dep["debit"]}" x="{ex + 13:.0f}" y="{ey + 4:.0f}"></text></g>')
         for k, (x, y, e) in jch.items():
             out_c.append(f'<g class="carte chn" data-id="{k}" tabindex="0"><rect x="{x}" y="{y}" width="118" height="20" rx="4"/>'
                          f'<text class="t2" x="{x + 59}" y="{y + 14}" text-anchor="middle" style="fill:var(--txt);font-weight:600">{html.escape("🔥 " + e["nom"])}</text></g>')
@@ -416,6 +470,7 @@ LEGENDE = """<div class="legende">
 <label class="seul-wifi"><input type="checkbox" checked data-type="wap"><svg width="46" height="12"><path d="M2,6 L36,6" stroke="#7048e8" stroke-width="2.2"/><circle cx="40" cy="6" r="4.5" fill="#7048e8"/></svg>vers un appareil Wi-Fi (couleur = appareil)</label>
 <label class="seul-wifi"><input type="checkbox" data-type="wsec"><svg width="46" height="12"><path d="M2,6 L36,6" stroke="#7048e8" stroke-width="2.2" stroke-dasharray="7 5" opacity=".6"/></svg>pointillé = réseau de secours (masqué par défaut)</label>
 <label class="seul-wifi"><input type="checkbox" checked data-type="wre"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#d6336c" stroke-width="6"/><path d="M2,6 L44,6" stroke="var(--carte)" stroke-width="2.2"/></svg>Range Extender du maître</label>
+<span class="seul-chauffage" id="etat-debits" style="color:var(--doux)">Débits : « Lire les débits » les interroge sur la carte.</span>
 <span class="seul-chauffage"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#1098ad" stroke-width="5"/></svg>eau chaude PAC vers la nourrice</span>
 <span class="seul-chauffage"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#1098ad" stroke-width="2"/></svg>départs vers les pièces chauffées (rond numéroté = Débit n)</span>
 <span class="puces l-comm">@PUCES@</span></div>"""
@@ -441,12 +496,13 @@ aside{flex:0 1 280px;background:var(--carte);border:1px solid var(--trait);borde
 .carte:hover rect:first-child,.carte:focus rect:first-child,.carte.sel rect:first-child{stroke:var(--accent);stroke-width:2.8}.carte.autonome{opacity:.8}.carte.apn rect{stroke-width:2;fill:var(--carte)}
 .wl path{fill:none}.wl .rail{stroke:#d6336c;stroke-width:6;stroke-linejoin:round}.wl .ame{stroke:var(--carte);stroke-width:2.2;stroke-linejoin:round}
 body:not(.v-wifi) .wl,body:not(.v-wifi) .apn,body:not(.v-wifi) .seul-wifi,body:not(.v-chauffage) .chl,body:not(.v-chauffage) .chn,body:not(.v-chauffage) .seul-chauffage{display:none}
-.chl path{fill:none}.chl .hyd{stroke:#1098ad;stroke-width:5}.chl .dep{stroke:#1098ad;stroke-width:2}.chl .dn{fill:#fff;font-size:10px;font-weight:700;pointer-events:none}.chl circle{fill:#1098ad}.carte.chn rect{stroke:#1098ad;stroke-width:2;fill:var(--carte)}
-.lbl{fill:var(--txt);font-size:10px;font-weight:700;paint-order:stroke;stroke:var(--piece);stroke-width:3px;pointer-events:none}.carte .re{fill:var(--doux);font-size:9.5px;pointer-events:none}
+.chl path{fill:none}.chl .hyd{stroke:#1098ad;stroke-width:5}.chl .dep{stroke:#1098ad;stroke-width:2}.chl .dv{fill:var(--txt);font-size:11px;font-weight:700;paint-order:stroke;stroke:var(--piece);stroke-width:3px}.chl circle.imp{fill:#e0a800}.chl circle.mut{fill:#c92a2a}.chl .dn{fill:#fff;font-size:10px;font-weight:700;pointer-events:none}.chl circle{fill:#1098ad}.carte.chn rect{stroke:#1098ad;stroke-width:2;fill:var(--carte)}
+.lbl.lg{stroke:var(--fond)}.lbl{fill:var(--txt);font-size:10px;font-weight:700;paint-order:stroke;stroke:var(--piece);stroke-width:3px;pointer-events:none}.carte .re{fill:var(--doux);font-size:9.5px;pointer-events:none}
 body.v-wifi .lien.serie,body.v-wifi .lien.udp,body.v-wifi svg.reseau,body.v-wifi .l-comm,body.v-wifi .seul-reseau,body.v-chauffage .lien.serie,body.v-chauffage .lien.udp,body.v-chauffage svg.reseau,body.v-chauffage .l-comm,body.v-chauffage .seul-reseau{display:none}
 body.v-plan svg.reseau,body.v-reseau svg.plan{display:none}
 .carte .t1{fill:var(--txt);font-size:12px;font-weight:600;pointer-events:none}.carte .t2{fill:var(--doux);font-size:10.5px;pointer-events:none}
 .carte .etoile{fill:#e0a800;font-size:16px;pointer-events:none}.carte .etoile.vide{fill:var(--doux)}.idb{fill:var(--txt)}.idt{fill:var(--carte);font-size:11px;text-anchor:middle;font-weight:700;pointer-events:none}
+.lk circle{fill:var(--carte);stroke:var(--accent);stroke-width:1.4;cursor:pointer}.lk path{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linecap:round;pointer-events:none}.lk:hover circle{fill:var(--accent)}.lk:hover path{stroke:var(--carte)}
 .etat{fill:none}.carte.ok .etat{fill:#2f9e44}.carte.ko .etat{fill:#c92a2a}.carte.test .etat{fill:#e0a800}
 .lien path,.mqttbus{fill:none}.lien.serie{fill:var(--serie)}.lien.serie path{stroke:var(--serie);stroke-width:4;stroke-linejoin:round}
 .lien.udp.seul{fill:var(--udp)}.lien.udp.seul path{stroke:var(--udp);stroke-width:2.6;stroke-dasharray:2 5;stroke-linecap:round}
@@ -457,7 +513,7 @@ dt{color:var(--doux);font-size:12px;margin-top:8px}dd{margin:0;word-break:break-
 @media print{.haut{position:static}:root{--fond:#fff;--carte:#fff;--piece:#f1efe9;--trait:#777;--txt:#111;--doux:#444}.barre,aside,.legende label input{display:none}main{padding:0}svg.plan,svg.reseau{max-width:none;width:100%}@page{size:landscape;margin:8mm}}
 </style></head><body class="v-plan">
 <div class="haut"><header><h1>Plan de la maison</h1><div class="barre"><button id="b-plan" class="actif">Vue plan</button><button id="b-reseau">Vue réseau</button><button id="b-wifi">Vue Wi-Fi</button><button id="b-chauffage">Vue chauffage</button>
-<button id="b-test" title="Interroge l'IP connue de chaque carte, uniquement quand on clique">Tester les cartes</button><button id="b-print">Imprimer / PDF</button></div></header>
+<button id="b-test" title="Interroge l'IP connue de chaque carte, uniquement quand on clique">Tester les cartes</button><button id="b-debits" class="seul-chauffage" title="Lit les 6 débits sur la carte (au clic seulement)">Lire les débits</button><button id="b-print">Imprimer / PDF</button></div></header>
 @@LEGENDE@@</div>
 <main><svg class="plan" viewBox="0 0 1120 770" role="img" aria-label="Cartes Tasmota par pièce">@@PIECES@@@@LIENS@@@@CARTES@@</svg>@@RESEAU@@
 <aside id="fiche"><b>Fiche</b><p style="color:var(--doux)">Clique sur une carte : fiche, voisines et liens.</p></aside></main>
@@ -466,12 +522,19 @@ const F=@@FICHES@@,$=s=>[...document.querySelectorAll(s)],e=s=>String(s).replace
 $("input[data-type]").forEach(i=>i.addEventListener("change",()=>$("[data-type='"+i.dataset.type+"']:not(input)").forEach(p=>p.classList.toggle("off",!i.checked))));
 function vue(v){document.body.className="v-"+v;$("#b-plan").forEach(b=>b.classList.toggle("actif",v=="plan"));$("#b-reseau").forEach(b=>b.classList.toggle("actif",v=="reseau"));$("#b-wifi").forEach(b=>b.classList.toggle("actif",v=="wifi"));$("#b-chauffage").forEach(b=>b.classList.toggle("actif",v=="chauffage"))}
 document.getElementById("b-plan").onclick=()=>vue("plan");document.getElementById("b-reseau").onclick=()=>vue("reseau");document.getElementById("b-wifi").onclick=()=>vue("wifi");document.getElementById("b-chauffage").onclick=()=>vue("chauffage");document.getElementById("b-print").onclick=()=>window.print();
+document.getElementById("b-debits").onclick=async()=>{const b=document.getElementById("b-debits"),s=document.getElementById("etat-debits");b.disabled=true;s.textContent="Lecture en cours…";
+try{const r=await fetch("/debits",{cache:"no-store",signal:AbortSignal.timeout(9000)});const j=await r.json();if(!r.ok)throw new Error(j.erreur||("réponse "+r.status));
+$(".chl circle").forEach(c=>c.classList.remove("imp","mut"));
+j.debits.forEach((q,k)=>{const n=k+1,v=typeof q==="number"?q.toFixed(2).replace(".",",")+" L/min":"?";$(".dv[data-d='"+n+"']").forEach(t=>{t.textContent=v;const c=t.parentNode.querySelector("circle");c.classList.toggle("mut",!!(j.muets||[]).includes(n));c.classList.toggle("imp",!!(j.imprecis||[]).includes(n))})});
+s.textContent="Débits lus à "+new Date().toLocaleTimeString("fr-FR")+(typeof j.total==="number"?" · total "+j.total.toFixed(2).replace(".",",")+" L/min":"")}
+catch(e){s.textContent="Lecture impossible : "+(e&&e.message?e.message:e)+" (la page doit être ouverte par l'annuaire, port 7915)"}finally{b.disabled=false}};
 document.getElementById("b-test").onclick=async()=>{const cs=$(".carte[data-url]");cs.forEach(c=>{c.classList.remove("ok","ko");c.classList.add("test")});
 await Promise.all(cs.map(c=>fetch(c.dataset.url,{mode:"no-cors",signal:AbortSignal.timeout(2500)}).then(()=>{c.classList.remove("test");c.classList.add("ok")},()=>{c.classList.remove("test");c.classList.add("ko")})))};
 let cur=null;function hl(id){if(!id){$(".lien,.carte").forEach(n=>n.classList.remove("fade","sel"));return}const v=new Set([id]);$(".lien").forEach(l=>{const m=l.dataset.de==id||l.dataset.vers==id;l.classList.toggle("fade",!m);if(m){v.add(l.dataset.de);v.add(l.dataset.vers)}});
 $(".carte").forEach(c=>{c.classList.toggle("fade",!v.has(c.dataset.id));c.classList.toggle("sel",c.dataset.id==id)})}
 function sel(id){cur=id;hl(id);const f=F[id];
 document.getElementById("fiche").innerHTML="<b>"+e(f.libelle)+"</b><dl><dt>Rôle</dt><dd>"+e(f.role)+"</dd><dt>Pièce</dt><dd>"+e(f.piece)+"</dd><dt>Puce</dt><dd>"+e(f.puce)+"</dd><dt>Nom d'hôte</dt><dd>"+e(f.hote||"(pas de persist)")+"</dd><dt>IP</dt><dd>"+(f.url?'<a href="'+e(f.url)+'" target="_blank" rel="noopener">'+e(f.url)+"</a>":e(f.ip))+"</dd><dt>MQTT</dt><dd>"+e(f.mqtt)+" "+e(f.topic)+"</dd><dt>Dossier</dt><dd>"+e(f.dossier)+"</dd>"+(f.note?"<dt>Note</dt><dd>"+e(f.note)+"</dd>":"")+"<dt>Liens</dt><dd>"+(f.liens.map(e).join("<br>")||"aucun")+"</dd></dl>"}
+$(".lk").forEach(a=>a.addEventListener("click",x=>x.stopPropagation()));
 $(".carte").forEach(c=>{c.addEventListener("mouseenter",()=>hl(c.dataset.id));c.addEventListener("mouseleave",()=>hl(cur));c.addEventListener("click",()=>sel(c.dataset.id));c.addEventListener("keydown",k=>k.key=="Enter"&&sel(c.dataset.id))});
 $("svg").forEach(s=>s.addEventListener("click",x=>{if(!x.target.closest(".carte")){cur=null;hl(null)}}));
 </script></body></html>"""

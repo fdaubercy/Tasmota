@@ -1,0 +1,73 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plan de la maison : propositions de faisceau</title><style>
+:root{--fond:#f6f5f1;--carte:#fff;--piece:#eceae3;--trait:#8a8780;--txt:#222;--doux:#666;--accent:#1f6feb;--serie:#d9480f}
+@media(prefers-color-scheme:dark){:root{--fond:#16181c;--carte:#252931;--piece:#20232a;--trait:#5b606b;--txt:#e8e8e8;--doux:#9aa0aa;--accent:#6ea8ff}}
+body{margin:0;background:var(--fond);color:var(--txt);font:14px system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}p.i{color:var(--doux);margin:0 0 16px;max-width:900px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+.c{background:var(--carte);border:1px solid var(--trait);border-radius:8px;padding:12px}.c h2{font-size:15px;margin:0 0 6px}
+.c ul{margin:8px 0 0;padding-left:18px;color:var(--doux)}.c li{margin:2px 0}.reco{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+svg{width:100%;height:auto;display:block}.pc{fill:var(--piece);stroke:var(--trait);stroke-width:1.2}.np{fill:var(--doux);font-size:11px;font-weight:600}
+.k rect{fill:var(--carte);stroke:var(--trait);stroke-width:1.2}.k text{fill:var(--txt);font-size:11px;font-weight:600}.m rect{stroke:var(--txt);stroke-width:2.4}
+.l{fill:none;stroke:var(--serie);stroke-width:4;stroke-linejoin:round}.f{fill:var(--serie)}.d{fill:var(--serie);stroke:var(--carte);stroke-width:1.5}
+.fin{fill:none;stroke:var(--serie);stroke-width:1.6;stroke-linejoin:round}.fant{fill:none;stroke:var(--serie);stroke-width:1.6;stroke-dasharray:3 4;opacity:.6}
+.bd{fill:var(--carte);stroke:var(--serie);stroke-width:1.6}.bt{fill:var(--txt);font-size:10.5px;font-weight:700;text-anchor:middle}
+</style></head><body>
+<h1>Liens entre pièces : cinq façons de les regrouper</h1>
+<p class="i">Zone Jardin (cuve, portail) et Garage (maître P4), le seul endroit où des liens traversent deux pièces aujourd'hui. Chaque maquette montre le même câblage : le P4 commande la cuve et le portail. Ce sont des dessins de comparaison, pas encore dans la page.</p>
+<div class="g">
+
+<div class="c"><h2>A. Rail commun (version actuelle, améliorée)</h2>
+<svg viewBox="0 0 420 340"><rect class="pc" x="10" y="10" width="400" height="150" rx="6"/><text class="np" x="20" y="27">Jardin</text>
+<rect class="pc" x="10" y="190" width="400" height="140" rx="6"/><text class="np" x="20" y="207">Garage</text>
+<g class="k"><rect x="22" y="44" width="150" height="34" rx="5"/><text x="30" y="65">Projecteur LED</text><rect x="222" y="44" width="150" height="34" rx="5"/><text x="230" y="65">Pompe piscine</text>
+<rect x="22" y="96" width="150" height="34" rx="5"/><text x="30" y="117">Capteurs cuve</text><rect x="222" y="96" width="150" height="34" rx="5"/><text x="230" y="117">Portail jardin</text>
+<g class="m"><rect x="22" y="224" width="150" height="34" rx="5"/></g><text x="30" y="245">P4 maître ModBus</text><rect x="222" y="224" width="150" height="34" rx="5"/><text x="230" y="245">Serveur garage S3</text><rect x="22" y="276" width="150" height="34" rx="5"/><text x="30" y="297">Rideau garage</text></g>
+<path class="l" d="M97,224 V173 H297 V130"/><path class="l" d="M97,173 V130"/><circle class="d" cx="97" cy="173" r="5"/><polygon class="f" points="97,130 91,142 103,142"/><polygon class="f" points="297,130 291,142 303,142"/>
+<path class="l" d="M97,258 V276"/><polygon class="f" points="97,276 91,266 103,266"/></svg>
+<ul><li>Garde le principe actuel : un trait par esclave, une flèche chacune.</li><li>Ajoute un point de jonction pour voir que le tronc est partagé.</li><li>Le rail passe dans l'espace entre les deux pièces : lisible, mais le trait long traverse le plan.</li></ul></div>
+
+<div class="c"><h2>B. Un seul faisceau épais entre les pièces</h2>
+<svg viewBox="0 0 420 340"><rect class="pc" x="10" y="10" width="400" height="150" rx="6"/><text class="np" x="20" y="27">Jardin</text>
+<rect class="pc" x="10" y="190" width="400" height="140" rx="6"/><text class="np" x="20" y="207">Garage</text>
+<g class="k"><rect x="22" y="44" width="150" height="34" rx="5"/><text x="30" y="65">Projecteur LED</text><rect x="222" y="44" width="150" height="34" rx="5"/><text x="230" y="65">Pompe piscine</text>
+<rect x="22" y="96" width="150" height="34" rx="5"/><text x="30" y="117">Capteurs cuve</text><rect x="222" y="96" width="150" height="34" rx="5"/><text x="230" y="117">Portail jardin</text>
+<g class="m"><rect x="22" y="224" width="150" height="34" rx="5"/></g><text x="30" y="245">P4 maître ModBus</text><rect x="222" y="224" width="150" height="34" rx="5"/><text x="230" y="245">Serveur garage S3</text><rect x="22" y="276" width="150" height="34" rx="5"/><text x="30" y="297">Rideau garage</text></g>
+<path class="l" style="stroke-width:12;opacity:.9" d="M210,190 V160"/><rect class="bd" x="182" y="165" width="56" height="20" rx="10"/><text class="bt" x="210" y="179">×2 RS485</text>
+<path class="fant" d="M97,224 V130"/><path class="fant" d="M97,224 L210,190"/><path class="fant" d="M297,130 L210,160"/>
+<text class="np" x="20" y="333">pointillés : le détail apparaît au survol ou au clic</text></svg>
+<ul><li>Très lisible quand il y a beaucoup de liens entre deux pièces.</li><li>Les liens individuels (pointillés) se déplient au survol : rien n'est perdu.</li><li>Moins précis au premier coup d'œil : on ne voit pas quelle carte est liée à quelle carte.</li></ul></div>
+
+<div class="c reco"><h2>C. Colonne centrale (ma préférence)</h2>
+<svg viewBox="0 0 420 340"><rect class="pc" x="10" y="10" width="400" height="150" rx="6"/><text class="np" x="20" y="27">Jardin</text>
+<rect class="pc" x="10" y="190" width="400" height="140" rx="6"/><text class="np" x="20" y="207">Garage</text>
+<g class="k"><rect x="22" y="44" width="150" height="34" rx="5"/><text x="30" y="65">Projecteur LED</text><rect x="222" y="44" width="150" height="34" rx="5"/><text x="230" y="65">Pompe piscine</text>
+<rect x="22" y="96" width="150" height="34" rx="5"/><text x="30" y="117">Capteurs cuve</text><rect x="222" y="96" width="150" height="34" rx="5"/><text x="230" y="117">Portail jardin</text>
+<g class="m"><rect x="22" y="224" width="150" height="34" rx="5"/></g><text x="30" y="245">P4 maître ModBus</text><rect x="222" y="224" width="150" height="34" rx="5"/><text x="230" y="245">Serveur garage S3</text><rect x="22" y="276" width="150" height="34" rx="5"/><text x="230" y="297"></text><text x="30" y="297">Rideau garage</text></g>
+<path class="l" d="M172,241 H197 V113 M197,113 H172 M197,113 H222"/><circle class="d" cx="197" cy="241" r="5"/><circle class="d" cx="197" cy="113" r="5"/>
+<polygon class="f" points="172,113 184,107 184,119"/><polygon class="f" points="222,113 210,107 210,119"/>
+<path class="l" d="M97,258 V276"/><polygon class="f" points="97,276 91,266 103,266"/>
+<text class="bt" x="197" y="175" style="paint-order:stroke;stroke:var(--piece);stroke-width:3px">id 2 · id 4</text></svg>
+<ul><li>Utilise l'espace libre entre les deux colonnes de pastilles, déjà vide dans chaque pièce : le tronc est court et droit.</li><li>Un tronc, des branches à angle droit : on lit tout de suite « un maître, deux esclaves ».</li><li>Ne traverse aucune pastille ; seule limite : il faut que les pastilles soient sur deux colonnes.</li></ul></div>
+
+<div class="c"><h2>D. Renvois étiquetés (comme un schéma électrique)</h2>
+<svg viewBox="0 0 420 340"><rect class="pc" x="10" y="10" width="400" height="150" rx="6"/><text class="np" x="20" y="27">Jardin</text>
+<rect class="pc" x="10" y="190" width="400" height="140" rx="6"/><text class="np" x="20" y="207">Garage</text>
+<g class="k"><rect x="22" y="44" width="150" height="34" rx="5"/><text x="30" y="65">Projecteur LED</text><rect x="222" y="44" width="150" height="34" rx="5"/><text x="230" y="65">Pompe piscine</text>
+<rect x="22" y="96" width="150" height="34" rx="5"/><text x="30" y="117">Capteurs cuve</text><rect x="222" y="96" width="150" height="34" rx="5"/><text x="230" y="117">Portail jardin</text>
+<g class="m"><rect x="22" y="224" width="150" height="34" rx="5"/></g><text x="30" y="245">P4 maître ModBus</text><rect x="222" y="224" width="150" height="34" rx="5"/><text x="230" y="245">Serveur garage S3</text><rect x="22" y="276" width="150" height="34" rx="5"/><text x="30" y="297">Rideau garage</text></g>
+<g><circle class="bd" cx="152" cy="241" r="9"/><text class="bt" x="152" y="245">A</text><circle class="bd" cx="152" cy="113" r="9"/><text class="bt" x="152" y="117">A</text><circle class="bd" cx="352" cy="113" r="9"/><text class="bt" x="352" y="117">A</text></g>
+<text class="np" x="20" y="333">A = bus RS485 du P4 (une pastille par carte reliée)</text></svg>
+<ul><li>Aucun trait ne traverse le plan : plus de croisements, même avec dix liens.</li><li>Il faut lire la légende : moins intuitif que de suivre un trait.</li><li>Le survol d'un renvoi pourrait tracer le lien en pointillé.</li></ul></div>
+
+<div class="c"><h2>E. Câble multibrins avec manchon</h2>
+<svg viewBox="0 0 420 340"><rect class="pc" x="10" y="10" width="400" height="150" rx="6"/><text class="np" x="20" y="27">Jardin</text>
+<rect class="pc" x="10" y="190" width="400" height="140" rx="6"/><text class="np" x="20" y="207">Garage</text>
+<g class="k"><rect x="22" y="44" width="150" height="34" rx="5"/><text x="30" y="65">Projecteur LED</text><rect x="222" y="44" width="150" height="34" rx="5"/><text x="230" y="65">Pompe piscine</text>
+<rect x="22" y="96" width="150" height="34" rx="5"/><text x="30" y="117">Capteurs cuve</text><rect x="222" y="96" width="150" height="34" rx="5"/><text x="230" y="117">Portail jardin</text>
+<g class="m"><rect x="22" y="224" width="150" height="34" rx="5"/></g><text x="30" y="245">P4 maître ModBus</text><rect x="222" y="224" width="150" height="34" rx="5"/><text x="230" y="245">Serveur garage S3</text><rect x="22" y="276" width="150" height="34" rx="5"/><text x="30" y="297">Rideau garage</text></g>
+<path class="fin" d="M90,224 V176 H290 V130"/><path class="fin" d="M97,224 V173 H297 V130"/><path class="fin" d="M104,224 V170 H304 V130 M104,170 V130"/>
+<rect class="bd" x="172" y="164" width="50" height="22" rx="7"/><text class="bt" x="197" y="179">×2</text></svg>
+<ul><li>Montre qu'un câble physique unique porte plusieurs liaisons.</li><li>Le manchon (×2) donne le nombre sans texte supplémentaire.</li><li>Plus chargé visuellement ; les brins parallèles se confondent s'ils sont trop nombreux.</li></ul></div>
+
+</div></body></html>

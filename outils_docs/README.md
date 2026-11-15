@@ -51,6 +51,7 @@
 ### Outils et historique
 - [scripts_python/](scripts_python/) — outillage PC, rangé par usage : `build/`, `outils_pc/`, `berry/`, `maintenance/`, `sauvegarde/`, `reseau/` (détail dans [CLAUDE.md](../CLAUDE.md)).
 - [HISTORIQUE_SYNCHRO_FORK.md](HISTORIQUE_SYNCHRO_FORK.md) *(généré)* — journal des synchronisations du fork.
+- [LIENS_WEB.md](LIENS_WEB.md) *(généré)* — tous les liens web cités dans le dépôt (par thème, avec le fichier qui les cite), les outils locaux et les documents fournis ; page de recherche et d'archivage : [Liens web](#liens-web-page-web).
 - [CHANGELOG.md](CHANGELOG.md) — historique des évolutions.
 - [Les graphiques des mesures](#les-graphiques-des-mesures-cartes-s3p4) — page `/graphiques` des cartes S3/P4, plus bas dans ce fichier.
 - [Build et téléversement (page web)](#build-et-téléversement-page-web) — compiler et téléverser les cartes (COM ou OTA) depuis http://127.0.0.1:7700, plus bas dans ce fichier.
@@ -2646,7 +2647,21 @@ Marque « 📶 RE ×N » sur chaque maître (esclaves derrière son Range Extend
 
 Tuile « Plan de la maison » de l'annuaire (groupe Dépôt et références, port 7915, `outils_pc/plan_maison_web.py`, lecture seule, page régénérée à chaque ouverture, banc `outils_pc/test_plan_maison_web.py`).
 
+Icône ↗ sur chaque pastille : ouvre la page web de la carte (IP du persist ; esclave derrière un maître : IP du maître, port 8080 + id - 1). Vue chauffage : bouton « Lire les débits » (au clic seulement) -> `GET /debits` de `outils_pc/plan_maison_web.py` lit `Status 10` de la carte d'acquisition (cible fixe de `placement.json` > `chauffage.acquisition`, lecture seule) et affiche les 6 débits, le total et les voies muettes ou imprécises ; la page doit être ouverte par l'annuaire. Comparaison des façons de tracer les liens entre pièces : `outils_docs/plan_maison/propositions_faisceau.html`.
+
 Banc : `python outils_docs/plan_maison/test_plan_maison.py` (code 0 = vert). Plan : `tasks/plans/plan-maison.md`.
+
+## Liens web (page web)
+
+`outils_docs/LIENS_WEB.md` *(généré)* réunit les liens web du dépôt : les outils locaux (ports 7000 à 7995), les liens externes cités dans les fichiers du fork, rangés par thème (Tasmota amont, GitHub tiers, Espressif, boutiques et fiches matériel, PCB, icônes, IA, autres) avec le fichier qui les cite, puis les documents fournis sous `outils_docs/` (PDF, manuels, outils Windows, raccourcis `URL.txt`). Il se régénère par `python outils_docs/scripts_python/outils_pc/genere_liens_web.py` (`--verifier` : code 1 si le fichier est en retard) ou par le bouton de la page. Sont écartés : bancs, bibliothèques tierces, persist, adresses IP du parc, adresses fictives de test, URL à identifiants, l'amont Tasmota.
+
+Tuile « Liens web » de l'annuaire (groupe Dépôt et références, port 7905, `outils_pc/liens_web_web.py`, logique `liens_web.py`, page `liens_web_page.py`, banc `outils_pc/test_liens_web.py`) :
+
+- recherche et filtres (thème, archivés ou non) sur tous les liens ;
+- **Ajouter un lien** (adresse, titre, thème, note) : écrit `outils_docs/liens_web/liens_ajoutes.json`, repris par `LIENS_WEB.md` ; seul un lien ajouté se retire depuis la page (un lien cité dans un fichier se corrige dans ce fichier) ;
+- **Archiver en PDF** : une adresse qui rend un PDF est copiée telle quelle ; une page HTML est imprimée en PDF par Chrome sans fenêtre (Chrome de `Program Files` requis). Les PDF vont dans `outils_docs/liens_web/archives/` avec leur `index.json`, **ignorés par git** (dépôt public : droits d'auteur et poids). Limites : 40 Mo, 90 s pour une page, hôtes publics seulement (hôte local, privé ou à identifiant refusé, redirections comprises). Le bouton « Ouvrir l'archive » sert le PDF en `sandbox`.
+
+Les trois gestes qui écrivent ou téléchargent (`/ajouter`, `/archiver`, `/regenere`, plus `/retirer`) sont réservés à ce PC (en-tête `X-Liens`, même origine). Tuile et page sans accès réseau avant un clic. Pas encore de cible PlatformIO ni de tâche VS Code : lancer par l'annuaire (http://127.0.0.1:7600) ou `python outils_docs/scripts_python/outils_pc/liens_web_web.py`.
 
 ## Les devices Tasmota développées :
 

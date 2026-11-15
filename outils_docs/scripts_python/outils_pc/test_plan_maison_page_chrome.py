@@ -44,6 +44,11 @@ def attente_http(url, delai):
     raise TimeoutError(url)
 
 
+def DV(n):
+    """Selecteur JS litteral du texte de debit n."""
+    return json.dumps(".dv[data-d='%d']" % n)
+
+
 def visible(cdp, sel):
     """Nombre d'elements du selecteur dont l'affichage calcule n'est pas none."""
     return cdp.js("[...document.querySelectorAll(" + json.dumps(sel) + ")].filter(function(e){return getComputedStyle(e).display!=='none'}).length")
@@ -106,6 +111,31 @@ def scenario(cdp, url):
     cdp.js("F['" + p4 + "'].libelle='<img src=x onerror=window.__pwn=1>';document.querySelector(" + json.dumps(sel) + ").dispatchEvent(new MouseEvent('click',{bubbles:true}))")
     verifie(cdp.js("window.__pwn === undefined && document.querySelectorAll('#fiche img').length"), 0, "fiche : le texte hostile reste du texte")
 
+    # icone de lien vers la page de la carte : ouvre la bonne adresse, ne selectionne pas la carte
+    verifie(cdp.js("document.querySelector(" + json.dumps(sel + " a.lk") + ").getAttribute('href')"), "http://192.168.0.43/", "icone de lien : adresse de la carte du maitre")
+    verifie(cdp.js("[...document.querySelectorAll('svg.plan g.carte[data-id$=cuve-modbus] a.lk')].map(function(a){return a.getAttribute('href')}).join()"),
+            "http://192.168.0.43:8081/", "icone de lien : esclave derriere le NAPT = IP du maitre, port 8080 + id - 1")
+    verifie(cdp.js("document.querySelectorAll('svg.plan g.carte:not(.apn):not(.chn):not([data-url]) a.lk').length"), 0, "icone de lien : absente d'une carte sans adresse")
+    cdp.js("document.querySelector('svg.plan').dispatchEvent(new MouseEvent('click',{bubbles:true}))")
+    cdp.js("var a=document.querySelector(" + json.dumps(sel + " a.lk") + ");a.addEventListener('click',function(e){e.preventDefault()});a.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))")
+    verifie(cdp.js("document.querySelectorAll('svg.plan g.carte.sel').length"), 0, "icone de lien : le clic n'ouvre pas la fiche de la carte")
+
+    # debits en direct : lecture remplacee dans le serveur (aucun reseau), valeurs a cote des ronds, voies a signaler
+    cdp.js("document.getElementById('b-chauffage').click()")
+    verifie(cdp.js("document.querySelectorAll('.dv').length > 0 && [...document.querySelectorAll('.dv')].every(function(t){return t.textContent===''})"), True, "debits : aucune valeur avant le clic")
+    verifie(cdp.js("getComputedStyle(document.getElementById('b-debits')).display !== 'none'"), True, "debits : bouton visible en vue chauffage")
+    cdp.js("document.getElementById('b-debits').click()")
+    verifie(bool(attend(cdp, "document.querySelector(" + DV(1) + ").textContent.length > 0", 10)), True, "debits : valeurs affichees apres le clic")
+    verifie(cdp.js("document.querySelector(" + DV(1) + ").textContent"), "1,50 L/min", "debits : D1 formate")
+    verifie(cdp.js("[document.querySelector(" + DV(3) + ").parentNode.querySelector('circle').classList.contains('mut'), document.querySelector(" + DV(4) + ").parentNode.querySelector('circle').classList.contains('imp')]"),
+            [True, True], "debits : voie muette en rouge, voie imprecise en orange")
+    verifie(cdp.js("document.getElementById('etat-debits').textContent.indexOf('total 5,90') > 0"), True, "debits : total dans la ligne d'etat")
+    web.lit_url = lambda u: (_ for _ in ()).throw(OSError("timed out"))
+    cdp.js("document.getElementById('b-debits').click()")
+    verifie(bool(attend(cdp, "document.getElementById('etat-debits').textContent.indexOf('impossible') > 0", 10)), True, "debits : carte muette -> message d'erreur lisible")
+    cdp.js("document.getElementById('b-plan').click()")
+    verifie(cdp.js("getComputedStyle(document.getElementById('b-debits')).display"), "none", "debits : bouton masque hors vue chauffage")
+
     # bouton de test : fetch remplace, aucune requete vers une carte
     cdp.js("window.__appels=[];window.fetch=function(u){window.__appels.push(u);return u.indexOf('192.168.0.43')>0?Promise.resolve():Promise.reject(new Error('ko'))}")
     cdp.js("document.getElementById('b-test').click()")
@@ -144,6 +174,8 @@ def main():
         cdp = Cdp(cible["webSocketDebuggerUrl"])
         for d in ("Runtime.enable", "Page.enable"):
             cdp.appel(d)
+        web.lit_url = lambda u: json.dumps({"StatusSNS": {"Time": "2026-11-15T20:00:00", "DEBITS": {"D1": 1.5, "D2": 2.0, "D3": None, "D4": 0.4, "D5": 1.1, "D6": 0.9,
+                                                                                                    "Total": 5.9, "Imprecis": [4], "Muets": [3]}}})
         scenario(cdp, f"http://127.0.0.1:{port}/")
     finally:
         tue_arbre(chrome)

@@ -293,7 +293,7 @@
     "coul": "#868e96"
    }
   },
-  "defaut_ssid": "MAISON ou MAISON_5GHz = Freebox Server par défaut : trois points d'accès diffusent MAISON, le persist ne dit pas lequel (à corriger dans wifi_manuel)",
+  "defaut_ssid": "MAISON = Freebox Server par défaut. Confirmé le 2026-11-15 : la Freebox Server et le répéteur du salon diffusent le même nom MAISON, le persist ne dit pas lequel une carte utilise (à corriger carte par carte dans wifi_manuel, par exemple principal = repeteur_salon, une fois lu le BSSID de la carte)",
   "wifi_manuel": {},
   "re_hotes": {
    "SERVEUR-GARAGE": "garage/tasmota32p4-serveur-modbus"
