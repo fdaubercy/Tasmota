@@ -30,7 +30,7 @@ BUDGET_USD = "3"
 ZONES = ("data", "outils_docs", "tasks", ".claude", "docs", "lib/libesp32/berry_custom")
 MAX_ACTIVITE = 300
 MODELES = ("sonnet", "opus", "haiku")
-EFFORTS = ("low", "medium", "high")
+EFFORTS = ("low", "medium", "high", "max")
 AGENT = "auditeur-menage"
 BASH_LECTURE = ["Bash(git status:*)", "Bash(git log:*)", "Bash(git ls-files:*)", "Bash(git diff:*)", "Bash(git hash-object:*)",
                 "Bash(git check-ignore:*)", "Bash(ls:*)", "Bash(wc:*)", "Bash(du:*)"]
@@ -55,7 +55,7 @@ def parametres(brut):
     modele = brut.get("modele", "sonnet")
     if modele not in MODELES:
         erreurs.append(f"modele : {MODELES}")
-    effort = brut.get("effort", "medium")
+    effort = brut.get("effort", "max")
     if effort not in EFFORTS:
         erreurs.append(f"effort : {EFFORTS}")
     if erreurs:

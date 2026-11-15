@@ -75,7 +75,7 @@ for libelle, brut in [("zone inconnue", {"zone": ["/etc"]}), ("zone vide", {"zon
                       ("categorie inconnue", {"categories": ["tout"]}), ("anciennete negative", {"anciennete_jours": -1}),
                       ("anciennete trop grande", {"anciennete_jours": 9999}), ("anciennete booleenne", {"anciennete_jours": True}),
                       ("anciennete texte", {"anciennete_jours": "3; rm -rf"}), ("modele libre", {"modele": "opus --dangerously-skip-permissions"}),
-                      ("effort inconnu", {"effort": "max"})]:
+                      ("effort inconnu", {"effort": "extreme"})]:
     p, e = ml.parametres(brut)
     verifie((p is None, bool(e)), (True, True), f"parametres refuses : {libelle}")
 
