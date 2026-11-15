@@ -2,7 +2,7 @@
 chantier: sondes-en-cours
 titre: Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel
 objectif: Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin
-statut: actif
+statut: clos
 cree: 2026-11-15
 maj: 2026-11-15
 famille: methode

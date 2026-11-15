@@ -13,7 +13,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-55 plans : 29 actif, 1 en-pause, 25 clos.
+55 plans : 28 actif, 1 en-pause, 26 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
@@ -23,7 +23,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | actif | █████████░ 90 % (23/24) | 1 étape, 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ███████░░░ 71 % (16/20) | 4 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██░░░░░░░░ 20 % (2/11) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
-| [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) | Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin | actif | ██████████ 100 % (20/20) | 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 88 % (38/41) | 3 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
@@ -47,6 +46,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 6 étapes, 1 amélioration | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 37 étapes, 1 amélioration | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 22 étapes, 2 améliorations | 2026-10-31 | 2026-10-31 |
+| [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) | Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin | clos | ██████████ 100 % (20/20) | 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | clos | ██████████ 100 % (21/21) | — | 2026-11-10 | 2026-11-11 |
 | [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | clos | ██████████ 100 % (26/26) | — | 2026-11-11 | 2026-11-11 |
 | [Atelier des graphiques (page 7950) et moteur commun des pages de graphiques](plans/atelier-graphiques.md) | Préparer sur le PC un graphique pour une carte, le voir avec ses vraies valeurs, puis écrire dans le dépôt la description qui le fait apparaître sur la carte, sans Berry écrit à la main | clos | ██████████ 100 % (39/39) | — | 2026-11-03 | 2026-11-09 |
@@ -137,11 +137,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A4 — Essai réel et clôture : Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
 - A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
 - Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
-
-#### [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) — 100 %
-
-- Amélioration [projet] : Brancher `suit()` dans les autres bancs `test_*.py` au fil des usages
-- Amélioration [projet] : Afficher l'avancement d'un banc qui annonce son `total` (aujourd'hui la barre n'existe que si `suit(total=N)` est appelé)
 
 #### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 75 %
 
@@ -482,6 +477,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A6 — Allègement de l'env (P7, P9, P11) : Persist nettoyé : `TasmotaSlaveModBus2`, `diverses.historique.grafana`, `ledPower`
 - Amélioration [projet] : Vérifier si un 2e « maître » (id 0) perturbe la table discovery du P4
 - Amélioration [projet] : Réduire la partition FS (11,3 Mo) pour la cave si l'écriture de l'image gêne
+
+#### [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) — 100 %
+
+- Amélioration [projet] : Brancher `suit()` dans les autres bancs `test_*.py` au fil des usages
+- Amélioration [projet] : Afficher l'avancement d'un banc qui annonce son `total` (aujourd'hui la barre n'existe que si `suit(total=N)` est appelé)
 
 #### [Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »](plans/atelier-destinations.md) — 96 %
 
