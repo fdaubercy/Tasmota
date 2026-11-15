@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Fin de build : maquettes de l'occupation des partitions</title>
+<style>
+:root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--bleu:#2563eb;--vert:#15803d;--orange:#b45309;--orange-fond:#fff4e0;--rouge:#b91c1c;--rouge-fond:#fdecea;--piste:#e9e9ea;--btn:#f1f1f3;--ombre:rgba(0,0,0,.35);
+ --z-sys:#8b95a5;--z-safe:#b07ad9;--z-app:#2563eb;--z-fs:#0d9488}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--bleu:#6b9bff;--vert:#4ade80;--orange:#f0a020;--orange-fond:#3a2c12;--rouge:#ff6b5b;--rouge-fond:#3a1d1b;--piste:#39393d;--btn:#2a2d33;--ombre:rgba(0,0,0,.6)}}
+:root[data-theme=dark]{color-scheme:dark;--fond:#121417;--carte:#1d2025;--bord:#33373e;--texte:#e6e6e6;--doux:#a8adb5;--bleu:#6b9bff;--vert:#4ade80;--orange:#f0a020;--orange-fond:#3a2c12;--rouge:#ff6b5b;--rouge-fond:#3a1d1b;--piste:#39393d;--btn:#2a2d33;--ombre:rgba(0,0,0,.6)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--texte);font:14px/1.45 system-ui,"Segoe UI",sans-serif}
+.cat{background:#1f2937;color:#fff;padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cat button{background:#374151;color:#fff;border:1px solid #4b5563;border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit}
+.cat button.on{background:#2563eb;border-color:#2563eb}
+.btn{background:var(--btn);color:var(--texte);border:1px solid var(--bord);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit}
+.btn.p{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+main{max-width:1060px;margin:0 auto;padding:14px 16px 28px;position:relative;min-height:760px}
+.carte{background:var(--carte);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 8px}.d{color:var(--doux);font-size:12px}
+.ligne{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ligne .nom{font-weight:600;flex:1;min-width:200px}
+.ok{color:var(--vert);font-weight:600}
+.pil{border:1px solid var(--bord);border-radius:12px;padding:2px 9px;font:inherit;font-size:12px;background:var(--btn);color:var(--texte);cursor:pointer;display:inline-block}
+.pil.o{background:var(--orange-fond);color:var(--orange);border-color:var(--orange)}.pil.r{background:var(--rouge-fond);color:var(--rouge);border-color:var(--rouge)}
+.ruban{display:flex;height:34px;border-radius:6px;overflow:hidden;background:var(--piste);margin:8px 0}
+.seg{position:relative;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;border-right:1px solid rgba(255,255,255,.6)}
+.seg .pl{position:absolute;left:0;top:0;bottom:0;background:rgba(0,0,0,.28)}.seg span{position:relative}
+.bj{height:9px;background:var(--piste);border-radius:5px;overflow:hidden}.bj i{display:block;height:100%;background:var(--vert)}
+.bj i.o{background:var(--orange)}.bj i.r{background:var(--rouge)}
+table{border-collapse:collapse;width:100%}th{font-size:12px;color:var(--doux);text-align:left;padding:4px 6px;border-bottom:1px solid var(--bord)}
+td{padding:5px 6px;border-bottom:1px solid var(--bord)}td.n,th.n{text-align:right;white-space:nowrap}
+.pt{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.al{padding:6px 10px;border-radius:6px;margin:6px 0}.al.o{background:var(--orange-fond);color:var(--orange)}.al.r{background:var(--rouge-fond);color:var(--rouge)}
+.voile{position:absolute;inset:0;background:var(--ombre);display:flex;align-items:flex-start;justify-content:center;padding-top:50px;z-index:5}
+.modale{background:var(--carte);border:1px solid var(--bord);border-radius:10px;width:min(760px,94%);padding:14px 16px;box-shadow:0 10px 30px var(--ombre);max-height:700px;overflow:auto}
+.modale h2{font-size:16px}.pied{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.tiroir{position:absolute;top:0;right:0;bottom:0;width:min(420px,96%);background:var(--carte);border-left:1px solid var(--bord);box-shadow:-8px 0 24px var(--ombre);padding:12px 14px;z-index:5;overflow:auto}
+.jauges{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0}
+.jg{border:1px solid var(--bord);border-radius:8px;padding:6px;text-align:center}.jg svg{width:100%;max-width:150px}
+.jg b{display:block;font-size:12px}.delta{font-size:11px}.delta.h{color:var(--orange)}.delta.b{color:var(--vert)}
+.panneau{margin:8px 0 0;padding:8px 10px;border:1px solid var(--bord);border-radius:6px;background:var(--fond)}
+.pr{display:grid;grid-template-columns:110px 1fr 230px;gap:8px;align-items:center;margin:4px 0;font-size:12.5px}
+.note{font-size:12px;color:var(--doux);margin:4px 0 10px}
+.sx{display:flex;gap:8px;margin:6px 0 10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="cat"><b>Fin de build : variantes</b>
+<button data-v="A">A. Fenêtre modale</button><button data-v="B">B. Panneau repliable</button>
+<button data-v="C">C. Tiroir latéral</button><button data-v="D">D. Pastille + détail</button>
+<span style="flex:1"></span><button id="th">Thème</button></div>
+<main id="m"></main>
+<script>
+/* Données : P4 du garage = relevé réel de %LOCALAPPDATA%\outils_tasmota\build\memoire\tasmota32p4-garage-serveur-modbus.json (build du 2026-11-14).
+   Cuve et S3 de la cave : valeurs PLAUSIBLES (aucun relevé lu). "avant" (build précédent) : PLAUSIBLE, non enregistré aujourd'hui. */
+const KO=1024;
+const ENVS=[
+ {env:"tasmota32p4-garage-serveur-modbus",puce:"ESP32-P4",flash:16*1024*KO,duree:"6 min 12 s",
+  parts:[["nvs","nvs",36864,20480,null],["otadata","sys",57344,8192,null],["safeboot","safe",65536,851968,803824],["app0","app",917504,3997696,3602294],["spiffs (FS)","fs",4915200,11862016,102400,1]],
+  avant:{app0:3548160,"spiffs (FS)":98304},
+  ram:[["DIRAM",133504,445392],["HP core RAM",1408,8192],["LP RAM",488,23168]],ramAvant:{DIRAM:131200}},
+ {env:"tasmota32-cave-serveur-rly",puce:"ESP32",flash:4*1024*KO,duree:"4 min 03 s",
+  parts:[["nvs","nvs",36864,20480,null],["otadata","sys",57344,8192,null],["safeboot","safe",65536,655360,610000],["app0","app",720896,1572864,1511424],["spiffs (FS)","fs",2293760,1900544,610304,1]],
+  avant:{app0:1498112,"spiffs (FS)":606208},
+  ram:[["DIRAM",98000,180000]],ramAvant:{DIRAM:97200}},
+ {env:"tasmota32s3-cave-ecran",puce:"ESP32-S3",flash:16*1024*KO,duree:"5 min 40 s",
+  parts:[["nvs","nvs",36864,20480,null],["otadata","sys",57344,8192,null],["safeboot","safe",65536,851968,790000],["app0","app",917504,3997696,2810000],["spiffs (FS)","fs",4915200,11862016,950272,1]],
+  avant:{app0:2806000,"spiffs (FS)":950272},
+  ram:[["DIRAM",101000,390000]],ramAvant:{DIRAM:100400}}
+];
+const SEUIL=90,SEUIL_ROUGE=95;
+const COUL={nvs:"var(--z-sys)",sys:"var(--z-sys)",safe:"var(--z-safe)",app:"var(--z-app)",fs:"var(--z-fs)"};
+const fmt=o=>o>=1048576?(o/1048576).toFixed(2).replace(".",",")+" Mo":Math.round(o/KO)+" Ko";
+const pc=(u,t)=>t?Math.round(u/t*1000)/10:0;
+const cl=p=>p>=SEUIL_ROUGE?"r":p>=SEUIL?"o":"";
+const e=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fp=p=>String(p).replace(".",",");
+const totFlash=x=>x.parts.reduce((s,p)=>s+p[3],0);
+function pires(x){let m={p:0,n:""};x.parts.forEach(p=>{if(p[4]!=null&&pc(p[4],p[3])>m.p)m={p:pc(p[4],p[3]),n:p[0]}});return m}
+function flashPc(x){return pc(x.parts.reduce((s,p)=>s+(p[4]??0),0),x.parts.reduce((s,p)=>s+(p[4]!=null?p[3]:0),0))}
+function ramPrinc(x){const r=x.ram[0];return pc(r[1],r[2])}
+function delta(avant,nom,u){const a=avant[nom];if(a==null||u==null)return"";const d=u-a;if(!d)return'<span class="delta">= avant</span>';return`<span class="delta ${d>0?"h":"b"}">${d>0?"+":"−"}${Math.abs(Math.round(d/KO*10)/10)} Ko</span>`}
+function ruban(x){const tot=totFlash(x);
+ return`<div class="ruban" role="img" aria-label="Répartition de la flash">`+x.parts.map(p=>{const w=p[3]/tot*100,o=p[4]!=null?pc(p[4],p[3]):0;
+ return`<div class="seg" style="width:${Math.max(w,.8)}%;background:${COUL[p[1]]}" title="${e(p[0])} : ${fmt(p[3])}">${p[4]!=null?`<i class="pl" style="width:${o}%"></i>`:""}${w>7?`<span>${e(p[0].split(" ")[0])}</span>`:""}</div>`}).join("")+`</div>`}
+function tableau(x){return`<table><thead><tr><th>Partition</th><th>Adresse</th><th class="n">Taille</th><th class="n">Occupé</th><th style="width:22%">Occupation</th><th class="n">vs précédent</th></tr></thead><tbody>`+x.parts.map(p=>{
+ const o=p[4],q=o!=null?pc(o,p[3]):null;
+ return`<tr><td><i class="pt" style="background:${COUL[p[1]]}"></i>${e(p[0])}</td><td class="d">0x${p[2].toString(16).toUpperCase()}</td><td class="n">${fmt(p[3])}</td><td class="n">${o!=null?fmt(o)+(p[5]?" (estimé)":""):"—"}</td><td>${q!=null?`<div class="bj"><i class="${cl(q)}" style="width:${q}%"></i></div>`:'<span class="d">non mesurable</span>'}</td><td class="n">${q!=null?fp(q)+" % "+delta(x.avant,p[0],o):""}</td></tr>`}).join("")+`</tbody></table>`}
+function alertes(x){return x.parts.filter(p=>p[4]!=null&&pc(p[4],p[3])>=SEUIL).map(p=>{const q=pc(p[4],p[3]);return`<div class="al ${cl(q)}">⚠ ${e(p[0])} occupée à ${fp(q)} % : reste ${fmt(p[3]-p[4])}${q>=SEUIL_ROUGE?" (la prochaine fonction risque de ne plus tenir)":""}.</div>`}).join("")}
+function ramBarres(x){return x.ram.map(r=>{const q=pc(r[1],r[2]);return`<div class="pr"><span>${e(r[0])}</span><div class="bj"><i class="${cl(q)}" style="width:${q}%"></i></div><span>${fmt(r[1])} / ${fmt(r[2])} · ${fp(q)} % ${delta(x.ramAvant,r[0],r[1])}</span></div>`}).join("")}
+function barres(x){return x.parts.filter(p=>p[4]!=null).map(p=>{const q=pc(p[4],p[3]);return`<div class="pr"><span>${e(p[0])}</span><div class="bj"><i class="${cl(q)}" style="width:${q}%"></i></div><span>${fmt(p[4])} / ${fmt(p[3])} · ${fp(q)} % ${delta(x.avant,p[0],p[4])}</span></div>`}).join("")}
+function jauge(nom,q,sous,d){const a=Math.PI*Math.min(q,100)/100,r=48,cx=60,cy=58,x2=cx-r*Math.cos(a),y2=cy-r*Math.sin(a);
+ const c=q>=SEUIL_ROUGE?"var(--rouge)":q>=SEUIL?"var(--orange)":"var(--vert)";
+ return`<div class="jg"><svg viewBox="0 0 120 70"><path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="var(--piste)" stroke-width="10" stroke-linecap="round"/><path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${x2} ${y2}" fill="none" stroke="${c}" stroke-width="10" stroke-linecap="round"/><text x="60" y="54" text-anchor="middle" font-size="19" font-weight="700" fill="var(--texte)">${fp(q)} %</text></svg><b>${e(nom)}</b><span class="d">${sous}</span> ${d||""}</div>`}
+function carteEnv(x,extra,corps){return`<div class="carte"><div class="ligne"><span class="nom">${e(x.env)}</span><span class="ok">✓ Réussi</span><span class="d">${x.duree}</span>${extra||""}</div>${corps||""}</div>`}
+function entete(){return`<h1>Build et téléversement</h1><p class="note">Série de 3 envs compilés. P4 : relevé réel du 2026-11-14 ; cuve et S3 : valeurs plausibles ; « vs précédent » : plausible.</p>`}
+const V={
+A(){const x=ENVS[0];return entete()+ENVS.map(y=>carteEnv(y,`<span class="d">Flash ${fp(flashPc(y))} %</span>`)).join("")+
+`<div class="voile"><div class="modale" role="dialog" aria-label="Occupation de la flash"><h2>Compilation terminée : ${e(x.env)}</h2>
+<div class="d">${x.puce} · flash ${fmt(x.flash)} · env 1 sur 3</div>
+<div class="sx"><button class="btn p">1 · P4 garage ⚠</button><button class="btn">2 · cave-serveur-rly ⚠</button><button class="btn">3 · cave-ecran</button></div>
+${alertes(x)}<h2>Flash</h2>${ruban(x)}${tableau(x)}<h2 style="margin-top:10px">RAM</h2>${ramBarres(x)}
+<div class="pied"><button class="btn">Voir l'onglet Mémoire et partitions</button><button class="btn p">Fermer</button></div></div></div>`},
+B(){return entete()+ENVS.map((y,i)=>{const p=pires(y);const ouvert=i!==2;return carteEnv(y,`<span class="pil ${cl(p.p)}">${e(p.n)} ${fp(p.p)} %</span><button class="btn">${ouvert?"▾ Masquer":"▸ Mémoire"}</button>`,
+ ouvert?`<div class="panneau">${alertes(y)}${ruban(y)}${barres(y)}<div class="d" style="margin:6px 0 2px">RAM</div>${ramBarres(y)}</div>`:"")}).join("")},
+C(){const x=ENVS[1];return entete()+ENVS.map(y=>carteEnv(y,`<span class="d">Flash ${fp(flashPc(y))} %</span>`)).join("")+
+`<aside class="tiroir" aria-label="Occupation"><div class="ligne"><b class="nom">${e(x.env)}</b><button class="btn">✕</button></div><div class="d">${x.puce} · ${fmt(x.flash)} · env 2 sur 3</div>${alertes(x)}
+<div class="jauges">${x.parts.filter(p=>p[4]!=null).map(p=>jauge(p[0],pc(p[4],p[3]),fmt(p[4])+" / "+fmt(p[3]),delta(x.avant,p[0],p[4]))).join("")}${x.ram.map(r=>jauge(r[0],pc(r[1],r[2]),fmt(r[1])+" / "+fmt(r[2]),delta(x.ramAvant,r[0],r[1]))).join("")}</div>
+<div class="d">Seuils : orange à ${SEUIL} %, rouge à ${SEUIL_ROUGE} %. Écart avec le build précédent de l'env.</div>
+<div class="pied"><button class="btn">◀ env précédent</button><button class="btn">env suivant ▶</button></div></aside>`},
+D(){const x=ENVS[0];return entete()+ENVS.map(y=>{const p=pires(y);return carteEnv(y,`<button class="pil ${cl(p.p)}" title="Ouvrir le détail">Flash ${Math.round(flashPc(y))} % · RAM ${Math.round(ramPrinc(y))} %${p.p>=SEUIL?" ⚠":""}</button>`)}).join("")+
+`<div class="voile" style="padding-top:150px"><div class="modale" style="width:min(600px,94%)"><h2>${e(x.env)} <span class="pil ${cl(pires(x).p)}">Flash ${Math.round(flashPc(x))} % · RAM ${Math.round(ramPrinc(x))} %</span></h2>
+${alertes(x)}${ruban(x)}${barres(x)}<div class="d" style="margin:6px 0 2px">RAM</div>${ramBarres(x)}
+<div class="pied"><button class="btn">Onglet Mémoire</button><button class="btn p">Fermer</button></div></div></div>`}
+};
+function aff(v){document.querySelectorAll(".cat button[data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v==v));document.getElementById("m").innerHTML=V[v]();location.hash=v}
+document.querySelectorAll(".cat button[data-v]").forEach(b=>b.onclick=()=>aff(b.dataset.v));
+document.getElementById("th").onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme=="dark"?"light":"dark"};
+if(new URLSearchParams(location.search).get("t")=="dark")document.documentElement.dataset.theme="dark";
+aff((location.hash.slice(1)||"A").toUpperCase());
+</script>
+</body>
+</html>

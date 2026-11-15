@@ -159,7 +159,7 @@ exception plutot qu'un generateur tasse ; 496 lignes avant la page « Systeme »
 ecrans (`atelier_ecrans_lvgl.py`) d'apres `ecran.json` : ne pas le decouper ni l'editer a la main, le regenerer. Meme regle pour
 l'`ecranLvgl.be` genere de toute autre carte a ecran.
 
-`outils_docs/scripts_python/outils_pc/build_page.py` fait **1250 lignes**, et c'est **voulu**
+`outils_docs/scripts_python/outils_pc/build_page.py` fait **1256 lignes**, et c'est **voulu**
 (decide le 2026-10-24 a 788 lignes : exception acceptee plutot qu'un decoupage CSS/JS ; 813 apres la
 vague de corrections finale du meme jour ; 935 le 2026-10-25 avec le panneau « Sortie » et « Effacer puis
 televerser » ; 1038 le meme jour avec la pause « rebranchez la carte » et les panneaux refermes ; 1053 avec
@@ -169,7 +169,7 @@ deja le FS ; 1131 le meme jour avec les sons de fin de lancement et de pause ; 1
 branchement de l'onglet « Fichiers », dont le code vit dans `build_page_fichiers.py` ; 1154 le 2026-10-31 avec
 les durees en heures au-dela de 60 min ; 1162 le 2026-11-01 avec le branchement de l'onglet « Mémoire et partitions », dont
 le code vit dans `build_page_memoire.py` ; 1169 le meme jour avec le branchement de l'onglet « Env par défaut (Platformio override) », dont le
-code vit dans `build_page_defaut.py` ; 1206 le meme jour avec le bouton de purge du cache et le resume memoire de chaque env ; 1210 le 2026-11-02 avec les couleurs du panneau « Sortie », dont le code vit dans `build_page_couleurs.py` ; 1215 le meme jour avec le branchement de l'onglet « Aide », dont le texte vit dans `build_page_aide.py` ; 1223 le 2026-11-03 avec le branchement de l'onglet « Sauvegarde configuration », dont le code vit dans `build_page_sauvegarde.py` ; 1223 encore le 2026-11-10 avec le branchement de la bascule « Classer par », dont le code vit dans `build_page_lieux.py` (qui reprend aussi la memoire d'ouverture de `chargeEnvs`) ; 1226 le 2026-11-11 avec le branchement de `lieux.JS`, commun aux listes de cartes ; 1233 le 2026-11-13 avec la case « Publier les fiches QR à la fin », etiquettes A11 ; 1250 le 2026-11-15 avec le branchement de l'onglet de réparations, dont le code vit dans `build_page_reparations.py`). C'est la page
+code vit dans `build_page_defaut.py` ; 1206 le meme jour avec le bouton de purge du cache et le resume memoire de chaque env ; 1210 le 2026-11-02 avec les couleurs du panneau « Sortie », dont le code vit dans `build_page_couleurs.py` ; 1215 le meme jour avec le branchement de l'onglet « Aide », dont le texte vit dans `build_page_aide.py` ; 1223 le 2026-11-03 avec le branchement de l'onglet « Sauvegarde configuration », dont le code vit dans `build_page_sauvegarde.py` ; 1223 encore le 2026-11-10 avec le branchement de la bascule « Classer par », dont le code vit dans `build_page_lieux.py` (qui reprend aussi la memoire d'ouverture de `chargeEnvs`) ; 1226 le 2026-11-11 avec le branchement de `lieux.JS`, commun aux listes de cartes ; 1233 le 2026-11-13 avec la case « Publier les fiches QR à la fin », etiquettes A11 ; 1250 le 2026-11-15 avec le branchement de l'onglet de réparations, dont le code vit dans `build_page_reparations.py` ; 1256 le meme jour avec la pastille Flash / RAM de fin de compilation, dont le code vit dans `build_page_fin_memoire.py`). C'est la page
 unique de l'outil « Build et televersement » (HTML + CSS + JS dans une seule constante
 servie par `build_web.py`) : ne pas la decouper pour satisfaire le compteur.
 

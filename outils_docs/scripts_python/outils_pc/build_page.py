@@ -167,6 +167,7 @@ PAGE = r"""<!doctype html>
 /*CSS_MEMOIRE*/
 /*CSS_DEFAUT*/
 /*CSS_REPARATIONS*/
+/*CSS_FIN_MEMOIRE*/
 /*CSS_SAUVEGARDE*/
 /*CSS_AIDE*/
 /*CSS_LIEUX*/
@@ -820,6 +821,7 @@ function traiteEvenement(e, rejeu) {
       r.actif = false;
       if (r.statut === "succes") r.pourcent = 100;
     });
+    finMemoireCharge(e);             // pastille Flash / RAM (build_page_fin_memoire.py)
     if (b.statut === "succes") fermeSortie(e.env);   // ouvert par la page et reussi : refermer (sauf geste de l'utilisateur)
     lisSortie(e.env);                // fin du journal (le dernier fils pio est fini), si le panneau reste ouvert
     planifie(e.env);
@@ -1012,6 +1014,7 @@ function dessineBloc(env) {
   u.tete.appendChild(h("strong", {texte: env}));
   u.tete.appendChild(h("span", {}, h("span", {"class": "discret", texte: methode + "  "}),
     h("span", {"class": "puce " + classe, texte: libelle + (b.secondes !== null ? " · " + duree(b.secondes) : "")})));
+  finMemoireTete(u.tete, env);
   u.rangs.textContent = "";
   // « fichiers » : action de l'onglet Fichiers, sans case dans l'onglet Build
   ACTIONS.concat("fichiers").filter(function (a) { return b.rangs[a]; }).forEach(function (a) { u.rangs.appendChild(dessineRang(b, b.rangs[a])); });
@@ -1202,6 +1205,7 @@ $("son").onchange = function () {
 /*JS_MEMOIRE*/
 /*JS_DEFAUT*/
 /*JS_REPARATIONS*/
+/*JS_FIN_MEMOIRE*/
 /*JS_SAUVEGARDE*/
 /*JS_LIEUX_COMMUN*/
 /*JS_LIEUX*/
@@ -1248,3 +1252,5 @@ PAGE = PAGE.replace("/*JS_LIEUX_COMMUN*/", lieux.JS)
 import build_page_reparations                    # noqa: E402 - bandeau, choix et panneau « Réparations » (plan build-reparations A5)
 PAGE = (PAGE.replace("/*CSS_REPARATIONS*/", build_page_reparations.CSS).replace("<!--REPARATIONS-->", build_page_reparations.HTML)
         .replace("/*JS_REPARATIONS*/", build_page_reparations.JS))
+import build_page_fin_memoire                    # noqa: E402 - pastille Flash / RAM de fin de compilation (plan build-fin-partitions)
+PAGE = PAGE.replace("/*CSS_FIN_MEMOIRE*/", build_page_fin_memoire.CSS).replace("/*JS_FIN_MEMOIRE*/", build_page_fin_memoire.JS)
