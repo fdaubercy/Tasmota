@@ -96,7 +96,8 @@ verifie(r["eligibles"][0]["cree_dossier"], "nouveau/dossier", "dossier de destin
 
 # 2. refus, un motif par cas
 m = motifs(apercu("S1", "C1", "V1", "D1", "K1", "M1", "N1", "P1", "X1", "R1", "I1"))
-verifie("suppressions" in m["S1"], True, "suppression refusee en version 1")
+verifie("S1" in m, False, "suppression sans renvoi : plus refusee (git rm autorise, decision du 2026-11-15)")
+verifie("archiver" in motifs(ma.previsualise(["AR"], PROPS + [prop("AR", "libre.txt", "archives/ar.txt", action="archiver")], racine))["AR"], True, "archiver reste refuse")
 verifie("en cours" in m["C1"], True, "proposition en cours refusee")
 verifie("destination" in m["V1"], True, "sans destination exacte : refusee")
 verifie("1 document" in m["D1"], True, "cite par un document : refusee (etape 2, pas 1)")
@@ -108,6 +109,39 @@ verifie("existe deja" in m["X1"], True, "destination deja prise : refusee")
 verifie("dossier" in m["R1"], True, "un dossier ne se deplace pas d'un coup")
 verifie("existe deja" in m["I1"], True, "destination identique au chemin : refusee (elle existe deja)")
 verifie(apercu("G1")["eligibles"], [], "destination hors depot : jamais eligible")
+
+# 2a. suppressions par git rm, simulees par git lui-meme (-n)
+r = apercu("S1")
+verifie([(e["id"], e["action"], e["vers"], e["commande"]) for e in r["eligibles"]], [("S1", "supprimer", None, "git rm -- libre.txt")], "suppression eligible : commande git rm exacte, sans destination")
+verifie((r["eligibles"][0]["dry_run"]["ok"], "libre.txt" in r["eligibles"][0]["dry_run"]["sortie"]), (True, True), "dry-run reel de git : ok, sortie de git montree")
+r = ma.previsualise(["E2"], [prop("E2", "-rf", None, action="supprimer")], racine)
+verifie(([e["commande"] for e in r["eligibles"]], r["eligibles"][0]["dry_run"]["ok"]), (["git rm -- -rf"], True), "nom hostile -rf supprime : « -- » devant le chemin, dry-run ok")
+verifie("dossier" in motifs(ma.previsualise(["R2"], [prop("R2", "dossier", None, action="supprimer")], racine))["R2"], True, "suppression d'un dossier refusee")
+verifie("cite" in motifs(ma.previsualise(["K2"], [prop("K2", "cite_code.py", None, action="supprimer")], racine))["K2"], True, "suppression d'un fichier cite par du code refusee")
+verifie("modifie" in motifs(ma.previsualise(["M2"], [prop("M2", "modifie.txt", None, action="supprimer")], racine))["M2"] or "en cours" in motifs(ma.previsualise(["M2"], [prop("M2", "modifie.txt", None, action="supprimer")], racine))["M2"], True, "suppression d'un fichier modifie refusee")
+verifie("meme fichier" in motifs(ma.previsualise(["S1", "E1"], PROPS, racine)).get("E1", ""), True, "supprimer et deplacer le meme fichier dans un lot : le second refuse")
+for argv in (ma.argv_git("supprimer", "a", None, False), ma.argv_git("deplacer", "a", "b", False)):
+    verifie(("-f" in argv or "-r" in argv or "--force" in argv, "--" in argv), (False, True), f"jamais -f ni -r, « -- » present : {argv[2]}")
+verifie("-n" in ma.argv_git("supprimer", "a", None, True) and "-n" in ma.argv_git("deplacer", "a", "b", True), True, "la simulation porte -n")
+verifie("-n" in ma.argv_git("supprimer", "a", None, False) or "-n" in ma.argv_git("deplacer", "a", "b", False), False, "l'application reelle ne porte pas -n")
+r = ma.previsualise(["E3"], [prop("E3", "libre.txt", "nouveau/dossier/libre.txt")], racine)
+verifie((r["eligibles"][0]["dry_run"]["ok"], r["eligibles"][0]["cree_dossier"]), (True, "nouveau/dossier"), "dossier de destination absent : git -n accepte, le dossier a creer est annonce (A2 le creera avant git mv)")
+_dry_avant = ma._dry_run
+ma._dry_run = lambda rac, action, chemin, vers: (False, "fatal: destination directory does not exist")
+r = ma.previsualise(["E3"], [prop("E3", "libre.txt", "nouveau/dossier/libre.txt")], racine)
+ma._dry_run = _dry_avant
+verifie((r["eligibles"], "git refuse" in motifs(r).get("E3", "")), ([], True), "si git refuse faute de dossier : la ligne est refusee, jamais eligible sans simulation reussie")
+vrai_dry = ma._dry_run
+ma._dry_run = lambda rac, action, chemin, vers: (False, "fatal: simulation")
+r = apercu("S1", "E1")
+verifie((r["eligibles"], "git refuse" in motifs(r).get("S1", "")), ([], True), "git refuse en simulation : la ligne quitte le lot, rien d'eligible")
+ma._dry_run = vrai_dry
+vrai_head = ma._head
+e1 = apercu("S1")["empreinte"]
+ma._head = lambda rac: "autre-commit"
+verifie(apercu("S1")["empreinte"] != e1, True, "empreinte liee au HEAD : un autre commit change l'empreinte")
+ma._head = vrai_head
+verifie(apercu("S1")["head"] != "", True, "head rendu")
 
 # 2b. destinations et sources protegees, collisions de lot
 PP =[prop("H1", "libre.txt", ".git/hooks/pre-commit"), prop("H2", "libre.txt", ".GIT/x"), prop("H3", "libre.txt", ".claude/hooks/x.sh"),
@@ -169,6 +203,11 @@ verifie(apercu("K1")["eligibles"], [], "apres mutants : garde-fous restaures")
 ma.PROTEGES = ()
 verifie(ma.previsualise(["H1"], PP, racine)["eligibles"] != [], True, "mutant sans dossiers proteges : .git devient une destination (le banc le voit)")
 ma.PROTEGES = (".git", ".github", ".claude", ".vscode")
+ma._dry_run = lambda rac, action, chemin, vers: (True, "")
+verifie(apercu("S1")["eligibles"][0]["dry_run"]["ok"], True, "mutant dry-run neutre : plus aucun refus de git possible (temoin)")
+ma._dry_run = lambda rac, action, chemin, vers: (False, "x")
+verifie(apercu("S1")["eligibles"], [], "mutant dry-run toujours refuse : rien d'eligible (le banc voit que le dry-run decide)")
+ma._dry_run = vrai_dry
 
 if ECHECS:
     print(f"ROUGE : {len(ECHECS)} echec(s)")

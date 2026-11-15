@@ -28,16 +28,18 @@ liens: menage-page
 - **Après** : `verifie_references_docs.py` est lancé et sa sortie affichée ; les renvois cassés sont listés, jamais corrigés seuls.
 
 ## A1 — Aperçu d'un lot (lecture seule)
-- [x] `menage_application.py::previsualise(ids, rapport, racine)` : pour chaque proposition cochée, vérifie l'éligibilité (règles ci-dessus), rend les commandes git exactes et le motif de chaque refus ; aucun effet — banc avec faux dépôt, cas hostiles et mutants — preuve : test_menage_application.py VERT (cas hostiles, aperçu sans effet sur l'arbre et l'index, 3 mutants vus par le banc ; un trou réel trouvé et corrigé : destination hors dépôt)
+- [x] `menage_application.py::previsualise(ids, rapport, racine)` : pour chaque proposition cochée, vérifie l'éligibilité (règles ci-dessus), rend les commandes git exactes et le motif de chaque refus ; aucun effet — banc avec faux dépôt, cas hostiles et mutants — preuve : test_menage_application.py VERT (cas hostiles, aperçu sans effet sur l'arbre et l'index, 3 mutants vus par le banc ; un trou réel trouvé et corrigé : destination hors dépôt ; révisé le 2026-11-15 : `supprimer` (git rm) accepté à l'étape 1, simulation par `git rm -n` / `git mv -n`, empreinte liée au HEAD, mutants dry-run)
 - [x] Route `POST /appliquer/apercu` : refuse hors rapport en cours, ids inconnus, build en cours ; rend le diff (commandes + fichiers touchés) — preuve : test_menage_web.py VERT (404 sans rapport, 409 pendant un build, 400 lot vide, refus archiver et supprimer)
 
 ## A2 — Application
 - [ ] Garde-fous d'exécution relevés par la relecture de A1 : argv construit `["git","mv","--",chemin,vers]` (jamais en découpant la chaîne `commande`), `GIT_LITERAL_PATHSPECS=1`, `previsualise` REFAIT à l'application avec empreinte et HEAD identiques à l'aperçu, refus d'un build à CE moment-là
+- [ ] `applique` exécute `argv_git(action, chemin, vers, False)` (jamais `commande.split()`), crée avant `git mv` le dossier `cree_dossier` (git -n l'accepte absent, git mv non)
 - [ ] `menage_application.py::applique(...)` : recontrôle juste avant, exécute `git mv` un par un sans shell (`--` devant les chemins, `:(literal)`), s'arrête à la première erreur et dit ce qui est fait ; banc : fichier modifié entre l'aperçu et l'application, destination créée entre-temps, chemin hostile
 - [ ] Route `POST /appliquer` avec confirmation explicite (le diff renvoyé par l'aperçu, son empreinte) ; verrou unique ; journal hors dépôt
 - [ ] Lancement de `verifie_references_docs.py` après l'application et affichage de son verdict
 
 ## A3 — Page
+- [ ] Avertissement affiché près du bouton : la contre-vérification ne voit pas un renvoi construit dynamiquement (listes `custom_files_*` de l'ini, glob) ; `git restore --staged --worktree <chemin>` annule une suppression
 - [ ] Cases à cocher sur les propositions de l'étape 1, bouton « Voir ce que ça ferait », liste des commandes, bouton « Appliquer » grisé tant que l'aperçu n'est pas affiché ; message final : « relisez git status, rien n'est commité »
 - [ ] Sonde Chrome avec témoins (bouton actif sans aperçu, texte hostile, case sur une proposition non éligible)
 
