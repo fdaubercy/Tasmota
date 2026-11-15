@@ -17,8 +17,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 80 % (53/68) | 15 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
-| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ████░░░░░░ 38 % (11/26) | 15 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
+| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | █████░░░░░ 50 % (13/26) | 13 étapes, 2 améliorations | 2026-11-14 | 2026-11-15 |
+| [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 83 % (56/68) | 12 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 89 % (34/36) | 2 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
@@ -70,31 +70,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 80 %
+#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 50 %
 
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
-- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Tests lancés : rouges ; modules écrits ; tests verts
-- A6 — Points chauds, sources et aperçu par le vrai moteur : Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
-- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
-- A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
-- A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
-- A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
-- A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
-- A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
-- A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
-- Amélioration [projet] : Commander un relais en cliquant son voyant (spec § 3, non-objectif)
-- Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
-- Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
-
-#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 38 %
-
-- A4 — Routes de la page (`build_web.py`) : Écrire d'abord les tests dans `test_build_web.py` : `GET /reparations` rend règles (base + locales) et historique de la
-- A4 — Routes de la page (`build_web.py`) : Ajouter les routes dans `build_web.py` (quelques lignes, logique dans `build_reparations.py`)
 - A5 — Page : bandeau, choix, panneau « Réparations » : Écrire d'abord la sonde `test_build_page_reparations_chrome.py` (rouge ; pas de pause fixe, attendre des conditions) :
 - A5 — Page : bandeau, choix, panneau « Réparations » : Créer `build_page_reparations.py` (CSS, HTML, JS du bandeau, des boutons et du panneau, inséré dans `build_page.PAGE` par
 - A5 — Page : bandeau, choix, panneau « Réparations » : Sonde verte ; Chrome `sonde_*` orphelins arrêtés après coup (compter les `HasExited` faux 15 s après)
@@ -110,6 +87,24 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Retour au plan en cours avant ce chantier : Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs`
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
+
+#### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 83 %
+
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Essai sur la cuve : `visuel.json` + `visuel.svg` d'essai dans son dossier, liste `visuel_accueil` levée pour la
+- A4 — Moteur `visuel.js` et premier essai sur carte à la main : Fichiers d'essai retirés du dossier de la cuve (ou gardés si l'utilisateur le demande), cenv remis à l'état exclu
+- A6 — Points chauds, sources et aperçu par le vrai moteur : Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
+- A7 — Écriture dans le dépôt, lien vers Build, suivi, documentation : Tests lancés : rouges ; modules écrits ; tests verts ; `banc_demarrage.py` vert sur la copie après écriture
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Cuve : photo réelle, fond et points chauds (niveau, relais, liaison ModBus série, liaison UDP vers le P4) écrits par
+- A8 — Première carte réelle, cohabitation, mesures, rangement : P4 du garage : visuel sous la façade des volets, les deux vivants, ordre vérifié, capture
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Un ESP32 classique (proposition : le différentiel) : fond dessin, `UfsFree` et tas avant/après notés ; seuils
+- A8 — Première carte réelle, cohabitation, mesures, rangement : `tasks/lessons.md` complété si une leçon est apparue ; plan `statut: clos` si tout est coché
+- A8 — Première carte réelle, cohabitation, mesures, rangement : Commit `feat(atelier-visuels): premieres cartes (cuve, P4, ESP32) et rangement des images (A8)`
+- A9 — Assistant IA facultatif (spec § 2.10) : Relire `atelier_ecrans_remarques.py` (options `OPTIONS`, `reglages_sans_hooks`, délai, arrêt de l'arbre, journal,
+- A9 — Assistant IA facultatif (spec § 2.10) : Essai réel avec la photo de l'utilisateur, un fournisseur à la fois et son accord, rendu comparé à la référence
+- A9 — Assistant IA facultatif (spec § 2.10) : Commit `feat(atelier-visuels): assistant IA facultatif, quota et avertissements (A9)`
+- Amélioration [projet] : Commander un relais en cliquant son voyant (spec § 3, non-objectif)
+- Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
+- Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
 
 #### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 75 %
 

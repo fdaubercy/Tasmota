@@ -203,11 +203,11 @@ Page : palette voyant / valeur / liaison, pose au clic, glisser, poignées pour 
 panneau de l'élément : source choisie dans les listes de `/sources`, style, seuil ; aperçu = `visuel.js` monté sur le
 fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par source) ou **réel** (`/etat` toutes les
 `rafraichissement` s, bouton « Carte en ligne »).
-- [ ] Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le
+- [x] Tests ajoutés à `test_atelier_visuels_web.py` : `/sources` de la cuve (copie) sans aucune clé secrète même si le — preuve : commits 24c094059 (/etat, /valide, fuite de /sources testée avec mutant) et 748d6552b (JSON imbriqué : 400, témoin 409 sans le correctif) ; banc web VERT 3 fois
   persist en contient une ; `/etat` sur une IP qui ne répond pas rend `inconnu` en moins de 3,5 s ; `/valide` rend les
   erreurs du validateur
-  - [ ] Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur
-- [ ] Tests lancés : rouges ; modules écrits ; tests verts
+  - [x] Routes `GET /sources`, `GET /etat`, `POST /valide` : absentes du serveur ; la page essaie `/sources` et retombe sur la saisie à la main (champs identiques) — à brancher côté serveur — preuve : 24c094059, a7a0e4b88 (README)
+- [x] Tests lancés : rouges ; modules écrits ; tests verts — preuve : avant les routes le banc échouait sur GET /etat (404) ; sans le correctif de profondeur il échoue (409 au lieu de 400) ; vert avec tout (2026-11-15)
 - [ ] Recherche d'icônes en ligne (spec § 2.4, `atelier_visuels_icones_web.py`) : lire d'abord la documentation de l'API
   Iconify et noter ses limites ; routes `GET /icones/recherche?q=` et `GET /icones/svg?jeu=&nom=` (hôte fixe, jeu et nom
   validés par expression régulière, délai court, hors ligne = message clair) ; licence de la collection lue et affichée,
