@@ -108,6 +108,7 @@ for libelle, corps in [("zone hors liste blanche", {"zone": ["/etc"]}), ("modele
 verifie(s.req("POST", "/garder", {"chemin": "tasks/README.md"})[0], 404, "garder sans rapport")
 verifie(s.req("POST", "/ignorer", {"id": "M1"})[0], 404, "ignorer sans rapport")
 verifie(s.req("POST", "/appliquer/apercu", {"ids": ["M1"]})[0], 404, "apercu sans rapport")
+verifie(s.req("POST", "/appliquer", {"ids": ["M1"], "empreinte": "x", "head": "y", "confirme": True})[0], 404, "appliquer sans rapport")
 
 # client distant sans jeton
 vrai = acces_web.est_local
@@ -142,6 +143,18 @@ st, t = s.req("POST", "/appliquer/apercu", {"ids": ["M1", "M2", "M9"]})
 ap = json.loads(t) if st == 200 else {}
 verifie((st, sorted(x["id"] for x in ap.get("refuses", [])), ap.get("eligibles")), (200, ["M1", "M2", "M9"], []), "apercu : archiver, supprimer et inconnue refuses, rien d'eligible")
 verifie(s.req("POST", "/appliquer/apercu", {"ids": []})[0], 400, "apercu : lot vide refuse")
+# application REELLE : seulement des refus ici (RACINE est le vrai depot, une application reussie y toucherait a de vrais fichiers)
+verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "x", "head": "y"})[0], 400, "appliquer sans confirmation explicite : refuse")
+verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "x", "head": "y", "confirme": "oui"})[0], 400, "appliquer : confirme doit etre le booleen true")
+_est_local = mw.acces_web.est_local
+mw.acces_web.est_local = lambda adresse: False
+verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "0" * 16, "head": "inconnu", "a_blanc": True})[0], 403, "appliquer depuis un autre appareil : 403, meme a blanc")
+mw.acces_web.est_local = _est_local
+verifie(s.req("POST", "/appliquer/apercu", {"ids": ["M2"]})[0], 200, "l'apercu (lecture seule) reste permis, lui")
+verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "0" * 16, "head": "inconnu", "a_blanc": True})[0], 409, "a blanc : sans confirmation, mais meme refus d'un apercu perime (409)")
+verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "x", "head": "y", "a_blanc": "oui"})[0], 400, "a_blanc doit etre un booleen")
+verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "confirme": True})[0], 400, "appliquer sans empreinte ni head : refuse")
+verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "0" * 16, "head": "inconnu", "confirme": True})[0], 409, "appliquer avec une empreinte qui n'est pas celle de l'apercu : 409, rien applique")
 verifie(s.req("POST", "/appliquer/apercu", {"ids": "M1"})[0], 400, "apercu : ids pas une liste")
 
 # ignorer, garder, degarder

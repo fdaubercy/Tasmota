@@ -14,16 +14,40 @@ Banc : test_menage_application.py.
 import hashlib
 import json
 import os
+import re
 import subprocess
-from pathlib import PurePosixPath
+import sys
+import threading
+import time
+from pathlib import Path, PurePosixPath
 
 import menage_rapport
 import menage_verification
 
 MAX_LOT = 50
 ACTIONS = ("deplacer", "supprimer")
-PROTEGES = (".git", ".github", ".claude", ".vscode")   # jamais une destination ni une source : configuration de git, de l'IDE et de Claude
+PROTEGES = (".git", ".claude", ".vscode")   # jamais une destination ni une source : configuration de git (tout « .git* » aussi), de l'IDE et de Claude
 DELAI_GIT = 30
+
+
+def _protege(chemin, racine=None):
+    """Vrai si le chemin vise un dossier protege, y compris par un nom qui y mene sans lui ressembler : nom court Windows (`CLAUDE~1`),
+    point ou espace en fin de segment (`.claude.`), ou chemin resolu qui retombe dans un dossier protege."""
+    segments = [x for x in chemin.replace("\\", "/").split("/") if x]
+    for x in segments:
+        if x != x.rstrip(" .") or re.search(r"~\d", x):
+            return True
+    premier = segments[0].lower() if segments else ""
+    if premier in PROTEGES or premier.startswith(".git"):
+        return True
+    if racine is not None:
+        try:
+            resolu = Path(str(racine), chemin).resolve().relative_to(Path(str(racine)).resolve()).parts
+        except (OSError, ValueError):
+            return True                              # qui sort du depot ou ne se resout pas : jamais applique
+        if resolu and (resolu[0].lower() in PROTEGES or resolu[0].lower().startswith(".git")):
+            return True
+    return False
 
 
 def motif_refus(p, verif, racine=None):
@@ -38,8 +62,8 @@ def motif_refus(p, verif, racine=None):
         return "aucune destination exacte proposee"
     cibles = [p.get("chemin")] + ([vers] if action == "deplacer" else [])
     for chemin in cibles:
-        if isinstance(chemin, str) and chemin.replace("\\", "/").split("/")[0].lower() in PROTEGES:
-            return "dossier protege (.git, .github, .claude, .vscode)"
+        if isinstance(chemin, str) and _protege(chemin, racine):
+            return "dossier protege (.git*, .claude, .vscode) ou nom de segment ambigu (nom court 8.3, point ou espace final)"
     if racine is not None and any(menage_rapport.chemin_sur(c, racine) is None for c in cibles):
         return "chemin refuse : absolu, avec .. ou hors du depot"
     if not verif.get("disponible"):
@@ -61,6 +85,11 @@ def _est_dossier(racine, chemin):
     return os.path.isdir(os.path.join(str(racine), chemin))
 
 
+def _imbriques(a, b):
+    """Vrai si l'un des deux chemins normalises est un ancetre de l'autre."""
+    return a.startswith(b + os.sep) or b.startswith(a + os.sep)
+
+
 def _cle(chemin):
     """Forme comparable : Windows ignore la casse et `a/./b` vaut `a/b`."""
     return os.path.normcase(os.path.normpath(chemin))
@@ -74,16 +103,22 @@ def argv_git(action, chemin, vers, simulation):
     return base + ["mv"] + (["-n"] if simulation else []) + ["--", chemin, vers]
 
 
-def _dry_run(racine, action, chemin, vers):
-    """Simulation par git (`-n`) : (ok, sortie). Un delai ou une erreur systeme donnent ok=False : jamais un faux « ca passera »."""
-    env = dict(os.environ, GIT_LITERAL_PATHSPECS="1")
+def _lance_git(racine, action, chemin, vers, simulation):
+    """Lance git (liste d'arguments, jamais de shell) : (ok, sortie). Un delai ou une erreur systeme donnent ok=False : jamais un faux « ca passera »."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}     # GIT_DIR, GIT_WORK_TREE... : git agirait ailleurs
+    env["GIT_LITERAL_PATHSPECS"] = "1"
     try:
-        r = subprocess.run(argv_git(action, chemin, vers, True), cwd=str(racine), capture_output=True, timeout=DELAI_GIT, env=env,
+        r = subprocess.run(argv_git(action, chemin, vers, simulation), cwd=str(racine), capture_output=True, timeout=DELAI_GIT, env=env,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except (OSError, subprocess.SubprocessError) as e:
         return False, f"git inutilisable : {type(e).__name__}"
     texte = (r.stdout + r.stderr).decode("utf-8", "replace").strip()
     return r.returncode == 0, texte[:300]
+
+
+def _dry_run(racine, action, chemin, vers):
+    """Simulation par git (`-n`)."""
+    return _lance_git(racine, action, chemin, vers, True)
 
 
 def _head(racine):
@@ -129,6 +164,8 @@ def previsualise(ids, propositions, racine):
             motif = "meme fichier qu'une autre proposition du lot"
         elif p["action"] == "deplacer" and _cle(p["vers"]) in destinations:
             motif = "meme destination qu'une autre proposition du lot"
+        elif p["action"] == "deplacer" and any(_imbriques(_cle(p["vers"]), d) for d in destinations):
+            motif = "destination imbriquee dans (ou contenant) celle d'une autre proposition du lot : git mv rangerait DEDANS"
         dossier, absent = None, False
         if motif is None and p["action"] == "deplacer":
             dossier = str(PurePosixPath(p["vers"]).parent)
@@ -151,3 +188,86 @@ def previsualise(ids, propositions, racine):
     head = _head(racine)
     condense = json.dumps([(e["id"], e["action"], e["chemin"], e["vers"]) for e in eligibles] + [head], ensure_ascii=False, sort_keys=True)
     return {"eligibles": eligibles, "refuses": refuses, "head": head, "empreinte": hashlib.sha256(condense.encode("utf-8")).hexdigest()[:16]}
+
+
+_VERROU = threading.Lock()
+SCRIPT_RENVOIS = os.path.join("outils_docs", "scripts_python", "maintenance", "verifie_references_docs.py")
+
+
+def verifie_renvois(racine):
+    """Lance le controle des renvois des documents apres une application : {code, sortie}. Lecture seule ; ne corrige jamais rien."""
+    try:
+        r = subprocess.run([sys.executable, os.path.join(str(racine), SCRIPT_RENVOIS)], cwd=str(racine), capture_output=True, timeout=120,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.SubprocessError) as e:
+        return {"code": None, "sortie": f"controle des renvois impossible : {type(e).__name__}"}
+    return {"code": r.returncode, "sortie": (r.stdout + r.stderr).decode("utf-8", "replace").strip()[-1500:]}
+
+
+def _journalise(journal, ligne):
+    if not journal:
+        return
+    try:
+        os.makedirs(os.path.dirname(str(journal)), exist_ok=True)
+        with open(journal, "a", encoding="utf-8") as f:
+            f.write(json.dumps(dict(ligne, t=time.strftime("%Y-%m-%d %H:%M:%S")), ensure_ascii=False) + "\n")
+    except OSError:
+        pass                                      # un journal illisible ne doit jamais empecher ni masquer l'application
+
+
+def applique(ids, empreinte, head, propositions, racine, builds_en_cours, verifie_refs=verifie_renvois, journal=None, a_blanc=False):
+    """Applique le lot `ids` : l'apercu est REFAIT a cet instant et doit avoir la meme empreinte et le meme HEAD que celui montre a l'utilisateur.
+    git est lance un fichier a la fois (argv_git sans -n), on s'arrete a la premiere erreur. Rien n'est jamais commite ni force.
+    `a_blanc=True` : meme parcours, memes controles, mais chaque git tourne avec -n et aucun dossier n'est cree : rien n'est modifie, le journal le note.
+    Rend {a_blanc, faits, echec, restants, renvois} ; leve RuntimeError (build, lot deja en cours, apercu perime) ou ValueError (saisie)."""
+    if not isinstance(empreinte, str) or not empreinte or not isinstance(head, str) or not head:
+        raise ValueError("empreinte et head de l'apercu attendus")
+    if not _VERROU.acquire(blocking=False):
+        raise RuntimeError("une application est deja en cours")
+    try:
+        enc = builds_en_cours()
+        if enc:
+            raise RuntimeError("un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + ") : application refusee")
+        r = previsualise(ids, propositions, racine)
+        if r["head"] != head or r["empreinte"] != empreinte:
+            raise RuntimeError("l'apercu n'est plus a jour (le depot ou le lot a change) : refaire l'apercu, rien n'a ete applique")
+        if not r["eligibles"]:
+            raise ValueError("aucune ligne eligible dans ce lot")
+        faits, echec = [], None
+        for e in r["eligibles"]:
+            enc = builds_en_cours()                  # un build peut demarrer pendant le lot : on revoit la garde a CHAQUE ligne
+            if enc and faits:
+                echec = {"id": e["id"], "chemin": e["chemin"], "motif": "un build a demarre pendant l'application : arret"}
+                break
+            cree = []
+            try:
+                if e["action"] == "deplacer" and (os.path.lexists(os.path.join(str(racine), e["vers"])) or _protege(e["vers"], racine)):
+                    raise OSError("la destination existe ou est devenue protegee depuis l'apercu")   # TOCTOU : dossier, lien ou jonction apparu entre-temps
+                if e["action"] == "deplacer" and e["cree_dossier"] and _protege(e["cree_dossier"], racine):
+                    raise OSError("le dossier a creer est devenu protege ou sort du depot")
+                if e["action"] == "deplacer" and e["cree_dossier"] and not a_blanc:
+                    cible = os.path.join(str(racine), e["cree_dossier"])
+                    niveau, borne = cible, os.path.normcase(os.path.abspath(str(racine)))
+                    while not os.path.isdir(niveau) and os.path.normcase(os.path.abspath(niveau)) != borne:
+                        cree.append(niveau)           # du plus profond au plus haut : l'ordre du retrait si git echoue
+                        niveau = os.path.dirname(niveau)
+                    if cree:
+                        os.makedirs(cible)
+                _journalise(journal, {"id": e["id"], "action": e["action"], "chemin": e["chemin"], "vers": e["vers"], "intention": True, "a_blanc": bool(a_blanc)})
+                ok, sortie = _lance_git(racine, e["action"], e["chemin"], e["vers"], bool(a_blanc))
+            except OSError as erreur:
+                ok, sortie = False, f"{type(erreur).__name__} : {erreur}"[:300]
+            _journalise(journal, {"id": e["id"], "action": e["action"], "chemin": e["chemin"], "vers": e["vers"], "ok": ok, "sortie": sortie, "a_blanc": bool(a_blanc)})
+            if not ok:
+                for dossier in cree:              # dossiers crees pour rien : on ne laisse pas de dossiers vides
+                    try:
+                        os.rmdir(dossier)
+                    except OSError:
+                        break
+                echec = {"id": e["id"], "chemin": e["chemin"], "motif": sortie}
+                break
+            faits.append({"id": e["id"], "action": e["action"], "chemin": e["chemin"], "vers": e["vers"], "commande": e["commande"]})
+        restants = [e["id"] for e in r["eligibles"] if e["id"] not in {f["id"] for f in faits} and (not echec or e["id"] != echec["id"])]
+        return {"a_blanc": bool(a_blanc), "faits": faits, "echec": echec, "restants": restants, "renvois": verifie_refs(racine) if faits and not a_blanc else None}
+    finally:
+        _VERROU.release()

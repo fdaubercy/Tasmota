@@ -17,6 +17,7 @@ Routes (les POST exigent l'en-tete X-Menage: 1 et la meme origine ; client de ce
     POST /lancer    {zone, categories, anciennete_jours, modele, effort}  -> {message}
     POST /arreter   {}
     POST /appliquer/apercu {ids}  -> {eligibles, refuses, empreinte} : apercu LECTURE SEULE d'un lot de deplacements (A1 du plan menage-appliquer)
+    POST /appliquer {ids, empreinte, head, confirme:true | a_blanc:true}  -> {a_blanc, faits, echec, restants, renvois} : APPLIQUE le lot apercu (git rm / git mv, jamais commite) ; a_blanc = meme parcours en git -n, rien modifie
     POST /garder    {chemin}    un chemin du rapport en cours seulement   -> memorise dans garde.json
     POST /degarder  {chemin}
     POST /ignorer   {id}        une proposition du rapport en cours ; oubliee au redemarrage de l'outil
@@ -56,6 +57,7 @@ class Etat:
     def __init__(self, racine, builds_en_cours, programme=None, dossier=None, delai=ml.DELAI):
         dossier = Path(dossier) if dossier else acces_web.dossier_donnees() / "menage"
         self.racine = Path(racine)
+        self.dossier = dossier
         self.memoire = menage_memoire.Memoire(dossier, racine)
         self.audit = ml.Audit(racine, builds_en_cours, programme=programme, delai=delai, gardes=self.memoire.charge, dossier_rapports=dossier / "rapports")
         self.ignorees = set()
@@ -90,6 +92,19 @@ class Etat:
         if r is None:
             raise LookupError("pas de rapport")
         return menage_application.previsualise(d.get("ids"), r["propositions"], self.racine)
+
+    def applique(self, d):
+        """Application REELLE d'un lot (git rm / git mv, rien de commite) : exige la confirmation explicite, l'empreinte et le HEAD de l'apercu."""
+        a_blanc = d.get("a_blanc", False)
+        if not isinstance(a_blanc, bool):
+            raise ValueError("a_blanc : booleen attendu")
+        if not a_blanc and d.get("confirme") is not True:
+            raise ValueError("confirmation explicite attendue (confirme: true), ou a_blanc: true pour une simulation")
+        r = self.rapport()
+        if r is None:
+            raise LookupError("pas de rapport")
+        return menage_application.applique(d.get("ids"), d.get("empreinte"), d.get("head"), r["propositions"], self.racine,
+                                           builds_en_cours=self.audit.builds_en_cours, journal=self.dossier / "applications.jsonl", a_blanc=a_blanc)
 
     def garde(self, chemin, retire=False):
         if retire:
@@ -218,6 +233,11 @@ def fabrique_gestionnaire(acces, etat):
             elif chemin == "/arreter":
                 etat.audit.arrete()
                 self._json({"message": "arret demande"})
+            elif chemin == "/appliquer":
+                if not acces_web.est_local(self.client_address):       # un geste qui ECRIT dans le depot : ce PC seulement, jamais un autre appareil (meme avec le jeton)
+                    self._envoie(403, "geste reserve a ce PC".encode("utf-8"))
+                    return
+                self._json(etat.applique(d))
             elif chemin == "/appliquer/apercu":
                 self._json(etat.apercu(d))
             elif chemin == "/garder":
