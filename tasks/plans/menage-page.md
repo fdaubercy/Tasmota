@@ -97,7 +97,7 @@ Raison : le champ « Non vérifié » était un bloc de texte illisible ; et l'a
 - [x] Agent : consigne et format de sortie (`auditeur-menage.md`, schéma JSON) ; le contrôle d'une catégorie demandée mais non déclarée apparaît « non déclaré » à la page — preuve : auditeur-menage.md et menage_rapport.schema.json mis à jour ; la page affiche « non déclaré » (sonde Chrome)
 - [x] Page : carte « Couverture de l'audit » (un contrôle par ligne avec pastille et raison en français), « Limites », « Écarté volontairement », bouton « Cocher les contrôles à refaire » ; sonde Chrome avec témoin — preuve : test_menage_page_chrome.py VERT, 50+ OK, témoin couv-html rouge, 7 lignes dont les non déclarées
 - [ ] Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
-- [ ] Revue, `controleur-secrets`, commit
+- [x] Revue, `controleur-secrets`, commit — preuve : relecteur-pages-web sans bloquant, controleur-secrets sans valeur secrète, commits 6bc190482 et celui de la couverture
 
 ## Améliorations restantes
 - [ ] [projet] Version 2 : application d'un lot depuis la page (selon A7)
