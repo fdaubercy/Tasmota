@@ -11,6 +11,12 @@
     POST /ecriture/ecrit {env, description, empreinte_fond? | type_fond?, empreinte (celle du diff)} -> {ecrits: [chemin]}
     POST /ecriture/prevoit_retire {env}  -> meme forme que prevoit (visuel decoche)
     POST /ecriture/retire {env, empreinte (celle de prevoit_retire)} -> {ecrits: [chemin]}
+    GET  /etat?env=&chemins=  -> {etat: "connu", relais: [bool..] | bool | null, mesures: {ANALOG: {A1: nombre}} (feuilles numeriques seules,
+         sans cle secrete ; chemins = "ANALOG.A1,Switch1" limite aux mesures citees, sinon toutes), liaisons: {modbus: {serie_ms, esclaves:
+         {adresse: ms}}, wifi: bool, reseau: [{mac, etat, rssi}]}} ou {etat: "inconnu"} (carte muette, route /visuel absente, reponse
+         illisible : en moins de 3,5 s, jamais d'erreur). Lit /visuel?f=etat de la carte (adresse du persist ou du maitre, 3 s).
+    POST /valide {description (objet), octets? (poids du fond), puce? ("ESP32" par defaut)} -> {erreurs: ["fond.type : ...", ...]},
+         liste vide = valide ; 400 si description n'est pas un objet ; corps 1 Mo au plus.
     GET  /suivi?env=              -> {carte: identique | differente | absente | inconnue}
 Reponses : icones/recherche {icones: [{jeu, nom, licence, permissive, attribution}]} ; icones/svg {svg, licence, auteur, origine} ; icones/garde {chemin, licence} ;
   ia/fournisseurs {fournisseurs, reglages} ; ia/cle {fournisseur, cle: {presente, ...}} ; ia/demande {svg | operations | erreur, quota: {envois_jour, plafond, etat, reprise}} ; ia/quota {envois_jour, plafond, etat, reprise}.
@@ -20,12 +26,14 @@ Erreurs : ValueError (400), LookupError (404), RuntimeError (409), HorsLigne (50
 import base64
 import binascii
 import json
+import time
 import urllib.error
 import urllib.request
 
 import atelier_visuels_ecriture as ave
 import atelier_visuels_ia as ia
 import atelier_visuels_description as avd
+import atelier_visuels_etat as ave_etat
 import atelier_visuels_ia_config as cfg
 import atelier_visuels_icones_web as ico
 import atelier_visuels_icones_traces as ict
@@ -33,12 +41,12 @@ import atelier_visuels_suivi as avs
 import build_envs
 import tapp_envoi
 
-DELAI_CARTE = 3
+DELAI_CARTE = 2.5                      # echeance GLOBALE d'une lecture de carte (connexion et corps compris)
 MAX_CORPS_IA = 10 * 1024 * 1024        # corps JSON de /ia/demande, photo en base64 comprise ; 1 Mo pour les autres routes
 CHEMINS_IA = {"/ia/demande"}
-ROUTES_GET = {"/sources", "/icones/firmware", "/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
+ROUTES_GET = {"/sources", "/etat", "/icones/firmware", "/icones/recherche", "/icones/svg", "/ia/fournisseurs", "/ia/quota", "/suivi"}
 ROUTES_POST = {"/icones/garde", "/ia/demande", "/ia/cle", "/ecriture/prevoit", "/ecriture/ecrit",
-               "/ecriture/prevoit_retire", "/ecriture/retire"}
+               "/ecriture/prevoit_retire", "/ecriture/retire", "/valide"}
 HorsLigne = ico.HorsLigne
 
 
@@ -57,7 +65,16 @@ def lecteur_http(racine, adresse_de=None):
         try:
             with urllib.request.urlopen(urllib.request.Request(f"http://{a}{chemin}", headers={"Referer": f"http://{a}/"}),
                                         timeout=DELAI_CARTE) as r:
-                return r.read(1024 * 1024)
+                fin, morceaux, total = time.monotonic() + DELAI_CARTE, [], 0
+                while total < 1024 * 1024:
+                    if time.monotonic() > fin:
+                        raise OSError("carte trop lente")
+                    m = r.read(8192)
+                    if not m:
+                        break
+                    morceaux.append(m)
+                    total += len(m)
+                return b"".join(morceaux)
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return None
@@ -114,6 +131,8 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
             return ia.quota(c, fournisseur_valide(c, q.get("fournisseur")))
         if chemin == "/sources":
             return avd.sources(racine, env_valide(q.get("env")))
+        if chemin == "/etat":
+            return ave_etat.etat(env_valide(q.get("env")), lecteur, q.get("chemins"))
         if chemin == "/suivi":
             return avs.etat(racine, env_valide(q.get("env")), lecteur)
         raise LookupError("introuvable")
@@ -125,6 +144,13 @@ def fabrique_routes(racine, fonds, verrou, builds_en_cours=None, ouvre=None, cac
             raise ValueError("corps JSON illisible") from None
         if not isinstance(d, dict):
             raise ValueError("objet JSON attendu")
+        if chemin == "/valide":
+            desc, octets = d.get("description"), d.get("octets")
+            if not isinstance(desc, dict):
+                raise ValueError("description attendue (objet)")
+            if octets is not None and (isinstance(octets, bool) or not isinstance(octets, int) or octets < 0):
+                raise ValueError("octets : entier positif attendu")
+            return {"erreurs": avd.valide(desc, octets, "ESP32" if d.get("puce") in (None, "ESP32") else str(d["puce"])[:20])}
         if chemin == "/icones/garde":
             info = ico.svg(d.get("jeu"), d.get("nom"), ouvre, cache)        # le SVG est relu chez Iconify, jamais pris du client
             try:

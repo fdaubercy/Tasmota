@@ -30,6 +30,7 @@ import tapp_envoi
 ECHECS = []
 ENT = {"X-Atelier-Visuels": "1"}
 NS = "http://www.w3.org/2000/svg"
+CUVE = "tasmota32s3-garage-capteurs-cuve-modbus"
 
 
 def verifie(obtenu, attendu, libelle):
@@ -300,6 +301,122 @@ def retrait(racine, env):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def copie_cuve(racine, env, modifie):
+    """Racine temporaire : les ini du depot (la liste des cartes) et le persist de la cuve passe par `modifie(dict)`."""
+    tmp = Path(tempfile.mkdtemp(prefix="test_visuels_sources_"))
+    for f in ("platformio.ini", "platformio_tasmota32.ini", "platformio_tasmota_env.ini", "platformio_tasmota_env32.ini",
+              "platformio_override.ini", "platformio_tasmota_cenv.ini"):
+        if (racine / f).is_file():
+            shutil.copy2(racine / f, tmp / f)
+    dossier = tmp / fbe.dossier_carte(env)
+    dossier.mkdir(parents=True)
+    d = json.loads((racine / fbe.dossier_carte(env) / "_persist.json").read_text(encoding="utf-8-sig"))
+    modifie(d)
+    (dossier / "_persist.json").write_text(json.dumps(d), encoding="utf-8")
+    return tmp
+
+
+SECRETS = ("VALEUR-SECRETE-1", "VALEUR-SECRETE-2", "VALEUR-SECRETE-3", "motdepasse_wifi", "api_key_x", "token_rl")
+
+
+def sources_sans_secret(racine, env):
+    """/sources d'une copie de la cuve dont le persist porte des secrets : (relais lus, un secret ressort)."""
+    def seme(d):
+        mod = d["modules"]["cuve"]["environnement"]
+        mod["relais"]["token_rl"] = {"activation": "ON", "id": 9, "nom": "VALEUR-SECRETE-1"}          # entree au nom sensible
+        mod["relais"]["relai1"].update({"motdepasse_wifi": "VALEUR-SECRETE-2", "activation": "ON", "id": 1, "nom": "Ruban"})
+        d["diverses"]["api_key_x"] = "VALEUR-SECRETE-3"
+    tmp = copie_cuve(racine, env, seme)
+    srv, port = serveur_sur(tmp)
+    try:
+        st, corps = requete(port, "GET", f"/sources?env={env}")
+        ok = st == 200 and any(r.get("nom") == "Ruban" for r in json.loads(corps)["relais"])
+        return ok, any(x.encode() in corps for x in SECRETS)
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def sources_secrets(racine, env):
+    ok, fuite = sources_sans_secret(racine, env)
+    verifie((ok, fuite), (True, False), "GET /sources : relais lus, aucune valeur ni nom de champ secret rendus")
+    import atelier_visuels_description as avd
+    vrai = avd._utiles
+    avd._utiles = lambda o: o if isinstance(o, dict) else {}                      # mutant : le filtre des secrets ne filtre plus
+    try:
+        verifie(sources_sans_secret(racine, env)[1], True, "temoin negatif : sans le filtre des secrets, le test voit la fuite")
+    finally:
+        avd._utiles = vrai
+
+
+MESURES = {"t": 5, "power": [True, False],
+           "sensor": {"ANALOG": {"A1": 1.5, "token": 7, "Nom": "texte", "Temp": True}, "Switch1": 1, "motdepasse": {"x": 1}},
+           "modbus": {"serie_ms": 120, "esclaves": {"7": 33}}, "wifi": True,
+           "reseau": [{"mac": "AABBCCDDEEFF", "etat": "ok", "rssi": -60, "cle": "VALEUR-SECRETE-9"}]}
+
+
+def etat_et_valide(racine, env):
+    """GET /etat?env= (carte qui repond, qui se tait, qui n'a pas la route) et POST /valide (cas de cas_visuel.json)."""
+    vus = []
+    reponse = {"v": json.dumps(MESURES).encode()}
+
+    def lecteur(e, c):
+        vus.append(c)
+        if reponse["v"] is Ellipsis:
+            raise OSError("carte muette")
+        return reponse["v"]
+    srv, port = serveur_sur(racine, lecteur=lecteur)
+    try:
+        st, corps = requete(port, "GET", f"/etat?env={env}")
+        d = json.loads(corps) if st == 200 else {}
+        verifie((st, d.get("etat"), vus[:1]), (200, "connu", ["/visuel?f=etat"]), "GET /etat : lit /visuel?f=etat de la carte")
+        verifie((d.get("relais"), d.get("mesures"), d.get("liaisons", {}).get("wifi")),
+                ([True, False], {"ANALOG": {"A1": 1.5}, "Switch1": 1}, True), "GET /etat : relais, mesures numeriques seules, liaisons")
+        verifie(any(x in corps for x in (b"VALEUR-SECRETE", b"token", b"motdepasse", b"texte")), False, "GET /etat : aucun secret ni texte rendus")
+        st, corps = requete(port, "GET", f"/etat?env={env}&chemins=ANALOG.A1")
+        verifie(json.loads(corps).get("mesures"), {"ANALOG": {"A1": 1.5}}, "GET /etat?chemins= : seulement les mesures citees")
+        verifie(requete(port, "GET", "/etat?env=nulle")[0], 404, "etat d'une carte inconnue : 404")
+        verifie(requete(port, "GET", f"/etat?env={env}", hote="evil.example")[0], 403, "GET /etat avec un hote non local : 403")
+        reponse["v"] = None
+        verifie(json.loads(requete(port, "GET", f"/etat?env={env}")[1])["etat"], "inconnu", "carte sans la route (404) : inconnu")
+        reponse["v"] = b"<html>pas du json"
+        verifie(json.loads(requete(port, "GET", f"/etat?env={env}")[1])["etat"], "inconnu", "reponse illisible : inconnu")
+        reponse["v"] = Ellipsis
+        st, corps = requete(port, "GET", f"/etat?env={env}")
+        verifie((st, json.loads(corps)["etat"]), (200, "inconnu"), "carte en erreur : inconnu, jamais d'exception")
+        cas = json.loads((racine / "outils_docs/schemas/cas_visuel.json").read_text(encoding="utf-8"))
+        erreurs = []
+        for c in cas:
+            st, corps = jpost(port, "/valide", {"description": c["desc"], "octets": c["octets"], "puce": c["puce"]})
+            lues = json.loads(corps).get("erreurs") if st == 200 else None
+            if lues is None or bool(lues) != bool(c["erreurs"]) or any(not any(a in e for e in lues) for a in c["erreurs"]):
+                erreurs.append((c["nom"], st, lues))
+        verifie(erreurs, [], f"POST /valide : les {len(cas)} cas de cas_visuel.json (valides et invalides)")
+        verifie(jpost(port, "/valide", {"description": {"version": 1}})[0], 200, "POST /valide : description incomplete = 200 avec erreurs")
+        verifie(jpost(port, "/valide", {"description": "texte"})[0], 400, "POST /valide : description qui n'est pas un objet : 400")
+        verifie(requete(port, "POST", "/valide", b"[1]", ENT)[0], 400, "POST /valide : corps qui n'est pas un objet : 400")
+        verifie(jpost(port, "/valide", {"description": {}}, {})[0], 403, "POST /valide sans en-tete : 403")
+        verifie(requete(port, "POST", "/valide", b"x" * (avw.MAX_CORPS + 1), ENT)[0], 413, "POST /valide au-dessus de 1 Mo : 413")
+    finally:
+        srv.shutdown()
+        srv.server_close()
+    # carte qui accepte la connexion puis ne repond jamais : etat inconnu en moins de 3,5 s, par le vrai lecteur HTTP
+    ecoute = socket.socket()
+    ecoute.bind(("127.0.0.1", 0))
+    ecoute.listen(5)
+    srv, port = serveur_sur(racine, lecteur=avr.lecteur_http(racine, adresse_de=lambda e: f"127.0.0.1:{ecoute.getsockname()[1]}"))
+    try:
+        t0 = time.monotonic()
+        st, corps = requete(port, "GET", f"/etat?env={env}")
+        duree = time.monotonic() - t0
+        verifie((st, json.loads(corps)["etat"], duree < 3.5), (200, "inconnu", True), f"GET /etat, carte muette : inconnu en {duree:.1f} s (< 3,5 s)")
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        ecoute.close()
+
+
 def main():
     racine = avw.DEPOT
     envs = tapp_envoi.cartes(racine)
@@ -376,6 +493,8 @@ def main():
         serveur.server_close()
     routes_modules(racine, env)
     retrait(racine, env)
+    sources_secrets(racine, CUVE)
+    etat_et_valide(racine, env)
     suivi_muet()
     print("VERT" if not ECHECS else f"ROUGE : {ECHECS}")
     return 1 if ECHECS else 0
