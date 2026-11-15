@@ -19,9 +19,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 |---|---|---|---|---|---|---|
 | [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 84 % (58/69) | 11 étapes, 3 améliorations | 2026-11-13 | 2026-11-15 |
 | [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) | Chaque page d'accueil montre seulement ce que sa carte dirige : portail seul (esclave 4), garage et porte seuls (rideau), fenêtre de cuisine, porte d'entrée et trappe (grenier du RDC) | actif | ████░░░░░░ 38 % (6/15) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
-| [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ████████░░ 83 % (26/30) | 4 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
+| [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ████████░░ 83 % (26/30) | 4 étapes | 2026-11-15 | 2026-11-15 |
 | [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██████░░░░ 60 % (10/13) | 3 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
-| [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande | actif | █████████░ 85 % (29/34) | 5 étapes, 8 améliorations | 2026-11-15 | 2026-11-15 |
+| [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande | actif | █████████░ 89 % (33/37) | 4 étapes, 4 améliorations | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 88 % (38/41) | 3 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
@@ -113,7 +113,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Page d'accueil de l'esclave 4 : le portail seul avec son capteur de fermeture : Compilation de l'esclave 4 par la page Build, rendu vu sur la carte avec son capteur de fermeture réel
 - A9 — Retour au plan atelier-visuels : Passer d'abord par le plan `facade-esclaves-grenier-rdc` (façades de l'esclave 4, du rideau et du grenier du RDC), qui se termine par ce même retour
 - A9 — Retour au plan atelier-visuels : Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
-- Amélioration [projet] : Même façade animée pour la carte du rideau et l'accueil d'autres lieux
 
 #### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 60 %
 
@@ -122,21 +121,16 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
 - Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
 
-#### [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) — 85 %
+#### [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) — 89 %
 
 - A2 — Liens dérivés des persist : Exceptions et confirmations manuelles dans `placement.json` : `ip_cartes`, `etiquettes`, `liens_manuels` faits ; reste l'avertissement quand la dérivation et la saisie divergent
-- A5 — Lisibilité des liens : Liens entre pièces et entre étages : faisceau par bus plutôt qu'une ligne par esclave
-- A7 — Qualité et documentation : Contrôle de secrets avant commit (la page affiche IP, topics, jamais de mot de passe) puis commit en français sans accents
+- A5 — Lisibilité des liens : Liens entre pièces et entre étages : faisceau par bus plutôt qu'une ligne par esclave — cinq propositions dessinées dans `outils_docs/plan_maison/propositions_faisceau.html`, choix en attente (préférence : C, colonne centrale)
 - A8 — Wi-Fi, box, relais et répéteurs, survol, tuile annuaire : Confirmer avec l'utilisateur : l'appareil réel de MAISON pour chaque module (déduit : Freebox Server), répéteur salon sans SSID identifié
-- A9 — Couche chauffage et débits : Afficher les valeurs en direct des 6 débits (lecture de la carte des débits, à la demande comme « Tester les cartes »)
+- A10 — Icône de lien et débits en direct : Essai réel de la lecture des débits sur la carte `tasmota32s3-serveur-debits-pac` (derrière le NAPT de l'écran, port 8080), non fait
 - Amélioration [projet] : Dessiner un vrai plan à l'échelle des pièces (si l'utilisateur fournit les dimensions ou un plan)
-- Amélioration [projet] : Lier la page aux façades animées (`volets.js`) : clic sur une pièce -> sa page d'accueil
-- Amélioration [conversation] : Confirmer les placements incertains de A1 (position de la cave)
+- Amélioration [projet] : Clic sur une pièce -> sa page d'accueil ou sa façade animée (`volets.js`) ; les pastilles ont déjà leur icône de lien
 - Amélioration [projet] : Corriger les rattachements Wi-Fi : appareil réel de MAISON pour chaque carte (défaut Freebox Server, faux pour certaines), répéteur du salon sans SSID identifié (`wifi_manuel`)
-- Amélioration [projet] : Pousser les commits du plan de la maison (agent `preparateur-push` d'abord)
-- Amélioration [projet] : Lier le plan aux pages des cartes : clic sur une pièce ou une carte -> sa façade animée (`volets.js`) ou sa page d'accueil
 - Amélioration [projet] : Plan à l'échelle des pièces, si l'utilisateur fournit les dimensions ou un plan
-- Amélioration [projet] : Cible PlatformIO et tâche VS Code pour la tuile « Plan de la maison » (comme les autres outils de l'annuaire)
 
 #### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 75 %
 
