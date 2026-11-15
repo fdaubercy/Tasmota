@@ -39,6 +39,10 @@ label.ch input{margin-top:3px;flex:none}
 input[type=number],select{font:inherit;padding:5px 7px;border:1px solid var(--bord);border-radius:5px;background:var(--champ);color:var(--texte);width:100%}
 .etat{padding:8px 10px;border-radius:6px;background:var(--piste);margin-top:8px;overflow-wrap:anywhere}
 .detail{margin-top:8px} .detail pre{max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin:6px 0 0}
+.suivi{border-color:var(--bleu)} .suivi h2{display:flex;gap:8px;align-items:center}
+.maintenant{font-size:14px;min-height:2.6em;overflow-wrap:anywhere} .maintenant .o{color:var(--bleu);font-weight:600}
+.pastille{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bleu);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}} @media (prefers-reduced-motion:reduce){.pastille{animation:none}}
 .avance{margin-top:8px} .barre{height:8px;border-radius:4px;background:var(--piste);overflow:hidden}
 .rempli{height:100%;width:0;background:var(--bleu);transition:width .6s ease}
 .journal{margin-top:8px;max-height:240px;overflow:auto;padding:6px 8px;border:1px solid var(--bord);border-radius:6px;background:var(--champ);
@@ -71,13 +75,17 @@ HTML = """
   <div class="ligne"><button class="btn prim" id="b-lance">Lancer l'audit</button><button class="btn" id="b-stop" disabled>Arrêter</button></div>
   <div class="etat" id="etat" role="status">Prêt.</div>
   <details class="detail" id="detail" hidden><summary>Détail technique (texte d'origine de claude, en anglais)</summary><pre id="detail-texte"></pre></details>
-  <div class="avance" id="avance" hidden><div class="barre" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="barre"><div class="rempli" id="rempli"></div></div>
-   <div class="doux petit" id="pct"></div></div>
-  <div class="journal" id="journal" hidden tabindex="0" aria-label="Actions de l'agent en direct"></div>
  </section>
  <section class="carte"><h2>Gardés <span class="doux petit" id="n-gardes"></span></h2>
   <p class="doux petit">Chemins à ne plus se voir proposer (mémorisés hors du dépôt).</p><div id="gardes"></div></section>
 </div>
+<div>
+<section class="carte suivi" id="suivi" hidden aria-live="polite"><h2 id="suivi-titre">Audit en cours</h2>
+ <div class="maintenant" id="maintenant"></div>
+ <div class="avance" id="avance"><div class="barre" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="barre"><div class="rempli" id="rempli"></div></div>
+  <div class="doux petit" id="pct"></div></div>
+ <div class="journal" id="journal" tabindex="0" aria-label="Actions de l'agent en direct"></div>
+</section>
 <section class="carte"><h2>Propositions <span class="doux petit" id="n-props"></span></h2>
  <p id="resume" class="doux"></p>
  <div class="ligne">
@@ -90,12 +98,13 @@ HTML = """
  <p class="doux petit" id="non-verifie"></p>
 </section>
 </div>
+</div>
 </main>
 """
 
 JS = r"""
 "use strict";
-var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0};
+var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0, derniere: null};
 function $(id) { return document.getElementById(id); }
 function vide(n) { while (n.firstChild) n.removeChild(n.firstChild); }
 function el(tag, classe, texte) { var e = document.createElement(tag); if (classe) e.className = classe; if (texte != null) e.textContent = texte; return e; }
@@ -237,20 +246,29 @@ function chargeRapport() {
 function duree(s) { return Math.floor(s / 60) + ":" + ("0" + Math.floor(s % 60)).slice(-2); }
 function journalise(e) {
   var j = $("journal");
-  if (e.appels < S.recu) { vide(j); S.recu = 0; }          // nouvel audit : on repart de zero
+  if (e.appels < S.recu) { vide(j); S.recu = 0; S.derniere = null; }          // nouvel audit : on repart de zero
   var bas = j.scrollHeight - j.scrollTop - j.clientHeight < 30;
   (e.activite || []).forEach(function (a) {
     var l = el("div"); l.appendChild(el("span", "t", duree(a.t) + "  ")); l.appendChild(el("span", "o", a.outil + "  ")); l.appendChild(document.createTextNode(a.detail));
-    j.appendChild(l);
+    j.appendChild(l); S.derniere = a;
   });
   S.recu = e.appels;
-  var visible = e.etat === "en_cours" || j.childNodes.length > 0;
-  j.hidden = !visible; $("avance").hidden = !(e.etat === "en_cours" || e.etat === "fini");
+  var enCours = e.etat === "en_cours";
+  $("suivi").hidden = !(enCours || j.childNodes.length > 0);
   if (bas) j.scrollTop = j.scrollHeight;
   var pct = e.etat === "fini" ? 100 : e.progression || 0;
   $("rempli").style.width = pct + "%"; $("barre").setAttribute("aria-valuenow", pct);
-  $("pct").textContent = e.etat === "en_cours" ? "≈ " + pct + " % (estimation : le nombre d'actions n'est pas connu d'avance) · " + e.appels + " actions"
-                                               : pct + " % · " + e.appels + " actions";
+  $("pct").textContent = (enCours ? "≈ " + pct + " % (estimation : le nombre d'actions n'est pas connu d'avance) · " : pct + " % · ")
+    + e.appels + " action" + (e.appels > 1 ? "s" : "") + (e.debut ? " · " + duree(Math.max(0, Math.round((e.fin || Date.now() / 1000) - e.debut))) : "");
+  var t = $("suivi-titre"); vide(t);
+  if (enCours) t.appendChild(el("span", "pastille"));
+  t.appendChild(document.createTextNode(enCours ? "Audit en cours" : e.etat === "fini" ? "Audit terminé" : "Audit interrompu"));
+  var m = $("maintenant"); vide(m);
+  if (enCours) {
+    if (e.message && e.message !== "audit en cours") m.appendChild(el("span", "o", e.message));          // phase : contre-verification, etc.
+    else if (S.derniere) { m.appendChild(document.createTextNode("En ce moment : ")); m.appendChild(el("span", "o", S.derniere.outil + "  ")); m.appendChild(document.createTextNode(S.derniere.detail)); }
+    else m.appendChild(document.createTextNode("L'agent démarre et prépare sa première recherche…"));
+  }
 }
 
 function etat() {
@@ -281,7 +299,7 @@ function lance() {
   api("POST", "/lancer", p).then(function (r) {
     if (!r.ok) { message("ko", r.texte); return; }
     S.gen++; S.rapport = null; rend();
-    vide($("journal")); S.recu = 0;
+    vide($("journal")); S.recu = 0; S.derniere = null; $("suivi").hidden = false; $("suivi").scrollIntoView({block: "nearest"});
     etat();
   });
 }

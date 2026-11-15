@@ -50,6 +50,9 @@ ecrit(racine, "inutile.bak", "reste\n")
 ecrit(racine, "-rf", "nom hostile\n")
 ecrit(racine, "dossier avec espaces/f.txt", "x\n")
 ecrit(racine, "cible/deja.txt", "x\n")
+ecrit(racine, "ref/partitions/a.csv", "x\n")                                                       # dossier au nom commun
+ecrit(racine, "lib/mot.py", "# les partitions de la flash\n")                                  # mot courant, pas un renvoi
+ecrit(racine, "build.ini", "dossier = ref/partitions/a.csv\n")                                     # vrai renvoi, par le chemin
 ecrit(racine, "cfg.ini", "a = -rf\nb = $(echo x)\nc = *.txt\n")                       # cite les noms hostiles
 git(racine, "add", "-A")
 git(racine, "commit", "-q", "-m", "init")
@@ -77,6 +80,10 @@ r, ve = v(prop("outils/calculDesDebits.py"))
 verifie((ve["n_code"], r["risque"], sorted(ve["renvois_code"])), (2, "eleve", ["config.ini", "lib/module.be"]), "renvoi dans du code ou une config : risque eleve")
 r, ve = v(prop("outils/calculDesDebits.py", action="garder"))
 verifie((r["risque"], "risque_agent" in r), ("faible", False), "une proposition « garder » n'est pas relevee")
+
+# 3b. un dossier au nom commun n'est pas cherche par son seul mot (faux positifs), mais bien par son chemin
+r, ve = v(prop("ref/partitions", action="deplacer", vers="archives/partitions"))
+verifie(("lib/mot.py" in ve["renvois_code"], "build.ini" in ve["renvois_code"]), (False, True), "dossier au nom commun : cite par son chemin, pas par le mot seul")
 
 # 4. le fichier ne se compte pas lui-meme
 verifie("outils/calculDesDebits.py" in ve.get("renvois_code", []), False, "pas d'auto-renvoi")

@@ -13,6 +13,7 @@ Une erreur de git (code de sortie inattendu, delai, depot illisible) rend la ver
 Banc : test_menage_verification.py.
 """
 import os
+import re
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -28,6 +29,13 @@ ACTIONS_A_RISQUE = ("supprimer", "deplacer", "archiver")
 
 def est_document(chemin):
     return PurePosixPath(chemin).suffix.lower() in DOCUMENTS
+
+
+def nom_distinctif(nom, racine):
+    """Le nom court (sans extension) n'est cherche que pour un FICHIER dont le nom ne peut pas etre un mot courant : au moins 8 caracteres
+    avec un tiret, un souligne, un chiffre ou une majuscule interne. Pas pour un dossier (« partitions » trouvait 66 fichiers pour 2 vrais renvois)."""
+    return (len(nom.stem) >= 8 and not os.path.isdir(os.path.join(str(racine), str(nom)))
+            and bool(re.search(r"[_\-0-9]|[a-z][A-Z]", nom.stem)))
 
 
 def force_en_cours(proposition, verif):
@@ -67,7 +75,7 @@ def _verifie_une(racine, p, delai, limite):
         return {"disponible": False, "erreur": "chemin refuse"}
     litteral = ":(literal)" + chemin
     nom = PurePosixPath(chemin)
-    motifs = [chemin] + ([nom.stem] if len(nom.stem) >= 8 else [])
+    motifs = [chemin] + ([nom.stem] if nom_distinctif(nom, racine) else [])
     cmd = ["grep", "-I", "-l", "-z", "-F"] + [x for m in motifs for x in ("-e", m)] + ["--", ".", ":(exclude,literal)" + chemin]
 
     def restant():

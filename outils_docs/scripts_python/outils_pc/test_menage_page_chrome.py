@@ -39,6 +39,7 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
                      "journal : l'action hostile reste du texte"),
     "verif-sans-code": ("if (v.n_code) vb.appendChild", "if (false) vb.appendChild", "verif : badge code/config sur le fichier cite par config.ini"),
     "detail-html": ('$("detail-texte").textContent = dt;', '$("detail-texte").innerHTML = dt;', "echec : le detail reste du texte"),
+    "suivi-cache": ('$("suivi").hidden = !(enCours || j.childNodes.length > 0);', '$("suivi").hidden = true;', "suivi : bloc d'avancement visible, au-dessus des propositions, dans l'ecran"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -165,6 +166,11 @@ def scenario(m, temoin):
     verifie(cdp.js("document.getElementById('etat').className.indexOf('en') >= 0 && document.getElementById('b-stop').disabled === false"), True,
             "journal : l'audit est encore en cours quand l'action s'affiche")
     verifie(cdp.js("document.querySelector('#journal div').textContent.indexOf('Bash') >= 0"), True, "journal : l'outil est nomme")
+    verifie(cdp.js("(function(){var s=document.getElementById('suivi'),p=document.getElementById('props'); var r=s.getBoundingClientRect(); return !s.hidden && r.height > 0 && r.top < p.getBoundingClientRect().top && r.top < window.innerHeight;})()"),
+            True, "suivi : bloc d'avancement visible, au-dessus des propositions, dans l'ecran")
+    verifie(cdp.js("document.getElementById('maintenant').textContent.indexOf('En ce moment') >= 0 && document.getElementById('maintenant').textContent.indexOf('Bash') >= 0"), True,
+            "suivi : « En ce moment » nomme l'action en cours")
+    verifie(cdp.js("document.getElementById('suivi-titre').textContent"), "Audit en cours", "suivi : titre pendant l'audit")
     verifie(cdp.js("document.querySelectorAll('#journal img, #journal b').length === 0 && window.__pwn2 === undefined"), True,
             "journal : l'action hostile reste du texte")
     verifie(cdp.js("document.getElementById('journal').textContent.indexOf(" + json.dumps(HOSTILE_ACTION) + ") >= 0"), True, "journal : action affichee telle quelle")
@@ -172,6 +178,7 @@ def scenario(m, temoin):
             "progression : barre visible et non vide pendant l'audit")
     verifie(bool(attend(cdp, "document.getElementById('etat').textContent.indexOf('terminé') >= 0", 40)), True, "audit termine")
     verifie(cdp.js("document.getElementById('rempli').style.width"), "100%", "progression : 100 % a la fin")
+    verifie(cdp.js("document.getElementById('suivi-titre').textContent"), "Audit terminé", "suivi : titre a la fin (le journal reste consultable)")
     verifie(bool(attend(cdp, "document.querySelectorAll('#props .prop').length > 0", 15)), True, "rapport affiche apres l'audit")
     verifie(cdp.js("document.querySelectorAll('#props .prop').length"), 2, "2 propositions actives")
     verifie(cdp.js("document.getElementById('n-props').textContent"), "(2)", "compteur des propositions")
