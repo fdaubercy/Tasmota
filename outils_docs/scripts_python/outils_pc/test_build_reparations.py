@@ -177,6 +177,18 @@ def passe_reparateur(d):
     s, r = rep()
     s._arret = True
     verifie("traite : arret demande -> rien", r.traite(L, "compiler", "", "Compilation", j1, []) is False)
+    # journal du verrou : un processus resté « demande » (attendre, annuler) est nommé, jamais « aucun processus » ;
+    # un processus fermé n'est pas redit sous « demande » (essai hors série du 2026-11-15)
+    proc = {"pid": 77, "nom": "outil.exe"}
+    for etiquette, rendu_verrou, attendu_j in (
+            ("demande restee", {"libre": False, "ferme": [], "attend": [], "demande": [proc], "refuse": []}, "demande : outil.exe (77)"),
+            ("ferme", {"libre": True, "ferme": [proc], "attend": [], "demande": [proc], "refuse": []}, "ferme : outil.exe (77)")):
+        s, r = rep(libere=lambda *a, _r=rendu_verrou: _r)
+        r.traite(L, "compiler", "", "Compilation", j1, [])
+        lignes = [e.get("texte", "") for e in s.evenements if e["type"] == "ligne" and "verrou de" in e.get("texte", "")]
+        verifie("journal du verrou (" + etiquette + ")",
+                len(lignes) == 1 and attendu_j in lignes[0] and "aucun processus" not in lignes[0]
+                and (etiquette != "ferme" or "demande" not in lignes[0]))
     # choix : demande ouverte, reponse, refus d'une 2e reponse ; choix inconnu
     for choix, attendu in (("fermer", True), ("annuler", False)):
         def libere_demande(chemin, liste, pid, demande):

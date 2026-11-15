@@ -361,8 +361,10 @@ class Reparateur:
                 self._ligne(f"dossier de build vidé : {base / env}")
         elif nom == "libere_verrou":
             rendu = self.libere(chemin, verrou.LISTE_BLANCHE, None, self._demande(env, regle, chemin))
-            quoi = [f"{cle} : " + ", ".join(f"{p.get('nom')} ({p.get('pid')})" for p in rendu[cle])
-                    for cle in ("ferme", "attend", "refuse") if rendu.get(cle)]
+            reste = [p for p in rendu.get("demande", []) if p not in rendu.get("ferme", [])]   # reste « demande » : attendre, annuler
+            quoi = [f"{cle} : " + ", ".join(f"{p.get('nom')} ({p.get('pid')})" for p in liste)
+                    for cle, liste in (("ferme", rendu.get("ferme")), ("attend", rendu.get("attend")), ("demande", reste),
+                                       ("refuse", rendu.get("refuse"))) if liste]
             if rendu.get("erreur"):
                 quoi.append("Restart Manager : " + rendu["erreur"])
             self._ligne(filtre_secrets(f"verrou de {chemin} : " + ("; ".join(quoi) or "aucun processus")))
