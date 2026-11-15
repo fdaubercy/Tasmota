@@ -43,11 +43,15 @@ liens: menage-page
 - [x] Cases à cocher sur les propositions de l'étape 1, bouton « Voir ce que ça ferait », liste des commandes, bouton « Appliquer » grisé tant que l'aperçu n'est pas affiché ; message final : « relisez git status, rien n'est commité » — preuve : test_menage_page_chrome.py VERT : une seule case (suppression sans renvoi), boutons grisés, « Appliquer » grisé sans aperçu, aperçu simulé par git, à blanc, confirmation, résultat, annulation par git restore
 - [x] Sonde Chrome avec témoins (bouton actif sans aperçu, texte hostile, case sur une proposition non éligible) — preuve : témoins lot-sans-confirm et lot-apercu-garde détectés ; dépôt jetable, jamais le vrai
 
-## A4 — Essai réel et clôture
-- [ ] Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin — preuve : sortie de `git status`
+## A4 — Rouvrir un rapport sauvegardé (manque constaté le 2026-11-15 : la page redémarrée n'a aucun rapport, donc ni cases ni bloc « Appliquer un lot » ; les rapports ne vivent que sur disque dans `%LOCALAPPDATA%\outils_tasmota\menage\rapports\`)
+- [ ] Route `GET /rapports` (liste : nom, date, nombre de propositions, passe) et `POST /rapports/ouvrir {nom}` : nom pris dans la liste seulement (jamais un chemin libre), rapport revalidé par `menage_rapport.valide`, contre-vérification refaite par git à l'ouverture (l'état du dépôt a pu changer) ; refus si un audit est en cours ; tests dont nom hostile (`..`, chemin absolu) et rapport illisible
+- [ ] Bouton « Rouvrir un rapport » dans la page : liste des rapports sauvegardés, bandeau « rapport du <date>, contre-vérifié maintenant », mêmes cases et même bloc de lot qu'après un audit ; sonde Chrome avec témoin (ouverture d'un rapport sans relancer d'audit, cases visibles)
+
+## A5 — Essai réel et clôture
+- [ ] Essai réel sur 1 ou 2 propositions choisies par l'utilisateur (candidats proposés : les deux fichiers verrou Word `~$…docx` de `outils_docs/Electronique/Connecteur ModBus/`), `git restore` ensuite si besoin — preuve : sortie de `git status`
 - [ ] Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
 
-## A5 — Retour au plan précédent (menage-page)
+## A6 — Retour au plan précédent (menage-page)
 - [ ] Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
 
 ## Améliorations restantes

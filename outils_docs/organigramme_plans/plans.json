@@ -949,8 +949,8 @@
    ],
    "cree": "2026-11-13",
    "maj": "2026-11-15",
-   "pct": 79,
-   "etapes": "57/72",
+   "pct": 81,
+   "etapes": "58/72",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/atelier-visuels.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-13-atelier-visuels-accueil-design.md"
@@ -1093,8 +1093,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 0,
-   "etapes": "0/16",
+   "pct": 38,
+   "etapes": "6/16",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/facade-esclaves-grenier-rdc.md",
    "urls_spec": []
   },
@@ -1112,8 +1112,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 67,
-   "etapes": "16/24",
+   "pct": 87,
+   "etapes": "27/31",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/facade-garage-portail-commande.md",
    "urls_spec": []
   },
@@ -1130,8 +1130,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 50,
-   "etapes": "7/14",
+   "pct": 62,
+   "etapes": "10/16",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-appliquer.md",
    "urls_spec": []
   },
@@ -1149,8 +1149,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 71,
-   "etapes": "25/35",
+   "pct": 87,
+   "etapes": "40/46",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison.md",
    "urls_spec": []
   },

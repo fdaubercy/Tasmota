@@ -14,6 +14,8 @@ Routes (les POST exigent l'en-tete X-Menage: 1 et la meme origine ; client de ce
                     activite: actions de l'agent depuis la n-ieme (secrets masques)}
     GET  /rapport   le rapport valide, sans les propositions « ignorees cette fois » ni les chemins « a garder » ; 404 s'il n'y en a pas
     GET  /gardes    {gardes: [chemins]}
+    GET  /rapports  {rapports: [{nom, date, propositions}]} : rapports sauvegardes hors depot, le plus recent d'abord (A4 du plan menage-appliquer)
+    POST /rapports/ouvrir {nom}  -> {message} : rouvre un rapport DE LA LISTE (jamais un chemin libre), revalide et recontre-verifie par git ; 404 nom inconnu, 400 illisible, 409 audit en cours
     POST /lancer    {zone, categories, anciennete_jours, modele, effort}  -> {message}
     POST /arreter   {}
     POST /appliquer/apercu {ids}  -> {eligibles, refuses, empreinte} : apercu LECTURE SEULE d'un lot de deplacements (A1 du plan menage-appliquer)
@@ -79,6 +81,13 @@ class Etat:
         ok, message = self.audit.lance(params)
         if not ok:
             raise RuntimeError(message)
+        with self._verrou:
+            self.ignorees = set()
+        return {"message": message}
+
+    def ouvre(self, d):
+        """Rouvre un rapport sauvegarde (nom pris dans la liste) : revalide, recontre-verifie ; « ignorees cette fois » repart de zero."""
+        message = self.audit.ouvre_rapport(d.get("nom"))
         with self._verrou:
             self.ignorees = set()
         return {"message": message}
@@ -207,6 +216,8 @@ def fabrique_gestionnaire(acces, etat):
                 self._json(r)
             elif chemin == "/gardes":
                 self._json({"gardes": etat.memoire.charge()})
+            elif chemin == "/rapports":
+                self._json({"rapports": etat.audit.rapports()})
             else:
                 self._envoie(404, b"introuvable")
 
@@ -238,6 +249,8 @@ def fabrique_gestionnaire(acces, etat):
                     self._envoie(403, "geste reserve a ce PC".encode("utf-8"))
                     return
                 self._json(etat.applique(d))
+            elif chemin == "/rapports/ouvrir":
+                self._json(etat.ouvre(d))
             elif chemin == "/appliquer/apercu":
                 self._json(etat.apercu(d))
             elif chemin == "/garder":

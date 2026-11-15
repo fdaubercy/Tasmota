@@ -208,6 +208,69 @@ finally:
 verifie((e["etat"], e["rapport"]["propositions"][0]["verif"]["disponible"], "RuntimeError" in e["rapport"]["propositions"][0]["verif"]["erreur"]),
         ("fini", False, True), "contre-verification en panne : l'audit reste valide, la page dira « indisponible »")
 
+# 7b. rouvrir un rapport sauvegarde (A4 de menage-appliquer) : liste, nom pris dans la liste seulement, revalidation, recontre-verification
+DOSSIER_R = Path(tempfile.mkdtemp()) / "rapports"
+a = audit("ok")
+a.dossier_rapports = DOSSIER_R
+a.lance({})
+attend(a)
+time.sleep(0.5)
+b = ml.Audit(RACINE, lambda: [], programme=PROG, dossier_rapports=DOSSIER_R)      # « page redemarree » : aucun rapport en memoire
+verifie(b.etat()["rapport"], None, "page redemarree : aucun rapport en memoire")
+liste = b.rapports()
+verifie((len(liste), liste[0]["propositions"]), (1, 1), "rapports() : le rapport sauvegarde est liste avec son nombre de propositions")
+nom = liste[0]["nom"]
+sauve = json.loads((DOSSIER_R / nom).read_text(encoding="utf-8"))
+sauve["propositions"][0]["verif"] = {"disponible": True, "n_code": 99, "n_docs": 99}          # verdict perime, ecrit dans le fichier
+(DOSSIER_R / nom).write_text(json.dumps(sauve), encoding="utf-8")
+msg = b.ouvre_rapport(nom)
+e = b.etat()
+v = e["rapport"]["propositions"][0].get("verif", {})
+verifie((e["etat"], len(e["rapport"]["propositions"]), "rouvert" in msg), ("fini", 1, True), "ouvre_rapport : la page a un rapport fini")
+verifie((v.get("n_code"), v.get("n_docs")) != (99, 99) and "disponible" in v, True, "ouvre_rapport : verdict git REFAIT, le verdict ecrit dans le fichier est ecarte")
+verifie(len(list(DOSSIER_R.glob("rapport-*.json"))), 1, "ouvre_rapport ne sauvegarde pas une copie de plus")
+# noms hostiles : seuls les noms de la liste passent
+(DOSSIER_R.parent / "hors.json").write_text(json.dumps(sauve), encoding="utf-8")
+for hostile in ["../hors.json", str(DOSSIER_R.parent / "hors.json"), "rapport-inconnu.json", "", None, 5, ["x"], nom + "/..", nom.upper() + "x"]:
+    try:
+        b.ouvre_rapport(hostile)
+        verifie("accepte", "LookupError", f"nom hostile refuse : {hostile!r}")
+    except LookupError:
+        pass
+    except Exception as ex:
+        verifie(type(ex).__name__, "LookupError", f"nom hostile refuse : {hostile!r}")
+# fichier illisible ou rapport invalide : 400 cote web (ValueError), l'etat de la page ne change pas
+(DOSSIER_R / "rapport-zz-illisible.json").write_text("pas du json", encoding="utf-8")
+(DOSSIER_R / "rapport-zz-invalide.json").write_text(json.dumps({"propositions": [dict(sauve["propositions"][0], chemin="../hors")]}), encoding="utf-8")
+avant = b.etat()["rapport"]
+verifie([r["propositions"] for r in b.rapports() if r["nom"] == "rapport-zz-illisible.json"], [None], "rapport illisible : liste avec propositions None")
+for nom_mauvais in ("rapport-zz-illisible.json", "rapport-zz-invalide.json"):
+    try:
+        b.ouvre_rapport(nom_mauvais)
+        verifie("accepte", "ValueError", f"rapport refuse : {nom_mauvais}")
+    except ValueError:
+        pass
+verifie(b.etat()["rapport"] is avant, True, "rapport refuse : l'etat de la page est inchange")
+# pendant un audit : refus, rapport en place intact
+b._etat["etat"] = "en_cours"
+try:
+    b.ouvre_rapport(nom)
+    verifie("accepte", "RuntimeError", "ouverture pendant un audit refusee")
+except RuntimeError:
+    pass
+b._etat["etat"] = "fini"
+# le plus recent d'abord
+os.utime(DOSSIER_R / "rapport-zz-invalide.json", (time.time() + 100, time.time() + 100))
+verifie(b.rapports()[0]["nom"], "rapport-zz-invalide.json", "rapports() : le plus recent d'abord")
+verifie(ml.Audit(RACINE, lambda: [], programme=PROG).rapports(), [], "sans dossier de rapports : liste vide")
+# mutant : sans le controle « le nom est dans la liste », un chemin hors du dossier s'ouvrirait
+rapports_vrai = ml.Audit.rapports
+ml.Audit.rapports = lambda self: [{"nom": "../hors.json", "date": "", "propositions": 1}]
+c = ml.Audit(RACINE, lambda: [], programme=PROG, dossier_rapports=DOSSIER_R)
+c.ouvre_rapport("../hors.json")
+verifie(c.etat()["etat"], "fini", "mutant : un nom qui sort du dossier s'ouvre des qu'il est dans la liste (le controle de liste est donc la garde)")
+ml.Audit.rapports = rapports_vrai
+
 # 8. mutants : la garde de build et la liste blanche doivent compter
 a = ml.Audit(RACINE, lambda: [], programme=PROG)       # mutant : detection de build neutralisee
 os.environ["FAUX_MODE"] = "ok"

@@ -194,6 +194,45 @@ st, t = s2.req("POST", "/appliquer/apercu", {"ids": ["M1"]})
 verifie((st, "build" in t), (409, True), "apercu pendant un build : 409")
 s2.ferme()
 
+# rouvrir un rapport sauvegarde (A4 de menage-appliquer) : audit, « redemarrage » de la page, puis ouverture
+s4 = Serveur()
+verifie(s4.req("POST", "/lancer", {})[0], 200, "rapports : un audit pour avoir un rapport sauvegarde")
+s4.attend(30)
+time.sleep(0.5)
+s4.ferme()
+s5 = Serveur()                                                   # meme dossier de donnees, etat neuf : la page redemarree
+verifie(s5.req("GET", "/rapport")[0], 404, "page redemarree : pas de rapport en memoire")
+st, t = s5.req("GET", "/rapports")
+liste = json.loads(t)["rapports"] if st == 200 else []
+verifie((st, len(liste) >= 1, liste and liste[0]["propositions"]), (200, True, 2), "GET /rapports : le rapport sauvegarde est liste (le plus recent d'abord)")
+nom = liste[0]["nom"]
+verifie(s5.req("POST", "/rapports/ouvrir", {"nom": nom}, {mw.ENTETE: "0"})[0], 403, "ouvrir sans l'en-tete X-Menage : 403")
+verifie(s5.req("POST", "/rapports/ouvrir", {"nom": nom}, {"Origin": "http://evil.example"})[0], 403, "ouvrir d'une autre origine : 403")
+for hostile in ["../donnees/rapports/" + nom, "rapport-inconnu.json", "", None, 7]:
+    verifie(s5.req("POST", "/rapports/ouvrir", {"nom": hostile})[0], 404, f"ouvrir un nom hors liste : {hostile!r} : 404")
+verifie(s5.req("POST", "/rapports/ouvrir", {})[0], 404, "ouvrir sans nom : 404")
+verifie(s5.req("GET", "/rapport")[0], 404, "refus : toujours pas de rapport en memoire")
+st, t = s5.req("POST", "/rapports/ouvrir", {"nom": nom})
+verifie((st, "rouvert" in t), (200, True), "ouvrir un rapport de la liste : 200")
+st, t = s5.req("GET", "/rapport")
+verifie((st, st == 200 and len(json.loads(t)["propositions"])), (200, 2), "le rapport rouvert est celui de la page")
+verifie(s5.req("POST", "/ignorer", {"id": "M1"})[0], 200, "ignorer M1 sur le rapport rouvert")
+verifie(len(json.loads(s5.req("GET", "/rapport")[1])["propositions"]), 1, "M1 ignoree : absente")
+verifie(s5.req("POST", "/rapports/ouvrir", {"nom": nom})[0], 200, "rouvrir le meme rapport")
+verifie(len(json.loads(s5.req("GET", "/rapport")[1])["propositions"]), 2, "rouvrir remet a zero les « ignorees cette fois »")
+dossier_r = TMP / "donnees" / "rapports"
+(dossier_r / "rapport-zz-illisible.json").write_text("pas du json", encoding="utf-8")
+verifie(s5.req("POST", "/rapports/ouvrir", {"nom": "rapport-zz-illisible.json"})[0], 400, "rapport illisible : 400")
+verifie(len(json.loads(s5.req("GET", "/rapport")[1])["propositions"]), 2, "rapport illisible : le rapport de la page reste en place")
+os.environ["FAUX_LENT"] = "1"
+verifie(s5.req("POST", "/lancer", {})[0], 200, "rapports : audit lent pour le refus pendant un audit")
+time.sleep(1)
+verifie(s5.req("POST", "/rapports/ouvrir", {"nom": nom})[0], 409, "ouvrir pendant un audit : 409")
+s5.req("POST", "/arreter", {})
+s5.attend(20)
+del os.environ["FAUX_LENT"]
+s5.ferme()
+
 # mutant : si l'origine n'etait pas controlee, une origine etrangere passerait (le banc le voit)
 s3 = Serveur()
 s3.acces.origine_autorisee = lambda handler: True

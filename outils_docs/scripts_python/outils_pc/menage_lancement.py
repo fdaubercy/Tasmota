@@ -163,6 +163,16 @@ def _arrete_processus(p):
         p.kill()
 
 
+def contre_verifie(propositions, racine):
+    """Contre-verification par git ; un echec ne perd pas le rapport : chaque proposition dit « indisponible »."""
+    try:
+        return menage_verification.enrichit(propositions, racine)
+    except Exception as e:
+        for p in propositions:
+            p["verif"] = {"disponible": False, "erreur": f"erreur interne : {type(e).__name__}"}
+        return propositions
+
+
 class Audit:
     def __init__(self, racine, builds_en_cours, programme=None, delai=DELAI, gardes=lambda: [], dossier_rapports=None):
         self.dossier_rapports = Path(dossier_rapports) if dossier_rapports else None
@@ -224,6 +234,46 @@ class Audit:
                 vieux.unlink()
         except OSError:
             pass
+
+    def rapports(self):
+        """Rapports sauvegardes, le plus recent d'abord : [{nom, date, propositions}] ; propositions None = fichier illisible."""
+        if not self.dossier_rapports or not self.dossier_rapports.is_dir():
+            return []
+        sortie = []
+        for f in self.dossier_rapports.glob("rapport-*.json"):
+            try:
+                st = f.stat()
+                try:
+                    n = len(json.loads(f.read_text(encoding="utf-8"))["propositions"])
+                except (OSError, ValueError, KeyError, TypeError):
+                    n = None
+                sortie.append((st.st_mtime, {"nom": f.name, "date": time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime)), "propositions": n}))
+            except OSError:
+                continue
+        return [r for _, r in sorted(sortie, key=lambda x: x[0], reverse=True)]
+
+    def ouvre_rapport(self, nom):
+        """Remplace le rapport de la page par un rapport sauvegarde : le nom doit etre dans la liste (jamais un chemin libre),
+        le rapport est revalide puis recontre-verifie par git (l'etat du depot a pu changer). Refuse pendant un audit."""
+        if not isinstance(nom, str) or nom not in {r["nom"] for r in self.rapports()}:
+            raise LookupError("rapport inconnu")
+        if self.etat()["etat"] == "en_cours":
+            raise RuntimeError("un audit est en cours : rapport non rouvert")
+        try:
+            brut = json.loads((self.dossier_rapports / nom).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            raise ValueError(f"rapport illisible : {type(e).__name__}")
+        rapport, erreurs = menage_rapport.valide(brut, self.racine)
+        if rapport is None:
+            raise ValueError("rapport refuse : " + " ; ".join(erreurs[:5]))
+        rapport["propositions"] = contre_verifie(rapport["propositions"], self.racine)
+        message = f"rapport {nom} rouvert, {len(rapport['propositions'])} proposition(s) contre-verifiee(s) maintenant"
+        with self._verrou:
+            if self._etat["etat"] == "en_cours":
+                raise RuntimeError("un audit est en cours : rapport non rouvert")
+            self._etat = {"etat": "fini", "message": message, "rapport": rapport, "debut": None, "fin": time.time(),
+                          "activite": [], "appels": 0, "progression": 100, "detail": ""}
+        return message
 
     def _lit_flux(self, p, finale):
         """Lit le flux stream-json de claude : chaque appel d'outil devient une ligne d'activite, l'evenement final est garde."""
@@ -297,10 +347,6 @@ class Audit:
         if rapport is None:
             return "echec", "rapport refuse : " + " ; ".join(erreurs[:5]), None
         self._pose(message="contre-verification des propositions par git...")
-        try:
-            rapport["propositions"] = menage_verification.enrichit(rapport["propositions"], self.racine)
-        except Exception as e:                 # la contre-verification est un plus : un echec ne doit pas perdre l'audit
-            for p in rapport["propositions"]:
-                p["verif"] = {"disponible": False, "erreur": f"erreur interne : {type(e).__name__}"}
+        rapport["propositions"] = contre_verifie(rapport["propositions"], self.racine)
         n = len(rapport["propositions"])
         return "fini", f"{n} proposition(s)", rapport

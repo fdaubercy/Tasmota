@@ -346,6 +346,17 @@ OUTILS = [
         [_port("http", 7915)],
         "http",
         "Console capturée : " + CONSOLE.format("plan_maison") + "."),
+    Outil(
+        "liens_web", "Liens web", "Liens web", GROUPES[5],
+        "Tous les liens cités dans le dépôt : recherche, ajout d'un lien, archive PDF d'une fiche.",
+        "Page web : liens cités dans les fichiers du fork (par thème) et liens ajoutés à la main, recherche, filtre archivés ou non. "
+        "« Archiver en PDF » copie un PDF ou imprime une page par Chrome sans fenêtre, dans outils_docs/liens_web/archives/ (ignoré par git, "
+        "hôtes publics seulement). Écrit LIENS_WEB.md à la demande. Seul paramètre ici : le port de la page (7905). "
+        "Aucun accès réseau ni écriture avant un geste dans la page : l'arrêter à tout moment.",
+        DOSSIER + "outils_pc/liens_web_web.py",
+        [_port("http", 7905)],
+        "http",
+        "Console capturée : " + CONSOLE.format("liens_web") + "."),
 ]
 
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.

@@ -43,7 +43,15 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
     "couv-html": ('l.appendChild(t); z.appendChild(l);', 'l.appendChild(t); t.innerHTML += c.note; z.appendChild(l);', "couverture : texte de l'agent affiche comme du texte"),
     "lot-sans-confirm": ('if (!aBlanc && !window.confirm(', 'if (false && !window.confirm(', "lot : confirmation refusee, rien n'est applique"),
     "lot-apercu-garde": ('$("b-blanc").disabled = true; $("b-applique").disabled = true;', '$("b-blanc").disabled = true;', "lot : changer la selection invalide l'apercu et grise « Appliquer »"),
-    "lot-reponse-tardive": ('if (JSON.stringify(ids) !== JSON.stringify(S.lot.ids)) return;', 'if (false) return;', "lot : un apercu qui arrive apres un changement de selection n'arme pas « Appliquer »"),
+    "lot-reponse-tardive": ('if (seq !== S.lot.seq) return;', 'if (false) return;', "lot : un apercu qui arrive apres un changement de selection n'arme pas « Appliquer »"),
+    "rouvre-sans-attente": ('b.disabled = true; b.textContent = "Ouverture…";', 'b.disabled = false;',
+                            "rapports : pendant l'ouverture, bouton grise « Ouverture… » et message d'attente"),
+    "rouvre-sans-affichage": ('S.gen++; chargeRapport(); message("ok", r.donnees.message + ".");', 'message("ok", r.donnees.message + ".");',
+                             "rapports : le rapport rouvert s'affiche sans nouvel audit"),
+    "rouvre-lot-garde": ("S.demandes = null; S.appliques = []; S.lot.ids = []; S.lot.apercu = null;", "S.demandes = null; S.appliques = [];",
+                         "rapports : un rapport rouvert repart sans case cochee d'avant"),
+    "rouvre-appliquees-gardees": ("S.demandes = null; S.appliques = []; S.lot.ids", "S.demandes = null; S.lot.ids",
+                                  "rapports : le bloc de lot et sa case sont la, comme apres un audit"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -161,6 +169,7 @@ def scenario(m, temoin):
     verifie(cdp.js("document.querySelectorAll('#p-cat input').length"), 7, "une case par controle")
     verifie(cdp.js("document.title"), "Ménage du dépôt", "titre")
     verifie(cdp.js("document.getElementById('b-copie').disabled"), True, "copier grise sans rapport")
+    verifie(cdp.js("document.getElementById('b-rouvre').disabled && document.getElementById('n-rapports').textContent"), "(aucun)", "rapports : aucun rapport sauvegarde, « Rouvrir » grise")
     verifie(cdp.js("document.getElementById('n-zone').textContent"), "(%d/%d)" % (len(mw.ml.ZONES), len(mw.ml.ZONES)), "groupe dossiers : compte des cases cochees")
     verifie(cdp.js("(function(){var d=document.getElementById('p-cat').parentNode; d.open=false; var c=document.getElementById('p-cat'); var ferme=!c.checkVisibility({contentVisibilityAuto:true}); d.open=true; return d.tagName==='DETAILS' && ferme && c.checkVisibility()})()"), True, "groupe controles : repliable")
 
@@ -303,6 +312,27 @@ def scenario(m, temoin):
         verifie(cdp.js("document.querySelectorAll('#detail b').length"), 0, "echec : le detail reste du texte")
     finally:
         os.environ.pop("FAUX_MENAGE", None)
+
+    # rouvrir un rapport sauvegarde (A4 de menage-appliquer) : l'audit reussi du debut est sur disque, la page n'a plus de rapport (l'audit en echec l'a remplace)
+    verifie(cdp.js("document.querySelectorAll('#props .prop').length"), 0, "rapports : la page n'a plus de rapport avant la reouverture")
+    verifie(cdp.js("document.querySelectorAll('#p-rapport option').length >= 1 && document.getElementById('b-rouvre').disabled === false"), True,
+            "rapports : l'audit reussi est dans la liste, « Rouvrir » est actif")
+    verifie(cdp.js("document.querySelector('#p-rapport option').textContent.indexOf('3 proposition(s)') >= 0"), True, "rapports : la liste donne la date et le nombre de propositions")
+    cdp.js("S.lot.ids = ['M2']")                                       # une case cochee d'avant : le nouveau rapport doit repartir sans
+    cdp.js("(function(){var r=window.fetch; window.fetch=function(u,o){var p=r.apply(this,arguments); return String(u).indexOf('/rapports/ouvrir')>=0 ? new Promise(function(ok){setTimeout(function(){ok(p)},1500)}) : p;};})()")                      # ouverture ralentie : l'attente doit se voir
+    clic(cdp, "b-rouvre")
+    time.sleep(0.5)
+    verifie(cdp.js("document.getElementById('b-rouvre').disabled && document.getElementById('b-rouvre').textContent.indexOf('Ouverture') >= 0 && document.getElementById('etat').textContent.indexOf('Ouverture du rapport') >= 0"), True,
+            "rapports : pendant l'ouverture, bouton grise « Ouverture… » et message d'attente")
+    verifie(bool(attend(cdp, "document.querySelectorAll('#props .prop').length === 2", 15)), True, "rapports : le rapport rouvert s'affiche sans nouvel audit")
+    verifie(cdp.js("document.getElementById('etat').textContent.indexOf('rouvert') >= 0 && document.getElementById('etat').className.indexOf('ok') >= 0"), True,
+            "rapports : message de reouverture")
+    verifie(cdp.js("document.getElementById('lot-n').textContent"), "Aucune ligne cochée.", "rapports : un rapport rouvert repart sans case cochee d'avant")
+    verifie(cdp.js("document.getElementById('lot').hidden === false && document.querySelectorAll('.lot-case input').length"), 1,
+            "rapports : le bloc de lot et sa case sont la, comme apres un audit")
+    verifie(cdp.js("document.querySelector('#props-encours .prop .verif').textContent.indexOf('référencé par 1 fichier(s) de code ou de config') >= 0"), True,
+            "rapports : verdict git refait a l'ouverture (renvoi de config.ini)")
+    verifie(cdp.js("document.querySelectorAll('#props img, #props b, #p-rapport img').length === 0 && window.__pwn === undefined"), True, "rapports : texte du rapport rouvert affiche comme du texte")
 
     # theme
     cdp.js("var c=document.getElementById('theme'); c.checked=!c.checked; c.dispatchEvent(new Event('change',{bubbles:true}))")

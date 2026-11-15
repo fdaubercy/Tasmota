@@ -6,6 +6,8 @@ Un compteur de generation (S.gen) ecarte une reponse de /rapport depassee par un
 Sonde : test_menage_page_chrome.py.
 """
 
+import menage_page_rapports
+
 CSS = """
 :root{color-scheme:light;--fond:#f6f7f9;--carte:#fff;--bord:#ddd;--texte:#222;--doux:#666;--bleu:#2563eb;--vert:#1e7e3a;
   --orange:#a86400;--rouge:#c0392b;--btn:#fff;--btn-bord:#888;--piste:#e9e9ea;--orange-fond:#fff4e0;--vert-fond:#e3f4e8;
@@ -82,7 +84,7 @@ HTML = """
   <div class="etat" id="etat" role="status">Prêt.</div>
   <details class="detail" id="detail" hidden><summary>Détail technique (texte d'origine de claude, en anglais)</summary><pre id="detail-texte"></pre></details>
  </section>
- <section class="carte"><h2>Gardés <span class="doux petit" id="n-gardes"></span></h2>
+@@RAPPORTS@@ <section class="carte"><h2>Gardés <span class="doux petit" id="n-gardes"></span></h2>
   <p class="doux petit">Chemins à ne plus se voir proposer (mémorisés hors du dépôt).</p><div id="gardes"></div></section>
 </div>
 <div>
@@ -125,11 +127,12 @@ HTML = """
 </div>
 </main>
 """
+HTML = HTML.replace("@@RAPPORTS@@", menage_page_rapports.HTML.strip())
 
 JS = r"""
 "use strict";
 var S = {gen: 0, rapport: null, options: null, scrute: null, recu: 0, derniere: null, demandes: null, arefaire: [],
-         lot: {ids: [], apercu: null}, appliques: []};
+         lot: {ids: [], apercu: null, seq: 0}, appliques: []};
 function $(id) { return document.getElementById(id); }
 function vide(n) { while (n.firstChild) n.removeChild(n.firstChild); }
 function el(tag, classe, texte) { var e = document.createElement(tag); if (classe) e.className = classe; if (texte != null) e.textContent = texte; return e; }
@@ -323,7 +326,7 @@ function lotPossible(p) {
   return !p.en_cours && (p.action === "supprimer" || p.action === "deplacer") && etapeDe(p) === "sur" && S.appliques.indexOf(p.chemin) < 0;
 }
 function lotChange(garde) {
-  S.lot.apercu = null; vide($("lot-apercu")); if (!garde) vide($("lot-resultat"));
+  S.lot.seq++; S.lot.apercu = null; vide($("lot-apercu")); if (!garde) vide($("lot-resultat"));
   var n = S.lot.ids.length;
   $("lot-n").textContent = n ? n + " ligne(s) dans le lot" : "Aucune ligne cochée.";
   $("b-apercu").disabled = !n; $("b-blanc").disabled = true; $("b-applique").disabled = true;
@@ -336,11 +339,11 @@ function rendLot(r) {
 }
 function ligneLot(texte, classe) { return el("div", classe || "doux petit", texte); }
 function apercuLot() {
-  var ids = S.lot.ids.slice(), z = $("lot-apercu"); vide(z); vide($("lot-resultat"));
+  var ids = S.lot.ids.slice(), seq = S.lot.seq, z = $("lot-apercu"); vide(z); vide($("lot-resultat"));
   $("b-apercu").disabled = true;
   api("POST", "/appliquer/apercu", {ids: ids}).then(function (x) {
     $("b-apercu").disabled = !S.lot.ids.length;
-    if (JSON.stringify(ids) !== JSON.stringify(S.lot.ids)) return;       // la selection a change pendant l'attente : cette reponse ne vaut plus rien
+    if (seq !== S.lot.seq) return;       // la selection a change pendant l'attente : cette reponse ne vaut plus rien
     if (!x.ok) { z.appendChild(ligneLot("Aperçu refusé : " + x.texte, "etat ko")); return; }
     var d = x.donnees;
     z.appendChild(el("h4", null, d.eligibles.length + " action(s) que git ferait (simulation par git -n)"));
@@ -470,7 +473,7 @@ function etat() {
       if (!S.scrute) S.scrute = setInterval(etat, 1500);
     } else {
       if (S.scrute) { clearInterval(S.scrute); S.scrute = null; }
-      if (e.etat === "fini") { message("ok", "Audit terminé : " + e.message + "."); chargeRapport(); }
+      if (e.etat === "fini") { message("ok", "Audit terminé : " + e.message + "."); chargeRapport(); chargeRapports(); }
       else if (e.etat === "echec") message("ko", "L'audit a échoué. " + e.message);
       else message("", "Prêt.");
     }
@@ -515,7 +518,7 @@ $("b-stop").onclick = arrete;
 $("b-copie").onclick = copie;
 $("f-cat").onchange = $("f-risque").onchange = rend;
 chargeOptions().then(function () { chargeGardes(); etat(); });
-"""
+""" + menage_page_rapports.JS
 
 THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getItem('menage-theme'); } catch (e) {}"
               " if (t !== 'clair' && t !== 'sombre') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)"

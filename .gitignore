@@ -91,3 +91,6 @@ tasmota/tasmota_defines_for_berry.h
 outils_docs/sauvegardes_cartes/
 .env
 .env.*
+
+# Archives PDF des liens web (outil « Liens web » : droits d'auteur et poids, depot public)
+outils_docs/liens_web/archives/
