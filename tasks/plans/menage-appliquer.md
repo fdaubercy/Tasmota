@@ -23,6 +23,7 @@ liens: menage-page
 - **Réversibilité** : tout passe par git, rien n'est commité par la page. L'utilisateur relit `git status` et commite lui-même ; `git restore --staged --worktree` annule.
 - **Garde-fous** : refus pendant un build ; refus si le fichier est modifié ou non suivi ; refus si la destination existe ; contre-vérification refaite
   juste avant l'application (l'état a pu changer depuis l'audit) ; en-tête anti-CSRF et nom d'hôte comme les autres routes ; une seule application à la fois.
+- **Fin de chantier** : revenir au plan `menage-page` (A5 ci-dessous), demande de l'utilisateur du 2026-11-15.
 - **Après** : `verifie_references_docs.py` est lancé et sa sortie affichée ; les renvois cassés sont listés, jamais corrigés seuls.
 
 ## A1 — Aperçu d'un lot (lecture seule)
@@ -41,6 +42,9 @@ liens: menage-page
 ## A4 — Essai réel et clôture
 - [ ] Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin — preuve : sortie de `git status`
 - [ ] Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
+
+## A5 — Retour au plan précédent (menage-page)
+- [ ] Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
 
 ## Améliorations restantes
 - [ ] [projet] Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
