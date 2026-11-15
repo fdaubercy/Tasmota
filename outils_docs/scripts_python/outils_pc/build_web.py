@@ -243,9 +243,13 @@ def fabrique_gestionnaire(serie, acces, racine, dossier):
             fichiers = demande.get("fichiers")             # onglet Fichiers : {liste, jeton, recharger_berry, redemarrer}
             if fichiers is not None and not isinstance(fichiers, dict):
                 raise ValueError("fichiers attendu sous forme d'objet")
+            ia_auto = demande.get("ia_auto", False)         # case « Relancer apres reparation par l'IA » : ce PC seulement
+            if not isinstance(ia_auto, bool):
+                raise ValueError("ia_auto attendu sous forme de booléen")
             ancien, etat["debut"] = etat["debut"], time.time()
             try:
-                serie.lance(objets, actions, fichiers, publier=demande.get("publier_fiches") is True)   # 409 : motifs
+                serie.lance(objets, actions, fichiers, publier=demande.get("publier_fiches") is True,
+                            ia_auto=ia_auto and acces_web.est_local(client))   # 409 : motifs
             except RuntimeError:
                 etat["debut"] = ancien                    # un refus ne change pas le lancement en cours
                 raise

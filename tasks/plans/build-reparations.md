@@ -123,13 +123,17 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
 - [x] Routes `POST /reparations/diagnostic {env}` et `POST /reparations/appliquer {env, regle}` (ce PC seulement) ; « Appliquer et
   relancer » lance une série d'un seul env avec les actions non réussies, ou attend la fin de la série en cours ; bouton « Faire
   diagnostiquer par l'IA » sur un env en échec sans règle (résumé de la série), dans `build_page_reparations.py` — preuve : build_web_reparations.py::ia + 6 lignes de build_web.py ; test_build_web (400/409/403, distant 403) VERT ; sonde test_build_page_reparations_chrome.py VERT (bouton, proposition echappee, POST appliquer avec la regle)
-- [ ] Bancs verts, un essai réel de diagnostic sur un journal d'échec archivé (lecture seule, rien appliqué) — preuve : …
+- [x] Bancs verts, un essai réel de diagnostic sur un journal d'échec archivé (lecture seule, rien appliqué) — preuve : 2026-11-15, `diagnostique()` sur le journal 20261115-043620 (uv.exe pip install tool-esptoolpy, délai de 60 s) : 23 s, ok vrai, cause juste (délai ponctuel d'uv), règle `attendre 20 s` à l'étape prebuild, motif validé contre le journal, aucun fichier du dépôt écrit ; bancs verts (commit 7f743f8bf)
+
+## A6b — Case « Relancer après réparation par l'IA » (relance automatique)
+- [x] Tests d'abord (rouges) : `test_build_serie.py::test_reparations_ia` (faux `claude`), `test_build_web.py::test_ia_auto`, sonde `test_build_page_reparations_chrome.py` (case) — preuve : test_reparations_ia rouge (TypeError ia_auto inconnu) avant le code, puis 12 contrôles verts
+- [x] `build_reparations.py::Reparateur._ia` (un seul diagnostic par env et par lancement, jamais un envoi, aucune règle du catalogue, arrêt prioritaire, build étranger refusé), `_ia_garde` (règle ajoutée seulement si la relance réussit), `build_reparations_ia.diagnostique(arret=)` interruptible ; `Serie.lance(ia_auto=)`, `/lancer {ia_auto}` booléen (400) ignoré hors de ce PC, case de la page (`localStorage`) — preuve : build_reparations.py 371->421 lignes, build_serie.py +6, build_web.py +6, build_page.py +1 ; test_build_serie 221 OK / VERT, test_build_web VERT, sonde Chrome VERT (4 contrôles de la case), Chrome sonde_ : 0 orphelin
+- [x] Bancs verts, mutants (garde « un seul appel », garde « jamais un envoi », garde client distant) rouges — preuve : 3 mutants rouges (relance échouée -> 2 appels IA ; upload COM diagnostiqué ; ia_auto transmis à un client distant), fichiers restaurés
 
 ## A7 — Documentation, essai et commit
-- [ ] `outils_docs/README.md` (§ « Build et téléversement (page web) » : réparations, catalogue, liste blanche, panneau), `CLAUDE.md`
-  (carte des documents : les modules neufs), `tasks/README.md` régénéré ; `verifie_references_docs.py` sans renvoi faux
-- [ ] Relecteurs `relecteur-pages-web` (page et routes, sécurité : fermeture de processus, clients distants, XSS du journal) puis
-  correction des défauts ; mutants des bancs relus
+- [x] `outils_docs/README.md` (§ « Build et téléversement (page web) » : réparations, catalogue, liste blanche, panneau), `CLAUDE.md`
+  (carte des documents : les modules neufs), `tasks/README.md` régénéré ; `verifie_references_docs.py` sans renvoi faux — preuve : README.md § « Réparation automatique des pannes », CLAUDE.md (carte des documents, exceptions build_page/build_serie/build_web) ; verifie_references_docs.py : 0 défaut ; tasks/README.md non régénéré ici
+- [x] Relecteurs `relecteur-pages-web` (page, routes, sécurité) puis correction des défauts — preuve : relecteur-pages-web et relecteur-outils-python du 2026-11-15, aucun bloquant ; corrigés : exception de builds_en_cours() dans `_ia`, `_ia_regle` remis à None, case de l'IA désactivée hors de ce PC avec coût visible (`build_page_reparations.py`) ; sonde verte (23 contrôles), mutants rouges (A6, A6b). Restent notés : filtre ERR_CONNECTION_REFUSED trop large dans la sonde, test serveur du refus distant d'`ia_auto` par `traite_post`, clôture « réussie » d'une règle IA non applicable (cosmétique)
 - [ ] Essai réel hors série de production : un fichier du dépôt tenu ouvert par un script de test pendant un faux build (pas de vrai
   `pio`) ; la page annonce, libère, relance
 - [ ] Commit par chemins explicites (module neufs, bancs, plan, spec, README) — preuve : `git show --stat HEAD`

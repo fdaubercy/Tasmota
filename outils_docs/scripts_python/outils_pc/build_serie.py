@@ -49,6 +49,9 @@ Evenements numerotes (modele maintenance/synchro_fork_session.Session, rejoues p
   reprise_carte  env, port, choix (continuer | passer | arret) : fin de la pause
   reparation  env, action, regle, etat (en_cours | reussie | echouee), message : un fils pio rate est repare puis la meme
            etape relancee (build_reparations.Reparateur ; jamais un envoi, 2 relances au plus ; arret = env « arrete »)
+           `lance(..., ia_auto=True)` (case de la page, ce PC seulement) : panne sans regle du catalogue sur un fils pio
+           (jamais un envoi) -> UN diagnostic IA par env et par lancement, regle valide appliquee puis etape relancee ;
+           ligne `[réparation IA] …` dans le journal ; la regle n'entre au catalogue local (origine ia) que si la relance reussit
   choix_reparation  env, regle, texte, boutons (fermer | attendre | annuler) : un processus hors liste blanche tient le
            fichier ; reponse par repond_reparation, la reparation abandonnee sans reponse en 10 min
   fin      env=None, resultat (termine | arrete), succes, echecs, passes, arretes, non_lances, fichiers_modifies
@@ -360,7 +363,7 @@ class Serie:
 
     # -- lancement et arret -----------------------------------------------------------------------------
 
-    def lance(self, lignes, actions, fichiers=None, publier=False):
+    def lance(self, lignes, actions, fichiers=None, publier=False, ia_auto=False):
         lignes, actions = list(lignes), set(actions)
         motifs = self.controle(lignes, actions, fichiers)
         reparateur = self.fabrique_reparateur(self)     # avant _actif : une fabrique qui leve ne bloque pas la page
@@ -372,6 +375,7 @@ class Serie:
             self._actif, self._arret, self._arret_immediat = True, False, False
             self._publier = bool(publier)
             self.reparateur = reparateur
+            reparateur.ia_auto = bool(ia_auto)          # case « Relancer apres reparation par l'IA » (A6b)
             self._choix = {"fichiers": list(fichiers["liste"]), "recharger_berry": bool(fichiers.get("recharger_berry")),
                            "redemarrer": bool(fichiers.get("redemarrer")), "transport": fichiers.get("transport", "http"),
                            "effacer": bool(fichiers.get("effacer"))} if fichiers else {}

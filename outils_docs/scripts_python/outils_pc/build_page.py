@@ -656,7 +656,7 @@ $("lancer").onclick = async function () {
     $("publier-fiches").checked = false;
   }
   $("lancer").disabled = true;
-  var r = await appel("/lancer", {lignes: lignes, actions: acts, publier_fiches: publier});
+  var r = await appel("/lancer", {lignes: lignes, actions: acts, publier_fiches: publier, ia_auto: $("ia-auto").checked});
   if (r.ok) enCours = true;
   if (!r.ok) {
     var ul = h("ul", {});

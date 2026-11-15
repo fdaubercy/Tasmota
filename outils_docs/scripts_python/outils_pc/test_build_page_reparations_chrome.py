@@ -76,6 +76,30 @@ def sonde(m, capture):
     s.verifie("Réparation échouée" in cdp.js(BANDEAUX)[0]["texte"], True, "fin : relance rejetee (meme panne) -> bandeau « échouée »")
     s.attend(cdp, "!document.getElementById('lancer').disabled", 20)
 
+    # case « Relancer apres reparation par l'IA » : decochee par defaut, memorisee (ce navigateur), envoyee dans le lancement
+    CASE = "(() => { const c = document.getElementById('ia-auto'); return c ? c.checked : null; })()"
+    s.verifie(cdp.js(CASE), False, "case IA : presente et decochee par defaut")
+    cdp.js("(() => { const c = document.getElementById('ia-auto'); c.checked = true; c.dispatchEvent(new Event('change')); return true; })()")
+    m.ouvre()
+    s.attend(cdp, "document.getElementById('ia-auto')", 10)
+    s.verifie(cdp.js(CASE), True, "case IA : cochee, memorisee apres rechargement")
+    cdp.js("""(() => { const f0 = window.fetch; window._f0 = f0; window._lancers = [];
+      window.fetch = function (u, o) { if (String(u) === '/lancer') { window._lancers.push(JSON.parse(o.body));
+          return Promise.resolve(new Response('{"ok": true}', {status: 200})); } return f0.apply(this, arguments); }; return true; })()""")
+    s.attend(cdp, "document.querySelector('#env-" + B + "')", 10)
+    for env in (s.A, B, s.C):
+        s.coche(cdp, f"#env-{env}", env == B)
+    for action in ("compiler", "upload", "erase_upload", "buildfs", "uploadfs"):
+        s.coche(cdp, f'input[name=action][value="{action}"]', action == "compiler")
+    cdp.js("document.getElementById('lancer').click()")
+    s.attend(cdp, "window._lancers.length === 1", 10)
+    s.verifie(cdp.js("window._lancers[0].ia_auto"), True, "case IA : ia_auto vrai envoye dans POST /lancer")
+    cdp.js("window.fetch = window._f0; document.getElementById('ia-auto').checked = false; "
+           "document.getElementById('ia-auto').dispatchEvent(new Event('change')); true")
+    m.ouvre()
+    s.attend(cdp, "document.getElementById('ia-auto')", 10)
+    s.verifie(cdp.js(CASE), False, "case IA : decochee, memorisee apres rechargement")
+
     # choix Fermer / Attendre / Annuler (evenement synthetique, POST /reparation bouchonne)
     cdp.js("""(() => { const f0 = window.fetch; window._f1 = f0; window._posts = []; window._refus = false;
       window.fetch = function (u, o) { if (String(u) === '/reparation') { window._posts.push(JSON.parse(o.body));

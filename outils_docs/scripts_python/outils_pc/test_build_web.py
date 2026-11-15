@@ -815,6 +815,28 @@ def test_fermeture_attend_envoi():
             b.ferme()
 
 
+def test_ia_auto(b):
+    """POST /lancer {ia_auto} : booleen valide cote serveur (400 sinon), ignore pour un client distant (plan A6b)."""
+    vus = []
+    lance, b.serie.lance = b.serie.lance, lambda *a, **k: vus.append(k.get("ia_auto"))
+    corps = {"lignes": [LIGNE_A], "actions": ["compiler"]}
+    vrai = acces_web.est_local
+    try:
+        verifie([b.json("POST", "/lancer", dict(corps, ia_auto=x))[0] for x in ("oui", 1, None)], [400, 400, 400],
+                "ia_auto : valeur non booleenne = 400, rien lance")
+        verifie(vus, [], "ia_auto : refus avant tout lancement")
+        for valeur in (True, False):
+            b.json("POST", "/lancer", dict(corps, ia_auto=valeur))
+        b.json("POST", "/lancer", corps)
+        verifie(vus, [True, False, False], "ia_auto : transmis a la serie, faux par defaut (client de ce PC)")
+        vus.clear()
+        acces_web.est_local = lambda adresse: False                             # client distant avec le jeton
+        b.requete("POST", "/lancer", dict(corps, ia_auto=True), entetes={"X-Build": "1", "Cookie": f"{b.acces.cookie}={b.acces.jeton}"})
+        verifie(vus, [False], "ia_auto : ignore pour un client distant")
+    finally:
+        acces_web.est_local, b.serie.lance = vrai, lance
+
+
 def principal():
     with tempfile.TemporaryDirectory() as t:
         os.environ["OUTILS_TASMOTA_DOSSIER"] = str(Path(t) / "outils")
@@ -823,7 +845,7 @@ def principal():
             for test in (test_routes_locales, test_page_contient, test_envs_fs_avec_firmware, test_post_sans_entete_refuse, test_distant_sans_jeton_refuse,
                          test_corps_borne, test_port_ecrit_puis_relu, test_port_refuse_pendant_build_externe, test_defaut, test_cache, test_memoire_carte,
                          test_lancement, test_flux_et_journal, test_journal_dernier_lancement, test_arret,
-                         test_sortie_en_direct, test_erase_upload, test_fichiers, test_continuer, test_reparations):
+                         test_sortie_en_direct, test_erase_upload, test_fichiers, test_continuer, test_reparations, test_ia_auto):
                 test(b)
         finally:
             b.ferme()

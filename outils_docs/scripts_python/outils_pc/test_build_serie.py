@@ -1418,6 +1418,94 @@ def test_reparations():
         except RuntimeError:
             pass
 
+INCONNUE = {"code": 1, "lignes": ["Compiling .pio/build/{env}/src/a.cpp.o", "PANNE_INCONNUE 42 : cause jamais vue", "[FAILED] Took 0.10 seconds"]}
+FAUX_CLAUDE = """import json, os, sys, time
+d = os.environ["FAUX_DOSSIER"]
+sys.stdin.read()
+open(os.path.join(d, "appels.txt"), "a").write("x")
+time.sleep(float(os.environ.get("FAUX_DORT", "0")))
+if os.environ.get("FAUX_GUERIT") == "1":
+    open(os.environ["BUILD_WEB_FAUX_SCENARIO"], "w").write("{}")
+sys.stdout.write(open(os.path.join(d, "reponse.txt"), encoding="utf-8").read())
+"""
+REGLE_IA = {"titre": "Panne inconnue", "motif": r"PANNE_INCONNUE \d+", "actions": [{"action": "attendre", "parametres": {"secondes": 0}}]}
+
+
+def montage_ia(t, scenario, reponse, guerit=True, dort=0, regles=False):
+    """Montage dont le Reparateur a un faux `claude` (jamais le vrai) : `reponse` = proposition (dict ou texte brut)."""
+    import functools
+    import build_reparations_ia as ia
+    m = Montage(t, scenario)
+    d = m.t / "faux"
+    d.mkdir()
+    (d / "faux_claude.py").write_text(FAUX_CLAUDE, encoding="utf-8")
+    (d / "reponse.txt").write_text(json.dumps({"result": reponse if isinstance(reponse, str) else json.dumps(reponse)}), encoding="utf-8")
+    os.environ.update(FAUX_DOSSIER=str(d), FAUX_GUERIT="1" if guerit else "0", FAUX_DORT=str(dort),
+                      OUTILS_TASMOTA_DOSSIER=str(m.t / "outils"))
+    m.faux_appels = lambda: len((d / "appels.txt").read_text()) if (d / "appels.txt").is_file() else 0
+    regs = br.charge_catalogue(br.BASE, m.t / "absent.json") if regles else []
+    for r in regs:
+        r.actions = [dict(a, parametres={"secondes": 0.05}) if a["action"] == "attendre" else a for a in r.actions]
+    m.serie.fabrique_reparateur = lambda s: br.Reparateur(
+        s, regs, libere=lambda *a: {"libre": True, "ferme": [], "attend": [], "demande": [], "refuse": []}, diagnostique=functools.partial(ia.diagnostique, programme=[sys.executable, str(d / "faux_claude.py")]))
+    return m
+
+
+def lance_ia(m, lignes, actions, ia_auto=True):
+    m.serie.lance(lignes, set(actions), ia_auto=ia_auto)
+    return m.attend("fin")
+
+
+def test_reparations_ia():
+    """Plan build-reparations A6b : case « Relancer apres reparation par l'IA » (un seul appel IA par env, jamais un envoi)."""
+    proposition = {"cause": "inconnue", "explication": "x", "regle": REGLE_IA}
+    with tempfile.TemporaryDirectory() as t:              # case cochee, panne inconnue, la relance reussit
+        m = montage_ia(t, {A: {"build": INCONNUE}}, proposition)
+        ev = lance_ia(m, [com(A)], {"compiler"})
+        local = m.dossier / "reparations.json"
+        regles = json.loads(local.read_text(encoding="utf-8"))["regles"] if local.is_file() else []
+        verifie((du_type(ev, "fin_env")[0]["resultat"], len(m.appels()), m.faux_appels(), [(r["origine"]) for r in regles]),
+                ("succes", 2, 1, ["ia"]), "ia auto : diagnostic, regle appliquee, relance reussie, regle ajoutee (origine ia)")
+        verifie([e["etat"] for e in du_type(ev, "reparation", env=A)][-1], "reussie", "ia auto : evenement reparation reussie")
+        textes = "".join(p.read_text(encoding="utf-8") for p in (m.dossier / "journaux").glob("*.log"))
+        verifie("[réparation IA]" in textes, True, "ia auto : ligne [réparation IA] dans le journal de l'env")
+    with tempfile.TemporaryDirectory() as t:              # case decochee : comportement d'avant
+        m = montage_ia(t, {A: {"build": INCONNUE}}, proposition)
+        ev = lance_ia(m, [com(A)], {"compiler"}, ia_auto=False)
+        verifie((du_type(ev, "fin_env")[0]["resultat"], len(m.appels()), m.faux_appels(), du_type(ev, "reparation")),
+                ("echec", 1, 0, []), "ia auto : case decochee -> aucun appel IA, echec comme avant")
+    with tempfile.TemporaryDirectory() as t:              # une regle du catalogue correspond : pas d'IA
+        m = montage_ia(t, {A: {"build": ECHEC_VERROU}}, proposition, guerit=False, regles=True)
+        ev = lance_ia(m, [com(A)], {"compiler"})
+        verifie((m.faux_appels(), du_type(ev, "fin_env")[0]["resultat"]), (0, "echec"), "ia auto : regle du catalogue -> pas d'appel IA")
+    for libelle, reponse in (("regle refusee", {"cause": "x", "regle": dict(REGLE_IA, motif="ABSENT_DU_JOURNAL_X")}),
+                             ("sortie non JSON", "ceci n'est pas du json")):
+        with tempfile.TemporaryDirectory() as t:
+            m = montage_ia(t, {A: {"build": INCONNUE}}, reponse)
+            ev = lance_ia(m, [com(A), com(B)], {"compiler"})
+            verifie(([e["resultat"] for e in du_type(ev, "fin_env")], m.faux_appels(), [a["env"] for a in m.appels()]),
+                    (["echec", "succes"], 1, [A, B]), f"ia auto : {libelle} -> env en echec, serie continue, un seul appel")
+            fin = [e for e in du_type(ev, "reparation", env=A)]
+            verifie((bool(fin), fin[-1]["etat"] if fin else ""), (True, "echouee"), f"ia auto : {libelle} -> evenement echouee")
+    with tempfile.TemporaryDirectory() as t:              # la relance echoue : regle non ajoutee, pas de seconde IA
+        m = montage_ia(t, {A: {"build": INCONNUE}}, proposition, guerit=False)
+        ev = lance_ia(m, [com(A)], {"compiler"})
+        verifie((du_type(ev, "fin_env")[0]["resultat"], len(m.appels()), m.faux_appels(), (m.dossier / "reparations.json").is_file()),
+                ("echec", 2, 1, False), "ia auto : relance echouee -> regle non ajoutee, aucun second appel IA")
+    with tempfile.TemporaryDirectory() as t:              # upload COM : jamais diagnostique ni relance
+        m = montage_ia(t, {A: {"upload": INCONNUE}}, proposition)
+        ev = lance_ia(m, [com(A)], {"compiler", "upload"})
+        verifie((len(m.appels()), m.faux_appels(), du_type(ev, "reparation")), (1, 0, []), "ia auto : upload COM jamais diagnostique")
+    with tempfile.TemporaryDirectory() as t:              # arret pendant le diagnostic
+        m = montage_ia(t, {A: {"build": INCONNUE}}, proposition, dort=30)
+        m.serie.lance([com(A), com(B)], {"compiler"}, ia_auto=True)
+        m.attend("reparation", etat="en_cours")
+        debut = time.monotonic()
+        m.serie.arrete(False)
+        ev = m.attend("fin")
+        verifie((du_type(ev, "fin_env")[0]["resultat"], len(m.appels()), time.monotonic() - debut < 8),
+                ("arrete", 1, True), "ia auto : arret pendant le diagnostic -> env arrete, pas de relance")
+
 
 def principal():
     garde_fou()
@@ -1434,7 +1522,7 @@ def principal():
                  test_erase_upload_commandes, test_erase_upload_refus, test_erase_upload_envoi_et_echec,
                  test_solidification_vide, test_sans_fs, test_fs_par_firmware, test_pause_fs_par_firmware, test_data_dir_avant_pio,
                  test_uploadfs_ota_identite, test_fichiers_ota, test_fichiers_mqtt, test_pourcent_global_envoi,
-                 test_publication_fiches, test_reparations):
+                 test_publication_fiches, test_reparations, test_reparations_ia):
         test()
     print("\n" + ("VERT" if not ECHECS else f"ROUGE : {len(ECHECS)} echec(s) : {ECHECS}"))
     return 1 if ECHECS else 0

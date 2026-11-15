@@ -186,11 +186,13 @@ class Reparateur:
     jamais un envoi (cible upload, erase_upload, uploadfs), 2 relances au plus par etape, une regle ne s'applique pas deux
     fois a la meme panne (signature = id + ligne reconnue), un arret demande prime (alors `interrompue`)."""
 
-    def __init__(self, serie, regles, horloge=time.monotonic, libere=None, libre=None, chemin_local=None, avertissement=""):
+    def __init__(self, serie, regles, horloge=time.monotonic, libere=None, libre=None, chemin_local=None, avertissement="", diagnostique=None):
         self.serie, self.regles, self.horloge = serie, list(regles), horloge
         self.libere = libere or verrou.libere
         self.libre = libre or verrou.est_libre
         self.chemin_local = Path(chemin_local) if chemin_local else Path(serie.dossier) / "reparations.json"
+        self.ia_auto, self.diagnostique = False, diagnostique   # case « Relancer apres reparation par l'IA » (A6b), posee par Serie.lance
+        self._ia_faits, self._ia_regle = set(), None            # envs deja diagnostiques (un seul appel par env) ; regle IA a l'essai
         self.interrompue = False          # un arret a coupe une reparation : l'env est « arrete »
         self.historique = []              # [{env, action, regle, titre, etat, message}] de la serie
         self._relances, self._signatures = {}, {}
@@ -211,10 +213,13 @@ class Reparateur:
             rendu = lance_pio(ligne, action, cible)
             if rendu[0] is not False:
                 self._clos(bool(rendu[0]), "relance réussie" if rendu[0] else "arrêt demandé")
+                if rendu[0] and self._ia_regle:
+                    self._ia_garde(ligne.env, action)
                 return rendu
+            self._ia_regle = None                          # la relance d'une regle IA a echoue : rien n'est ajoute
             journal = "\n".join(e.get("texte", "") for e in self.serie.depuis(n, 0)
                                 if e["type"] == "ligne" and e["env"] == ligne.env)
-            if not self.traite(ligne, action, cible, rendu[3], journal, rendu[2]):
+            if not self.traite(ligne, action, cible, rendu[3], journal, rendu[2]) and not self._ia(ligne, action, cible, rendu[3], journal, rendu[2]):
                 return rendu
 
     def traite(self, ligne, action, cible, etape, journal, extrait, regle=None) -> bool:
@@ -260,6 +265,55 @@ class Reparateur:
             self._clos(False, self._abandon or "arrêt demandé")
             return False
         return True
+
+    def _ia(self, ligne, action, cible, etape, journal, extrait) -> bool:
+        """Case « Relancer apres reparation par l'IA » : UN diagnostic par env et par lancement, seulement pour un fils pio
+        (jamais un envoi) sans aucune regle du catalogue ; vrai = regle de l'IA appliquee, relancer. Sinon l'env echoue comme avant."""
+        env, nom = ligne.env, ETAPES_SUIVI.get(etape)
+        if (not self.ia_auto or not self.diagnostique or env in self._ia_faits or nom is None or self.serie._arrete_demande()
+                or cible.split()[-1:] not in ([], ["buildfs"]) or cherche(self.regles, journal, nom, env)):
+            return False
+        self._ia_faits.add(env)                            # avant l'appel : quoi qu'il arrive, jamais un second
+        self._ia_regle = None
+        with self.serie.verrou:
+            self._courante = {"env": env, "action": action, "regle": "ia", "titre": "Diagnostic par l'IA", "etat": "", "message": "", "ia": True}
+            self.historique.append(self._courante)
+        self._annonce("en_cours", "diagnostic en cours")
+        try:
+            d = self.diagnostique(self.serie.racine, env, nom, journal, arret=self.serie._arrete_demande)
+            d = d if isinstance(d, dict) else {"ok": False, "erreur": "réponse du diagnostic illisible"}
+        except Exception as e:                             # noqa: BLE001 - un diagnostic en panne ne casse jamais la serie
+            d = {"ok": False, "erreur": f"{type(e).__name__} : {e}"}
+        if self.serie._arrete_demande():
+            self.interrompue = True
+            self._clos(False, "arrêt demandé")
+            return False
+        if not d.get("ok") or not d.get("regle"):
+            self._clos(False, filtre_secrets(d.get("erreur") or d.get("refus") or d.get("correctif_manuel") or "aucune règle proposée"))
+            return False
+        try:
+            builds = self.serie.builds_en_cours()
+        except Exception:                                  # noqa: BLE001 - detection en panne = meme refus que « impossible »
+            builds = None
+        if builds is None or builds:                       # meme refus que le bouton : jamais agir pendant le build d'un autre
+            self._clos(False, "un build étranger est en cours : réparation refusée" if builds else "détection des builds impossible")
+            return False
+        self._clos(True, f"règle proposée : {d['regle']['titre']}")
+        if self.traite(ligne, action, cible, etape, journal, extrait, regle=_valide(d["regle"])):
+            self._ia_regle = d["regle"]
+            return True
+        return False
+
+    def _ia_garde(self, env, action):
+        """La relance d'une regle de l'IA a reussi : elle entre au catalogue local (origine « ia »)."""
+        regle, self._ia_regle = self._ia_regle, None
+        try:
+            r = self.ajoute_regle_locale(regle)
+        except (OSError, ValueError) as e:
+            self._ligne(f"règle non ajoutée au catalogue : {e}", {"env": env, "action": action, "ia": True})
+            return
+        self.serie._ajoute("reparation", env, action=action, regle=r.id, etat="reussie", message=f"Règle ajoutée au catalogue : {r.titre}")
+        self._ligne(f"règle ajoutée au catalogue : {r.titre}", {"env": env, "action": action, "ia": True})
 
     def repond_choix(self, env, choix):
         if choix not in BOUTONS:
@@ -360,7 +414,7 @@ class Reparateur:
     def _ligne(self, texte, c=None):
         """Ligne « [réparation] … » : evenement `ligne` et fin du dernier journal de l'env."""
         c = c or self._courante or {}
-        texte = "[réparation] " + texte
+        texte = ("[réparation IA] " if c.get("ia") else "[réparation] ") + texte
         self.serie._ajoute("ligne", c.get("env"), action=c.get("action"), texte=texte)
         journaux = list((Path(self.serie.dossier) / "journaux").glob(f"*-{c.get('env')}-{c.get('action')}*.log"))
         if journaux:

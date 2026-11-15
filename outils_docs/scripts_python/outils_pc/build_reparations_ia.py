@@ -114,7 +114,7 @@ def _echec(message):
     return {"ok": False, "erreur": message, "cause": "", "explication": "", "correctif_manuel": "", "regle": None, "refus": ""}
 
 
-def diagnostique(racine, env, etape, journal, programme=None, delai=DELAI):
+def diagnostique(racine, env, etape, journal, programme=None, delai=DELAI, arret=lambda: False):
     """RuntimeError si un diagnostic est deja en cours ; sinon toujours un dict (`ok` faux + `erreur` en cas d'echec)."""
     if not _DIAGNOSTIC.acquire(blocking=False):
         raise RuntimeError("un diagnostic est déjà en cours")
@@ -129,15 +129,20 @@ def diagnostique(racine, env, etape, journal, programme=None, delai=DELAI):
                                  stderr=subprocess.PIPE, env=environ, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except OSError as e:
             return _echec(f"lancement de claude impossible : {e}")
-        try:
-            sortie, erreur = p.communicate(consigne(env, etape, rep.filtre_secrets(fin_journal(journal))).encode("utf-8"), timeout=delai)
-        except subprocess.TimeoutExpired:
-            rem._arrete(p)
+        entree, limite = consigne(env, etape, rep.filtre_secrets(fin_journal(journal))).encode("utf-8"), time.monotonic() + delai
+        while True:                                      # sondage court : `arret()` (arret de la serie) interrompt le diagnostic
             try:
-                p.communicate(timeout=10)
+                sortie, erreur = p.communicate(entree, timeout=0.2)
+                break
             except subprocess.TimeoutExpired:
-                pass
-            return _echec(f"délai de {delai} s dépassé : diagnostic abandonné")
+                entree = None
+                if arret() or time.monotonic() >= limite:
+                    rem._arrete(p)
+                    try:
+                        p.communicate(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        pass
+                    return _echec("arrêt demandé : diagnostic abandonné" if arret() else f"délai de {delai} s dépassé : diagnostic abandonné")
         if p.returncode != 0:
             return _echec(f"claude a échoué (code {p.returncode}) : " + rep.filtre_secrets(erreur.decode("utf-8", "replace")[-300:]))
         try:

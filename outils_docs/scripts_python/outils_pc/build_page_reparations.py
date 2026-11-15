@@ -8,6 +8,7 @@ du flux (`reparation`, `choix_reparation`, formats : docstring de build_serie.py
     POST /reparations/supprime {id} retire une regle LOCALE (le bouton n'existe que pour elle)
     POST /reparations/diagnostic {env}        « Faire diagnostiquer par l'IA » (env en echec sans reparation ; ce PC seulement)
     POST /reparations/appliquer {env, regle}  « Appliquer et relancer » (la regle proposee, revalidee par le serveur)
+    POST /lancer {..., ia_auto}               case « Relancer apres reparation par l'IA » (#ia-auto, localStorage build-ia-auto)
 Tout texte vient du serveur (processus, ligne de commande, titres) : il passe par h(..., {texte}) = textContent, jamais innerHTML.
 """
 
@@ -45,6 +46,17 @@ function reparationsEvenement(e) {
   else return;
   if (!repMin) repMin = setTimeout(function () { repMin = null; dessineRep(); }, 50);
 }
+// case « Relancer apres reparation par l'IA » : decochee par defaut, memorisee dans ce navigateur ; le serveur l'ignore hors de ce PC
+(function () {
+  var apres = $("publier-fiches").parentNode, c = h("input", {type: "checkbox", id: "ia-auto"});
+  var local = ["127.0.0.1", "localhost", "[::1]"].indexOf(location.hostname) >= 0;   // le serveur refuse de toute facon hors de ce PC
+  try { c.checked = local && localStorage.getItem("build-ia-auto") === "1"; } catch (e) {}
+  c.disabled = !local;
+  c.onchange = function () { try { localStorage.setItem("build-ia-auto", c.checked ? "1" : "0"); } catch (e) {} };
+  apres.parentNode.insertBefore(h("label", {"class": "action", title: "Un env en échec sans règle connue : l'IA propose une règle (lecture seule), la page l'applique " +
+    "et relance l'étape une fois. Jamais un envoi. Ce PC seulement."}, c, " Relancer après réparation par l'IA ",
+    h("small", {texte: local ? "(un appel d'IA par env en échec, 5 min au plus)" : "(réservé à ce PC)"})), apres.nextSibling);
+})();
 function repTitre(c) { var r = repRegles[c.regle]; return r ? r.titre : (c.regle || c.message); }
 function dessineRep() {
   var zone = $("rep-bandeaux");
