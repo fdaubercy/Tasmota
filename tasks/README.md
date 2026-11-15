@@ -13,16 +13,19 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-50 plans : 24 actif, 1 en-pause, 25 clos.
+53 plans : 27 actif, 1 en-pause, 25 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | █████░░░░░ 50 % (13/26) | 13 étapes, 2 améliorations | 2026-11-14 | 2026-11-15 |
+| [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) | Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic | actif | █████░░░░░ 47 % (5/8) | 3 étapes, 5 améliorations | 2026-11-15 | 2026-11-15 |
+| [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | actif | ███████░░░ 72 % (19/26) | 7 étapes, 2 améliorations | 2026-11-14 | 2026-11-15 |
+| [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | actif | ░░░░░░░░░░ 0 % (0/19) | 19 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
+| [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██░░░░░░░░ 20 % (2/11) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
 | [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 84 % (57/68) | 11 étapes, 3 améliorations | 2026-11-13 | 2026-11-14 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
-| [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 89 % (34/36) | 2 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
-| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | ████████░░ 83 % (70/91) | 21 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
+| [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 88 % (38/41) | 3 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
+| [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | █████████░ 88 % (74/91) | 17 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ██████░░░░ 60 % (35/51) | 16 étapes, 4 améliorations | 2026-11-08 | 2026-11-13 |
 | [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 87 % (34/41) | 7 étapes | 2026-11-12 | 2026-11-13 |
 | [Façade du garage (P4 et carte du rideau) : fins de course animées, porte, chèvrefeuille, pergola et jasmin](plans/facade-garage-capteurs.md) | Voir sur la façade de l'accueil du P4 et de la carte du rideau l'état réel des deux fins de course, dans un dessin fidèle au garage | actif | ████░░░░░░ 38 % (7/13) | 6 étapes, 1 amélioration | 2026-11-13 | 2026-11-13 |
@@ -70,14 +73,19 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Points restants des plans non terminés
 
-#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 50 %
+#### [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) — 47 %
 
-- A5 — Page : bandeau, choix, panneau « Réparations » : Écrire d'abord la sonde `test_build_page_reparations_chrome.py` (rouge ; pas de pause fixe, attendre des conditions) :
-- A5 — Page : bandeau, choix, panneau « Réparations » : Créer `build_page_reparations.py` (CSS, HTML, JS du bandeau, des boutons et du panneau, inséré dans `build_page.PAGE` par
-- A5 — Page : bandeau, choix, panneau « Réparations » : Sonde verte ; Chrome `sonde_*` orphelins arrêtés après coup (compter les `HasExited` faux 15 s après)
-- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Écrire d'abord `test_build_reparations_ia.py` (rouge, `claude` remplacé par un faux programme injecté, comme le test de
-- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Créer `build_reparations_ia.py` : `diagnostique(racine, env, etape, journal, programme=None) -> dict` (`claude -p` en lecture
-- A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Routes `POST /reparations/diagnostic {env}` et `POST /reparations/appliquer {env, regle}` (ce PC seulement) ; « Appliquer et
+- A1 — Pastille et fenêtre de détail : Essai réel après une vraie compilation depuis la page :7700 (l'utilisateur, aucun build lancé ici)
+- A3 — Envs ESP8266 : pastille d'après le bilan de pio : Essai réel : le relevé de `tasmota-cave-lumiere-porte` n'est régénéré qu'à la prochaine compilation depuis la page :7700
+- A2 — Retour au plan en cours avant ce chantier : Reprendre le plan `build-reparations` : essai réel du diagnostic IA sur le journal `20261115-043620-tasmota-cave-lumiere-porte-compiler.log` (A6, dernière case), case « Relancer après réparation », puis A7 (documentation, relecteurs, essai hors série, commit) : `/suivi suivre build-reparations`
+- Amélioration [projet] : Écart avec le build précédent (variante C : champ `avant` à enregistrer par `build_memoire.enregistre`)
+- Amélioration [projet] : Accessibilité de la fenêtre : focus à l'ouverture, retour à la pastille, piège de Tab (relecteur-pages-web, 2026-11-15)
+- Amélioration [projet] : Garder le relevé : ignorer un `date_build` antérieur au début de l'env, vérifier le bloc après l'`await`, rafale au rejeu
+- Amélioration [projet] : Couleurs de `FM_COUL` et du voile : variables CSS du thème au lieu de valeurs en dur
+- Amélioration [projet] : Sonde : filtre `ERR_CONNECTION_REFUSED` trop large, test de classe `fm-alerte` laxiste
+
+#### [Réparation automatique des pannes de la page Build](plans/build-reparations.md) — 72 %
+
 - A6 — Diagnostic par l'IA et catalogue qui s'enrichit (`build_reparations_ia.py`) : Bancs verts, un essai réel de diagnostic sur un journal d'échec archivé (lecture seule, rien appliqué)
 - A7 — Documentation, essai et commit : `outils_docs/README.md` (§ « Build et téléversement (page web) » : réparations, catalogue, liste blanche, panneau), `CLAUDE.md`
 - A7 — Documentation, essai et commit : Relecteurs `relecteur-pages-web` (page et routes, sécurité : fermeture de processus, clients distants, XSS du journal) puis
@@ -87,6 +95,43 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — Retour au plan en cours avant ce chantier : Puis, à l'issue de ce plan, le plan `ecran-cave-vues-commandes` (A9, essai sur carte de l'écran de la cave), comme le prévoit l'action A4 de `facade-garage-capteurs`
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur)
+
+#### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 0 %
+
+- A1 — Voie GitHub fiable : Diagnostiquer l'absence de lancements (`gh api repos/fdaubercy/Tasmota/actions/workflows`, état « disabled_inactivity » ?) et réactiver
+- A1 — Voie GitHub fiable : `build_custom.yml` : matrice des 25 envs (liste lue de `platformio_tasmota_cenv.ini`), ajouter un contrôle qui échoue si un env manque
+- A1 — Voie GitHub fiable : Vérifier que le build GitHub reflète la config réelle (`platformio_override.ini` de l'échantillon vs dépôt) et noter l'écart
+- A1 — Voie GitHub fiable : Un lancement `workflow_dispatch` complet, lu jusqu'au bout (SUCCESS/FAILED par env)
+- A2 — Voie PC (tâche Windows qui pilote la page Build) : Script `maintenance/compilation_nuit.py` : refuse si un build tourne (garde existante), démarre la page Build si absente, `POST /lancer` (compiler seulement, sans port), attend la fin, écrit un résumé JSON par env
+- A2 — Voie PC (tâche Windows qui pilote la page Build) : Journal et résultat dans `%LOCALAPPDATA%\outils_tasmota\compilations_nuit\` (30 jours)
+- A2 — Voie PC (tâche Windows qui pilote la page Build) : Enregistrement de la tâche planifiée Windows (`schtasks`, réveil du PC optionnel), sans droits administrateur
+- A2 — Voie PC (tâche Windows qui pilote la page Build) : Banc `test_compilation_nuit.py` (faux serveur de build : refus pendant un build, échec d'un env, reprise)
+- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : `taches_planifiees_web.py` + `_page.py` + cible Custom détachée + tuile de l'annuaire (groupe Déploiement) + tâche VS Code
+- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : Liste des deux voies : activée ou non, prochaine exécution, dernier résultat, durée, envs en échec avec lien vers le journal
+- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : Lecture GitHub par `gh` (derniers runs), lecture PC par le dossier de résultats ; sondes hors ligne tolérées
+- A3 — Tuile « Tâches planifiées » (page 7920, v1 lecture) : Bancs et sonde Chrome
+- A4 — Tuile : activer, désactiver, paramétrer : Bouton activer / désactiver pour GitHub (`gh workflow enable\|disable`) et pour le PC (`schtasks /change /enable\|/disable`), état relu après chaque geste
+- A4 — Tuile : activer, désactiver, paramétrer : Paramètres : heure, envs cochés (ceux de la page Build), modification écrite dans le workflow (diff puis commit demandé) et dans la tâche Windows
+- A4 — Tuile : activer, désactiver, paramétrer : Bouton « Lancer maintenant » (GitHub : `workflow_dispatch`, PC : refus si un build tourne)
+- A4 — Tuile : activer, désactiver, paramétrer : Écritures atomiques avec diff préalable, refus pendant un build, accès comme les autres outils (`acces_web.py`)
+- A4 — Tuile : activer, désactiver, paramétrer : Bancs des gestes (faux `gh` et faux `schtasks`) et sonde Chrome
+- A5 — Documentation et mémoire : Carte des documents de `CLAUDE.md`, mode d'emploi dans `outils_docs/README.md`, vérification `verifie_references_docs.py`
+- A5 — Documentation et mémoire : Essai réel d'une nuit complète sur chaque voie, résultat relu le matin
+- Amélioration [projet] : Alerte Telegram si le plugin se connecte
+- Amélioration [projet] : Comparer la taille Flash/RAM d'une nuit à l'autre
+
+#### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 20 %
+
+- A2 — Application : Garde-fous d'exécution relevés par la relecture de A1 : argv construit `["git","mv","--",chemin,vers]` (jamais en découpant la chaîne `commande`), `GIT_LITERAL_PATHSPECS=1`, `previsualise` REFAIT à l'application avec empreinte et HEAD identiques à l'aperçu, refus d'un build à CE moment-là
+- A2 — Application : `menage_application.py::applique(...)` : recontrôle juste avant, exécute `git mv` un par un sans shell (`--` devant les chemins, `:(literal)`), s'arrête à la première erreur et dit ce qui est fait ; banc : fichier modifié entre l'aperçu et l'application, destination créée entre-temps, chemin hostile
+- A2 — Application : Route `POST /appliquer` avec confirmation explicite (le diff renvoyé par l'aperçu, son empreinte) ; verrou unique ; journal hors dépôt
+- A2 — Application : Lancement de `verifie_references_docs.py` après l'application et affichage de son verdict
+- A3 — Page : Cases à cocher sur les propositions de l'étape 1, bouton « Voir ce que ça ferait », liste des commandes, bouton « Appliquer » grisé tant que l'aperçu n'est pas affiché ; message final : « relisez git status, rien n'est commité »
+- A3 — Page : Sonde Chrome avec témoins (bouton actif sans aperçu, texte hostile, case sur une proposition non éligible)
+- A4 — Essai réel et clôture : Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin
+- A4 — Essai réel et clôture : Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
+- A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
+- Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
 
 #### [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) — 84 %
 
@@ -125,23 +170,20 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
 
-#### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 89 %
+#### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 88 %
 
 - A7 — Essais réels et décision sur la version 2 : Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés
 - A7 — Essais réels et décision sur la version 2 : Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan
+- A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15) : Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
 - Amélioration [projet] : Version 2 : application d'un lot depuis la page (selon A7)
 - Amélioration [projet] : Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles
 
-#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 83 %
+#### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 88 %
 
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : `qrcode.json` de chaque carte à écran écrit par l'outil des étiquettes (aujourd'hui seul le P4 du garage en a un) — débits fait (qrcode.json, autoexec, cenv) ; cave non faite (autre session)
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Page ajoutée à chaque `ecran.json` (QR code lié au texte, labels liés), bouton de navigation ; écran de la cave : — débits fait : page 5 de ecran.json, pages.jsonl et ecranLvgl.be régénérés, bouton 205 ; cave non faite
 - A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20) — bancs verts (debits, lvgl, systeme, demarrage, tests atelier, sonde Chrome) ; essai sur carte restant (A20)
 - A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A20) ; commit
-- A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Catalogue généré `outils_docs/schemas/icones.json` : glyphes MDI de `gen.sh` (code `\uE…`, nom lu dans la police
-- A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Usages : où chaque icône sert dans le parc (`ecran.json`, `pages.jsonl`, `.be` des cartes), icônes absentes du
-- A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Page : grille avec recherche par nom, filtre par source (firmware, LVGL, PNG, sites), fiche d'une icône (code à
-- A18 — Catalogue des icônes et logos : page de l'annuaire (demande de l'utilisateur du 2026-11-13) : Tuile de l'annuaire, tâche VS Code, cible Custom détachée ; mode d'emploi (`outils_docs/README.md`), carte des
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Icônes de la page Système : glyphes du firmware (`clock-outline`, `wifi`, `thermometer`…) et PNG pour celles qui manquent
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire (page à ajouter
 - A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Compilation par la page Build ; essai sur chaque carte (avec A20)

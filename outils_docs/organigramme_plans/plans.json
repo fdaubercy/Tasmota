@@ -805,9 +805,9 @@
     "2026-11-12-atelier-ecrans-ameliorations-design.md"
    ],
    "cree": "2026-11-11",
-   "maj": "2026-11-14",
-   "pct": 76,
-   "etapes": "70/92",
+   "maj": "2026-11-15",
+   "pct": 80,
+   "etapes": "74/92",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/atelier-ecrans.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-11-atelier-ecrans-design.md",
@@ -948,9 +948,9 @@
     "2026-11-13-atelier-visuels-accueil-design.md"
    ],
    "cree": "2026-11-13",
-   "maj": "2026-11-14",
-   "pct": 56,
-   "etapes": "40/71",
+   "maj": "2026-11-15",
+   "pct": 80,
+   "etapes": "57/71",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/atelier-visuels.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-13-atelier-visuels-accueil-design.md"
@@ -990,9 +990,9 @@
     "2026-11-14-build-reparations-design.md"
    ],
    "cree": "2026-11-14",
-   "maj": "2026-11-14",
-   "pct": 39,
-   "etapes": "11/28",
+   "maj": "2026-11-15",
+   "pct": 68,
+   "etapes": "19/28",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/build-reparations.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-14-build-reparations-design.md"
@@ -1011,9 +1011,9 @@
    ],
    "specs": [],
    "cree": "2026-11-14",
-   "maj": "2026-11-14",
-   "pct": 48,
-   "etapes": "13/27",
+   "maj": "2026-11-15",
+   "pct": 67,
+   "etapes": "18/27",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/cartes-simulees.md",
    "urls_spec": []
   },
@@ -1030,10 +1030,70 @@
    ],
    "specs": [],
    "cree": "2026-11-14",
-   "maj": "2026-11-14",
-   "pct": 76,
-   "etapes": "29/38",
+   "maj": "2026-11-15",
+   "pct": 88,
+   "etapes": "38/43",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-page.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "build-fin-partitions",
+   "titre": "Pastille d'occupation des partitions à la fin d'une compilation (page Build)",
+   "objectif": "Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic",
+   "statut": "actif",
+   "famille": "build",
+   "parent": "",
+   "liens": [
+    "temps-compilation"
+   ],
+   "specs": [
+    "aucune"
+   ],
+   "cree": "2026-11-15",
+   "maj": "2026-11-15",
+   "pct": 38,
+   "etapes": "5/13",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/build-fin-partitions.md",
+   "urls_spec": [
+    "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/aucune"
+   ]
+  },
+  {
+   "nom": "compilations-nuit",
+   "titre": "Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire",
+   "objectif": "Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire",
+   "statut": "actif",
+   "famille": "build",
+   "parent": "",
+   "liens": [
+    "build-reparations",
+    "build-fin-partitions",
+    "menage-page"
+   ],
+   "specs": [],
+   "cree": "2026-11-15",
+   "maj": "2026-11-15",
+   "pct": 0,
+   "etapes": "0/24",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/compilations-nuit.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "menage-appliquer",
+   "titre": "Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page",
+   "objectif": "Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents.",
+   "statut": "actif",
+   "famille": "methode",
+   "parent": "menage-page",
+   "liens": [
+    "menage-page"
+   ],
+   "specs": [],
+   "cree": "2026-11-15",
+   "maj": "2026-11-15",
+   "pct": 17,
+   "etapes": "2/12",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-appliquer.md",
    "urls_spec": []
   }
  ]
