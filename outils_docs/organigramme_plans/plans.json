@@ -979,7 +979,7 @@
    "nom": "build-reparations",
    "titre": "Réparation automatique des pannes de la page Build",
    "objectif": "La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "build",
    "parent": "",
    "liens": [
@@ -991,8 +991,8 @@
    ],
    "cree": "2026-11-14",
    "maj": "2026-11-15",
-   "pct": 85,
-   "etapes": "29/34",
+   "pct": 91,
+   "etapes": "31/34",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/build-reparations.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-14-build-reparations-design.md"
@@ -1040,7 +1040,7 @@
    "nom": "build-fin-partitions",
    "titre": "Pastille d'occupation des partitions à la fin d'une compilation (page Build)",
    "objectif": "Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "build",
    "parent": "",
    "liens": [
@@ -1051,8 +1051,8 @@
    ],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 56,
-   "etapes": "9/16",
+   "pct": 69,
+   "etapes": "11/16",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/build-fin-partitions.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/aucune"
@@ -1079,6 +1079,26 @@
    "urls_spec": []
   },
   {
+   "nom": "facade-esclaves-grenier-rdc",
+   "titre": "Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC",
+   "objectif": "Chaque page d'accueil montre seulement ce que sa carte dirige : portail seul (esclave 4), garage et porte seuls (rideau), fenêtre de cuisine, porte d'entrée et trappe (grenier du RDC)",
+   "statut": "actif",
+   "famille": "graphiques-ecrans",
+   "parent": "facade-garage-portail-commande",
+   "liens": [
+    "atelier-visuels",
+    "visuel-reglage-volets",
+    "facade-garage-capteurs"
+   ],
+   "specs": [],
+   "cree": "2026-11-15",
+   "maj": "2026-11-15",
+   "pct": 0,
+   "etapes": "0/16",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/facade-esclaves-grenier-rdc.md",
+   "urls_spec": []
+  },
+  {
    "nom": "facade-garage-portail-commande",
    "titre": "Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil",
    "objectif": "Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel",
@@ -1092,8 +1112,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 73,
-   "etapes": "16/22",
+   "pct": 67,
+   "etapes": "16/24",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/facade-garage-portail-commande.md",
    "urls_spec": []
   },
@@ -1110,9 +1130,28 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 17,
-   "etapes": "2/12",
+   "pct": 50,
+   "etapes": "7/14",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-appliquer.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "plan-maison",
+   "titre": "Plan de la maison, liens, rôles maître/esclave et vue réseau",
+   "objectif": "Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande",
+   "statut": "actif",
+   "famille": "modbus-reseau",
+   "parent": "",
+   "liens": [
+    "debits-deux-cartes",
+    "cartes-simulees"
+   ],
+   "specs": [],
+   "cree": "2026-11-15",
+   "maj": "2026-11-15",
+   "pct": 71,
+   "etapes": "25/35",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison.md",
    "urls_spec": []
   },
   {
@@ -1128,8 +1167,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 91,
-   "etapes": "20/22",
+   "pct": 100,
+   "etapes": "22/22",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/sondes-en-cours.md",
    "urls_spec": []
   }

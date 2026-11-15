@@ -320,6 +320,19 @@ verifie([spo.portail.capteur.attrs.fill, spo.portail.texte.textContent], ['#ff9a
 V.poseFermeturePortail(spo, null);
 verifie([spo.portail.capteur.attrs.fill, spo.portail.texte.textContent], ['#777', '?'], 'capteur de fermeture inconnu : gris, « ? »');
 verifie(empreinte(dessin(PORT)[0]), empreinte(dessin(PORT)[0]), 'portail : dessin identique d\'un appel a l\'autre');
+// Page de l'esclave du portail (plan facade-garage-portail-commande A8) : decor 'portailSeul' = ni mur, ni toit, ni foret, mais le portail et la nuit
+const SEUL = {toit: 'unPan', rafraichissement: 2345, decor: ['portailSeul', 'finition'], ouvertures: [O(3, 'portail2', {nom: 'Portail', tempsMontee: 0, tempsDescente: 0, source: '/portail?f=position'})]};
+const PSEUL = Object.assign({}, SEUL, {decor: ['finition']});
+const mur = c => tous(c, n => n.nom === 'polygon' && n.attrs.fill === '#d8cbb0').length;
+const [cse, sse] = dessin(SEUL), [cav] = dessin(PSEUL);
+verifie([mur(cse), mur(cav)], [0, 1], 'portail seul : aucun mur de garage (temoin : sans portailSeul, le mur est dessine)');
+verifie([compte(cse, 'data-portail'), tous(cse, n => n.attrs['data-vantail']).length, sse.volets.length, sse.volets[0].o.source], [1, 2, 1, '/portail?f=position'], 'portail seul : le portail, ses deux vantaux, une seule entree portant la source');
+verifie([!!sse.nuit, !!sse.modeNuit, !!sse.camera, !!sse.lampe], [true, true, false, false], 'portail seul : la nuit et son bouton, sans camera ni lampe');
+verifie(tous(cse, n => n.nom === 'polygon' && n.attrs['data-ombre'] !== undefined).length, 0, 'portail seul : pas de degrade du mur');
+sse.volets[0].pose(1);
+verifie([vant(cse, 'droit').attrs['data-ouverture'], vant(cse, 'gauche').attrs['data-ouverture']], ['100', '100'], 'portail seul : contact non ferme (100 %) = les deux vantaux grand ouverts');
+sse.volets[0].pose(0);
+verifie([vant(cse, 'droit').attrs['data-ouverture'], vant(cse, 'gauche').attrs['data-ouverture']], ['0', '0'], 'portail seul : contact ferme (0 %) = les deux vantaux fermes');
 const [cpc, spc] = dessin(PORT);
 const cx = () => +spc.portail.capteur.attrs.cx, cxA = () => +spc.portail.anneau.attrs.cx, tx = () => +spc.portail.texte.attrs.x;
 const c0 = cx();

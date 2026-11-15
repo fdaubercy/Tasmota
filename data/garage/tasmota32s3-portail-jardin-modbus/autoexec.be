@@ -18,5 +18,6 @@ if demarrage.prologue()
     demarrage.charge(["controleModbus"])                                    # ouvre le port serie RS485
     demarrage.charge(["controleDiscovery"], "serveur.discovery")
     demarrage.leds()
+    demarrage.charge(["controlePortail"], "modules.portail")                 # page d'accueil : le portail seul et son capteur de fermeture (lecture seule)
     demarrage.historique()
 end

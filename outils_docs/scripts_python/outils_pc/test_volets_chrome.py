@@ -82,6 +82,9 @@ RIDEAU_C = {"toit": "unPan", "rafraichissement": 300, "decor": ["chevrefeuille",
     {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3,
      "inclinaison": None, "source": "/rideau?f=position&id=1", "finsDeCourse": {"ouverture": "Capteur Ouverture", "fermeture": "Capteur Fermeture"}}]}
 RIDEAU_N = dict(RIDEAU_C, decor=["chevrefeuille", "porte", "finition"])       # carte du rideau : garage et porte seuls, avec la nuit
+PORTAIL_S = {"toit": "unPan", "rafraichissement": 300, "decor": ["portailSeul", "finition"], "lectureSeule": True, "ouvertures": [
+    {"id": 1, "nom": "Portail", "type": "portail2", "place": 1, "inverse": 0, "tempsMontee": 0, "tempsDescente": 0,
+     "inclinaison": None, "source": "/portail?f=position"}]}        # esclave 4 : le portail seul, comme controlePortail.be
 TETE = ("<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'/>"
         "<title>Accueil</title><style>:root{--c_bg:#252525;--c_txt:#eaeaea;--c_txtwrn:#ff5661;--c_ttl:#eaeaea;--c_btn:#1fa3ec;--c_btntxt:#faffff}"
         "div,input{padding:5px;font-size:1em;}body{text-align:center;font-family:verdana,sans-serif;background:var(--c_bg);}"
@@ -103,8 +106,8 @@ def verifie(obtenu, attendu, libelle):
 
 def page(nom, js):
     """Accueil imite ; nom 'sans' : ajout des volets present mais aucune table de curseurs (aucun s271)."""
-    facade, valeurs = (RIDEAU, {}) if nom == "rideau" else (RIDEAU_C, {}) if nom == "rideauc" else (RIDEAU_N, {}) if nom == "rideaun" else PAGES["rdc" if nom == "sans" else nom]
-    curseurs = "" if nom in ("sans", "rideau", "rideauc", "rideaun") else ("<table style='width:100%'>" + "".join(
+    facade, valeurs = (RIDEAU, {}) if nom == "rideau" else (RIDEAU_C, {}) if nom == "rideauc" else (RIDEAU_N, {}) if nom == "rideaun" else (PORTAIL_S, {}) if nom == "portailseul" else PAGES["rdc" if nom == "sans" else nom]
+    curseurs = "" if nom in ("sans", "rideau", "rideauc", "rideaun", "portailseul") else ("<table style='width:100%'>" + "".join(
         f"<tr><td style='width:15%'><button>&#9660;</button></td><td style='width:70%'><div style='padding:0px 2px;text-align:center;"
         f"font-size:12px;'><span>Shutter {n}</span><input id='s27{n}' type='range' min='0' max='100' value='{v}' "
         f"onchange='lc(\"u\",{n},value)'></div></td><td style='width:15%'><button>&#9650;</button></td></tr>"
@@ -157,7 +160,7 @@ class Carte(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urllib.parse.urlparse(self.path)
         nom, type_ = url.path.strip("/"), "text/html; charset=utf-8"
-        if nom in ("rideau", "rideauc", "rideaun") and url.query:
+        if nom in ("rideau", "rideauc", "rideaun", "portail") and url.query:
             code, corps, type_ = self.position_rideau()
         elif nom == "cm":
             code, corps, type_ = ((500, "panne", "text/plain") if Carte.statut7 is None else (200, json.dumps(Carte.statut7), "application/json"))
@@ -166,7 +169,7 @@ class Carte(BaseHTTPRequestHandler):
             code, corps, type_ = ((500, "panne", "text/plain") if Carte.capteurs is None
                                   else (200, json.dumps(Carte.capteurs), "application/json"))
         else:
-            code, corps = (200, page(nom, Carte.js)) if nom in PAGES or nom in ("sans", "rideau", "rideauc", "rideaun") else (404, "inconnu")
+            code, corps = (200, page(nom, Carte.js)) if nom in PAGES or nom in ("sans", "rideau", "rideauc", "rideaun", "portailseul") else (404, "inconnu")
         corps = corps.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", type_)
@@ -709,6 +712,41 @@ def sonde_rideau_nuit(m, capture):
     Carte.statut7 = None
 
 
+def sonde_portail_seul(m, capture):
+    """Page de l'esclave 4 : le portail seul (decor portailSeul), contact de fermeture lu a /portail?f=position, lecture seule, nuit (plan A8)."""
+    etat = "(() => { const t = document.querySelector('#vf [data-portail] text'); const g = [...document.querySelectorAll('#vf [data-vantail]')]; return [t ? t.textContent : null, g.map(x => x.getAttribute('data-ouverture'))]; })()"
+    Carte.capteurs, Carte.statut7 = {}, status7("2026-11-15T12:00:00")
+    Carte.position = {"ouverture": 0, "muet": False, "capteurs": {"fermeture": "ON"}}
+    verifie(bool(m.ouvre("portailseul")), True, "portail seul : page chargée")
+    verifie(vrai(attend(m.cdp, "document.querySelectorAll('#vf [data-vantail]').length === 2", 6)), True, "portail seul : le portail et ses deux vantaux sont dessinés")
+    verifie(m.cdp.js("[document.querySelectorAll('#vf polygon[fill=\"#d8cbb0\"]').length, document.querySelectorAll('#vf g[data-ouverture][data-id]').length > 0]"), [0, True],
+            "portail seul : aucun mur de garage")
+    jusqua(lambda: m.cdp.js(etat) == ["fermé ✔", ["0", "0"]], 8)
+    verifie(m.cdp.js(etat), ["fermé ✔", ["0", "0"]], "portail seul : contact à la masse : « fermé ✔ », vantaux fermés")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_portail_seul_ferme.png"))
+    Carte.position = {"ouverture": 100, "muet": False, "capteurs": {"fermeture": "OFF"}}
+    jusqua(lambda: m.cdp.js(etat) == ["ouvert", ["100", "100"]], 8)
+    verifie(m.cdp.js(etat), ["ouvert", ["100", "100"]], "portail seul : contact non fermé : « ouvert », les deux vantaux grand ouverts (saut direct)")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_portail_seul_ouvert.png"))
+    n = len(Carte.posts)
+    m.cdp.js("document.querySelectorAll('#vf [data-vantail]').forEach(g => g.dispatchEvent(new MouseEvent('click', {bubbles: true}))); 1")
+    time.sleep(0.5)
+    verifie([len(Carte.posts) - n, m.cdp.js("document.querySelectorAll('#vf [data-vantail]')[0].style.cursor")], [0, ""], "portail seul : lecture seule, un clic ne commande rien")
+    Carte.position = {"ouverture": None, "muet": False}
+    jusqua(lambda: m.cdp.js(etat)[0] == "?", 8)
+    verifie(m.cdp.js(etat)[0], "?", "portail seul : contact illisible : « ? »")
+    Carte.position = {"ouverture": 0, "muet": False, "capteurs": {"fermeture": "ON"}}
+    Carte.statut7 = status7("2026-11-15T23:30:00")
+    verifie(bool(m.ouvre("portailseul")), True, "portail seul : page rechargée à 23:30")
+    verifie(vrai(attend(m.cdp, "+document.querySelector('#vf [data-nuit]').getAttribute('opacity') > 0.55", 6)), True, "portail seul : 23:30 : voile de nuit > 0,55")
+    time.sleep(1.2)
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_portail_seul_nuit.png"))
+    Carte.statut7 = None
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome du dessin de la façade des volets.")
     options.add_argument("--js", default=str(RACINE / "data/sd/js/volets.js"), help="volets.js à éprouver")
@@ -732,6 +770,7 @@ def principal():
         sonde_soleil(m, args.capture)
         sonde_maison_nuit(m, args.capture)
         sonde_rideau_nuit(m, args.capture)
+        sonde_portail_seul(m, args.capture)
         verifie(bool(m.ouvre("sans")), True, "sans curseur : page chargée")
         time.sleep(0.3)
         verifie(m.cdp.js("[document.getElementById('vf').childElementCount, document.querySelectorAll('svg').length,"

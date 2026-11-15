@@ -664,6 +664,7 @@
     var decor = toit == 'unPan' ? listeDecor : [], porte = decor.indexOf('porte') >= 0, perg = decor.indexOf('pergola') >= 0 && !ouvPortail.length;   // avec un portail, sa pergola (2 arches) remplace celle du mur
     if (ouvPortail.length) W = Math.max(W, 420);
     var xMur = W - 20, alea = hasard(), maisonD = listeDecor.indexOf('maison') >= 0, pos = {};
+    var seul = toit == 'unPan' && ouvPortail.length > 0 && listeDecor.indexOf('portailSeul') >= 0;     // page de l'esclave du portail : ni mur, ni toit, ni foret
     if (maisonD) {
       decor = [];
       W = 400;
@@ -696,7 +697,7 @@
         el(lg, 'stop', {offset: 1, 'stop-color': q[1], 'stop-opacity': q[3]});
       });
     }
-    if (finition) foret(svg);                               // derriere le toit
+    if (finition && !seul) foret(svg);                      // derriere le toit
     var trappe = ouv.some(function (o) { return o.type == 'trappe' || o.type == 'trappeEchelle'; });
     if (maisonD) {
       maisonFond(svg, W, pos);
@@ -704,7 +705,9 @@
       el(svg, 'polygon', {points: '10,66 ' + W / 2 + ',8 ' + (W - 10) + ',66', fill: '#9c4b3a'});
       el(svg, 'rect', {x: 20, y: 66, width: W - 40, height: 130, fill: '#d8cbb0'});
     } else if (toit == 'unPan') {
-      if (perg) {                                           // mur et toit arretes avant la pergola
+      if (seul) {
+        // le ciel et le decor du portail suffisent
+      } else if (perg) {                                           // mur et toit arretes avant la pergola
         var yd = 44 + 16 * (xMur - 20) / (W - 40);
         el(svg, 'polygon', {points: '20,44 ' + xMur + ',' + yd + ' ' + xMur + ',196 20,196', fill: '#d8cbb0'});
         el(svg, 'polygon', {points: '6,36 ' + (xMur + 12) + ',' + (yd - 8) + ' ' + (xMur + 12) + ',' + (yd + 1) + ' 6,45', fill: '#6e6e6e'});
@@ -717,7 +720,7 @@
       el(svg, 'rect', {x: 0, y: 38, width: W, height: 154, fill: '#3b3631'});
       el(svg, 'rect', {x: 0, y: 192, width: W, height: 8, fill: '#777'});
     }
-    if (finition) {                                         // mur plus sombre vers le bas, ombre du debord de toit
+    if (finition && !seul) {                                // mur plus sombre vers le bas, ombre du debord de toit
       var xE = perg ? xMur : W - 20, yE = perg ? 44 + 16 * (xMur - 20) / (W - 40) : 60;
       el(svg, 'polygon', {points: '20,44 ' + xE + ',' + yE + ' ' + xE + ',196 20,196', fill: 'url(#vf_mur)', 'data-ombre': '', 'pointer-events': 'none'});
       el(svg, 'polygon', {points: '20,45 ' + xE + ',' + (yE + 1) + ' ' + xE + ',' + (yE + 12) + ' 20,56', fill: 'url(#vf_debord)', 'pointer-events': 'none'});
@@ -888,8 +891,8 @@
   function etatFermeture(svg, lecture) {
     var r = null;
     svg.volets.forEach(function (v) {
-      if (String(v.o.type || '').indexOf('portail') != 0 || !lecture.j || !lecture.j[v.o.id]) return;
-      var e = lecture.j[v.o.id].fermeture;
+      if (String(v.o.type || '').indexOf('portail') != 0 || (!v.o.source && (!lecture.j || !lecture.j[v.o.id]))) return;
+      var e = v.o.source ? (v.lu && v.lu.capteurs && v.lu.capteurs.fermeture) : lecture.j[v.o.id].fermeture;
       if (e == 'OFF') r = 'OFF'; else if (e == 'ON' && r == null) r = 'ON';
     });
     return r;
@@ -924,12 +927,12 @@
       try { poseMode(svg, window.localStorage.getItem('volets_nuit')); } catch (e) { }
       lisSoleil(soleil);
     }
-    brancheClics(svg, function (id, ordre) {
+    if (!facade.lectureSeule) brancheClics(svg, function (id, ordre) {
       fetch('/volets', {method: 'POST', body: new URLSearchParams({action: 'volet', id: String(id), ordre: ordre})})
         .then(function (r) { return r.json(); }).then(function (j) { if (j && !j.ok && window.alert) window.alert(j.message); },
           function () { if (window.alert) window.alert('Pas de réponse de la carte, commande non vérifiée'); });
     }, function (texte) { return window.confirm(texte); });
-    if (svg.camera || svg.lampe || svg.portail || svg.volets.some(function (v) { return v.capteurs && !v.o.source; })) lisCapteurs(lecture, periode);
+    if (svg.camera || svg.lampe || (svg.portail && svg.volets.some(function (v) { return !v.o.source; })) || svg.volets.some(function (v) { return v.capteurs && !v.o.source; })) lisCapteurs(lecture, periode);
     function image() {
       requestAnimationFrame(image);                       // en tete : une exception de lit ou pose n'arrete pas l'animation
       var t = performance.now(), dt = avant == null ? 0 : t - avant;

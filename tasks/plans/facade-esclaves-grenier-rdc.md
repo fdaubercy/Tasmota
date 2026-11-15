@@ -31,6 +31,8 @@ L'esclave 4 n'a ni driver de volets ni page de façade : le Shutter du portail t
 - [ ] Demander à l'utilisateur une photo de la porte d'entrée, de la fenêtre de cuisine et de la trappe si l'ajustement du grenier du RDC l'exige
 
 ## A2 — Esclave 4 : la page montre le portail seul
+> Suivi désormais dans `facade-garage-portail-commande` (action A8), à la demande de l'utilisateur du 2026-11-15. Les cases ci-dessous restent comme historique.
+
 - [x] Décision de l'utilisateur (2026-11-15) : l'esclave 4 EST le portail (le serveur ne fait que lui envoyer des ordres) : sa page s'appuie sur son capteur de fermeture local (interrupteur1, GPIO 47), pas sur une lecture du P4 — preuve : réponse de l'utilisateur ; reste à décider comment représenter un portail ni fermé ni ouvert (le capteur ne donne que fermé ou non)
 - [ ] Module de façade de l'esclave 4, sur le modèle de `controleRideau.be::facade` (route de position, page d'accueil, `volets.js`), sans driver de volets ; fichiers ajoutés à `custom_files_upload` de son env et exclus des autres
 - [ ] Mode `portail seul` de `volets.js` : un décor sans maison ni garage, pergola à deux arches conservée, aucun volet de rangée ; banc `test_volets.mjs` et sonde Chrome

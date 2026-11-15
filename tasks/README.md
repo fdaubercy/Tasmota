@@ -13,13 +13,15 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-55 plans : 25 actif, 1 en-pause, 29 clos.
+57 plans : 27 actif, 1 en-pause, 29 clos.
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
 | [Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, points chauds, page d'accueil des cartes](plans/atelier-visuels.md) | Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module | actif | ████████░░ 83 % (57/69) | 12 étapes, 3 améliorations | 2026-11-13 | 2026-11-15 |
-| [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ███████░░░ 71 % (16/20) | 4 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
-| [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██░░░░░░░░ 20 % (2/11) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
+| [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) | Chaque page d'accueil montre seulement ce que sa carte dirige : portail seul (esclave 4), garage et porte seuls (rideau), fenêtre de cuisine, porte d'entrée et trappe (grenier du RDC) | actif | ████░░░░░░ 38 % (6/15) | 9 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
+| [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) | Une façade du P4 plus fidèle (finition, cônes de la caméra et de la lampe), commandable par clic (rideau, portail), avec nuit selon le soleil réel | actif | ████████░░ 83 % (26/30) | 4 étapes, 2 améliorations | 2026-11-15 | 2026-11-15 |
+| [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██████░░░░ 60 % (10/13) | 3 étapes, 1 amélioration | 2026-11-15 | 2026-11-15 |
+| [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande | actif | █████████░ 85 % (29/34) | 5 étapes, 8 améliorations | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
 | [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | █████████░ 88 % (38/41) | 3 étapes, 2 améliorations | 2026-11-14 | 2026-11-14 |
@@ -93,27 +95,50 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : vtracer côté PC si l'A0 juge le tracé du navigateur insuffisant (spec § 5, voie 2)
 - Amélioration [projet] : Plusieurs visuels par carte, visuel sur les écrans HASPmota/LVGL
 
-#### [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — 71 %
+#### [Façades adaptées aux modules de chaque carte : esclave 4 (portail), rideau du garage, grenier du RDC](plans/facade-esclaves-grenier-rdc.md) — 38 %
 
-- A6 — Essai sur carte : Compilation par la page Build (:7700), jamais par pio direct ; contrôler que les fichiers `volets.js` et la page sont bien dans l'image
-- A6 — Essai sur carte : Rendu vu sur le P4 : façade, clics, nuit ; tas et `UfsFree` relevés ; aucune commande réelle du portail sans accord de l'utilisateur
-- A7 — Documentation et commit : `outils_docs/README.md`, `CLAUDE.md` (carte des documents, exception des lignes de `volets.js`), `CONSIGNES_VISUELS.md` (journal des affinements) ; `verifie_references_docs.py` vert
-- A7 — Documentation et commit : Agents avant commit : `controleur-secrets`, `relecteur-pages-web` ; commit `feat(volets): ...`
+- A1 — Relever l'existant avant de dessiner : Lister ce qui est en trop ou faux sur chacune (par ex. éléments du garage ou du portail vus depuis le rideau, trappe ou porte du grenier mal placées)
+- A1 — Relever l'existant avant de dessiner : Demander à l'utilisateur une photo de la porte d'entrée, de la fenêtre de cuisine et de la trappe si l'ajustement du grenier du RDC l'exige
+- A2 — Esclave 4 : la page montre le portail seul : Module de façade de l'esclave 4, sur le modèle de `controleRideau.be::facade` (route de position, page d'accueil, `volets.js`), sans driver de volets ; fichiers ajoutés à `custom_files_upload` de son env et exclus des autres
+- A2 — Esclave 4 : la page montre le portail seul : Mode `portail seul` de `volets.js` : un décor sans maison ni garage, pergola à deux arches conservée, aucun volet de rangée ; banc `test_volets.mjs` et sonde Chrome
+- A2 — Esclave 4 : la page montre le portail seul : Persist de l'esclave 4 : bloc `drivers.voletRoulants.facade` (`activation` ON, `decor`), volets portail 1 et 2 en lecture seule ; accord de l'utilisateur avant d'écrire le persist
+- A4 — Grenier du RDC : adapter la représentation à ses modules : Reprendre la façade `maison` d'après A1 : fenêtre de cuisine (volet roulant), porte d'entrée, trappe du grenier à leur place réelle, sans élément d'une autre carte
+- A5 — Mise en service : Relecture : `controleur-secrets` (seul, avant commit), `relecteur-pages-web`, `verificateur-solidification` si un `.be` de `data/fs` change ; commit `feat(volets): ...`
+- A5 — Mise en service : Compilation par la page Build (:7700) des envs touchés (esclave 4, rideau, grenier du RDC) et envoi des fichiers du FS ; rendu vu sur chaque carte
+- A6 — Retour au plan atelier-visuels : Reprendre `tasks/plans/atelier-visuels.md` (83 %) : étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
+- Amélioration [projet] : Même démarche pour les autres cartes à volets (grenier du 2e étage)
+
+#### [Façade du garage et du portail de jardin : finition, commande par clic, jour et nuit selon le soleil](plans/facade-garage-portail-commande.md) — 83 %
+
+- A6 — Essai sur carte : Clics sur le portail et le rideau, `UfsFree`, nuit selon le coucher réel : à voir sur le P4 après l'envoi du nouveau `volets.js` ; aucune commande réelle du portail sans accord de l'utilisateur
+- A8 — Page d'accueil de l'esclave 4 : le portail seul avec son capteur de fermeture : Compilation de l'esclave 4 par la page Build, rendu vu sur la carte avec son capteur de fermeture réel
+- A9 — Retour au plan atelier-visuels : Passer d'abord par le plan `facade-esclaves-grenier-rdc` (façades de l'esclave 4, du rideau et du grenier du RDC), qui se termine par ce même retour
+- A9 — Retour au plan atelier-visuels : Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
 - Amélioration [projet] : Brancher la page de l'atelier des visuels sur les consignes (plan atelier-visuels, A7)
 - Amélioration [projet] : Même façade animée pour la carte du rideau et l'accueil d'autres lieux
 
-#### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 20 %
+#### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 60 %
 
-- A2 — Application : Garde-fous d'exécution relevés par la relecture de A1 : argv construit `["git","mv","--",chemin,vers]` (jamais en découpant la chaîne `commande`), `GIT_LITERAL_PATHSPECS=1`, `previsualise` REFAIT à l'application avec empreinte et HEAD identiques à l'aperçu, refus d'un build à CE moment-là
-- A2 — Application : `menage_application.py::applique(...)` : recontrôle juste avant, exécute `git mv` un par un sans shell (`--` devant les chemins, `:(literal)`), s'arrête à la première erreur et dit ce qui est fait ; banc : fichier modifié entre l'aperçu et l'application, destination créée entre-temps, chemin hostile
-- A2 — Application : Route `POST /appliquer` avec confirmation explicite (le diff renvoyé par l'aperçu, son empreinte) ; verrou unique ; journal hors dépôt
-- A2 — Application : Lancement de `verifie_references_docs.py` après l'application et affichage de son verdict
-- A3 — Page : Cases à cocher sur les propositions de l'étape 1, bouton « Voir ce que ça ferait », liste des commandes, bouton « Appliquer » grisé tant que l'aperçu n'est pas affiché ; message final : « relisez git status, rien n'est commité »
-- A3 — Page : Sonde Chrome avec témoins (bouton actif sans aperçu, texte hostile, case sur une proposition non éligible)
 - A4 — Essai réel et clôture : Essai réel sur 1 ou 2 propositions choisies par l'utilisateur, `git restore` ensuite si besoin
 - A4 — Essai réel et clôture : Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
 - A5 — Retour au plan précédent (menage-page) : Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
 - Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
+
+#### [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) — 85 %
+
+- A2 — Liens dérivés des persist : Exceptions et confirmations manuelles dans `placement.json` : `ip_cartes`, `etiquettes`, `liens_manuels` faits ; reste l'avertissement quand la dérivation et la saisie divergent
+- A5 — Lisibilité des liens : Liens entre pièces et entre étages : faisceau par bus plutôt qu'une ligne par esclave
+- A7 — Qualité et documentation : Contrôle de secrets avant commit (la page affiche IP, topics, jamais de mot de passe) puis commit en français sans accents
+- A8 — Wi-Fi, box, relais et répéteurs, survol, tuile annuaire : Confirmer avec l'utilisateur : l'appareil réel de MAISON pour chaque module (déduit : Freebox Server), répéteur salon sans SSID identifié
+- A9 — Couche chauffage et débits : Afficher les valeurs en direct des 6 débits (lecture de la carte des débits, à la demande comme « Tester les cartes »)
+- Amélioration [projet] : Dessiner un vrai plan à l'échelle des pièces (si l'utilisateur fournit les dimensions ou un plan)
+- Amélioration [projet] : Lier la page aux façades animées (`volets.js`) : clic sur une pièce -> sa page d'accueil
+- Amélioration [conversation] : Confirmer les placements incertains de A1 (position de la cave)
+- Amélioration [projet] : Corriger les rattachements Wi-Fi : appareil réel de MAISON pour chaque carte (défaut Freebox Server, faux pour certaines), répéteur du salon sans SSID identifié (`wifi_manuel`)
+- Amélioration [projet] : Pousser les commits du plan de la maison (agent `preparateur-push` d'abord)
+- Amélioration [projet] : Lier le plan aux pages des cartes : clic sur une pièce ou une carte -> sa façade animée (`volets.js`) ou sa page d'accueil
+- Amélioration [projet] : Plan à l'échelle des pièces, si l'utilisateur fournit les dimensions ou un plan
+- Amélioration [projet] : Cible PlatformIO et tâche VS Code pour la tuile « Plan de la maison » (comme les autres outils de l'annuaire)
 
 #### [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — 75 %
 

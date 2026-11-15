@@ -151,6 +151,11 @@
 				"fileLogName": "/logs/portail.log",
 				"fileLogSize_Ko": 10000
 			},
+			"facade": {
+				"activation": "ON",
+				"decor": ["portailSeul", "finition"],
+				"capteur": 1
+			},
 			"environnement": {
 				"boutons": {
 					"bouton1": {
