@@ -52,6 +52,12 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
                          "rapports : un rapport rouvert repart sans case cochee d'avant"),
     "rouvre-appliquees-gardees": ("S.demandes = null; S.appliques = []; S.lot.ids", "S.demandes = null; S.lot.ids",
                                   "rapports : le bloc de lot et sa case sont la, comme apres un audit"),
+    "renvois-brut": ('var bon = rv.code === 0, titre', 'var bon = false, titre',
+                     "lot : contrôle des renvois en une phrase lisible, brut replie quand il n'y a aucun défaut"),
+    "retour-sans-attente": ('b.disabled = true; b.textContent = "Retour en arrière…";', 'b.disabled = false;',
+                            "retour : pendant le retour en arriere, bouton grise et message d'attente"),
+    "retour-appliques-gardes": ("S.appliques = S.appliques.filter(function (c) { return chemins.indexOf(c) < 0; });", "S.appliques = S.appliques;",
+                                "retour : la ligne est de nouveau cochable"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -249,9 +255,31 @@ def scenario(m, temoin):
             "lot : le fichier est supprime dans l'arbre et l'index, RIEN n'est commite")
     verifie(cdp.js("document.getElementById('lot-resultat').textContent.indexOf('git restore --staged --worktree') >= 0"), True, "lot : la commande d'annulation est donnee")
     verifie(cdp.js("document.querySelectorAll('.lot-case input').length"), 0, "lot : la ligne appliquee n'est plus cochable (badge « appliquee »)")
+    cdp.js("(function(){var z=document.createElement('div'); z.id='zz-renvois'; document.body.appendChild(z); rendRenvois(z, {code: 0, sortie: 'CLAUDE.md:999: hors depot, non verifie: x\\n30 document(s), 0 defaut(s), 18 renvoi(s) hors depot non verifie(s).'});})()")
+    verifie(cdp.js("(function(){var t=document.getElementById('zz-renvois').textContent; return t.indexOf('aucun renvoi cassé')>=0 && t.indexOf('30 documents relus, 0 renvoi(s) cassé(s)')>=0 && t.indexOf('18 autre(s) renvoi(s)')>=0 && !document.querySelector('#zz-renvois details').open;})()"), True,
+            "lot : contrôle des renvois en une phrase lisible, brut replie quand il n'y a aucun défaut")
+    cdp.js("(function(){var z=document.getElementById('zz-renvois'); while(z.firstChild) z.removeChild(z.firstChild); rendRenvois(z, {code: 1, sortie: 'defaut: a.md cite b.md\\n30 document(s), 1 defaut(s), 0 renvoi(s) hors depot non verifie(s).'});})()")
+    verifie(cdp.js("(function(){var z=document.getElementById('zz-renvois'); return z.textContent.indexOf('à regarder')>=0 && z.querySelector('details').open;})()"), True,
+            "lot : un défaut de renvoi est annoncé et le détail s'ouvre")
     verifie(cdp.js("document.querySelectorAll('#lot img, #lot b').length < 3 && window.__pwn === undefined"), True, "lot : aucun HTML injecte")
-    subprocess.run(["git", "restore", "--staged", "--worktree", "--", "tasks/autre.md"], cwd=depot, capture_output=True)      # la commande donnee a l'ecran ; la suite de la sonde a besoin du fichier
-    verifie((depot / "tasks" / "autre.md").exists(), True, "lot : git restore --staged --worktree annule la suppression")
+    # retour en arriere : le bouton defait l'application, avec un message pendant et une confirmation apres (la reponse est ralentie pour que l'attente se voie)
+    verifie(cdp.js("Array.prototype.map.call(document.querySelectorAll('#lot-resultat button'),function(b){return b.textContent}).join('|')"), "↶ Annuler cette application",
+            "retour : le bouton « Annuler cette application » est propose apres l'application")
+    cdp.js("(function(){var r=window.fetch; window.fetch=function(u,o){var p=r.apply(this,arguments); return String(u).indexOf('/appliquer/annuler')>=0 ? "
+           "new Promise(function(ok){setTimeout(function(){ok(p)},1500)}) : p;};})()")
+    clic_bouton(cdp, "#lot-resultat", "↶ Annuler cette application")
+    time.sleep(0.4)
+    verifie(cdp.js("(function(){var b=document.querySelector('#lot-resultat button'); return !!b && b.disabled && b.textContent.indexOf('Retour en arri') >= 0 "
+                   "&& document.getElementById('etat').textContent.indexOf('Retour en arri') >= 0 && document.getElementById('etat').className.indexOf('en') >= 0;})()"), True,
+            "retour : pendant le retour en arriere, bouton grise et message d'attente")
+    verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('Retour en arrière terminé') >= 0", 20)), True, "retour : confirmation affichee dans le bloc")
+    verifie(cdp.js("document.getElementById('etat').className.indexOf('ok') >= 0 && document.getElementById('etat').textContent.indexOf('Retour en arrière terminé') >= 0 "
+                   "&& document.getElementById('etat').textContent.indexOf('1 fichier') >= 0"), True, "retour : message de confirmation en haut de la page")
+    etat_git = subprocess.run(["git", "status", "--short"], cwd=depot, capture_output=True).stdout.decode()
+    verifie(((depot / "tasks" / "autre.md").exists(), "autre.md" in etat_git, subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=depot, capture_output=True).stdout.decode().strip()),
+            (True, False, "1"), "retour : le fichier est revenu, git ne voit plus aucun changement, rien n'est commite")
+    verifie(cdp.js("document.querySelectorAll('.lot-case input').length"), 1, "retour : la ligne est de nouveau cochable")
+    verifie(cdp.js("document.querySelectorAll('#lot-resultat button').length"), 0, "retour : plus de bouton d'annulation une fois defait")
     verifie(cdp.js("document.getElementById('b-copie').disabled"), False, "copier actif avec un rapport")
     verifie(cdp.js("document.getElementById('couverture').hidden === false && document.querySelectorAll('#couv .couv-ligne').length"), 7,
             "couverture : une ligne par controle demande (les non declares y figurent)")
@@ -318,7 +346,7 @@ def scenario(m, temoin):
     verifie(cdp.js("document.querySelectorAll('#p-rapport option').length >= 1 && document.getElementById('b-rouvre').disabled === false"), True,
             "rapports : l'audit reussi est dans la liste, « Rouvrir » est actif")
     verifie(cdp.js("document.querySelector('#p-rapport option').textContent.indexOf('3 proposition(s)') >= 0"), True, "rapports : la liste donne la date et le nombre de propositions")
-    cdp.js("S.lot.ids = ['M2']")                                       # une case cochee d'avant : le nouveau rapport doit repartir sans
+    cdp.js("S.lot.ids = ['M2']; S.appliques = ['tasks/autre.md']")     # une case cochee et une ligne « appliquee » d'avant : le nouveau rapport doit repartir sans
     cdp.js("(function(){var r=window.fetch; window.fetch=function(u,o){var p=r.apply(this,arguments); return String(u).indexOf('/rapports/ouvrir')>=0 ? new Promise(function(ok){setTimeout(function(){ok(p)},1500)}) : p;};})()")                      # ouverture ralentie : l'attente doit se voir
     clic(cdp, "b-rouvre")
     time.sleep(0.5)

@@ -151,6 +151,26 @@ mw.acces_web.est_local = lambda adresse: False
 verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "0" * 16, "head": "inconnu", "a_blanc": True})[0], 403, "appliquer depuis un autre appareil : 403, meme a blanc")
 mw.acces_web.est_local = _est_local
 verifie(s.req("POST", "/appliquer/apercu", {"ids": ["M2"]})[0], 200, "l'apercu (lecture seule) reste permis, lui")
+# retour en arriere : la page n'envoie qu'un numero, le serveur defait SA derniere application (RACINE : faux depot, annule() simule)
+verifie(s.req("POST", "/appliquer/annuler", {"application": 1})[0], 404, "annuler sans aucune application : 404")
+verifie(s.req("POST", "/appliquer/annuler", {"application": 1}, {mw.ENTETE: "0"})[0], 403, "annuler sans l'en-tete X-Menage : 403")
+mw.acces_web.est_local = lambda adresse: False
+verifie(s.req("POST", "/appliquer/annuler", {"application": 1})[0], 403, "annuler depuis un autre appareil : 403")
+mw.acces_web.est_local = _est_local
+s.etat.applications.extend([{"numero": 1, "head": "h", "faits": [{"id": "A"}]}, {"numero": 2, "head": "h", "faits": [{"id": "B"}, {"id": "C"}]}])
+verifie(s.req("POST", "/appliquer/annuler", {"application": 1})[0], 409, "annuler une application qui n'est pas la derniere : 409")
+verifie(s.req("POST", "/appliquer/annuler", {})[0], 409, "annuler sans numero : 409")
+vrai_annule = mw.menage_application.annule
+appels = []
+mw.menage_application.annule = lambda faits, head, racine, builds_en_cours, journal=None: (appels.append([f["id"] for f in faits]),
+    {"retablis": [{"id": "C", "action": "supprimer", "chemin": "c"}], "echec": {"id": "B", "chemin": "b", "motif": "x"}, "restants": ["B"]})[1]
+st, t = s.req("POST", "/appliquer/annuler", {"application": 2})
+verifie((st, json.loads(t)["restants"], appels, [f["id"] for f in s.etat.applications[-1]["faits"]]), (200, ["B"], [["B", "C"]], ["B"]), "annulation partielle : la pile garde les lignes non defaites")
+mw.menage_application.annule = lambda faits, head, racine, builds_en_cours, journal=None: {"retablis": [{"id": "B", "action": "supprimer", "chemin": "b"}], "echec": None, "restants": []}
+verifie(s.req("POST", "/appliquer/annuler", {"application": 2})[0], 200, "annulation terminee : 200")
+verifie([a["numero"] for a in s.etat.applications], [1], "annulation terminee : la derniere application sort de la pile")
+mw.menage_application.annule = vrai_annule
+s.etat.applications.clear()
 verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "0" * 16, "head": "inconnu", "a_blanc": True})[0], 409, "a blanc : sans confirmation, mais meme refus d'un apercu perime (409)")
 verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "x", "head": "y", "a_blanc": "oui"})[0], 400, "a_blanc doit etre un booleen")
 verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "confirme": True})[0], 400, "appliquer sans empreinte ni head : refuse")

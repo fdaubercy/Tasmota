@@ -362,6 +362,56 @@ function apercuLot() {
     }
   });
 }
+function rendRenvois(z, rv) {
+  // La sortie du controle finit par « N document(s), M defaut(s), K renvoi(s) hors depot non verifie(s). » : on en fait une phrase, le brut reste replie.
+  var m = /(\d+) document\(s\), (\d+) d[ée]faut\(s\)(?:, (\d+) renvoi)?/.exec(rv.sortie || "");
+  var bon = rv.code === 0, titre = bon ? "Documents : aucun renvoi cassé par ce lot" : "Documents : à regarder avant de commiter";
+  z.appendChild(el("h4", null, titre));
+  if (m) {
+    var t = m[1] + " documents relus, " + m[2] + " renvoi(s) cassé(s)." + (bon ? " Aucun document ne cite un fichier que vous venez de supprimer ou déplacer." : " Chaque ligne « défaut » du détail nomme le document et le fichier qui manque.");
+    if (m[3]) t += " " + m[3] + " autre(s) renvoi(s) visent du code hors dépôt (amont Tasmota, bibliothèques) : non vérifiables, sans lien avec ce lot.";
+    z.appendChild(ligneLot(t));
+  } else z.appendChild(ligneLot(bon ? "Contrôle terminé sans défaut." : "Résultat du contrôle non reconnu : lisez le détail."));
+  var dt = el("details"); dt.open = !bon; dt.appendChild(el("summary", null, "Détail du contrôle (sortie brute)")); dt.appendChild(el("pre", null, rv.sortie)); z.appendChild(dt);
+}
+function boutonAnnule(z, d) {
+  var l = el("div", "ligne"), b = el("button", "btn", "↶ Annuler cette application");
+  b.title = "Rétablit l'état d'avant (git restore, ou git mv à l'envers), tant que rien n'est commité";
+  b.onclick = function () { annuleLot(b, d); };
+  l.appendChild(b); z.appendChild(l);
+}
+function annuleLot(b, d) {
+  var t0 = Date.now(), tic, z = $("lot-resultat");
+  b.disabled = true; b.textContent = "Retour en arrière…";
+  function attente() { message("en", "Retour en arrière en cours : " + d.faits.length + " ligne(s) à rétablir, depuis " + Math.round((Date.now() - t0) / 1000) + " s…"); }
+  attente(); tic = setInterval(attente, 500);
+  api("POST", "/appliquer/annuler", {application: d.application}).then(function (x) {
+    // le message d'attente reste au moins 0,8 s : une annulation rapide serait sinon invisible
+    setTimeout(function () {
+      clearInterval(tic);
+      if (!x.ok) {
+        b.disabled = false; b.textContent = "↶ Annuler cette application";
+        message("ko", "Retour en arrière impossible : " + x.texte); z.appendChild(ligneLot("Retour en arrière refusé : " + x.texte, "etat ko")); return;
+      }
+      var r = x.donnees, ids = r.retablis.map(function (a) { return a.id; });
+      var chemins = d.faits.filter(function (f) { return ids.indexOf(f.id) >= 0; }).map(function (f) { return f.chemin; });
+      S.appliques = S.appliques.filter(function (c) { return chemins.indexOf(c) < 0; });
+      vide(z);
+      z.appendChild(el("h4", null, "Retour en arrière terminé : " + r.retablis.length + " ligne(s) rétablie(s)"));
+      r.retablis.forEach(function (a) { z.appendChild(ligneLot("↶ " + a.chemin + " (" + (a.action === "supprimer" ? "restauré" : "remis à sa place") + ")")); });
+      if (r.echec) {
+        z.appendChild(ligneLot("✗ arrêt sur " + r.echec.chemin + " : " + r.echec.motif, "etat ko"));
+        z.appendChild(ligneLot(r.restants.length + " ligne(s) non rétablie(s) : relisez git status."));
+        d.faits = d.faits.filter(function (f) { return r.restants.indexOf(f.id) >= 0; }); boutonAnnule(z, d);
+        message("ko", "Retour en arrière incomplet : " + r.retablis.length + " rétablie(s), arrêt sur " + r.echec.chemin + ".");
+      } else {
+        z.appendChild(ligneLot("L'état est celui d'avant l'application : rien n'a été commité, les cases sont de nouveau cochables."));
+        message("ok", "Retour en arrière terminé : " + r.retablis.length + " fichier(s) rétabli(s), l'état est celui d'avant l'application.");
+      }
+      rend();
+    }, Math.max(0, 800 - (Date.now() - t0)));
+  });
+}
 function appliqueLot(aBlanc) {
   var a = S.lot.apercu, z = $("lot-resultat"); if (!a) return;
   if (!aBlanc && !window.confirm("Appliquer ces " + a.ids.length + " ligne(s) ? Les fichiers seront supprimés ou déplacés dans l'arbre de travail (rien n'est commité).")) return;
@@ -383,9 +433,9 @@ function appliqueLot(aBlanc) {
       var faitsIds = d.faits.map(function (f) { return f.id; });
       d.faits.forEach(function (f) { S.appliques.push(f.chemin); });                 // par CHEMIN : les identifiants de l'agent changent d'un audit a l'autre
       S.lot.ids = S.lot.ids.filter(function (i) { return faitsIds.indexOf(i) < 0; });
-      if (d.renvois) { z.appendChild(el("h4", null, "Contrôle des renvois des documents : " + (d.renvois.code === 0 ? "aucun défaut" : "à regarder")));
-                       z.appendChild(el("pre", null, d.renvois.sortie)); }
-      z.appendChild(ligneLot("Relisez git status : rien n'est commité. Annuler une ligne : git restore --staged --worktree -- chemin"));
+      if (d.renvois) { rendRenvois(z, d.renvois); }
+      z.appendChild(ligneLot("Relisez git status : rien n'est commité. Une erreur ? Le bouton ci-dessous rétablit l'état d'avant (ou, à la main : git restore --staged --worktree -- chemin)."));
+      if (d.application) boutonAnnule(z, d);
       S.lot.apercu = null; rend();
     } else { $("b-blanc").disabled = $("b-applique").disabled = !S.lot.apercu; }
   });

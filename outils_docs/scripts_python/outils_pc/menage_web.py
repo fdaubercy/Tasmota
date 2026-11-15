@@ -20,6 +20,7 @@ Routes (les POST exigent l'en-tete X-Menage: 1 et la meme origine ; client de ce
     POST /arreter   {}
     POST /appliquer/apercu {ids}  -> {eligibles, refuses, empreinte} : apercu LECTURE SEULE d'un lot de deplacements (A1 du plan menage-appliquer)
     POST /appliquer {ids, empreinte, head, confirme:true | a_blanc:true}  -> {a_blanc, faits, echec, restants, renvois} : APPLIQUE le lot apercu (git rm / git mv, jamais commite) ; a_blanc = meme parcours en git -n, rien modifie
+    POST /appliquer/annuler {application}  -> {retablis, echec, restants} : DEFAIT la derniere application (git restore / git mv inverse), ce PC seulement ; 409 si un commit a eu lieu depuis ou si le fichier a ete touche
     POST /garder    {chemin}    un chemin du rapport en cours seulement   -> memorise dans garde.json
     POST /degarder  {chemin}
     POST /ignorer   {id}        une proposition du rapport en cours ; oubliee au redemarrage de l'outil
@@ -64,6 +65,8 @@ class Etat:
         self.audit = ml.Audit(racine, builds_en_cours, programme=programme, delai=delai, gardes=self.memoire.charge, dossier_rapports=dossier / "rapports")
         self.ignorees = set()
         self._verrou = threading.Lock()
+        self.applications = []                 # pile des applications REELLES de ce processus : {numero, head, faits} ; la page n'envoie jamais la liste a defaire
+        self._numero = 0
 
     def rapport(self):
         """Rapport valide de l'audit fini, filtre ; None sans rapport."""
@@ -112,8 +115,31 @@ class Etat:
         r = self.rapport()
         if r is None:
             raise LookupError("pas de rapport")
-        return menage_application.applique(d.get("ids"), d.get("empreinte"), d.get("head"), r["propositions"], self.racine,
-                                           builds_en_cours=self.audit.builds_en_cours, journal=self.dossier / "applications.jsonl", a_blanc=a_blanc)
+        res = menage_application.applique(d.get("ids"), d.get("empreinte"), d.get("head"), r["propositions"], self.racine,
+                                          builds_en_cours=self.audit.builds_en_cours, journal=self.dossier / "applications.jsonl", a_blanc=a_blanc)
+        if not a_blanc and res["faits"]:
+            with self._verrou:
+                self._numero += 1
+                self.applications.append({"numero": self._numero, "head": d.get("head"), "faits": list(res["faits"])})
+                res["application"] = self._numero
+        return res
+
+    def annule(self, d):
+        """Retour en arriere de la DERNIERE application de ce processus (numero exige : la page ne defait que ce qu'elle affiche)."""
+        with self._verrou:
+            if not self.applications:
+                raise LookupError("aucune application a defaire")
+            derniere = self.applications[-1]
+        if d.get("application") != derniere["numero"]:
+            raise RuntimeError("ce n'est pas la derniere application : seule la derniere peut etre defaite")
+        res = menage_application.annule(derniere["faits"], derniere["head"], self.racine, builds_en_cours=self.audit.builds_en_cours,
+                                        journal=self.dossier / "applications.jsonl")
+        with self._verrou:
+            if not res["restants"]:
+                self.applications.pop()
+            else:
+                derniere["faits"] = [f for f in derniere["faits"] if f["id"] in set(res["restants"])]
+        return res
 
     def garde(self, chemin, retire=False):
         if retire:
@@ -251,6 +277,11 @@ def fabrique_gestionnaire(acces, etat):
                 self._json(etat.applique(d))
             elif chemin == "/rapports/ouvrir":
                 self._json(etat.ouvre(d))
+            elif chemin == "/appliquer/annuler":
+                if not acces_web.est_local(self.client_address):
+                    self._envoie(403, "geste reserve a ce PC".encode("utf-8"))
+                    return
+                self._json(etat.annule(d))
             elif chemin == "/appliquer/apercu":
                 self._json(etat.apercu(d))
             elif chemin == "/garder":

@@ -428,6 +428,80 @@ try:
 except TypeError:
     pass
 
+# 10. retour en arriere : ce que l'application a fait se defait, dans l'ordre inverse, sans toucher a ce qui a change depuis
+d = depot_neuf()
+avant = arbre(d)
+ap, res = lance(d, ["S1", "E1", "S2", "E3"])
+verifie(all("dossiers_crees" in f for f in res["faits"]) and res["faits"][1]["dossiers_crees"] != [], True, "application : les dossiers crees sont notes pour pouvoir etre retires")
+verifie(arbre(d) != avant, True, "retour en arriere : l'application a bien change l'arbre")
+jr = Path(tempfile.mkdtemp()) / "j" / "applications.jsonl"
+r = ma.annule(res["faits"], ap["head"], d, lambda: [], journal=jr)
+verifie((r["echec"], [x["id"] for x in r["retablis"]], r["restants"]), (None, ["E3", "S2", "E1", "S1"], []), "retour en arriere : les 4 lignes rétablies, dans l'ordre inverse")
+verifie(arbre(d), avant, "retour en arriere : arbre de travail ET index identiques a ceux d'avant l'application")
+verifie(os.path.isdir(d / "rangees"), False, "retour en arriere : les dossiers crees par l'application sont retires")
+verifie(commits(d), "1", "retour en arriere : rien n'est commite")
+lj = [json.loads(x) for x in jr.read_text(encoding="utf-8").splitlines()]
+verifie(([x["id"] for x in lj if x.get("intention")], all(x.get("retour") for x in lj)), (["E3", "S2", "E1", "S1"], True), "retour en arriere : journal, intention avant chaque git")
+# un commit a eu lieu depuis : refus net, rien n'est touche
+d = depot_neuf()
+ap, res = lance(d, ["S1"])
+git(d, "commit", "-q", "-m", "l'utilisateur a commite la suppression")
+apres = arbre(d)
+try:
+    ma.annule(res["faits"], ap["head"], d, lambda: [])
+    verifie("accepte", "RuntimeError", "retour en arriere : refuse apres un commit")
+except RuntimeError as e:
+    verifie(("commit" in str(e), arbre(d)), (True, apres), "retour en arriere : refuse apres un commit (git revert), rien n'est touche")
+# build en cours : refuse
+d = depot_neuf()
+ap, res = lance(d, ["S1"])
+try:
+    ma.annule(res["faits"], ap["head"], d, lambda: ["pio run"])
+    verifie("accepte", "RuntimeError", "retour en arriere : refuse pendant un build")
+except RuntimeError as e:
+    verifie(("build" in str(e), os.path.exists(d / "libre.txt")), (True, False), "retour en arriere : refuse pendant un build, rien n'est touche")
+# le fichier a ete recree depuis : on n'ecrase jamais le travail de l'utilisateur
+ecrit(d, "libre.txt", "version de l'utilisateur\n")
+r = ma.annule(res["faits"], ap["head"], d, lambda: [])
+verifie((r["retablis"], r["echec"] and "recree" in r["echec"]["motif"], (d / "libre.txt").read_text(encoding="utf-8")), ([], True, "version de l'utilisateur\n"),
+        "retour en arriere : un fichier recree depuis n'est jamais ecrase")
+# un fichier deplace puis modifie : refuse (l'etat indexe n'est plus celui du git mv)
+d = depot_neuf()
+ap, res = lance(d, ["E1"])
+ecrit(d, "rangees/neuf/autre.txt", "modifie\n")
+git(d, "add", "-A")
+r = ma.annule(res["faits"], ap["head"], d, lambda: [])
+verifie((r["retablis"], r["echec"] is not None, os.path.exists(d / "rangees/neuf/autre.txt")), ([], True, True), "retour en arriere : un fichier deplace puis modifie n'est pas remis en place")
+# arret a la premiere erreur : les lignes restantes sont rendues, une 2e tentative peut finir
+d = depot_neuf()
+ap, res = lance(d, ["S1", "S2"])
+ecrit(d, "-rf", "recree\n")                        # la derniere ligne (S2) est defaite en premier : elle echoue, S1 reste
+r = ma.annule(res["faits"], ap["head"], d, lambda: [])
+verifie(([x["id"] for x in r["retablis"]], r["restants"], r["echec"] and r["echec"]["id"]), ([], ["S1", "S2"], "S2"), "retour en arriere : arret a la premiere erreur, les lignes non defaites sont rendues")
+os.remove(d / "-rf")
+r = ma.annule(res["faits"], ap["head"], d, lambda: [])
+verifie(([x["id"] for x in r["retablis"]], r["echec"]), (["S2", "S1"], None), "retour en arriere : une 2e tentative, une fois l'obstacle leve, rétablit tout")
+# pas de retour en arriere pendant une application
+d = depot_neuf()
+ap, res = lance(d, ["S1"])
+ma._VERROU.acquire()
+try:
+    ma.annule(res["faits"], ap["head"], d, lambda: [])
+    verifie("accepte", "RuntimeError", "retour en arriere : refuse pendant une application")
+except RuntimeError:
+    pass
+finally:
+    ma._VERROU.release()
+# mutant : sans la garde sur le HEAD, le retour en arriere s'executerait apres un commit
+d = depot_neuf()
+ap, res = lance(d, ["S1"])
+git(d, "commit", "-q", "-m", "commite")
+vrai_head = ma._head
+ma._head = lambda racine: ap["head"]
+r = ma.annule(res["faits"], ap["head"], d, lambda: [])
+ma._head = vrai_head
+verifie((len(r["retablis"]), r["echec"] is not None), (0, True), "mutant : HEAD masque, git restore echoue de lui-meme apres le commit (la garde HEAD reste la premiere ligne de defense)")
+
 # mutants : le banc doit voir si on affaiblit un garde-fou de l'application
 d = depot_neuf()
 ap = ma.previsualise(["S1"], lot_neuf(), d)

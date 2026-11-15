@@ -103,17 +103,29 @@ def argv_git(action, chemin, vers, simulation):
     return base + ["mv"] + (["-n"] if simulation else []) + ["--", chemin, vers]
 
 
-def _lance_git(racine, action, chemin, vers, simulation):
+def argv_annule(action, chemin, vers):
+    """La commande qui DEFAIT une ligne appliquee : un `git rm` se restaure (index et arbre), un `git mv` se refait a l'envers."""
+    base = ["git", "--no-optional-locks"]
+    if action == "supprimer":
+        return base + ["restore", "--staged", "--worktree", "--", chemin]
+    return base + ["mv", "--", vers, chemin]
+
+
+def _lance(racine, argv):
     """Lance git (liste d'arguments, jamais de shell) : (ok, sortie). Un delai ou une erreur systeme donnent ok=False : jamais un faux « ca passera »."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}     # GIT_DIR, GIT_WORK_TREE... : git agirait ailleurs
     env["GIT_LITERAL_PATHSPECS"] = "1"
     try:
-        r = subprocess.run(argv_git(action, chemin, vers, simulation), cwd=str(racine), capture_output=True, timeout=DELAI_GIT, env=env,
+        r = subprocess.run(argv, cwd=str(racine), capture_output=True, timeout=DELAI_GIT, env=env,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except (OSError, subprocess.SubprocessError) as e:
         return False, f"git inutilisable : {type(e).__name__}"
     texte = (r.stdout + r.stderr).decode("utf-8", "replace").strip()
     return r.returncode == 0, texte[:300]
+
+
+def _lance_git(racine, action, chemin, vers, simulation):
+    return _lance(racine, argv_git(action, chemin, vers, simulation))
 
 
 def _dry_run(racine, action, chemin, vers):
@@ -215,6 +227,76 @@ def _journalise(journal, ligne):
         pass                                      # un journal illisible ne doit jamais empecher ni masquer l'application
 
 
+def _statut(racine, *chemins):
+    """Premieres colonnes de `git status --porcelain` pour ces chemins (« D  », « R  »...), « » si rien. Un renommage ne se reconnait que si les DEUX
+    chemins sont donnes (la destination seule apparait comme un ajout)."""
+    try:
+        s = menage_verification._git(str(racine), ["status", "--porcelain", "--"] + list(chemins), DELAI_GIT)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return s[:3] if s.strip() else ""
+
+
+def motif_non_annulable(fait, racine):
+    """Pourquoi cette ligne ne peut PAS etre defaite sans risque (l'utilisateur a touche au fichier depuis), ou None."""
+    absent = lambda c: not os.path.lexists(os.path.join(str(racine), c))
+    if _protege(fait["chemin"], racine) or (fait["action"] == "deplacer" and _protege(fait["vers"] or "", racine)):
+        return "chemin protege"
+    if fait["action"] == "supprimer":
+        if not absent(fait["chemin"]):
+            return "le fichier existe de nouveau : il a ete recree depuis"
+        if _statut(racine, fait["chemin"]) != "D  ":
+            return "la suppression n'est plus l'etat indexe tel qu'elle a ete faite"
+        return None
+    if absent(fait["vers"]):
+        return "le fichier deplace n'est plus a sa nouvelle place"
+    if not absent(fait["chemin"]):
+        return "un fichier occupe de nouveau l'ancienne place"
+    if _statut(racine, fait["chemin"], fait["vers"]) != "R  ":
+        return "le deplacement n'est plus l'etat indexe tel qu'il a ete fait (fichier modifie depuis ?)"
+    return None
+
+
+def annule(faits, head, racine, builds_en_cours, journal=None):
+    """Defait, DANS L'ORDRE INVERSE, les lignes d'une application de ce processus : `git restore --staged --worktree` pour un rm, `git mv` a l'envers
+    pour un mv. Refuse si un commit a eu lieu depuis (HEAD different : `git revert` alors) ou si l'utilisateur a touche au fichier ; s'arrete a la
+    premiere erreur. Rend {retablis, echec, restants} ; leve RuntimeError (build, application en cours, HEAD change)."""
+    if not _VERROU.acquire(blocking=False):
+        raise RuntimeError("une application ou un retour en arriere est deja en cours")
+    try:
+        enc = builds_en_cours()
+        if enc:
+            raise RuntimeError("un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + ") : retour en arriere refuse")
+        if not head or _head(racine) != head:
+            raise RuntimeError("un commit a eu lieu depuis l'application : le retour en arriere automatique est refuse (utilisez git revert)")
+        retablis, echec = [], None
+        for fait in reversed(faits):
+            motif = motif_non_annulable(fait, racine)
+            ok, sortie = (False, motif) if motif else (None, "")
+            if motif is None:
+                _journalise(journal, {"id": fait["id"], "retour": True, "intention": True, "action": fait["action"], "chemin": fait["chemin"], "vers": fait["vers"]})
+                try:
+                    if fait["action"] == "deplacer":
+                        os.makedirs(os.path.dirname(os.path.join(str(racine), fait["chemin"])), exist_ok=True)     # l'ancien dossier a pu disparaitre
+                    ok, sortie = _lance(racine, argv_annule(fait["action"], fait["chemin"], fait["vers"]))
+                except OSError as erreur:
+                    ok, sortie = False, f"{type(erreur).__name__} : {erreur}"[:300]
+            _journalise(journal, {"id": fait["id"], "retour": True, "ok": ok, "sortie": sortie, "chemin": fait["chemin"]})
+            if not ok:
+                echec = {"id": fait["id"], "chemin": fait["chemin"], "motif": sortie}
+                break
+            for dossier in fait.get("dossiers_crees") or []:           # dossiers que l'application avait crees pour ce deplacement : retires s'ils sont vides
+                try:
+                    os.rmdir(os.path.join(str(racine), dossier))
+                except OSError:
+                    break
+            retablis.append({"id": fait["id"], "action": fait["action"], "chemin": fait["chemin"]})
+        faits_restants = [f["id"] for f in faits if f["id"] not in {r["id"] for r in retablis}]
+        return {"retablis": retablis, "echec": echec, "restants": faits_restants}
+    finally:
+        _VERROU.release()
+
+
 def applique(ids, empreinte, head, propositions, racine, builds_en_cours, verifie_refs=verifie_renvois, journal=None, a_blanc=False):
     """Applique le lot `ids` : l'apercu est REFAIT a cet instant et doit avoir la meme empreinte et le meme HEAD que celui montre a l'utilisateur.
     git est lance un fichier a la fois (argv_git sans -n), on s'arrete a la premiere erreur. Rien n'est jamais commite ni force.
@@ -266,7 +348,8 @@ def applique(ids, empreinte, head, propositions, racine, builds_en_cours, verifi
                         break
                 echec = {"id": e["id"], "chemin": e["chemin"], "motif": sortie}
                 break
-            faits.append({"id": e["id"], "action": e["action"], "chemin": e["chemin"], "vers": e["vers"], "commande": e["commande"]})
+            faits.append({"id": e["id"], "action": e["action"], "chemin": e["chemin"], "vers": e["vers"], "commande": e["commande"],
+                          "dossiers_crees": [os.path.relpath(d, str(racine)).replace(os.sep, "/") for d in cree]})
         restants = [e["id"] for e in r["eligibles"] if e["id"] not in {f["id"] for f in faits} and (not echec or e["id"] != echec["id"])]
         return {"a_blanc": bool(a_blanc), "faits": faits, "echec": echec, "restants": restants, "renvois": verifie_refs(racine) if faits and not a_blanc else None}
     finally:
