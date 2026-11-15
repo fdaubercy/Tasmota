@@ -55,7 +55,7 @@ class Etat:
         dossier = Path(dossier) if dossier else acces_web.dossier_donnees() / "menage"
         self.racine = Path(racine)
         self.memoire = menage_memoire.Memoire(dossier, racine)
-        self.audit = ml.Audit(racine, builds_en_cours, programme=programme, delai=delai, gardes=self.memoire.charge)
+        self.audit = ml.Audit(racine, builds_en_cours, programme=programme, delai=delai, gardes=self.memoire.charge, dossier_rapports=dossier / "rapports")
         self.ignorees = set()
         self._verrou = threading.Lock()
 

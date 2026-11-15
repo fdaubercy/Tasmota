@@ -73,7 +73,7 @@ def faux_claude(dossier):
         {"id": "M3", "categorie": "doublon", "chemin": "tasks/encours.md", "constat": "travail en cours", "preuve": "git status",
          "action": "supprimer", "casserait": "tout", "risque": "moyen", "en_cours": True},
     ]
-    rapport = json.dumps({"resume": "3 propositions", "non_verifie": "rien de grave", "propositions": props,
+    rapport = json.dumps({"resume": "- Premier point.\n- Second point.", "non_verifie": "rien de grave", "propositions": props,
                           "couverture": [{"controle": "reste", "etat": "fait", "note": "tout vu"},
                                          {"controle": "taille", "etat": "non_fait", "note": HOSTILE}],
                           "limites": [HOSTILE], "ecartes": ["les plans clos"]})
@@ -189,7 +189,12 @@ def scenario(m, temoin):
     verifie(cdp.js("document.querySelectorAll('#props .prop').length"), 2, "2 propositions actives")
     verifie(cdp.js("document.getElementById('n-props').textContent"), "(2)", "compteur des propositions")
     verifie(cdp.js("document.querySelector('#props .prop .chemin').textContent"), "tasks/README.md", "tri par risque : la faible d'abord")
-    verifie(cdp.js("document.getElementById('resume').textContent"), "3 propositions", "resume affiche")
+    verifie(cdp.js("Array.prototype.map.call(document.querySelectorAll('#resume li'),function(l){return l.textContent}).join('|')"), "Premier point.|Second point.",
+            "resume : une ligne par point, sans le tiret du texte")
+    verifie(cdp.js("Array.prototype.map.call(document.querySelectorAll('#plan summary'),function(s){return s.textContent.charAt(0)}).join('')"), "1",
+            "plan d'action : seule l'etape 1 (aucun renvoi) existe pour ces propositions")
+    verifie(cdp.js("document.querySelector('#plan details[open]').textContent.indexOf('tasks/README.md') >= 0 && document.querySelector('#plan details[open]').textContent.indexOf('tasks/encours.md') < 0"), True,
+            "plan d'action : la proposition « en cours » n'entre pas dans le plan")
     verifie(cdp.js("document.getElementById('b-copie').disabled"), False, "copier actif avec un rapport")
     verifie(cdp.js("document.getElementById('couverture').hidden === false && document.querySelectorAll('#couv .couv-ligne').length"), 7,
             "couverture : une ligne par controle demande (les non declares y figurent)")

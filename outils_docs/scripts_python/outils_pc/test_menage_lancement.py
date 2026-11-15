@@ -89,9 +89,14 @@ os.environ["FAUX_TRACE"] = str(trace)
 os.environ["ANTHROPIC_API_KEY"] = "valeur-factice-de-test"       # la page ne doit jamais la transmettre a claude
 os.environ["ANTHROPIC_AUTH_TOKEN"] = "valeur-factice-de-test"
 a = audit("ok", gardes=lambda: ["data/vieux.txt"])
+a.dossier_rapports = Path(tempfile.mkdtemp()) / "rapports"
 ok, msg = a.lance({"zone": ["tasks"], "anciennete_jours": 5})
 verifie(ok, True, "lancement accepte")
 e = attend(a)
+time.sleep(0.5)
+copies = list(a.dossier_rapports.glob("rapport-*.json"))
+verifie((len(copies), copies and json.loads(copies[0].read_text(encoding="utf-8"))["propositions"][0]["id"]), (1, e["rapport"]["propositions"][0]["id"]),
+        "rapport fini copie hors depot (la 2e passe ne le perd plus)")
 verifie((e["etat"], e["rapport"] and len(e["rapport"]["propositions"])), ("fini", 1), "audit fini avec 1 proposition")
 t = json.loads(trace.read_text(encoding="utf-8"))
 args = t["args"]

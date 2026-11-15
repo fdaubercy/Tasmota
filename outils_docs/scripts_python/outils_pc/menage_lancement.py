@@ -164,7 +164,8 @@ def _arrete_processus(p):
 
 
 class Audit:
-    def __init__(self, racine, builds_en_cours, programme=None, delai=DELAI, gardes=lambda: []):
+    def __init__(self, racine, builds_en_cours, programme=None, delai=DELAI, gardes=lambda: [], dossier_rapports=None):
+        self.dossier_rapports = Path(dossier_rapports) if dossier_rapports else None
         self.racine, self.builds_en_cours, self.programme, self.delai, self.gardes = Path(racine), builds_en_cours, programme, delai, gardes
         self._verrou = threading.Lock()
         self._etat = {"etat": "repos", "message": "", "rapport": None, "debut": None, "fin": None, "activite": [], "appels": 0, "progression": 0, "detail": ""}
@@ -209,6 +210,20 @@ class Audit:
         self._pose(etat=etat, message=message, rapport=rapport, fin=time.time())
         if etat == "fini":
             self._pose(progression=100)
+            self._garde_rapport(rapport)
+
+    def _garde_rapport(self, rapport):
+        """Copie du rapport hors depot : un audit suivant (la 2e passe) remplace celui de la page. Un echec ici ne perd rien."""
+        if not self.dossier_rapports or not rapport:
+            return
+        try:
+            self.dossier_rapports.mkdir(parents=True, exist_ok=True)
+            (self.dossier_rapports / f"rapport-{time.strftime('%Y%m%d-%H%M%S')}.json").write_text(
+                json.dumps(rapport, ensure_ascii=False, indent=1), encoding="utf-8")
+            for vieux in sorted(self.dossier_rapports.glob("rapport-*.json"))[:-20]:
+                vieux.unlink()
+        except OSError:
+            pass
 
     def _lit_flux(self, p, finale):
         """Lit le flux stream-json de claude : chaque appel d'outil devient une ligne d'activite, l'evenement final est garde."""

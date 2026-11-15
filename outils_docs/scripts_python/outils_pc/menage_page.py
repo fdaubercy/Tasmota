@@ -35,6 +35,7 @@ h1{font-size:20px;margin:0} h2{font-size:15px;margin:0 0 8px}
 .ligne{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
 label.ch{display:flex;gap:6px;align-items:flex-start;margin:4px 0}
 label.ch input{margin-top:3px;flex:none}
+.resume{margin:4px 0;padding-left:20px} #plan h3{font-size:13px;margin:10px 0 4px} #plan ul{margin:2px 0;padding-left:18px;font-size:12px}
 .groupe>summary{font-size:12px;margin-bottom:2px} .champ{display:block;margin:8px 0} .champ span{display:block;font-size:12px;color:var(--doux);margin-bottom:2px}
 input[type=number],select{font:inherit;padding:5px 7px;border:1px solid var(--bord);border-radius:5px;background:var(--champ);color:var(--texte);width:100%}
 .etat{padding:8px 10px;border-radius:6px;background:var(--piste);margin-top:8px;overflow-wrap:anywhere}
@@ -97,7 +98,8 @@ HTML = """
  <details id="brut" hidden><summary>Texte brut de l'agent</summary><pre id="brut-texte"></pre></details>
 </section>
 <section class="carte"><h2>Propositions <span class="doux petit" id="n-props"></span></h2>
- <p id="resume" class="doux"></p>
+ <ul id="resume" class="doux resume"></ul>
+ <div id="plan" hidden></div>
  <div class="ligne">
   <label>Catégorie <select id="f-cat"><option value="">toutes</option></select></label>
   <label>Risque <select id="f-risque"><option value="">tous</option><option>faible</option><option>moyen</option><option>eleve</option></select></label>
@@ -273,10 +275,46 @@ function propositionVue(p) {
 }
 
 var ORDRE = {faible: 0, moyen: 1, eleve: 2};
+function rendResume(texte) {
+  var z = $("resume"); vide(z);
+  var lignes = String(texte || "").split(/\n+/);
+  if (lignes.length < 2) lignes = lignes[0].split(/(?<=[.;])\s+(?=[A-ZÉÈÀ])/);   // ancien rapport en un paragraphe : une phrase par ligne
+  lignes.forEach(function (t) { t = t.replace(/^\s*[-*•]\s*/, "").trim(); if (t) z.appendChild(el("li", null, t)); });
+}
+var ETAPES = [
+  ["sur", "1. À appliquer d'un bloc : aucun fichier ne les cite (vérifié par git)"],
+  ["docs", "2. Après mise à jour des renvois dans les documents (même commit, puis verifie_references_docs.py)"],
+  ["code", "3. Un par un : cités par du code ou une configuration"],
+  ["main", "4. À vérifier à la main : vérification indisponible, chemin disparu ou destination déjà prise"]
+];
+function etapeDe(p) {
+  var v = p.verif;
+  if (p.action === "garder") return null;
+  if (!v || !v.disponible || v.perimee || v.destination_existe) return "main";
+  if (v.n_code) return "code";
+  if (v.n_docs) return "docs";
+  return "sur";
+}
+function rendPlan(r) {
+  var z = $("plan"); vide(z);
+  var groupes = {sur: [], docs: [], code: [], main: []};
+  r.propositions.forEach(function (p) { var e = p.en_cours ? null : etapeDe(p); if (e) groupes[e].push(p); });
+  var total = 0; ETAPES.forEach(function (e) { total += groupes[e[0]].length; });
+  if (!total) return;
+  z.appendChild(el("h3", null, "Actions à réaliser, par priorité"));
+  ETAPES.forEach(function (e) {
+    var l = groupes[e[0]]; if (!l.length) return;
+    var d = el("details"); if (e[0] === "sur") d.open = true;
+    d.appendChild(el("summary", null, e[1] + " (" + l.length + ")"));
+    var u = el("ul"); l.forEach(function (p) { u.appendChild(el("li", null, p.action + " " + p.chemin + (p.vers ? " vers " + p.vers : ""))); });
+    d.appendChild(u); z.appendChild(d);
+  });
+  z.hidden = false;
+}
 function rend() {
   var r = S.rapport, zone = $("props"), zoneEn = $("props-encours");
   vide(zone); vide(zoneEn);
-  if (!r) { zone.appendChild(el("p", "doux", "Aucun audit pour le moment.")); $("encours").hidden = true; $("resume").textContent = "";
+  if (!r) { zone.appendChild(el("p", "doux", "Aucun audit pour le moment.")); $("encours").hidden = true; vide($("resume")); $("plan").hidden = true;
             $("couverture").hidden = true; $("n-props").textContent = ""; $("b-copie").disabled = true; return; }
   var cat = $("f-cat").value, risque = $("f-risque").value;
   var tri = r.propositions.filter(function (p) { return (!cat || p.categorie === cat) && (!risque || p.risque === risque); })
@@ -286,7 +324,7 @@ function rend() {
   if (!actives.length) zone.appendChild(el("p", "doux", "Aucune proposition."));
   en.forEach(function (p) { zoneEn.appendChild(propositionVue(p)); });
   $("encours").hidden = !en.length; $("n-encours").textContent = String(en.length);
-  $("resume").textContent = r.resume; rendCouverture(r);
+  rendResume(r.resume); rendPlan(r); rendCouverture(r);
   $("n-props").textContent = "(" + actives.length + ")"; $("b-copie").disabled = !actives.length;
 }
 

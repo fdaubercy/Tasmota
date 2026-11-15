@@ -71,6 +71,8 @@ proposition par fichier ou par dossier entier (chemin = le dossier, vers = son n
 
 COMMANDES BASH : une seule commande simple par appel, sans `cd` (le dépôt est le dossier courant), sans pipe, sans `;`, `&&` ni redirection ;
 une commande composée est refusée par la page. Filtre avec Grep et Glob.
+RÉSUMÉ : le champ `resume` est une liste, une idée par ligne, chaque ligne commençant par `- ` et séparée par un retour à la ligne (`\n`), jamais un paragraphe. Ordre : d'abord ce qui est applicable sans risque, puis ce qui demande de mettre à jour des renvois, puis ce qui reste à décider.
+IMPACT : avant de proposer `supprimer`, `deplacer` ou `archiver`, cherche avec Grep le chemin complet ET le nom du fichier dans tout le dépôt (code, configuration, documents, autoexec, cenv). Mets dans `casserait` chaque fichier qui le cite ; sans recherche faite, le risque est `moyen` au moins. La page recontrôle par git, mais ne se substitue pas à cette recherche.
 PLUSIEURS MOTIFS OU NOMS ACCENTUÉS : n'utilise jamais Bash pour cela (`wc`, `ls` ou `du` sur un chemin accentué ou avec plusieurs motifs sont refusés). Utilise Grep (plusieurs motifs : une alternative `a|b`, ou un appel par motif) et Glob (noms accentués) ; Bash ne sert qu'aux commandes git et à `wc -l` sur un seul chemin ASCII.
 
 Pour CHAQUE proposition : chemin, constat avec la preuve (commande et sortie), action suggérée (supprimer / archiver /
