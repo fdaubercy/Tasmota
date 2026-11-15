@@ -16,6 +16,7 @@ Routes (les POST exigent l'en-tete X-Menage: 1 et la meme origine ; client de ce
     GET  /gardes    {gardes: [chemins]}
     POST /lancer    {zone, categories, anciennete_jours, modele, effort}  -> {message}
     POST /arreter   {}
+    POST /appliquer/apercu {ids}  -> {eligibles, refuses, empreinte} : apercu LECTURE SEULE d'un lot de deplacements (A1 du plan menage-appliquer)
     POST /garder    {chemin}    un chemin du rapport en cours seulement   -> memorise dans garde.json
     POST /degarder  {chemin}
     POST /ignorer   {id}        une proposition du rapport en cours ; oubliee au redemarrage de l'outil
@@ -33,6 +34,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import acces_web
 from annuaire_outils import hote_autorise
+import menage_application
 import menage_lancement as ml
 import menage_memoire
 import menage_rapport
@@ -78,6 +80,16 @@ class Etat:
         with self._verrou:
             self.ignorees = set()
         return {"message": message}
+
+    def apercu(self, d):
+        """Apercu (lecture seule) d'un lot de deplacements pris dans le rapport en cours : voir menage_application.previsualise."""
+        enc = self.audit.builds_en_cours()
+        if enc:
+            raise RuntimeError("un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + ") : apercu refuse")
+        r = self.rapport()
+        if r is None:
+            raise LookupError("pas de rapport")
+        return menage_application.previsualise(d.get("ids"), r["propositions"], self.racine)
 
     def garde(self, chemin, retire=False):
         if retire:
@@ -206,6 +218,8 @@ def fabrique_gestionnaire(acces, etat):
             elif chemin == "/arreter":
                 etat.audit.arrete()
                 self._json({"message": "arret demande"})
+            elif chemin == "/appliquer/apercu":
+                self._json(etat.apercu(d))
             elif chemin == "/garder":
                 self._json(etat.garde(d.get("chemin")))
             elif chemin == "/degarder":

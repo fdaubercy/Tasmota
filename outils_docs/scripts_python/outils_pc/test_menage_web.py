@@ -104,6 +104,7 @@ for libelle, corps in [("zone hors liste blanche", {"zone": ["/etc"]}), ("modele
     verifie(s.req("POST", "/lancer", corps)[0], 400, f"parametre refuse : {libelle}")
 verifie(s.req("POST", "/garder", {"chemin": "tasks/README.md"})[0], 404, "garder sans rapport")
 verifie(s.req("POST", "/ignorer", {"id": "M1"})[0], 404, "ignorer sans rapport")
+verifie(s.req("POST", "/appliquer/apercu", {"ids": ["M1"]})[0], 404, "apercu sans rapport")
 
 # client distant sans jeton
 vrai = acces_web.est_local
@@ -132,6 +133,13 @@ e = json.loads(s.req("GET", "/etat")[1])
 verifie((e["etat"], e["propositions"]), ("fini", 2), "audit fini, 2 propositions")
 r = json.loads(s.req("GET", "/rapport")[1])
 verifie([p["id"] for p in r["propositions"]], ["M1", "M2"], "rapport : 2 propositions")
+
+# apercu d'un lot de deplacements : lecture seule, refus de ce qui n'est pas un deplacement
+st, t = s.req("POST", "/appliquer/apercu", {"ids": ["M1", "M2", "M9"]})
+ap = json.loads(t) if st == 200 else {}
+verifie((st, sorted(x["id"] for x in ap.get("refuses", [])), ap.get("eligibles")), (200, ["M1", "M2", "M9"], []), "apercu : archiver, supprimer et inconnue refuses, rien d'eligible")
+verifie(s.req("POST", "/appliquer/apercu", {"ids": []})[0], 400, "apercu : lot vide refuse")
+verifie(s.req("POST", "/appliquer/apercu", {"ids": "M1"})[0], 400, "apercu : ids pas une liste")
 
 # ignorer, garder, degarder
 verifie(s.req("POST", "/ignorer", {"id": "M9"})[0], 404, "ignorer : id inconnu")
@@ -166,6 +174,8 @@ s.ferme()
 s2 = Serveur(builds=lambda: ["pio run -e x"])
 st, t = s2.req("POST", "/lancer", {})
 verifie((st, "build" in t), (409, True), "build en cours : 409")
+st, t = s2.req("POST", "/appliquer/apercu", {"ids": ["M1"]})
+verifie((st, "build" in t), (409, True), "apercu pendant un build : 409")
 s2.ferme()
 
 # mutant : si l'origine n'etait pas controlee, une origine etrangere passerait (le banc le voit)

@@ -1,0 +1,173 @@
+"""Banc de menage_application (apercu d'un lot de deplacements), avec mutants. Code de sortie 0 = vert.
+
+Faux depot git temporaire, jamais le vrai. Python de PlatformIO : <~/.platformio/penv/Scripts/python.exe> test_menage_application.py
+"""
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+import menage_application as ma
+
+ECHECS = []
+
+
+def verifie(obtenu, attendu, libelle):
+    if obtenu != attendu:
+        ECHECS.append(libelle)
+        print(f"ECHEC {libelle} : obtenu {obtenu!r}, attendu {attendu!r}")
+
+
+def git(racine, *args):
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=racine, capture_output=True, check=True)
+
+
+def ecrit(racine, chemin, texte="x\n"):
+    p = Path(racine) / chemin
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(texte, encoding="utf-8")
+
+
+def prop(ident, chemin, vers="archives/x.txt", action="deplacer", en_cours=False):
+    return {"id": ident, "categorie": "hors_dossier", "chemin": chemin, "action": action, "risque": "faible", "en_cours": en_cours,
+            "vers": vers, "constat": "c", "preuve": "p", "casserait": "rien"}
+
+
+def arbre(racine):
+    """Photo de l'arbre de travail ET de l'index : l'apercu ne doit rien changer."""
+    fichiers = sorted(str(p.relative_to(racine)) for p in Path(racine).rglob("*") if ".git" not in p.parts)
+    index = subprocess.run(["git", "ls-files", "-s"], cwd=racine, capture_output=True).stdout
+    return fichiers, index
+
+
+racine = Path(tempfile.mkdtemp()) / "depot"
+racine.mkdir()
+git(racine, "init", "-q")
+ecrit(racine, "libre.txt", "rien ne me cite\n")
+ecrit(racine, "-rf", "nom hostile\n")
+ecrit(racine, "cite_doc.txt", "contenu\n")
+ecrit(racine, "docs/lisez.md", "voir cite_doc.txt pour le detail\n")
+ecrit(racine, "cite_code.py", "x = 1\n")
+ecrit(racine, "config.ini", "script = cite_code.py\n")
+ecrit(racine, "modifie.txt", "avant\n")
+ecrit(racine, "pris.txt", "a deplacer\n")
+ecrit(racine, "archives/existe.txt", "deja la\n")
+ecrit(racine, "dossier/a.txt", "x\n")
+ecrit(racine, "autre.txt", "autre\n")
+ecrit(racine, "casse.txt", "x\n")
+git(racine, "add", "-A")
+git(racine, "commit", "-q", "-m", "init")
+ecrit(racine, "modifie.txt", "apres\n")
+ecrit(racine, "nonsuivi.txt", "pas suivi\n")
+
+avant = arbre(racine)
+PROPS = [prop("E1", "libre.txt", "archives/libre.txt"), prop("E2", "-rf", "archives/rf.txt"),
+         prop("S1", "libre.txt", None, action="supprimer"), prop("C1", "libre.txt", "archives/c1.txt", en_cours=True),
+         prop("V1", "libre.txt", None), prop("D1", "cite_doc.txt", "archives/cite_doc.txt"), prop("K1", "cite_code.py", "archives/cite_code.py"),
+         prop("M1", "modifie.txt", "archives/modifie.txt"), prop("N1", "nonsuivi.txt", "archives/nonsuivi.txt"),
+         prop("P1", "disparu.txt", "archives/disparu.txt"), prop("X1", "pris.txt", "archives/existe.txt"),
+         prop("R1", "dossier", "archives/dossier"), prop("Y1", "autre.txt", "archives/libre.txt"), prop("I1", "autre.txt", "autre.txt"),
+         prop("G1", "autre.txt", "../hors/depot.txt")]
+
+
+def apercu(*ids, props=PROPS, rac=racine):
+    return ma.previsualise(list(ids), props, rac)
+
+
+def motifs(r):
+    return {x["id"]: x["motif"] for x in r["refuses"]}
+
+
+# 1. un deplacement eligible : commande exacte, jamais de shell, dossier a creer signale
+r = apercu("E1")
+verifie([(e["id"], e["commande"], e["cree_dossier"]) for e in r["eligibles"]], [("E1", "git mv -- libre.txt archives/libre.txt", None)], "eligible : commande exacte")
+r = apercu("E2")
+verifie([e["commande"] for e in r["eligibles"]], ["git mv -- -rf archives/rf.txt"], "nom hostile : « -- » devant les chemins, jamais pris pour une option")
+r = apercu("E1")
+verifie(r["eligibles"][0]["cree_dossier"], None, "dossier de destination deja la : rien a creer")
+ecrit(racine, "autre_dest/placeholder.txt")
+os.remove(racine / "autre_dest" / "placeholder.txt"); os.rmdir(racine / "autre_dest")
+r = ma.previsualise(["E1"], [prop("E1", "libre.txt", "nouveau/dossier/libre.txt")], racine)
+verifie(r["eligibles"][0]["cree_dossier"], "nouveau/dossier", "dossier de destination absent : annonce qu'il sera cree")
+
+# 2. refus, un motif par cas
+m = motifs(apercu("S1", "C1", "V1", "D1", "K1", "M1", "N1", "P1", "X1", "R1", "I1"))
+verifie("suppressions" in m["S1"], True, "suppression refusee en version 1")
+verifie("en cours" in m["C1"], True, "proposition en cours refusee")
+verifie("destination" in m["V1"], True, "sans destination exacte : refusee")
+verifie("1 document" in m["D1"], True, "cite par un document : refusee (etape 2, pas 1)")
+verifie("1 fichier(s) de code" in m["K1"], True, "cite par du code ou une config : refusee")
+verifie("en cours" in m["M1"], True, "fichier modifie : refuse (devient « en cours » avant tout autre motif)")
+verifie("en cours" in m["N1"], True, "fichier non suivi : refuse (idem, il est modifie pour git)")
+verifie("n'existe plus" in m["P1"], True, "chemin disparu : refuse")
+verifie("existe deja" in m["X1"], True, "destination deja prise : refusee")
+verifie("dossier" in m["R1"], True, "un dossier ne se deplace pas d'un coup")
+verifie("existe deja" in m["I1"], True, "destination identique au chemin : refusee (elle existe deja)")
+verifie(apercu("G1")["eligibles"], [], "destination hors depot : jamais eligible")
+
+# 2b. destinations et sources protegees, collisions de lot
+PP =[prop("H1", "libre.txt", ".git/hooks/pre-commit"), prop("H2", "libre.txt", ".GIT/x"), prop("H3", "libre.txt", ".claude/hooks/x.sh"),
+      prop("H4", "libre.txt", ".github/workflows/x.yml"), prop("A1", "libre.txt", "archives/existe.txt"), prop("B1", "archives/existe.txt", "archives/chaine2.txt"),
+      prop("Q1", "autre.txt", "archives/Casse.txt"), prop("Q2", "casse.txt", "archives/casse.txt"),
+      prop("F1", "autre.txt", "libre.txt/dessous.txt"), prop("L1", "libre.txt", "archives\\barre.txt")]
+for ident in ("H1", "H2", "H3", "H4"):
+    verifie("protege" in motifs(ma.previsualise([ident], PP, racine)).get(ident, ""), True, f"destination protegee refusee ({ident})")
+r = ma.previsualise(["Q1", "Q2"], PP, racine)
+verifie(([e["id"] for e in r["eligibles"]], "meme destination" in motifs(r).get("Q2", "")), (["Q1"], True), "meme destination a la casse pres : la seconde refusee")
+r = ma.previsualise(["A1", "B1"], PP, racine)
+verifie(([e["id"] for e in r["eligibles"]], "existe deja" in motifs(r).get("A1", "")), (["B1"], True), "deplacements enchaines : l'amont (destination deja prise) est refuse, jamais les deux")
+r = ma.previsualise(["F1"], PP, racine)
+verifie(("dossier de destination est un fichier" in motifs(r).get("F1", "")), True, "parent de destination qui est un fichier : refuse, pas « dossier a creer »")
+r = ma.previsualise(["L1"], PP, racine)
+verifie([e["commande"] for e in r["eligibles"]], ["git mv -- libre.txt archives/barre.txt"], "chemin avec anti-slash : la commande porte la forme normalisee controlee")
+
+# 3. lot : meme destination deux fois, identifiant repete, identifiant inconnu
+r = apercu("E1", "Y1")
+verifie(([e["id"] for e in r["eligibles"]], "meme destination" in motifs(r).get("Y1", "")), (["E1"], True), "deux propositions vers la meme destination : la seconde refusee")
+r = apercu("E1", "E1")
+verifie(len(r["eligibles"]), 1, "identifiant coche deux fois : un seul deplacement")
+r = apercu("ZZ")
+verifie(("inconnue" in motifs(r)["ZZ"], r["eligibles"]), (True, []), "identifiant inconnu : refuse")
+for libelle, ids in [("vide", []), ("pas une liste", "E1"), ("pas des textes", [1]), ("trop long", [f"i{n}" for n in range(ma.MAX_LOT + 1)])]:
+    try:
+        ma.previsualise(ids, PROPS, racine)
+        verifie("accepte", "refuse", f"ids invalides ({libelle})")
+    except ValueError:
+        pass
+
+# 4. empreinte : stable pour le meme lot, differente si le lot change
+verifie(apercu("E1", "E2")["empreinte"], apercu("E1", "E2")["empreinte"], "empreinte stable")
+verifie(apercu("E1", "E2")["empreinte"] != apercu("E1")["empreinte"], True, "empreinte differente si le lot change")
+
+# 5. l'apercu ne touche a rien (arbre de travail et index)
+apercu("E1", "E2", "S1", "D1", "X1")
+verifie(arbre(racine), avant, "apercu : arbre de travail et index inchanges")
+
+# 6. depot sans git : tout refuse, rien d'eligible
+sans = Path(tempfile.mkdtemp())
+ecrit(sans, "libre.txt")
+r = ma.previsualise(["E1"], [prop("E1", "libre.txt", "archives/libre.txt")], sans)
+verifie((r["eligibles"], "indisponible" in motifs(r)["E1"]), ([], True), "depot sans git : verification indisponible, rien d'eligible")
+
+# 7. mutants : le banc doit voir si on affaiblit un garde-fou
+vrai = ma.motif_refus
+ma.motif_refus = lambda p, v, r=None: None
+verifie(len(apercu("K1", "M1", "N1")["eligibles"]) > 0, True, "mutant sans motif de refus : un fichier cite devient eligible (le banc 2 etait discriminant)")
+ma.motif_refus = vrai
+ma.motif_refus = lambda p, v, r=None: vrai(p, dict(v, n_code=0, n_docs=0), r)
+verifie("K1" in [e["id"] for e in apercu("K1")["eligibles"]], True, "mutant qui ignore les renvois : K1 devient eligible (le banc le voit)")
+ma.motif_refus = vrai
+sauve = ma._est_dossier
+ma._est_dossier = lambda rac, chemin: False
+verifie("R1" in [e["id"] for e in apercu("R1")["eligibles"]], True, "mutant sans test de dossier : R1 devient eligible (le banc le voit)")
+ma._est_dossier = sauve
+verifie(apercu("K1")["eligibles"], [], "apres mutants : garde-fous restaures")
+ma.PROTEGES = ()
+verifie(ma.previsualise(["H1"], PP, racine)["eligibles"] != [], True, "mutant sans dossiers proteges : .git devient une destination (le banc le voit)")
+ma.PROTEGES = (".git", ".github", ".claude", ".vscode")
+
+if ECHECS:
+    print(f"ROUGE : {len(ECHECS)} echec(s)")
+    sys.exit(1)
+print("VERT : menage_application")
