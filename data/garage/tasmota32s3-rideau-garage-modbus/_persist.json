@@ -687,7 +687,7 @@
 			"facade": {
 				"activation": "ON",
 				"toit": "unPan",
-				"decor": ["chevrefeuille", "porte", "pergola"]
+				"decor": ["chevrefeuille", "porte", "finition"]
 			},
 			"log": "info",
 			"environnement": {

@@ -1068,7 +1068,7 @@
 			"facade": {
 				"activation": "ON",
 				"toit": "deuxPans",
-				"decor": ["maison"],
+				"decor": ["maison", "finition"],
 				"camera": {"module": "autres", "id": 7}
 			},
 			"log": "info",

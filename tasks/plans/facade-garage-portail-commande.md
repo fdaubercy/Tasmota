@@ -61,6 +61,7 @@ Décisions :
 - [ ] Agents avant commit : `controleur-secrets`, `relecteur-pages-web` ; commit `feat(volets): ...`
 
 ## A8 — Retour au plan atelier-visuels
+- [ ] Passer d'abord par le plan `facade-esclaves-grenier-rdc` (façades de l'esclave 4, du rideau et du grenier du RDC), qui se termine par ce même retour
 - [ ] Une fois A7 close, reprendre le plan `atelier-visuels` (tasks/plans/atelier-visuels.md, 83 %) : prochaines étapes A4 (essai sur la cuve, fichiers d'essai retirés) et A5 (tests rouges à reprendre)
 
 ## Améliorations restantes

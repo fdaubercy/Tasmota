@@ -678,6 +678,7 @@
       el(p, 'rect', {y: m[3], width: m[1], height: m[4], fill: m[6]});
     });
     var finition = toit == 'unPan' && !maisonD && decor.indexOf('finition') >= 0;
+    var nuitDecor = finition || (maisonD && listeDecor.indexOf('finition') >= 0);     // la maison n'a que la nuit et le bouton, pas la foret ni les cones
     if (finition) {
       [['vf_mur', '#5a4a30', 0, 0.22], ['vf_debord', '#000', 0.25, 0], ['vf_cam', '#38bdf8', 0.5, 0], ['vf_lamp', '#fde047', 0.55, 0]].forEach(function (q) {
         var lg = el(defs, 'linearGradient', {id: q[0], x1: 0, y1: 0, x2: 0, y2: 1});
@@ -754,20 +755,20 @@
         svg.volets.push(v);
       });
     }
-    if (finition) {                                         // voile de nuit, puis les cones par-dessus (ils restent vifs la nuit)
-      svg.nuit = el(svg, 'rect', {x: 0, y: 0, width: WV, height: ouvPortail.length ? 320 : 200, fill: 'rgb(43,59,107)', opacity: 0, 'pointer-events': 'none', 'data-nuit': ''});
+    if (nuitDecor) {                                        // voile de nuit, puis (garage) les cones par-dessus (ils restent vifs la nuit)
+      svg.nuit = el(svg, 'rect', {x: 0, y: 0, width: WV, height: maisonD ? 214 : (ouvPortail.length ? 320 : 200), fill: 'rgb(43,59,107)', opacity: 0, 'pointer-events': 'none', 'data-nuit': ''});
       var cone = function (pts, rempl, nom) {
         var c = el(svg, 'polygon', {points: pts, fill: rempl, 'pointer-events': 'none', 'data-cone': nom});
         c.style.opacity = '0'; c.style.transition = 'opacity .5s';
         return c;
       };
-      if (svg.camera) svg.camera.cone = cone('29,62 -20,196 190,196', 'url(#vf_cam)', 'camera');
-      if (svg.lampe) {
+      if (finition && svg.camera) svg.camera.cone = cone('29,62 -20,196 190,196', 'url(#vf_cam)', 'camera');
+      if (finition && svg.lampe) {
         var lc = xMur - 18, ly = 45 + 16 * (lc - 20) / (W - 40) + 22;
         svg.lampe.cone = cone(lc + ',' + ly + ' ' + (lc - 120) + ',196 ' + (lc + 45) + ',196', 'url(#vf_lamp)', 'lampe');
       }
     }
-    if (finition) {                                         // bouton Auto, Jour, Nuit en haut a droite ; le mode est garde dans ce navigateur
+    if (nuitDecor) {                                        // bouton Auto, Jour, Nuit en haut a droite ; le mode est garde dans ce navigateur
       var bm = {g: el(svg, 'g', {style: 'cursor:pointer'}), mode: 'auto'};
       bm.texte = el(bm.g, 'text', {x: W - 6, y: 11, 'font-size': 9, 'text-anchor': 'end', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'});
       el(bm.g, 'title', {}).textContent = 'Jour et nuit : automatique (soleil de la carte), jour ou nuit forcés (clic pour changer)';
