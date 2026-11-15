@@ -216,7 +216,7 @@ fond gardé avec un état **simulé** (interrupteurs ON/OFF, actif/muet par sour
   non permis refusé, licence non permissive masquée, hors ligne) ; essai réel d'une recherche « camera »
   - [x] Routes `GET /icones/recherche`, `GET /icones/svg`, `POST /icones/garde` branchées dans `atelier_visuels_web.py` (via `atelier_visuels_web_routes.py`) — preuve : `test_atelier_visuels_web.py` VERT (hôte Iconify fixe par faux `ouvre`, nom `../` 400, licence NC masquée, garde 403 sans en-tête, 409 si déjà gardée)
   - [x] Module autonome `atelier_visuels_icones_web.py` + banc `test_atelier_visuels_icones_web.py`, essai réel « camera » (routes HTTP restent à brancher) — preuve : banc VERT 42 contrôles ; essai réel 47 icônes, svg mdi:camera 325 o ; README § « Recherche d'icônes en ligne »
-- [ ] Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`)
+- [x] Icônes (spec § 2.4) : sélecteur d'icône avec recherche, alimenté par `icones_firmware.json` (`atelier_ecrans_icones.charge`) — preuve : banque locale ffc9adc14, recherche en ligne 52a4d672e, sondes Chrome 171 contrôles OK (2026-11-15)
   puis les collections de `ICONES_IMAGES_SOURCES.md` ; conversion en tracé `path` (jeu des tracés MDI rangé dans
   `outils_docs/visuels_accueil/icones/` avec sa licence) ; taille réglable ; `icone_on` / `icone_off` / `icone_inconnu` et
   couleur par état ; import d'un `.svg` nettoyé ; test : l'icône change avec l'état simulé (caméra ON/OFF) dans l'aperçu
