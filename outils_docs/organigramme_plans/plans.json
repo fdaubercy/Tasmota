@@ -1062,7 +1062,7 @@
    "nom": "compilations-nuit",
    "titre": "Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire",
    "objectif": "Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "build",
    "parent": "",
    "liens": [
@@ -1073,8 +1073,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 89,
-   "etapes": "25/28",
+   "pct": 93,
+   "etapes": "26/28",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/compilations-nuit.md",
    "urls_spec": []
   },
@@ -1119,7 +1119,7 @@
    "nom": "sondes-en-cours",
    "titre": "Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel",
    "objectif": "Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "methode",
    "parent": "",
    "liens": [
@@ -1128,8 +1128,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 71,
-   "etapes": "12/17",
+   "pct": 91,
+   "etapes": "20/22",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/sondes-en-cours.md",
    "urls_spec": []
   }

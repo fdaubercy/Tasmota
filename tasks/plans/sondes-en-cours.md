@@ -57,5 +57,5 @@ Décisions de l'utilisateur : une tuile de l'annuaire (pas un mod Claude), et un
 - [x] Mode d'emploi : une phrase dans outils_docs/README.md § « Sondes en cours » et dans la docstring de sondes_web.py — preuve : README.md § « Sondes en cours » (paragraphe « Cliquer sur l'en-tête »), sondes_web.py (route `GET /detail`)
 
 ## Améliorations restantes
-- [ ] [projet] Brancher `suit()` dans les autres bancs `test_*.py` au fil des usages
-- [ ] [projet] Afficher l'avancement d'un banc qui annonce son `total` (aujourd'hui la barre n'existe que si `suit(total=N)` est appelé)
+- [x] [projet] Brancher le suivi dans les autres bancs `test_*.py` / `banc_*.py` — preuve : 180 fichiers de outils_docs/scripts_python (berry, build, maintenance, outils_pc) reçoivent 3 lignes `suit_si_script_test()` après leur docstring, tous valides à l'analyse syntaxique ; échantillon de 6 bancs relancés (5 verts, fichiers de suivi écrits ; test_ino_stable rouge à l'identique sur la version d'origine : demande le Python de PlatformIO)
+- [x] [projet] Afficher l'avancement d'un banc sans `total` annoncé — preuve : le total est le nombre de vérifications de la dernière exécution sans échec du même banc (`sondes_historique.json`), la page affiche « 12 / ~46 » et la barre ; test_suivi_sondes.py (6 vérifications ajoutées, 6 passages sur 6 verts), test_sondes_web.py VERT
