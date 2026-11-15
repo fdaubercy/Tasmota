@@ -72,9 +72,15 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
     racine = t / "depot"
     racine.mkdir()
     (racine / "platformio_tasmota_cenv.ini").write_text("[env:a]\n[env:b]\n[env:c]\n", encoding="utf-8")
-    jgh, jst, jpage, jlance = [], [], [], []
+    jgh, jst, jpage, jlance, jgit = [], [], [], [], []
+
+    def faux_git(args, racine_git):                    # aucun vrai git : ni commit ni push du vrai depot
+        jgit.append(list(args))
+        if args[0] == "rev-parse":
+            return 0, ("development" if "--abbrev-ref" in args else "f" * 40)
+        return 0, ("0\t0" if args[0] == "rev-list" else "")
     etat = tw.Etat(gh_complet(jgh), faux_schtasks(jst), t / "c", t / "j", cache_s=60, appel=fausse_page(jpage),
-                   lance=lambda c, **k: jlance.append(c), racine=racine, eteinte=lambda port: True)
+                   lance=lambda c, **k: jlance.append(c), racine=racine, eteinte=lambda port: True, git=faux_git)
     port = port_libre()
     acces = acces_web.Acces(port, True, "Taches planifiees")
     serveur = ThreadingHTTPServer(("127.0.0.1", port), tw.fabrique_gestionnaire(acces, etat))
@@ -183,6 +189,8 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
         verifie("GitHub apercu : rien d'ecrit", st == 200 and d["ajoutes"] == ["a"] and not (racine / tw.tgest.matrice.FICHIER_EXCLUS).exists())
         st, corps = geste("github", "envs", ["a", "c"])
         verifie("GitHub envs : fichier ecrit dans le depot TEMPORAIRE", st == 200 and tw.tgest.matrice.matrice(racine) == ["b"])
+        verifie("GitHub envs : commit puis push du sha, par le faux git", json.loads(corps)["resultat"]["publie"] is True
+                and ["push", "origin", "f" * 40 + ":development"] in jgit and any(c[0] == "commit" for c in jgit))
         verifie("GitHub envs inconnu : 400", geste("github", "envs", ["zzz"])[0] == 400)
         etat_json = json.loads(req("GET", "/etat?frais=1")[1])
         verifie("/etat : envs du cenv et exclusions GitHub", etat_json["envs"] == ["a", "b", "c"] and etat_json["github_exclus"] == ["a", "c"])

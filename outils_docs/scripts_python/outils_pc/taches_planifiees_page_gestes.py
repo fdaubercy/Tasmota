@@ -118,9 +118,9 @@ function blocGestes(c, voie, existe, actif, e, exclus) {
       }, false);
     };
     rang.appendChild(ap);
-    rang.appendChild(deuxTemps("Écrire dans le dépôt", "écrit " + "outils_docs/compilations_nuit/envs_github.json", function () {
+    rang.appendChild(deuxTemps("Écrire, commiter et pousser", "écrit, commite et pousse seulement outils_docs/compilations_nuit/envs_github.json vers origin/development", function () {
       geste(zone, voie, "envs", exclusDe(), function (t) {
-        return t.inchange ? "Aucun changement." : "Fichier écrit. Il faut le commiter et le pousser pour que GitHub le voie.";
+        return t.inchange ? "Aucun changement." : "Poussé (commit " + t.commit + "). Lancez ensuite le workflow pour que GitHub en tienne compte.";
       });
     }));
   }));

@@ -4,7 +4,7 @@ Deux voies, memes gestes :
     PC     tache Windows `Tasmota-CompilationNuit` (maintenance/compilation_nuit_tache.py) et `config.json` de
            %LOCALAPPDATA%\\outils_tasmota\\compilations_nuit\\ (maintenance/compilation_nuit.py) ;
     GitHub workflow `Build_custom` par la CLI `gh`, envs exclus dans outils_docs/compilations_nuit/envs_github.json
-           (lu par maintenance/matrice_github.py ; il part sur GitHub au prochain `git push`, la page ne pousse JAMAIS).
+           (lu par maintenance/matrice_github.py ; `publie_exclus_github` l'ecrit, le commite seul et le pousse, sans force, avec refus si des commits ne sont pas pousses).
 
 Regles : ValueError = entree invalide (400), RuntimeError = refus (409). Toute ecriture de fichier est atomique. Les envs sont
 verifies contre le cenv (jamais un nom inconnu ecrit). Chaque appel externe (schtasks, gh, HTTP, processus) est injectable : banc
@@ -54,6 +54,55 @@ def ecrit_exclus_github(noms, racine=matrice.RACINE):
     if not resultat["inchange"]:
         nuit.ecrit_atomique(Path(racine) / matrice.FICHIER_EXCLUS, {"exclus": resultat["apres"]})
     return resultat
+
+
+def git_reel(args, racine):
+    """(code, sortie) d'un `git` lance sans shell dans le depot ; l'echec de lancement est un code 1, pas une exception."""
+    try:
+        p = subprocess.run(["git", *args], cwd=str(racine), capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=90)
+    except (OSError, subprocess.SubprocessError) as e:
+        return 1, str(e)
+    return p.returncode, (p.stdout + p.stderr).strip()
+
+
+def publie_exclus_github(noms, racine=matrice.RACINE, git=git_reel):
+    """Ecrit envs_github.json, le commite SEUL (git commit -- <fichier>) et pousse CE commit vers origin/development.
+
+    Jamais de force, jamais un autre fichier. Refus (RuntimeError) AVANT d'ecrire : autre branche, commits non pousses ou en retard sur
+    origin (le push emporterait le travail d'une autre session), fichier deja modifie. Echec du push : le commit reste local, dit dans le message.
+    """
+    resultat = apercu_exclus_github(noms, racine)
+    if resultat["inchange"]:
+        return {**resultat, "publie": False}
+    fichier = resultat["fichier"]
+    code, branche = git(["rev-parse", "--abbrev-ref", "HEAD"], racine)
+    if code or branche != "development":
+        raise RuntimeError(f"branche courante {branche!r} : la publication se fait depuis development seulement")
+    code, sortie = git(["fetch", "origin", "development"], racine)
+    if code:
+        raise RuntimeError("git fetch a echoue (reseau ?) : " + sortie[-200:])
+    code, ecarts = git(["rev-list", "--left-right", "--count", "origin/development...HEAD"], racine)
+    try:
+        retard, avance = (int(x) for x in ecarts.split())
+    except ValueError:
+        raise RuntimeError("ecart avec origin illisible : " + ecarts[-200:])
+    if code or retard or avance:
+        raise RuntimeError(f"development a {avance} commit(s) non pousses et {retard} de retard sur origin : "
+                           "pousser ou synchroniser d'abord, rien n'est ecrit")
+    code, sale = git(["status", "--porcelain", "--", fichier], racine)
+    if code or sale:
+        raise RuntimeError(fichier + " est deja modifie dans l'arbre de travail : le commiter ou l'annuler d'abord, rien n'est ecrit")
+    nuit.ecrit_atomique(Path(racine) / matrice.FICHIER_EXCLUS, {"exclus": resultat["apres"]})
+    liste = ", ".join(resultat["apres"]) or "aucun"
+    code, sortie = git(["commit", "-m", f"chore(ci): envs exclus de la compilation de nuit GitHub : {liste} (page Taches planifiees)", "--", fichier], racine)
+    if code:
+        raise RuntimeError("fichier ecrit mais commit refuse (hook ?) : " + sortie[-300:])
+    code, sha = git(["rev-parse", "HEAD"], racine)
+    code2, sortie = git(["push", "origin", f"{sha}:development"], racine)
+    if code or code2:
+        raise RuntimeError(f"fichier ecrit et commit {sha[:9]} fait EN LOCAL, push refuse : " + sortie[-300:])
+    return {**resultat, "publie": True, "commit": sha[:9]}
 
 
 def ecrit_exclus_pc(noms, dossier, racine=matrice.RACINE):

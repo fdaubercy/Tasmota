@@ -39,8 +39,10 @@ MAX_CORPS = 64 * 1024
 
 class Etat:
     def __init__(self, gh=tg.gh, schtasks=tp.tache.schtasks, dossier=None, journaux=None, cache_s=CACHE_S,
-                 appel=tgest.nuit.appel, lance=subprocess.Popen, racine=tgest.matrice.RACINE, eteinte=tgest.page_eteinte):
+                 appel=tgest.nuit.appel, lance=subprocess.Popen, racine=tgest.matrice.RACINE, eteinte=tgest.page_eteinte,
+                 git=tgest.git_reel):
         self.gh, self.schtasks, self.dossier, self.journaux, self.cache_s = gh, schtasks, dossier, journaux, cache_s
+        self.git = git                                                        # injectable aussi : le banc ne commite ni ne pousse jamais le vrai depot
         self.eteinte, self.verrou_gestes = eteinte, threading.Lock()
         self.appel, self.lance, self.racine = appel, lance, racine           # injectables : le banc n'atteint jamais la vraie page Build ni le vrai depot
         self._cache = (0.0, None)

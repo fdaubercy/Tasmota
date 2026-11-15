@@ -71,7 +71,8 @@ class Montage:
         self.lances = []
         fausse_page = lambda port, chemin, corps=None, delai=30: (200, {"en_cours": False, "numero": 0}) if chemin == "/execution" else (200, {"ok": True})
         self.etat = tw.Etat(lambda a, delai=0: (mort if self.mode["hors_ligne"] else vrai)(a), banc.faux_schtasks(), donnees, self.t / "build" / "journaux",
-                            cache_s=0, appel=fausse_page, lance=lambda c, **k: self.lances.append(c), racine=self.racine)
+                            cache_s=0, appel=fausse_page, lance=lambda c, **k: self.lances.append(c), racine=self.racine,
+                            git=lambda a, r: (1, "git interdit dans la sonde"))
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
         acces = acces_web.Acces(self.port, True, "Taches planifiees")
@@ -161,6 +162,7 @@ def scenario(m):
     cdp.js(bouton("gh", "Aperçu") + ".click()")
     verifie(bool(attend(cdp, "document.querySelector('#gh .msg').textContent.indexOf('Exclus ajoutés') >= 0", 15)), True, "apercu GitHub : liste le changement")
     verifie((m.racine / "outils_docs").exists(), False, "apercu GitHub : rien n'est ecrit dans le depot")
+    verifie(cdp.js(bouton("gh", "Écrire, commiter et pousser") + " != null"), True, "GitHub : le bouton annonce qu'il commite et pousse")
     m.mode["hors_ligne"] = True
     cdp.js("document.getElementById('actualiser').click()")
     verifie(bool(attend(cdp, "document.getElementById('bandeau').textContent.indexOf('injoignable') >= 0", 15)), True, "gh hors ligne : le bandeau le dit")

@@ -52,6 +52,56 @@ r = g.ecrit_exclus_github(["b"], d)
 verifie("ecriture identique : inchange", r["inchange"] is True)
 r = g.ecrit_exclus_github([], d)
 verifie("retour a tous les envs", g.matrice.matrice(d) == ["a", "b", "c"] and r["retires"] == ["b"])
+
+
+class FauxGit:
+    """git injecte : aucune commande reelle. Chaque parametre force un refus."""
+    def __init__(self, branche="development", ecart="0\t0", sale="", fetch=0, commit=0, push=0):
+        self.appels, self.p = [], dict(branche=branche, ecart=ecart, sale=sale, fetch=fetch, commit=commit, push=push)
+
+    def __call__(self, args, racine):
+        self.appels.append(list(args))
+        a = args[0]
+        if a == "rev-parse":
+            return (0, self.p["branche"]) if "--abbrev-ref" in args else (0, "abc123def4567890")
+        if a == "fetch":
+            return self.p["fetch"], "fetch ko" if self.p["fetch"] else ""
+        if a == "rev-list":
+            return 0, self.p["ecart"]
+        if a == "status":
+            return 0, self.p["sale"]
+        if a == "commit":
+            return self.p["commit"], "hook ko" if self.p["commit"] else "ok"
+        if a == "push":
+            return self.p["push"], "rejected" if self.p["push"] else "ok"
+        return 1, "commande inattendue"
+
+
+def ecrit_ou_non(d):
+    return (d / g.matrice.FICHIER_EXCLUS).exists()
+
+
+d = depot()
+fg = FauxGit()
+r = g.publie_exclus_github(["b"], d, fg)
+verifie("publie : ecrit, commite CE fichier, pousse le sha vers development", r["publie"] is True and r["commit"] == "abc123def" and g.matrice.matrice(d) == ["a", "c"]
+        and any(c[0] == "commit" and c[-2:] == ["--", "outils_docs/compilations_nuit/envs_github.json"] for c in fg.appels)
+        and ["push", "origin", "abc123def4567890:development"] in fg.appels)
+verifie("publie : jamais de force, jamais d'ajout global", not any(("--force" in c or "-f" in c or "--force-with-lease" in c) for c in fg.appels) and not any(c[0] == "add" for c in fg.appels))
+fg = FauxGit()
+r = g.publie_exclus_github(["b"], d, fg)
+verifie("publie, rien a changer : aucun appel git", r["publie"] is False and fg.appels == [])
+for nom, kw, mot in (("autre branche", dict(branche="chantier"), "chantier"), ("commits non pousses", dict(ecart="0\t2"), "non pousses"),
+                     ("en retard sur origin", dict(ecart="1\t0"), "retard"), ("fichier deja modifie", dict(sale=" M outils_docs/x"), "deja modifie"),
+                     ("fetch en echec", dict(fetch=1), "fetch")):
+    d2, fg = depot(), FauxGit(**kw)
+    verifie(f"publie refuse ({nom}) : rien d'ecrit, ni commit ni push", mot in str(leve(RuntimeError, g.publie_exclus_github, ["b"], d2, fg))
+            and not ecrit_ou_non(d2) and not any(c[0] in ("commit", "push") for c in fg.appels))
+d2, fg = depot(), FauxGit(push=1)
+verifie("push refuse : commit local signale", "EN LOCAL" in str(leve(RuntimeError, g.publie_exclus_github, ["b"], d2, fg)) and ecrit_ou_non(d2))
+d2, fg = depot(), FauxGit(commit=1)
+verifie("commit refuse : pas de push", "commit refuse" in str(leve(RuntimeError, g.publie_exclus_github, ["b"], d2, fg)) and not any(c[0] == "push" for c in fg.appels))
+verifie("publie : env inconnu refuse avant tout git", (lambda f: leve(ValueError, g.publie_exclus_github, ["zzz"], depot(), f) is not False and f.appels == [])(FauxGit()))
 dossier = tempfile.mkdtemp()
 Path(dossier, "config.json").write_text(json.dumps({"actif": False, "port": 7711, "envs_exclus": ["c"]}), encoding="utf-8")
 r = g.ecrit_exclus_pc(["a"], dossier, d)

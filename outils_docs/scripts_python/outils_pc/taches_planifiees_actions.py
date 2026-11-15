@@ -32,7 +32,7 @@ def executer(demande, etat):
             "lancer": lambda: g.github_lancer(etat.gh),
             "arreter": lambda: g.github_arreter(etat.gh),
             "envs_apercu": lambda: g.apercu_exclus_github(valeur, etat.racine),
-            "envs": lambda: g.ecrit_exclus_github(valeur, etat.racine),
+            "envs": lambda: g.publie_exclus_github(valeur, etat.racine, etat.git),
         }
     else:
         raise ValueError("voie inconnue (pc ou github attendu)")
