@@ -6,6 +6,9 @@ Verifie : description du depot -> rien a ecrire ; texte modifie -> les trois fic
 aux generateurs ; build en cours ou indetectable, fichier modifie apres le diff, ecran.json modifie depuis le chargement
 de la page -> refus, rien d'ecrit ; fins de ligne CRLF gardees ; lien vers la page Build. Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import copy
 import os
 import sys

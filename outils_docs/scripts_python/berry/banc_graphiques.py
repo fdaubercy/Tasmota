@@ -34,6 +34,9 @@ La vraie carte : ni le serveur web de Tasmota, ni la RAM, ni les vraies mesures.
 n'est pas juge ici (Chrome sans interface ne descend pas sous 500 px de fenetre) : capture a la main
 dans un cadre de 412 px. Un banc vert ne remplace pas l'essai sur le P4 (A6 du plan graphiques-web).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import html
 import json

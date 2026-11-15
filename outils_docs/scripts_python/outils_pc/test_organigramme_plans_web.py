@@ -2,6 +2,9 @@
 
 Lancement : python test_organigramme_plans_web.py   (code 0 = vert). Python de PlatformIO non requis.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import http.client
 import re
 import socket

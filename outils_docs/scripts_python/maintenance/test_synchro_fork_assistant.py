@@ -7,6 +7,9 @@ non pousses imposant la voie B, arbre sale classe, autre branche, fetch impossib
 trois voies hors liste, une seule etape courante.
 Temoin : une analyse qui ignore `non_pousses` dans la regle de voie DOIT faire echouer `non_pousses_force_b`.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import subprocess
 import sys

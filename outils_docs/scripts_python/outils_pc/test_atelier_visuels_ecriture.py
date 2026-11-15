@@ -6,6 +6,9 @@ Tout se passe dans une COPIE temporaire (.ini dont le cenv, user_config_override
 est teste SANS la liste `visuel_accueil` (etat du depot avant A4) puis AVEC elle (apres l'exclusion). Les trois fichiers de la
 page sont simules. Le vrai depot n'est jamais ecrit ; les sauvegardes de Transaction vont dans un dossier temporaire.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

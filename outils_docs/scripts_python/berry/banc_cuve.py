@@ -27,6 +27,9 @@ Voir l'en-tete de banc_cuve.be : la logique seulement, pas le vrai scale_int du
 firmware (bouchon porte du C), pas le rendu reel de la page, pas le ruban ni l'ADS1115 physiques. Un
 banc vert ne remplace pas l'observation sur la carte apres flash.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import subprocess
 import sys
 from pathlib import Path

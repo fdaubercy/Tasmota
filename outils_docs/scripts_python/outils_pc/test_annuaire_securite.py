@@ -5,6 +5,9 @@ navigateur hors du job, champs lie et peut_arreter de l'etat, copie de lances av
 lanceur.lance et de liste_ports, route_occupee quand l'outil ne repond pas (fusion ou rebase dans un faux
 .git). Aucun vrai outil, aucun navigateur, aucun port COM ; seul processus cree : pid_mort() (python -c pass).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import inspect

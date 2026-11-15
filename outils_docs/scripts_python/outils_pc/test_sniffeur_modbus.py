@@ -27,6 +27,9 @@ CE QU'IL NE TESTE PAS
     le bus reel et le convertisseur (timing, echo), la page web (JavaScript), le pare-feu Windows :
     voir l'onglet Aide du sniffeur, section « Essai sur le bus reel ».
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

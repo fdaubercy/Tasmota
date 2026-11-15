@@ -7,6 +7,9 @@ l'autoexec de la cuve (avec historique) et du differentiel (sans historique), et
 tasmota32-rdc-vr-porte (exclusion heritee de sa base, pas de custom_files_exclude_solidified). Le vrai depot n'est
 jamais ecrit ; les sauvegardes de Transaction vont dans un dossier temporaire (OUTILS_TASMOTA_DOSSIER).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

@@ -8,6 +8,9 @@ Code de sortie 0 si tout est vert. Ne teste pas la vraie carte : ni le releve Mo
 plan debits-deux-cartes, A6 et A8). Les entrees analogiques sont posees a la main comme les range modBus_TasmotaSlaveModBus
 (banc_test_modbus.py couvre le releve groupe et la repartition du push).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
 import re
 import subprocess

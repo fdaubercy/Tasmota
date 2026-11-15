@@ -10,6 +10,9 @@ Groupes :
   reel      (--reel) les VRAIS scripts en --dry-run par la session : lecture seule (GitHub, git fetch upstream).
 Temoin : une session qui transmet toute reponse sans la valider DOIT faire echouer le groupe session.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import json

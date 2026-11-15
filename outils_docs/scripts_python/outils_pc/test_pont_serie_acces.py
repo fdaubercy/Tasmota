@@ -8,6 +8,9 @@ Temoins : copie du pont dans un dossier temporaire, d'abord verte intacte, puis 
 brut distant retire ; controle du jeton retire) : le cas correspondant DOIT alors echouer.
 N'ouvre aucun port COM, ne touche pas aux ports 7000/7001.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import json

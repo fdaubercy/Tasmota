@@ -7,6 +7,9 @@ refus : pas un TrueType, police tronquee, nom dangereux, licence non confirmee, 
 police dans le dossier de la carte, licence HORS de ce dossier, catalogue regenere et a jour ; routes en base64 (corps
 de plus de 256 Ko accepte sur /polices/*, refuse ailleurs ; 403 sans en-tete). Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import base64
 import shutil
 import os

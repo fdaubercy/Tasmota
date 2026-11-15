@@ -11,6 +11,9 @@ Cas : depuis le reseau, page / etat / flux SSE sans jeton -> 403 ; mauvais jeton
 Depuis ce PC : inchange (200 sans jeton). Aucune route POST (501). --local : rien sur le reseau.
 TEMOIN : une copie de syslog_tasmota.py SANS l'appel acces.controle DOIT faire echouer les refus.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import os

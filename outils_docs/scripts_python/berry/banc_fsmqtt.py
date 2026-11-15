@@ -6,6 +6,9 @@ Depuis n'importe quel dossier. Code de sortie 0 = vert : le vrai module passe ba
 (copie du module avec un controle retire) le fait echouer ; sans ces temoins, un vert ne prouverait rien.
 Ne teste ni le vrai MQTT, ni LittleFS, ni le vrai MD5 (bouchons : bouchons_berry/fsmqtt/).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import subprocess
 import sys

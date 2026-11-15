@@ -1,6 +1,9 @@
 """Banc du generateur LVGL pur de l'atelier des ecrans (description -> ecranLvgl.be). Code de sortie 0 = vert.
 Python de PlatformIO. Lit le depot (ecran.json et ecranLvgl.be des debits), n'ecrit que dans un dossier temporaire.
 Le comportement du module genere (objets, cache, couleurs, courbe, touchers) est verifie par berry/banc_ecran_lvgl.py."""
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import re

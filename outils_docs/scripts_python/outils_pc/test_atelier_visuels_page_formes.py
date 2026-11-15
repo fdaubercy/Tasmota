@@ -4,6 +4,9 @@ Lancer : "$USERPROFILE/.platformio/penv/Scripts/python.exe" test_atelier_visuels
 (a) constantes Python presentes et sobres ; (b) logique pure executee par node (test_atelier_visuels_formes.mjs) ;
 (c) chaque SVG produit passe nettoie_svg SANS perte (meme infoset).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import re

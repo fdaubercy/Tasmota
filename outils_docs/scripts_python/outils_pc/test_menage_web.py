@@ -3,6 +3,9 @@
 Serveur reel sur 127.0.0.1, port libre, faux `claude`, depot et dossier de donnees temporaires. Aucun vrai claude, aucun build.
 Python de PlatformIO : <~/.platformio/penv/Scripts/python.exe> outils_docs/scripts_python/outils_pc/test_menage_web.py
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import http.client
 import json
 import os

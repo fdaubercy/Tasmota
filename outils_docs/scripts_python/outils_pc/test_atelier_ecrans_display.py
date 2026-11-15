@@ -7,6 +7,9 @@ sous-sections :IC/:IS/:II et :UTI/:UTT/:UTX/:UTY, motifs `strstr(ddesc, ":..")` 
 aucune ERREUR sur les display.ini du depot (cartes et tasmota/displaydesc) ; chaque piege fabrique detecte ; explication
 des arguments. Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
 import re
 import sys

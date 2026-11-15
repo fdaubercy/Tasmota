@@ -5,6 +5,9 @@ dorment 60 s. Chaque processus cree par le banc est suivi par un HANDLE ouvert d
 tant que le handle reste ouvert, Windows ne recycle pas le PID, et le nettoyage (TerminateProcess par
 handle) ne peut pas toucher un autre processus (le build de l'utilisateur lance beaucoup de python.exe).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import ctypes
 import json

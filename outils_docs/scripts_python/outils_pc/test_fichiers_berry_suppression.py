@@ -4,6 +4,9 @@ Code de sortie 0 = vert. Depot d'essai = COPIE des vrais .ini, du vrai user_conf
 dossiers de carte (test_fichiers_berry_creation.depot_essai), dans un dossier temporaire ; sauvegardes dans un
 OUTILS_TASMOTA_DOSSIER temporaire. Le vrai depot n'est jamais ecrit.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import os
 import re

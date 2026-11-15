@@ -18,6 +18,9 @@ CE QU'IL NE TESTE PAS
 Voir l'en-tete de banc_reglage_volets.be : la logique du module seulement, pas le vrai Shutter de Tasmota, ni les
 vrais boutons, ni le moteur. Un banc vert ne remplace pas l'essai sur la carte.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import subprocess
 import sys
 from pathlib import Path

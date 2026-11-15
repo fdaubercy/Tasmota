@@ -6,6 +6,9 @@ Depuis n'importe quel dossier. Code de sortie 0 = vert : le vrai module passe ba
 (copie du module avec une regle retiree) le fait echouer. Ne teste ni le vrai serveur web, ni le reseau, ni le dessin
 (sonde outils_pc/test_volets_chrome.py, scenario rideau).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import subprocess
 import sys

@@ -46,6 +46,9 @@ SVG : le rendu de l'animation des vagues et les couleurs ne sont pas jugees (seu
 Le format telephone n'est pas juge (Chrome sans interface ne descend pas sous 500 px de fenetre). Un banc vert ne
 remplace pas l'essai sur la cuve et le P4.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import html
 import json

@@ -6,6 +6,9 @@ Serveur dans un fil, sur un port libre, devant une COPIE du depot (copie() du ba
 bureau et de la porte ; plus le .h, le persist de la cuve et les 6 fichiers du moteur de data/sd) dans un dossier
 temporaire. La carte est simulee par un `get` injecte (aucun reseau) ; la detection des builds aussi.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import json

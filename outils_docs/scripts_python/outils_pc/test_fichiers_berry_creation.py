@@ -4,6 +4,9 @@ Code de sortie 0 = vert. Le depot d'essai est une COPIE des vrais .ini, du vrai 
 des vrais dossiers data/<lieu>/<carte> (lecture seule du depot), dans un dossier temporaire : la creation
 y est faite pour de vrai, jamais dans le depot. A lancer avec le Python du penv (ProjectConfig).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

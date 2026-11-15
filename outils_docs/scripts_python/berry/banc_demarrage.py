@@ -21,6 +21,9 @@ Controle statique en plus (audit S6/P3.3) : chaque <sources>/controleXxx.be fini
 (sinon, charge depuis le LittleFS sans etre solidifie, il vaudrait nil et son driver ne demarrerait pas).
 Les cartes gelees (ancien maitre S3 du garage, cave ESP32) ne sont pas suivies.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import difflib
 import os
 import subprocess

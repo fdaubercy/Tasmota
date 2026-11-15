@@ -7,6 +7,9 @@ Puis chaque mutant de build_memoire.py doit faire echouer au moins un cas.
 
 Code de sortie 0 = vert, 1 = rouge.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import os
 import sys
 import tempfile

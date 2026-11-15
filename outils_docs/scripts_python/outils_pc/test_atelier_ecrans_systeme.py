@@ -9,6 +9,9 @@ la main, CHAMPS illisible, id hors groupe, id au-dela de 199, collision d'ids, p
 (chaque objet ecrit par ecranSysteme existe avec le bon type, attributs connus du catalogue, aucune action sur 120 et 121) ;
 apercu de la page web (objets deroules envoyes). Le cote LVGL est prouve par berry/banc_page_systeme.py. Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import copy
 import json
 import sys

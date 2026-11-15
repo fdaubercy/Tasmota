@@ -3,6 +3,9 @@ protocole de data/fs/fsMqtt.be (choix 25 et 26 de la spec ; le module Berry a so
 
 Aucun broker, aucune carte : tout est en memoire. Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import hashlib
 import io

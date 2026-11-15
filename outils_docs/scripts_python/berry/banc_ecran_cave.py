@@ -5,6 +5,9 @@ r"""Enveloppe du banc Berry de la affichage de l ecran de la cave (MQTT) (banc_e
 Lance berry.exe depuis la racine du depot et traduit la derniere ligne `BANC_ECRAN_CAVE: OK|ECHEC` en code de
 sortie (0 = vert). Limites : voir l'en-tete de banc_ecran_cave.be (pas de firmware reel).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import subprocess
 import sys
 from pathlib import Path

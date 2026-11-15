@@ -27,6 +27,9 @@ La vraie carte : ni le serveur web de Tasmota (Referer), ni la RAM de l'ESP32 (b
 donne un ordre de grandeur), ni le vrai gabarit (bouchons de bouchons_berry/pages_graphiques/sd, action A3), ni le
 trace dans un navigateur.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import subprocess
 import sys

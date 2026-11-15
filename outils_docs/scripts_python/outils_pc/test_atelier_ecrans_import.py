@@ -8,6 +8,9 @@ source, dans le meme ordre, lus comme HASPmota les lit (page courante heritee, l
 parentid, action autre que p<n>, hors ecran, id en double, {"page":n} seul, reglage de page apres un objet, ligne non JSON
 signalee) ; aucune liaison ; LVGL pur : objets bruts absents et signales. Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
 import sys
 from pathlib import Path

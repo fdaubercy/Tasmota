@@ -6,6 +6,9 @@ temoins sur des copies modifiees de preinit.be.
 Code de sortie 0 si tout est vert. Ne prouve ni l'ordre reel du firmware (preinit avant l'ecran : lu dans tasmota.ino),
 ni que l'expandeur reponde a ces registres, ni l'adresse du GT911 sur la vraie carte (essai du plan debits-deux-cartes, A8).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import subprocess
 import sys
 import tempfile

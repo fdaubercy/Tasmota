@@ -1,5 +1,8 @@
 """Banc de la description neutre de l'atelier des ecrans (`ecran.json`) : validateur a mutants, charge, chemin, empreinte.
 Code de sortie 0 = vert. Python de PlatformIO. Lit le catalogue et l'ecran.json du depot, n'ecrit rien dans le depot."""
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import copy
 import json

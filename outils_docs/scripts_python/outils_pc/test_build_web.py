@@ -4,6 +4,9 @@ Code de sortie 0 = vert. Le VRAI pio n'est jamais lance : BUILD_WEB_PIO est pose
 Depot d'essai, donnees de l'outil (OUTILS_TASMOTA_DOSSIER) et journal du faux pio : dossiers
 temporaires ; le serveur ecoute sur un port libre, en 127.0.0.1, sans fiche de presence.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import json

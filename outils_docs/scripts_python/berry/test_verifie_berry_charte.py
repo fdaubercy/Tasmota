@@ -11,6 +11,9 @@ Partie 4 : mutants sur le vrai code (les ecarts corriges par l'audit, remis en m
 Partie 5 : le hook d'edition de Claude dans un faux depot (erreur -> 2, ecarts -> additionalContext, propre -> muet).
 Fichiers de test dans un dossier temporaire ; rien n'est ecrit dans le depot.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
 import os
 import shutil

@@ -7,6 +7,9 @@ expliquee, analyse et insertion, diff puis enregistrement dans la bibliotheque (
 amont, notes datees ; refus : build en cours, empreinte perimee, nom hors bibliotheque ou chemin, fichier inconnu,
 parametre inconnu ; amont et cartes jamais ecrits. Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import shutil
 import sys
 import tempfile

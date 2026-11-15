@@ -6,6 +6,9 @@ La carte est un `get(ip, chemin, delai)` injecte (aucun reseau) qui imite les re
 xdrv_52_9_berry.ino::CmndBrRun ({"Br": "<valeur>"} ou {"Br": "[type] message"}), xdrv_52_3_berry_lvgl.ino::lv0_screenshot
 (nom /screenshot-<utc>.bmp, en-tete BMP de 0x42 octets, taille declaree aux octets 2..6), xdrv_50_filesystem.ino (/ufsd).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import struct

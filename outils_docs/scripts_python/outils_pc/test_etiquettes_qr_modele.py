@@ -4,6 +4,9 @@ Lecture seule du vrai depot (persist des cartes, gabarit) ; les images sont ecri
 Temoin des secrets sur le vrai depot : motif INDEPENDANT de celui du module (filtre des sorties de ce depot).
 Mutants : filtre par cle retire -> test_secret_par_cle rouge ; filtre par valeur retire -> test_secret_par_valeur rouge.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

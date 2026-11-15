@@ -3,6 +3,9 @@
 Copie temporaire du depot (test_etiquettes_qr_ecriture.copie) : le vrai depot n'est jamais ecrit. La carte est simulee par
 `get` (fonction rendue par le banc) ; la carte muette est un vrai socket qui accepte sans jamais repondre.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import dataclasses
 import json

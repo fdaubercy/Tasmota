@@ -7,6 +7,9 @@ modifiees du fichier genere, chacune doit rendre le banc rouge.
 Code de sortie 0 si tout est vert. Le pages.jsonl (HASPmota) est controle par outils_pc/test_atelier_ecrans_systeme.py. Ne
 prouve ni le rendu sur la dalle, ni le tactile reel (essai sur carte, A20).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import subprocess
 import sys
 import tempfile

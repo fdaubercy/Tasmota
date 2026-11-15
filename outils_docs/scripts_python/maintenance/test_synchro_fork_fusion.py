@@ -10,6 +10,9 @@ marque perimee, depot introuvable ; liste blanche de TOUTES les commandes git la
 Temoins : un « resolu » qui n'inspecte pas les marqueurs DOIT faire echouer `resolu_avec_marqueurs` ; une liste
 de conflits prise dans la prevision au lieu de `--diff-filter=U` DOIT faire echouer `mien` ou `reprise`.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import subprocess
 import sys

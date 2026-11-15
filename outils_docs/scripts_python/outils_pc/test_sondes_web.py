@@ -98,6 +98,11 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
         (t / "sondes" / "20.json").write_text(json.dumps(ok20), encoding="utf-8")
         st, corps = req("GET", "/detail?pid=20")
         d = json.loads(corps) if st == 200 else {}
+        verifie("GET /etat : total_estime faux par defaut ; vrai quand le fichier de suivi le dit",
+                next(x for x in json.loads(req("GET", "/etat")[1])["sondes"] if x["pid"] == 20)["total_estime"] is False)
+        (t / "sondes" / "20.json").write_text(json.dumps(dict(fichier(20, "test_alpha"), total_estime=True)), encoding="utf-8")
+        etat._cache = (0.0, None)
+        verifie("total_estime vrai transmis a la page", next(x for x in json.loads(req("GET", "/etat")[1])["sondes"] if x["pid"] == 20)["total_estime"] is True)
         verifie("GET /detail?pid=20 : fiche, script, phases et journal (entrees mal formees ecartees, texte brut)",
                 st == 200 and d["sonde"]["pid"] == 20 and d["script"].endswith("test_alpha.py") and [(p["nom"], p["faits"], p["echecs"]) for p in d["phases"]] == [("p1", 3, 1), ("x", 0, 0)]
                 and [l[1] for l in d["journal"]] == ["phase", "ko", "ok"] and d["journal"][2][2] == "<b>OK</b>")

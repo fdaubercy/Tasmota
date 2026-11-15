@@ -104,7 +104,7 @@ function carte(s) {
   c.appendChild(t);
   if (s.etat === "en_cours" || s.etat === "termine" || s.etat === "disparue") {
     if (s.total) { var b = el("div", "barre"), i = el("i"); i.style.width = Math.min(100, Math.round(100 * s.faits / s.total)) + "%"; b.appendChild(i); c.appendChild(b); }
-    c.appendChild(el("div", "ligne", s.faits + (s.total ? " / " + s.total : "") + " vérification(s) faite(s)" + (s.phase ? " · phase : " + s.phase : "")));
+    c.appendChild(el("div", "ligne", s.faits + (s.total ? " / " + (s.total_estime ? "~" : "") + s.total : "") + " vérification(s) faite(s)" + (s.phase ? " · phase : " + s.phase : "")));
     if (s.dernier) c.appendChild(el("div", "ligne doux petit", "Dernier cas : " + s.dernier));
   } else if (s.etat === "orpheline") {
     c.appendChild(el("div", "ligne", "Le processus qui l'a lancée (pid " + s.parent + ") n'existe plus : ce Chrome reste ouvert pour rien."));

@@ -6,6 +6,9 @@ Depuis n'importe quel dossier. Code de sortie 0 = vert : le vrai autoexec.be pas
 fait echouer, l'archive de gen_tapp.py a la forme attendue, et aucun env n'embarque data/extensions. Ne remplace pas
 l'essai sur carte (A10 du plan autoexec-mqtt-tapp) : lecture de l'archive par le firmware, /ext, ordre reel au demarrage.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import subprocess
 import sys

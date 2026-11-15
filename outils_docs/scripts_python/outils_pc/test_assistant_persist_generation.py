@@ -18,6 +18,9 @@ Les ecarts restants sont des reglages faits a la main hors questions : ils sont 
 TOLERANCES ci-dessous (motif de chemin precis, cartes, raison), jamais par un joker global. Une entree qui ne couvre
 plus aucun ecart est signalee : la liste reste exacte.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import copy
 import fnmatch

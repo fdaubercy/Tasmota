@@ -8,6 +8,9 @@ A lancer avec le Python du penv (ProjectConfig) :
     "$USERPROFILE/.platformio/penv/Scripts/python.exe" -u outils_docs/scripts_python/outils_pc/test_assistant_persist_creation.py
     ... --garde <dossier>   laisse le depot d'essai (apres creation de la carte piscine) dans ce dossier
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import hashlib
 import json

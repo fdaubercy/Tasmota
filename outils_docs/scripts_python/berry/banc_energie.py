@@ -7,6 +7,9 @@ Rendu : la page (css, html, js reels) est servie avec les donnees produites par 
 la page expose (data-valeurs, totaux, tuiles, rappel) et le POST du prix.
 Ne teste pas la vraie carte : ni le serveur web de Tasmota, ni la RAM, ni la vraie mesure.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import html
 import json

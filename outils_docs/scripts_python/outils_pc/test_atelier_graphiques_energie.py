@@ -5,6 +5,9 @@ Code de sortie 0 = vert. Lancer avec le Python de PlatformIO depuis la racine du
 Copies temporaires du depot (copie() du banc A6 + le .h des adresses) ; la carte est un `get` injecte (aucun reseau,
 aucun envoi) ; le serveur de l'atelier tourne dans un fil devant la copie (Banc du banc web).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

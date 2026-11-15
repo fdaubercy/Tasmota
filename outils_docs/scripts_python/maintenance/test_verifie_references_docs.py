@@ -9,6 +9,9 @@ Partie 3 (~1 min, sautee par --sans-carte) : carte_modules_berry.py genere deux 
 hachage differentes -> sorties identiques octet pour octet (constat B16), sans le faux diagnostic sur
 controleRideau (S7). Documents de test et cartes generees dans un dossier temporaire.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import os
 import subprocess
 import sys

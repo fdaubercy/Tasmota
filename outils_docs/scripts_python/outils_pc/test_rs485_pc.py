@@ -34,6 +34,9 @@ UN SEUL MAITRE SUR LE BUS
     La carte relais sort d'usine a 9600 bauds, adresse 1 ; le bus du garage est a 19200
     (outils_docs/PROTOCOLE_MODBUS.md, section 8).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import argparse
 import sys

@@ -6,6 +6,9 @@ Code de sortie 0 si tout est vert. La page (css, html, js reels) est servie par 
 (`/energie?f=description`) et des archives (`f=mois`) fabriquees ici. La page SANS description (celle d'aujourd'hui) est jugee par
 banc_energie.py ; la validation par test_energie_rendu.mjs. Ne teste pas la vraie carte (ni routes Berry, ni RAM).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
 import re
 import subprocess

@@ -9,6 +9,9 @@ banc_ecran_lvgl.be sur des objets LVGL simules (bouchons_berry/ecran_lvgl/), pui
 Code de sortie 0 si tout est vert. Ne prouve ni le rendu sur la dalle, ni la RAM, ni le tactile reel (essai sur carte,
 plan debits-deux-cartes A8).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
 import subprocess
 import sys

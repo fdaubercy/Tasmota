@@ -10,6 +10,9 @@ non compilee rejetes ; faux claude qui modifie un fichier du depot -> rejet, rem
 d'erreur, delai depasse -> echec ; second lancement pendant un traitement -> refus ; options de lecture seule passees ;
 routes HTTP (dont le refus du lancement depuis un autre appareil). Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
 import os
 import subprocess

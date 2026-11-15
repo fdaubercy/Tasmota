@@ -4,6 +4,9 @@ Code de sortie 0 = vert. Un faux build_web (serveur HTTP de la stdlib, ecrit dan
 remplace la vraie page ; ports pris au hasard sur 127.0.0.1, jamais 7700 ; navigateur simule.
 Lancer : "%USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe" -u test_cible_build_web.py
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.server
 import socket

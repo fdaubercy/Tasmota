@@ -9,6 +9,8 @@ UTILISATION : une ligne en tete d'un banc, `import suivi_sondes; suivi_sondes.su
     L'etat est ecrit de facon atomique (.tmp puis os.replace, au plus toutes les 0,3 s sauf echec et fin) dans
     <dossier de donnees>/sondes/<pid>.json ; atexit le passe a « termine ». Un processus tue brutalement reste « en_cours » : le serveur le lit « disparue ».
     Dossier : OUTILS_TASMOTA_DOSSIER, sinon %LOCALAPPDATA%\\outils_tasmota (meme regle que acces_web.dossier_donnees).
+    Total estime : sans `total=`, le total est le nombre de verifications de la derniere execution SANS echec du meme banc
+    (<dossier de donnees>/sondes_historique.json) ; "total_estime": true dans le fichier, la page l'affiche « ~N ».
     SUIVI_SONDES=0 : sans effet. Ne leve JAMAIS : un echec d'ecriture ne casse pas un banc.
 Banc : test_suivi_sondes.py.
 """
@@ -44,6 +46,36 @@ def dossier_sondes():
     return dossier_donnees() / "sondes"
 
 
+def _fichier_historique():
+    return dossier_donnees() / "sondes_historique.json"
+
+
+def total_precedent(nom):
+    """Verifications de la derniere execution sans echec du banc <nom> (None si inconnu ou illisible)."""
+    try:
+        v = json.loads(_fichier_historique().read_text(encoding="utf-8")).get(nom)
+        return v if isinstance(v, int) and v > 0 else None
+    except Exception:
+        return None
+
+
+def retient_total(nom, faits):
+    try:
+        f = _fichier_historique()
+        try:
+            h = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            h = {}
+        h = h if isinstance(h, dict) else {}
+        h[nom] = int(faits)
+        f.parent.mkdir(parents=True, exist_ok=True)
+        tmp = f.with_name(f.name + f".{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(h, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+        os.replace(tmp, f)
+    except Exception:
+        pass
+
+
 def vivant(pid):
     """True si le processus <pid> tourne (Windows : code de sortie 259 = STILL_ACTIVE)."""
     try:
@@ -75,7 +107,7 @@ class Suivi:
         self.dossier = Path(dossier)
         self.etat = {"pid": os.getpid(), "parent": os.getppid(), "nom": nom, "script": os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else "",
                      "debut": time.time(), "maj": time.time(), "total": total, "faits": 0, "echecs": [], "phase": "", "dernier": "", "etat": "en_cours",
-                     "phases": [], "journal": []}
+                     "phases": [], "journal": [], "total_estime": False}
         self.dernier_ecrit = 0.0
         self.tampon = ""
         self.sale = False
@@ -147,6 +179,8 @@ class Suivi:
                     self.tampon = ""
                 self.etat["etat"] = "termine"
                 self.ecrit(True)
+                if not self.etat["echecs"] and self.etat["faits"] > 0:
+                    retient_total(self.etat["nom"], self.etat["faits"])
         except Exception:
             pass
 
@@ -203,6 +237,9 @@ def suit(nom=None, total=None):
         dossier = dossier_sondes()
         _purge(dossier)
         _ACTIF = Suivi(nom, total, dossier)
+        if total is None:
+            _ACTIF.etat["total"] = total_precedent(nom)
+            _ACTIF.etat["total_estime"] = _ACTIF.etat["total"] is not None
         sys.stdout = Enveloppe(sys.stdout, _ACTIF)
         atexit.register(_ACTIF.fin)
         threading.Thread(target=_relais, args=(_ACTIF,), daemon=True).start()

@@ -24,7 +24,7 @@ ENFANT = """
 import sys, time
 sys.path.insert(0, {ici!r})
 import suivi_sondes
-r = suivi_sondes.suit({nom!r}, total=8)
+r = suivi_sondes.suit({nom!r}, total={total})
 {corps}
 """
 NORMAL = """
@@ -54,9 +54,9 @@ def verifie(nom, condition):
         ECHECS.append(nom)
 
 
-def enfant(dossier, corps, nom="enfant", extra_env=None, fichier="essai_enfant.py", attendre=True):
+def enfant(dossier, corps, nom="enfant", extra_env=None, fichier="essai_enfant.py", attendre=True, total="8"):
     script = Path(dossier) / fichier
-    script.write_text(ENFANT.format(ici=str(ICI), nom=nom, corps=corps), encoding="utf-8")
+    script.write_text(ENFANT.format(ici=str(ICI), nom=nom, corps=corps, total=total), encoding="utf-8")
     env = dict(os.environ, OUTILS_TASMOTA_DOSSIER=str(dossier), PYTHONIOENCODING="utf-8", **(extra_env or {}))
     p = subprocess.Popen([sys.executable, "-u", str(script)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
     if not attendre:
@@ -67,11 +67,21 @@ def enfant(dossier, corps, nom="enfant", extra_env=None, fichier="essai_enfant.p
 
 def lit_nom(dossier, nom):
     """Fichier de suivi du processus de ce nom (le python du venv PlatformIO est un lanceur : son pid n'est pas celui qui ecrit)."""
+    trouves = []
     for f in (Path(dossier) / "sondes").glob("*.json"):
         d = json.loads(f.read_text(encoding="utf-8"))
         if d.get("nom") == nom:
-            return d
-    raise OSError("pas de fichier de suivi pour " + nom)
+            trouves.append(d)
+    if not trouves:
+        raise OSError("pas de fichier de suivi pour " + nom)
+    return max(trouves, key=lambda d: d.get("maj", 0))        # plusieurs executions du meme nom : la plus recente
+
+
+def historique(dossier, nom):
+    try:
+        return json.loads((Path(dossier) / "sondes_historique.json").read_text(encoding="utf-8")).get(nom)
+    except (OSError, ValueError):
+        return None
 
 
 def attend(condition, delai=10):
@@ -127,7 +137,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
     fichier_bloquant = t / "bloque"
     fichier_bloquant.write_text("je suis un fichier, pas un dossier", encoding="utf-8")
     script = t / "bloque_enfant.py"
-    script.write_text(ENFANT.format(ici=str(ICI), nom="bloque", corps=NORMAL), encoding="utf-8")
+    script.write_text(ENFANT.format(ici=str(ICI), nom="bloque", corps=NORMAL, total=8), encoding="utf-8")
     r = subprocess.run([sys.executable, str(script)], env=dict(os.environ, OUTILS_TASMOTA_DOSSIER=str(fichier_bloquant), PYTHONIOENCODING="utf-8"),
                        capture_output=True, text=True, encoding="utf-8", timeout=60)
     verifie("dossier de suivi impossible a creer : l'enfant finit en code 0, sortie intacte, aucune trace d'erreur",
@@ -166,6 +176,21 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
     os.utime(ancien, (vieux, vieux))
     enfant(sous, "pass")
     verifie("purge au demarrage : fichier de plus de 2 jours supprime", not ancien.exists())
+
+    # -- total estime d'apres la derniere execution sans echec -----------------------------------
+    propre = 'print("== p"); print("OK   a"); print("OK   b"); print("OK   c")'
+    enfant(t, propre, nom="estime", total="None")
+    d = lit_nom(t, "estime")
+    verifie("total estime : 1re execution, aucun historique -> total absent, pas estime", d["total"] is None and d["total_estime"] is False)
+    verifie("historique : le nombre de verifications de l'execution propre est retenu", historique(t, "estime") == 3)
+    enfant(t, 'print("== p"); print("OK   a"); time.sleep(0.2)', nom="estime", total="None")
+    d = lit_nom(t, "estime")
+    verifie("total estime : 2e execution -> total = 3 et marque estime", d["total"] == 3 and d["total_estime"] is True)
+    enfant(t, 'print("OK   a"); print("KO   b")', nom="estime", total="None")
+    verifie("execution avec echec : l'historique n'est pas ecrase (reste a 1, derniere execution propre)", historique(t, "estime") == 1)
+    verifie("total donne par le banc : jamais estime", (enfant(t, 'print("OK   a")', nom="fixe", total="5"), lit_nom(t, "fixe"))[1]["total_estime"] is False)
+    rel = sondes_scan.releve([], sondes_scan.lit_fichiers(t / "sondes"))
+    verifie("releve : total_estime transmis a la page", any(x["nom"] == "estime" and x["total_estime"] for x in rel))
 
     # -- vivant() ------------------------------------------------------------------------------
     verifie("vivant : ce processus oui, pid 0 et pid absurde non", suivi_sondes.vivant(os.getpid()) and not suivi_sondes.vivant(0) and not suivi_sondes.vivant(2 ** 30))

@@ -4,6 +4,9 @@ Cas : journal non ecrit (signale), push arrete au delai (DELAI_PUSH minuscule), 
 en conflit, /commit-journal sur le faux depot (le vrai depot garde son HEAD), commit des fichiers coches de l'etape
 « arbre » (seulement eux, accents retires, refus hors liste / message vide / pendant un merge / build en cours).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import subprocess
 import sys

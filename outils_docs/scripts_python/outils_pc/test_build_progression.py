@@ -4,6 +4,9 @@ Code de sortie 0 = vert. Aucun appel a pio : le module est pur, il ne fait que l
 Les lignes sont ecrites d'apres les formats connus de PlatformIO / SCons / esptool, calibrees sur
 de vraies sorties (action A8 du plan) ; `build_sortie_reelle_cuve.txt` en est un extrait.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import sys
 from pathlib import Path

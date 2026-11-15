@@ -6,6 +6,9 @@ NON EMIS / EMIS NON RECU, comme si l'UDP etait en cause. Fermer puis rouvrir le 
 reset de la carte l'a retablie. Le testeur doit le DIRE : carte « muette » apres SEUIL_MUETTE s sans reponse a
 une commande, et un essai sans aucune ligne de la carte le signale au lieu d'accuser l'emission.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import time
 

@@ -4,6 +4,9 @@ Code de sortie 0 = vert. Faux dossier berry_custom dans un dossier temporaire : 
 Cas reel (2026-10-26) : data/fs/demarrage.be sans `#@ solidify:demarrage` -> solidified_demarrage.h vide,
 `undefined reference to be_native_module_demarrage` a l'edition des liens, apres une heure de compilation.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import sys
 import tempfile

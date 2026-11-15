@@ -1,5 +1,8 @@
 """Banc du catalogue de l'atelier des ecrans (objets, attributs, polices, ecrans). Code de sortie 0 = vert.
 Python de PlatformIO. Le temoin travaille sur une copie temporaire des sources, jamais sur le depot."""
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import shutil

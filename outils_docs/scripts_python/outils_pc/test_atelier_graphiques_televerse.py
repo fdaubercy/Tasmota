@@ -5,6 +5,9 @@ Code de sortie 0 = vert. Lancer avec le Python de PlatformIO depuis la racine du
 COPIE temporaire du depot (comme le banc d'ecriture) ; carte simulee par un `get` injecte qui repond a `Br path.exists`.
 Aucun reseau : la sonde du port 7700 est injectee aussi.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

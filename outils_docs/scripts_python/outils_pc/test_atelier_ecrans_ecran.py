@@ -7,6 +7,9 @@ compilee, bouton de 46 px -> 25 px signale) ; changement de l'ecran des debits v
 ecriture des quatre fichiers, ecran de l'env relu ; carte de l'ILI9488 vers le 7B : conflit de broches refuse, rien
 d'ecrit ; ecran inconnu refuse. Code de sortie 0 = vert.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import os
 import sys
 import tempfile

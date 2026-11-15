@@ -4,6 +4,9 @@ Deux cartes simulees repondent aux commandes de la grille par les lignes de log 
 sont reduits par 'echelle'. Chaque verdict positif a son temoin negatif (la meme etape doit echouer quand la
 preuve manque ou qu'un motif interdit apparait).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import os
 import threading

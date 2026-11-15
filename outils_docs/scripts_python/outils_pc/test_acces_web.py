@@ -4,6 +4,9 @@
 plus 127.0.0.1. Sans adresse reseau (PC hors ligne), ces cas sont sautes et le banc le dit.
 Temoin : un Acces dont controle() laisse tout passer DOIT faire echouer les cas « refuse ».
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import json

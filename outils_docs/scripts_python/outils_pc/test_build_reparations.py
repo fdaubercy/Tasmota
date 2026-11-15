@@ -4,6 +4,9 @@ UTILISATION (Python de PlatformIO, depuis la racine du depot)
     python outils_docs/scripts_python/outils_pc/test_build_reparations.py
 Code de sortie 0 = vert. Mutants : le module est recharge avec une garde retiree ; le banc doit alors passer au rouge.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import importlib
 import json

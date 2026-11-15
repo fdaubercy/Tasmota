@@ -6,6 +6,9 @@ Serveur dans un fil, sur un port libre, devant une COPIE du depot (les .ini, le 
 chaque dossier de carte : display.ini, _persist.json, pages.jsonl, ecranLvgl.be, *.ttf) dans un dossier temporaire.
 La carte est simulee par un `get` injecte (aucun reseau) qui note chaque adresse appelee.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import json

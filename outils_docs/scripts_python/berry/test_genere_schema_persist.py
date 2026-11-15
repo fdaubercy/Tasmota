@@ -5,6 +5,9 @@
 Schema genere en memoire depuis les persists du depot (rien n'est ecrit). Une valeur hors vocabulaire n'est refusee
 que si la cle est decrite : sans CLES_DU_CODE ni le contrat, `additionalProperties` accepterait "oui" (temoin).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import copy
 import sys
 

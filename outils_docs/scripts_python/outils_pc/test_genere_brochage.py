@@ -2,6 +2,9 @@
 
 Lancer : python outils_docs/scripts_python/outils_pc/test_genere_brochage.py  (code 0 = vert)
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from genere_brochage_excel import CARTES, DEPOT, noms_composants, usages_persist, texte_broche

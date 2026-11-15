@@ -2,6 +2,9 @@
 
 Le .h et les autoexec reels sont lus en lecture seule ; aucune de leurs lignes n'est affichee (mots de passe).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import os
 import re

@@ -17,6 +17,9 @@ porte de garage en chronometre, arrets (sens inverse, bloque, arret, delai, refu
 volet avec balise (texte), temoin d'etape (409 : message, etat relu), note visible carte injoignable, mode sombre lisible,
 largeur de 320 px, aucune erreur de la console (« Failed to load resource » tolere pendant les pannes voulues seulement).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import argparse
 import json

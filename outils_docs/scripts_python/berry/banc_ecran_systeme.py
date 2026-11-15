@@ -7,6 +7,9 @@ l'atelier (outils_pc/atelier_ecrans_systeme.py::champs), puis temoins (copies mo
 Code de sortie 0 si tout est vert. Ne teste pas une vraie carte : ni tasmota.memory, ni les reponses reelles de Status 1/2/11,
 UfsSize, UfsFree, RgxClients (formes lues dans le C++ et posees a la main), ni HASPmota ou LVGL reels (interfaces simulees).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import re
 import subprocess
 import sys

@@ -112,10 +112,11 @@ def liste_sure(valeur, maxi):
     return sortie
 
 
-def _sonde(pid, parent, nature, nom, debut, duree, faits, total, echecs, phase, dernier, etat, verdict, proc_debut=None):
+def _sonde(pid, parent, nature, nom, debut, duree, faits, total, echecs, phase, dernier, etat, verdict, proc_debut=None, estime=False):
     # proc_debut : heure de creation du PROCESSUS (pas celle du fichier de suivi) : l'arret la reverifie avant de tuer (pid reutilise par Windows)
     return {"pid": pid, "parent": parent, "proc_debut": proc_debut, "nature": nature, "nom": _s(nom, 120), "debut": debut, "duree_s": max(0, int(duree)), "faits": faits,
-            "total": total, "echecs": [_s(e) for e in echecs][-20:], "phase": _s(phase), "dernier": _s(dernier), "etat": etat, "verdict": verdict}
+            "total": total, "echecs": [_s(e) for e in echecs][-20:], "phase": _s(phase), "dernier": _s(dernier), "etat": etat, "verdict": verdict,
+            "total_estime": bool(estime and total)}
 
 
 def releve(procs, fichiers, vivant=suivi_sondes.vivant, maintenant=None):
@@ -130,7 +131,8 @@ def releve(procs, fichiers, vivant=suivi_sondes.vivant, maintenant=None):
         if f is not None and f.get("etat") in ("en_cours", "termine"):
             echecs = f.get("echecs") or []
             sortie.append(_sonde(p["pid"], p["parent"], p["nature"], f.get("nom") or p["nom"], debut, maintenant - debut, int(f.get("faits") or 0),
-                                 f.get("total"), echecs, f.get("phase"), f.get("dernier"), "en_cours", "rouge" if echecs else None, p.get("debut")))
+                                 f.get("total"), echecs, f.get("phase"), f.get("dernier"), "en_cours", "rouge" if echecs else None, p.get("debut"),
+                                 f.get("total_estime")))
         elif p["nature"] == "chrome" and not vivant(p["parent"]):
             sortie.append(_sonde(p["pid"], p["parent"], "chrome", p["nom"], debut, maintenant - debut, 0, None, [], "", "", "orpheline", None, p.get("debut")))
         else:
@@ -146,11 +148,11 @@ def releve(procs, fichiers, vivant=suivi_sondes.vivant, maintenant=None):
         args = (f["pid"], f.get("parent"), "banc", f.get("nom") or "?", debut, maj - debut, int(f.get("faits") or 0), f.get("total"),
                 echecs, f.get("phase"), f.get("dernier"))
         if f.get("etat") == "termine":
-            termines.append((maj, _sonde(*args, "termine", "rouge" if echecs else "vert")))
+            termines.append((maj, _sonde(*args, "termine", "rouge" if echecs else "vert", estime=f.get("total_estime"))))
         elif vivant(f["pid"]):          # sonde vivante que le scan n'a pas reconnue (lancee autrement)
-            sortie.append(_sonde(args[0], args[1], "banc", args[3], debut, maintenant - debut, *args[6:], "en_cours", "rouge" if echecs else None))
+            sortie.append(_sonde(args[0], args[1], "banc", args[3], debut, maintenant - debut, *args[6:], "en_cours", "rouge" if echecs else None, estime=f.get("total_estime")))
         else:
-            sortie.append(_sonde(*args, "disparue", "rouge"))
+            sortie.append(_sonde(*args, "disparue", "rouge", estime=f.get("total_estime")))
     termines.sort(key=lambda t: -t[0])
     sortie.extend(s for _, s in termines[:MAX_TERMINES])
     ordre = {"en_cours": 0, "orpheline": 1, "sans_suivi": 2, "disparue": 3, "termine": 4}

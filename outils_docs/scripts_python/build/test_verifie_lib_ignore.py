@@ -5,6 +5,9 @@ Avec --reel : le vrai env de la cuve (preprocesseur croise de PlatformIO, ~15 s)
 esp_wireguard_tasmota (incident du 2026-10-31) y est refusee.
 Lancer : "%USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe" -u test_verifie_lib_ignore.py [--reel]
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import os
 import sys

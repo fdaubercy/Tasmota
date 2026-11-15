@@ -7,6 +7,9 @@ du volet de la porte (sans persist, faux autoexec, exclusion heritee de sa base)
 Les fichiers de la page de carte (A6) y sont simules quand un test en a besoin. Le vrai depot n'est jamais ecrit ; les sauvegardes
 de Transaction vont dans un dossier temporaire (OUTILS_TASMOTA_DOSSIER).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import json
 import os

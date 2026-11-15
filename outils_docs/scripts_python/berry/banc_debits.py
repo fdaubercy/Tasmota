@@ -5,6 +5,9 @@ r"""Banc du module debits (carte Serveur Debits de PAC) : banc_debits.be, puis t
 Code de sortie 0 si tout est vert. Ne teste pas la vraie carte : ni les interruptions des compteurs, ni le pilote
 FlowRateMeter, ni la RAM, ni le rendu de la page (essai de charge A6 du plan debitmetres-chauffage).
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import subprocess
 import sys
 import tempfile

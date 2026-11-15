@@ -6,6 +6,9 @@ Garde-fou : AUCUN des mots de passe reels du parc (lus en lecture seule) ne doit
 erreurs comprises. Un echec n'affiche jamais une valeur.
 Lancer : "%USERPROFILE%\\.platformio\\penv\\Scripts\\python.exe" -u outils_docs/scripts_python/outils_pc/test_assistant_persist_web.py
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import http.client
 import json

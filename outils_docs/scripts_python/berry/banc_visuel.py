@@ -6,6 +6,9 @@ Depuis n'importe quel dossier. Code de sortie 0 = vert : le vrai module passe ba
 module avec une protection retiree) le fait echouer (temoins negatifs). Ni le serveur web de Tasmota (Referer), ni la RAM,
 ni la solidification ne sont testes : un banc vert ne remplace pas l'essai sur une carte.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import argparse
 import subprocess
 import sys

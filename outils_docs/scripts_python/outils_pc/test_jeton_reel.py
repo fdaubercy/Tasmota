@@ -8,6 +8,9 @@ l'adresse reseau de ce PC (= autre appareil : jeton exige). Verifie : jeton de l
 de l'un ouvre l'autre (barre Annuaire) ; /_barre.json ; puis l'annuaire est tue et relance (nouveau jeton) : l'outil
 survit, garde son ancien jeton, accepte le nouveau ; l'annuaire refuse l'ancien. Sans adresse reseau : arret sans rien lancer.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import http.client, json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 

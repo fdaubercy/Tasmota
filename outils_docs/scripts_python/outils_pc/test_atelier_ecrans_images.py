@@ -6,6 +6,9 @@ Copie temporaire du depot. Verifie : PNG valides (avec et sans alpha, palette + 
 dimensions, poids, nom), import (origine, licence, build en cours, nom pris, ecritures exactes, rien d'ecrit en cas de refus).
 Code de sortie 0 = vert. `png` est reutilise par les bancs de la page web.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import struct
 import sys
 import tempfile

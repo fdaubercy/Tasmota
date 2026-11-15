@@ -4,6 +4,9 @@ Code de sortie 0 = vert. Le VRAI pio n'est jamais lance : BUILD_WEB_PIO est pose
 build_faux_pio.py, et le banc s'arrete avant tout lancement si la serie resout une autre commande.
 Depot d'essai, donnees de l'outil et journal du faux pio : dans des dossiers temporaires.
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import ctypes
 import json

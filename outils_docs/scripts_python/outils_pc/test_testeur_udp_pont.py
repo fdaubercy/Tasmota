@@ -1,5 +1,8 @@
 """Banc du testeur UDP, groupe « pont » : liaison par le VRAI pont_serie.py (lance sur un port TCP libre,
 port serie loop://). Appele par test_testeur_udp.py, qui fournit verifie() et attend() (un seul decompte)."""
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 
 import os
 import sys

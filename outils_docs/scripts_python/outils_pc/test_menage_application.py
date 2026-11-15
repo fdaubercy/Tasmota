@@ -2,6 +2,9 @@
 
 Faux depot git temporaire, jamais le vrai. Python de PlatformIO : <~/.platformio/penv/Scripts/python.exe> test_menage_application.py
 """
+import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
+_sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
+import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import os
 import subprocess
 import sys
