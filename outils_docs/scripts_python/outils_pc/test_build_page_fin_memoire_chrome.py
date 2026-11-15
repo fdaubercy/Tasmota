@@ -60,8 +60,8 @@ def sonde(m, capture):
     s.injecte(cdp, evenements)
     s.attend(cdp, "document.querySelectorAll('.fm-pastille').length === 3", 10)
     p = cdp.js(PASTILLES)
-    s.verifie([p[A]["texte"], p[B]["texte"], p[C]["texte"]], ["Flash 26 % · RAM 33 %", "Flash 37 % · RAM 33 % ⚠", "Flash 36 % · RAM 33 % ⚠"],
-              "serie : une pastille par env reussi, chiffres Flash / RAM")
+    s.verifie([p[A]["texte"], p[B]["texte"], p[C]["texte"]], ["Flash 50 % · RAM 33 %", "Flash 92 % · RAM 33 % ⚠", "Flash 50 % · RAM 33 % ⚠"],
+              "serie : une pastille par env reussi, Flash = app0, RAM")
     s.verifie((p[SANS], [p[A]["classe"], p[B]["classe"], p[C]["classe"]]),
               (None, ["fm-pastille ", "fm-pastille o", "fm-pastille r"]), "env sans releve : pas de pastille ; vert, orange (90 %), rouge (95 %)")
     s.verifie([p[A]["couleur"], p[B]["couleur"], p[C]["couleur"]], ["rgb(42, 157, 74)", "rgb(194, 116, 0)", "rgb(192, 57, 43)"],
@@ -78,6 +78,29 @@ def sonde(m, capture):
         s.attend(cdp, f"document.querySelector('.bloc[data-bloc=\"{env}\"] .fm-pastille')", 10)
         cas[pc] = cdp.js(PASTILLES)[env]["classe"].split()[-1]
     s.verifie(cas, {89: "fm-pastille", 90: "o", 94: "o", 95: "r"}, "seuils : orange des 90 %, rouge des 95 %")
+    # ESP32-S3 : IRAM 16384/16384 = cache d'instructions, jamais une alerte ; Flash = app0 ; FS exclu du niveau. ESP32 classique : IRAM pleine = rouge
+    def serie_env(env):
+        s.injecte(cdp, [{"type": "debut", "env": None, "actions": ["compiler"], "lignes": [{"env": env, "methode": "com", "port": "", "ip": ""}]},
+                        {"type": "debut", "env": env, "actions": ["compiler"], "methode": "com", "port": ""},
+                        {"type": "fin_env", "env": env, "resultat": "succes", "statuts": {"compiler": "succes"}, "secondes": 1}])
+        s.attend(cdp, f"document.querySelector('.bloc[data-bloc=\"{env}\"] .fm-pastille')", 10)
+        return cdp.js(PASTILLES)[env]
+    for env, iram in (("s3-iram", 16384), ("classique-iram", 172032)):
+        rel = releve(env, 870 * Ko, 747 * Ko + 205, 14 * Ko, 160 * Ko)
+        rel["ram"].append({"zone": "IRAM", "utilise": iram, "total": iram if iram != 16384 else 16384})
+        (dossier / f"{env}.json").write_text(json.dumps(rel), encoding="utf-8")
+    p3 = serie_env("s3-iram")
+    s.verifie((p3["texte"], p3["classe"].split()[-1]), ("Flash 87 % · RAM 40 % ⚠", "o"), "S3 : IRAM 16384/16384 ignoree, Flash = app0, safeboot 93,4 % = orange (pas rouge)")
+    cdp.js("document.querySelector('.bloc[data-bloc=\"s3-iram\"] .fm-pastille').click()")
+    s.attend(cdp, "document.querySelector('.fm-fenetre')", 5)
+    f = cdp.js(FENETRE)
+    s.verifie(("IRAM" in " ".join(f["partitions"]), any("IRAM" in a for a in f["alertes"]), any("safeboot" in a for a in f["alertes"]), True),
+              (True, False, True, True), "S3 : ligne IRAM affichee, aucune alerte IRAM, alerte safeboot gardee")
+    s.verifie(cdp.js("document.querySelector('.fm-fenetre .fm-ligne[title*=\"cache\"]') !== null"), True, "S3 : mention « cache d'instructions » sur la ligne IRAM")
+    cdp.js("document.querySelector('.fm-voile').click()")
+    s.attend(cdp, "!document.querySelector('.fm-fenetre')", 5)
+    pc = serie_env("classique-iram")
+    s.verifie(pc["classe"].split()[-1], "r", "ESP32 classique : IRAM reellement pleine = rouge")
     # ESP8266 : releve sans partitions, bilan de pio (bilan_flash + RAM) ; releve vide : pas de pastille
     base8266 = {"date": 1.0, "date_build": 1.0, "csv": "", "flash": None, "notes": [], "journal": "", "partitions": []}
     r8 = {}

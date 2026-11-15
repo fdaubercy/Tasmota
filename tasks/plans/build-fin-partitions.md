@@ -27,6 +27,11 @@ la page lit `GET /memoire?env=`. Code dans `outils_pc/build_page_fin_memoire.py`
 - [x] Pastille et détail : `build_page_fin_memoire.py::fmParts` (repli sur `bilan_flash`) — preuve : test_build_page_fin_memoire_chrome.py VERT (pastille 70 %/94 %/95 %, relevé vide sans pastille, fenêtre « firmware » + RAM), mutant JS rouge
 - [ ] Essai réel : le relevé de `tasmota-cave-lumiere-porte` n'est régénéré qu'à la prochaine compilation depuis la page :7700
 
+## A4 — Pastille : IRAM du S3 et Flash = app0
+- [x] IRAM de 16384 o d'un ESP32-S3 (cache d'instructions, toujours pleine) : ni rouge ni alerte, ligne gardée avec la mention « cache d'instructions, toujours plein » ; ESP32 classique à IRAM pleine : rouge — preuve : `build_page_fin_memoire.py::fmCache`, sonde `test_build_page_fin_memoire_chrome.py` VERT (cas s3-iram orange, classique-iram rouge), mutant « fmCache renvoie false » rouge
+- [x] « Flash » = occupation d'app0 (sinon `bilan_flash` de pio, sinon somme) ; niveau = partition la plus pleine hors FS (spiffs, littlefs, ffat) et zone de RAM la plus pleine hors cache S3 — preuve : `fmResume`, sonde VERT (S3 app0 87 %, safeboot 93,4 % : « Flash 87 % · RAM 40 % ⚠ » orange ; ESP8266 inchangé)
+- [ ] Essai réel après redémarrage de la page :7700 et une compilation de `tasmota32s3-cave-serveur-rly` (l'utilisateur)
+
 ## A2 — Retour au plan en cours avant ce chantier
 - [ ] Reprendre le plan `build-reparations` : essai réel du diagnostic IA sur le journal `20261115-043620-tasmota-cave-lumiere-porte-compiler.log` (A6, dernière case), case « Relancer après réparation », puis A7 (documentation, relecteurs, essai hors série, commit) : `/suivi suivre build-reparations`
 

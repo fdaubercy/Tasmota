@@ -3,8 +3,8 @@
 Inseree dans build_page.PAGE par /*CSS_FIN_MEMOIRE*/ et /*JS_FIN_MEMOIRE*/, avec deux appels dans la page :
 `finMemoireCharge(e)` (evenement `fin_env`) et `finMemoireTete(tete, env)` (dessin de la ligne de l'env).
 Quand un env reussit sa COMPILATION, la page lit GET /memoire?env= (analyse que la serie vient d'enregistrer, aucun nouvel
-evenement) et pose dans la ligne de l'env « Flash 87 % · RAM 32 % » : orange des 90 %, rouge des 95 % (partition ou zone
-de RAM la plus pleine). Clic = fenetre de detail (alertes, ruban, jauges par partition et par zone de RAM), fermee par
+evenement) et pose dans la ligne de l'env « Flash 87 % · RAM 32 % » : orange des 90 %, rouge des 95 % (partition hors FS ou zone
+de RAM la plus pleine ; IRAM de 16384 o du S3 = cache, jamais alertee). « Flash » = occupation d'app0. Clic = fenetre de detail (alertes, ruban, jauges par partition et par zone de RAM), fermee par
 Echap, un clic dehors ou « Fermer » ; « Onglet Mémoire » ouvre l'onglet de meme nom. Pas d'analyse ou aucune partition
 mesuree : pas de pastille, aucune erreur. Tout texte du serveur passe par h(..., {texte}) = textContent, jamais innerHTML.
 """
@@ -38,14 +38,21 @@ function fmParts(a) {
   var b = a && a.bilan_flash;
   return (a && a.partitions && a.partitions.length) ? a.partitions : (b ? [{nom: "firmware", utilise: b.utilise, taille: b.taille}] : []);
 }
+// IRAM d'un ESP32-S3 : 16384 o = cache d'instructions, declare plein par l'IDF a chaque build : jamais une alerte
+function fmCache(z) { return z.zone === "IRAM" && z.total === 16384; }
+function fmFs(p) { return p.nom === "spiffs" || p.nom === "littlefs" || p.nom === "ffat"; }
 function fmResume(a) {
   var mes = fmParts(a).filter(function (p) { return p.utilise != null && p.taille; });
   if (!mes.length) return null;
-  var u = 0, t = 0, pire = 0;
-  mes.forEach(function (p) { u += p.utilise; t += p.taille; pire = Math.max(pire, fmPc(p.utilise, p.taille)); });
+  var app0 = mes.filter(function (p) { return p.nom === "app0"; })[0], b = a.bilan_flash, u = 0, t = 0, pire = 0;
+  if (app0) { u = app0.utilise; t = app0.taille; }
+  else if (b) { u = b.utilise; t = b.taille; }
+  else mes.forEach(function (p) { u += p.utilise; t += p.taille; });
+  // niveau : partition la plus pleine hors systeme de fichiers, zone de RAM la plus pleine hors cache du S3
+  mes.forEach(function (p) { if (!fmFs(p)) pire = Math.max(pire, fmPc(p.utilise, p.taille)); });
   var ram = (a.ram || []).filter(function (z) { return z.total; });
   var z = ram.filter(function (x) { return x.zone === "DIRAM"; })[0] || ram[0];
-  ram.forEach(function (x) { pire = Math.max(pire, fmPc(x.utilise, x.total)); });
+  ram.forEach(function (x) { if (!fmCache(x)) pire = Math.max(pire, fmPc(x.utilise, x.total)); });
   return {niveau: fmNiveau(pire), texte: "Flash " + Math.round(fmPc(u, t)) + " %"
           + (z ? " · RAM " + Math.round(fmPc(z.utilise, z.total)) + " %" : "") + (pire >= 90 ? " ⚠" : "")};
 }
@@ -63,9 +70,9 @@ function finMemoireTete(tete, env) {
   tete.appendChild(h("button", {"class": "fm-pastille " + res.niveau, type: "button", texte: res.texte,
     title: "Occupation des partitions d'après ce build : ouvrir le détail", onclick: function () { finMemoireOuvre(env); }}));
 }
-function finMemoireLigne(nom, u, t, estime) {
+function finMemoireLigne(nom, u, t, estime, note) {
   var pc = u == null ? 0 : fmPc(u, t);
-  return h("div", {"class": "fm-ligne"}, h("span", {texte: nom}),
+  return h("div", {"class": "fm-ligne", title: note || ""}, h("span", {texte: nom + (note ? " *" : "")}),
     h("div", {"class": "fm-piste"}, h("i", {"class": fmNiveau(pc), style: "width:" + Math.min(100, pc) + "%"})),
     h("span", {texte: u == null ? "non mesurable" : (estime ? "≈ " : "") + fmKo(u) + " / " + fmKo(t) + " · " + pc.toFixed(1).replace(".", ",") + " %"}));
 }
@@ -75,7 +82,7 @@ function finMemoireOuvre(env) {
   var parts = fmParts(a), somme = parts.reduce(function (s, p) { return s + p.taille; }, 0);
   var fenetre = h("div", {"class": "fm-fenetre", role: "dialog", "aria-modal": "true", "aria-label": "Occupation des partitions de " + env},
     h("h2", {}, h("span", {texte: env}), h("span", {"class": "fm-pastille " + res.niveau, texte: res.texte})));
-  parts.concat((a.ram || []).map(function (z) { return {nom: z.zone, utilise: z.utilise, taille: z.total}; })).forEach(function (p) {
+  parts.concat((a.ram || []).filter(function (z) { return !fmCache(z); }).map(function (z) { return {nom: z.zone, utilise: z.utilise, taille: z.total}; })).forEach(function (p) {
     var pc = p.utilise == null ? 0 : fmPc(p.utilise, p.taille);
     if (pc >= 90) fenetre.appendChild(h("div", {"class": "fm-alerte " + fmNiveau(pc), texte: "⚠ " + p.nom + " occupée à "
       + pc.toFixed(1).replace(".", ",") + " % : reste " + fmKo(p.taille - p.utilise) + "."}));
@@ -87,7 +94,7 @@ function finMemoireOuvre(env) {
   fenetre.appendChild(ruban);
   parts.forEach(function (p) { fenetre.appendChild(finMemoireLigne(p.nom, p.utilise, p.taille, p.estime)); });
   if ((a.ram || []).length) fenetre.appendChild(h("div", {"class": "fm-titre", texte: "RAM"}));
-  (a.ram || []).forEach(function (z) { fenetre.appendChild(finMemoireLigne(z.zone, z.utilise, z.total, false)); });
+  (a.ram || []).forEach(function (z) { fenetre.appendChild(finMemoireLigne(z.zone, z.utilise, z.total, false, fmCache(z) ? "cache d'instructions, toujours plein" : "")); });
   var voile = h("div", {"class": "fm-voile"}, fenetre);
   function ferme() { document.removeEventListener("keydown", touche); voile.remove(); }
   function touche(ev) { if (ev.key === "Escape") ferme(); }
