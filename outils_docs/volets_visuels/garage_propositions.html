@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Garage et portail : propositions A et B</title>
+<style>
+  body{font-family:verdana,sans-serif;background:#252525;color:#eaeaea;margin:0;padding:12px}
+  h1{font-size:18px;max-width:940px;margin:0 auto 8px} p{font-size:12px;color:#bbb;max-width:940px;margin:4px auto 10px}
+  nav{max-width:940px;margin:0 auto 8px} nav button{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;padding:8px 16px;font-size:13px;cursor:pointer;margin-right:6px}
+  nav button.on{background:#0d6b9c;outline:2px solid #fff}
+  iframe{display:block;width:100%;max-width:940px;height:1020px;margin:0 auto;border:0;background:#252525}
+</style></head><body>
+<h1>Garage et portail : deux propositions animées</h1>
+<p>A garde notre façade (arches de jasmin, grillage, photinias) et lui donne la finition de Gemini. B reprend la scène de Gemini et y met nos organes. Dans les deux : portail à un ou deux vantaux (boutons simple et double, décalage, feu orange, capteur de fermeture), rideau avec ses fins de course (B), petite porte fixe, lampe et caméra du dépôt avec leurs zones de couverture, bascule jour et nuit.</p>
+<nav><button id="ba" class="on" onclick="v('a')">Proposition A</button><button id="bb" onclick="v('b')">Proposition B</button></nav>
+<iframe id="f" src="maquette_garage_a.html"></iframe>
+<script>
+function v(k){document.getElementById('f').src='maquette_garage_'+k+'.html';document.getElementById('ba').className=k=='a'?'on':'';document.getElementById('bb').className=k=='b'?'on':'';}
+</script></body></html>

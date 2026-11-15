@@ -4,7 +4,7 @@ titre: Atelier des visuels d'accueil (page 7985) : photo ou dessin dérivé, poi
 objectif: Depuis une photo réelle, produire par carte un fond (photo allégée ou dessin vectorisé) et des points chauds reliés aux relais, mesures et liaisons, et les faire vivre sur la page d'accueil du module
 statut: actif
 cree: 2026-11-13
-maj: 2026-11-14
+maj: 2026-11-15
 famille: graphiques-ecrans
 spec: 2026-11-13-atelier-visuels-accueil-design.md
 ---
@@ -256,6 +256,10 @@ Page : bouton « Écrire dans le dépôt » (diff montré, confirmation), puis l
   présent avec les bons fichiers — preuve : commit eeed51559, `test_build_page_fichiers_chrome.py` OK « visuel : carte choisie… » et « visuel : image prete… » (les 2 KO restants de ce banc, « ordre » et « aucune erreur JS », existent aussi sans ma modification)
   - [x] Page : « Écrire dans le dépôt » (diff, confirmation, refus pendant un build, motif de validation affiché), badge de suivi, lien « Téléverser » vers la page Build (`?env=&depuis=visuel&fichiers=visuel.json,visuel.<type>&redemarrer=1`) — preuve : sonde_ecriture VERT sur dépôt copié, commit 3f37b3948 (reste : `AT_ORIGINES` et `sonde_atelier` côté page Build)
 - [x] `outils_docs/README.md`, `CLAUDE.md` (carte des documents, une entrée) ; `verifie_references_docs.py` vert — preuve : commit ee7bde47c, 0 défaut
+- [ ] La page de l'atelier renvoie à `outils_docs/visuels_accueil/CONSIGNES_VISUELS.md` (consignes générales de création des visuels, qui
+  s'affinent au fil du temps, journal en fin de fichier) : lien « Consignes » dans la page, route de lecture seule qui sert le fichier,
+  rappel des règles qui concernent l'élément en cours d'édition (ouvrant, voyant, lampe, caméra, jour et nuit) ; test : le lien ouvre le fichier,
+  une règle ajoutée au fichier apparaît sans relancer l'outil ; entrée dans `outils_docs/README.md` et `verifie_references_docs.py` vert
 - [x] `relecteur-pages-web` lancé, remarques traitées — preuve : relecture du 2026-11-14 (défaut majeur du diff de confirmation corrigé en 93d3c3033)
 - [x] Export (spec § 2.5) : boutons « Télécharger le SVG », « Copier le code SVG », « Copier le code HTML »
   (fragment autonome : SVG + calques + script d'animation de `visuel.js` en ligne, aucune requête), « Télécharger le

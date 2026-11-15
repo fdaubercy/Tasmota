@@ -242,5 +242,126 @@ V.poseLampe(sl.lampe, 'OFF');
 verifie([sl.lampe.globe.style.fill, sl.lampe.halo.style.display], ['#a9adb0', 'none'], 'lampe OFF : globe gris, sans halo');
 verifie(typeof sl.lampe.g.onclick, 'function', 'lampe : clic branche');
 
+// Finition de la facade (2026-11-15, plan facade-garage-portail-commande A2) : foret, ombre, cones de la camera et de la lampe, couche de nuit.
+// Declaree par decor 'finition' ; SANS elle, le dessin est celui d'avant (empreinte relevee sur le volets.js du 2026-11-15).
+const GFIN = Object.assign({}, GL, {camera: {nom: 'Caméra de garage', id: 4}});
+const GFIN_OK = Object.assign({}, GFIN, {decor: ['chevrefeuille', 'porte', 'pergola', 'finition']});
+const compte = (c, attr) => tous(c, n => attr in n.attrs).length;
+const [cfin0] = dessin(GFIN);
+verifie(['data-foret', 'data-nuit', 'data-cone'].map(a => compte(cfin0, a)), [0, 0, 0], "finition non declaree : ni foret, ni nuit, ni cone");
+verifie(empreinte(cfin0), 'fd36ad7bd0aa', 'finition non declaree : dessin inchange (empreinte d\'avant)');
+const [cfin, sfin] = dessin(GFIN_OK);
+verifie([compte(cfin, 'data-foret'), compte(cfin, 'data-nuit'), compte(cfin, 'data-cone')], [1, 1, 2], 'finition declaree : une foret, une couche de nuit, deux cones (camera et lampe)');
+verifie([sfin.camera.cone.style.opacity, sfin.lampe.cone.style.opacity], ['0', '0'], 'cones : invisibles au depart (appareils inconnus)');
+V.poseCamera(sfin.camera, 'ON');
+verifie([sfin.camera.cone.style.opacity, sfin.lampe.cone.style.opacity], ['1', '0'], 'camera ON : son cone seulement');
+V.poseLampe(sfin.lampe, 'ON');
+verifie([sfin.camera.cone.style.opacity, sfin.lampe.cone.style.opacity], ['1', '1'], 'lampe ON : son cone aussi');
+V.poseCamera(sfin.camera, 'OFF');
+V.poseLampe(sfin.lampe, null);
+verifie([sfin.camera.cone.style.opacity, sfin.lampe.cone.style.opacity], ['0', '0'], 'camera OFF, lampe inconnue : cones eteints');
+const fait = (b) => dessin(Object.assign({}, GFIN_OK, b))[0];
+verifie(empreinte(fait({})), empreinte(fait({})), 'finition : dessin identique d\'un appel a l\'autre');
+verifie(compte(fait({camera: null, lampe: null}), 'data-cone'), 0, 'finition sans camera ni lampe : aucun cone');
+// Nuit selon le soleil : lever 08:01 (481), coucher 17:04 (1024), fondu 35 min, profondeur en sinus entre le coucher et le lever
+verifie([V.minutesDe('08:01'), V.minutesDe('17:04'), V.minutesDe('00:00'), V.minutesDe('7:5'), V.minutesDe('xx'), V.minutesDe('25:00'), V.minutesDe(null)], [481, 1024, 0, null, null, null, null], 'minutesDe : HH:MM en minutes, sinon null');
+const N = (m, mode) => { const e = V.nuitEtat(m, 481, 1024, mode); return [Math.round(e.o * 1e4) / 1e4, Math.round(e.p * 1e4) / 1e4, e.c]; };
+verifie(N(720), [0, 0, 'rgb(43,59,107)'], 'nuit : midi = plein jour, aucun voile');
+verifie(N(500), [0, 0, 'rgb(43,59,107)'], 'nuit : apres la fin du fondu du matin = jour');
+verifie(N(1024), [0.15, 0, 'rgb(43,59,107)'], 'nuit : au coucher, fondu a moitie, crepuscule bleu et leger');
+verifie(N(1380), [0.6034, 0.948, 'rgb(6,10,20)'], 'nuit : 23:00 deja profonde');
+verifie(N(30), [0.62, 1, 'rgb(4,7,15)'], 'nuit : 00:30, milieu de la nuit, profondeur maximale');
+verifie(N(481), [0.15, 0, 'rgb(43,59,107)'], 'nuit : au lever, fondu a moitie, crepuscule');
+verifie(N(720, 'nuit'), [0.62, 1, 'rgb(4,7,15)'], 'nuit forcee : profondeur maximale quelle que soit l\'heure');
+verifie(N(30, 'jour'), [0, 0, 'rgb(43,59,107)'], 'jour force : aucun voile a minuit');
+verifie(V.nuitEtat(null, 481, 1024, 'auto'), {o: 0, p: 0, c: 'rgb(43,59,107)'}, 'nuit : heure inconnue = jour (jamais de nuit par defaut)');
+V.poseNuit(sfin, V.nuitEtat(30, 481, 1024, 'auto'));
+verifie([sfin.nuit.attrs.opacity, sfin.nuit.attrs.fill], ['0.62', 'rgb(4,7,15)'], 'poseNuit : opacite et teinte de la couche');
+V.poseNuit(sfin, V.nuitEtat(720, 481, 1024, 'auto'));
+verifie(sfin.nuit.attrs.opacity, '0', 'poseNuit : le jour efface la couche');
+verifie(typeof V.poseNuit, 'function', 'window.Volets porte poseNuit');
+
+// Portail de jardin dans la facade (2026-11-15, plan facade-garage-portail-commande A3) : volets de type portail1 (un vantail, bouton 3) et
+// portail2 (deux vantaux, bouton 4), dessines au premier plan (piliers, vantaux, feu orange, capteur de fermeture), hors de la rangee des ouvertures.
+verifie([V.vantaux({1: 40, 2: 25}), V.vantaux({2: 60}), V.vantaux({1: 50}), V.vantaux({}), V.vantaux(null), V.vantaux({1: 150, 2: -5})],
+  [{droit: 0.4, gauche: 0.25}, {droit: 0.6, gauche: 0.6}, {droit: 0.5, gauche: 0}, {droit: 0, gauche: 0}, {droit: 0, gauche: 0}, {droit: 1, gauche: 0}],
+  'vantaux : droit = le plus ouvert des deux volets, gauche = le volet a deux vantaux seul, bornes a [0, 1]');
+verifie([V.feuPortail(2000, 1000), V.feuPortail(3000, 1000), V.feuPortail(3200, 2800), V.feuPortail(4200, 4000), V.feuPortail(4200, null), V.feuPortail(1500, 1000)],
+  [true, false, false, true, false, false], 'feu : clignote (1 s allume, 1 s eteint) seulement dans les 1,5 s qui suivent un mouvement');
+verifie([V.fermeture('ON'), V.fermeture('OFF'), V.fermeture(undefined), V.fermeture('x')],
+  [{ferme: true, texte: 'fermé ✔'}, {ferme: false, texte: 'ouvert'}, {ferme: null, texte: '?'}, {ferme: null, texte: '?'}], 'fermeture : ON = ferme, OFF = ouvert, autre = inconnu');
+const PORT = Object.assign({}, FACADES.garage, {ouvertures: [O(1, 'garage'), O(2, 'portail1', {nom: 'Portail 1 vantail'}), O(3, 'portail2', {nom: 'Portail 2 vantaux'})]});
+const [cpo, spo] = dessin(PORT);
+verifie([spo.attrs.viewBox, spo.volets.length, spo.volets.map(v => v.o.type)], ['0 0 420 320', 3, ['garage', 'portail1', 'portail2']], 'portail : viewBox agrandie vers le sol, trois entrees (le garage reste en rangee)');
+verifie([compte(cpo, 'data-portail'), tous(cpo, n => n.attrs['data-vantail']).length], [1, 2], 'portail : un groupe portail, deux vantaux (gauche et droit)');
+verifie(empreinte(dessin(Object.assign({}, FACADES.garage, {ouvertures: [O(1, 'garage')]}))[0]), EMPREINTES.garage, 'sans portail : dessin du garage inchange');
+const vant = (c, cote) => tous(c, n => n.attrs['data-vantail'] === cote)[0];
+verifie([vant(cpo, 'droit').attrs['data-ouverture'], vant(cpo, 'gauche').attrs['data-ouverture']], ['0', '0'], 'portail : ferme au depart');
+spo.volets[1].pose(0.4);
+verifie([vant(cpo, 'droit').attrs['data-ouverture'], vant(cpo, 'gauche').attrs['data-ouverture']], ['40', '0'], 'portail : simple a 40 % = vantail droit seul a 40 %');
+spo.volets[2].pose(0.25);
+verifie([vant(cpo, 'droit').attrs['data-ouverture'], vant(cpo, 'gauche').attrs['data-ouverture']], ['40', '25'], 'portail : double a 25 % : le droit reste le plus ouvert, le gauche suit le double');
+spo.volets[1].pose(0);
+verifie([vant(cpo, 'droit').attrs['data-ouverture'], vant(cpo, 'gauche').attrs['data-ouverture']], ['25', '25'], 'portail : simple ferme, le double mene les deux vantaux');
+verifie(compte(dessin(Object.assign({}, FACADES.garage, {ouvertures: [O(2, 'portail1')]}))[0], 'data-vantail'), 2, 'portail : un volet portail1 seul dessine quand meme les deux vantaux');
+V.poseFeuPortail(spo, true);
+verifie([spo.portail.feu.attrs.fill, spo.portail.halo.style.display], ['#ffa31a', ''], 'feu allume : orange vif et halo');
+V.poseFeuPortail(spo, false);
+verifie([spo.portail.feu.attrs.fill, spo.portail.halo.style.display], ['#8a5a1c', 'none'], 'feu eteint : orange sombre, sans halo');
+V.poseFermeturePortail(spo, 'ON');
+verifie([spo.portail.capteur.attrs.fill, spo.portail.texte.textContent], ['#38d66b', 'fermé ✔'], 'capteur de fermeture ON : vert, « fermé ✔ »');
+V.poseFermeturePortail(spo, 'OFF');
+verifie([spo.portail.capteur.attrs.fill, spo.portail.texte.textContent], ['#ff9a1f', 'ouvert'], 'capteur de fermeture OFF : orange, « ouvert »');
+V.poseFermeturePortail(spo, null);
+verifie([spo.portail.capteur.attrs.fill, spo.portail.texte.textContent], ['#777', '?'], 'capteur de fermeture inconnu : gris, « ? »');
+verifie(empreinte(dessin(PORT)[0]), empreinte(dessin(PORT)[0]), 'portail : dessin identique d\'un appel a l\'autre');
+
+// Commande par clic (plan facade-garage-portail-commande A4) : ordreClic decide l'ordre et la confirmation ; l'arret ne demande jamais confirmation
+const OC = (type, p, bouge, nom) => V.ordreClic(type, p, bouge, nom || 'Volet');
+verifie(OC('garage', 10, false), {ordre: 'ouvre', confirme: true, texte: 'Ouvrir : Volet ?'}, 'clic rideau ferme : ouvrir, avec confirmation');
+verifie(OC('garage', 80, false), {ordre: 'ferme', confirme: true, texte: 'Fermer : Volet ?'}, 'clic rideau ouvert : fermer, avec confirmation');
+verifie(OC('garage', 80, true), {ordre: 'stop', confirme: false, texte: 'Arrêter : Volet'}, 'clic rideau en mouvement : arret sans confirmation');
+verifie(OC('portail1', 0, false, 'Portail 1 vantail').ordre + OC('portail1', 0, false).confirme, 'toggletrue', 'clic portail simple ferme : impulsion avec confirmation');
+verifie(OC('portail1', 0, false, 'Portail 1 vantail').texte.indexOf("Ouvrir : Portail 1 vantail") === 0 && OC('portail1', 0, false).texte.indexOf('personne') > 0, true, 'portail ferme : « Ouvrir » et rappel de securite (personne dans la zone)');
+verifie(OC('portail2', 60, false, 'P').texte.indexOf('Fermer : P') === 0, true, 'portail ouvert : « Fermer »');
+verifie(OC('portail2', 60, true), {ordre: 'stop', confirme: false, texte: 'Arrêter : Volet'}, 'portail en mouvement : arret sans confirmation');
+verifie([OC('portail1', null, false), OC('garage', undefined, false)], [null, null], 'position inconnue : aucun ordre');
+verifie([V.enMouvement(1000, 0), V.enMouvement(1600, 0), V.enMouvement(500, null), V.enMouvement(400, 500)], [true, false, false, true], 'enMouvement : 1,5 s apres le dernier changement de position (nul = jamais)');
+const [cc, sc2] = dessin(PORT);
+const clics = [];
+V.brancheClics(sc2, (id, ordre) => clics.push([id, ordre]), () => true);
+verifie(sc2.volets.map(v => typeof v.g.onclick), ['function', 'function', 'function'], 'brancheClics : clic sur le rideau et les deux vantaux');
+sc2.volets[1].lue = 0; sc2.volets[1].g.onclick();
+verifie(clics, [[2, 'toggle']], 'clic sur le vantail droit : toggle du volet portail1 (id 2) apres confirmation');
+sc2.volets[2].lue = 0; sc2.volets[2].g.onclick();
+verifie(clics[1], [3, 'toggle'], 'clic sur le vantail gauche : toggle du volet portail2 (id 3)');
+sc2.volets[0].lue = null; sc2.volets[0].g.onclick();
+verifie(clics.length, 2, 'rideau a position inconnue : aucun ordre envoye');
+V.brancheClics(sc2, (id, ordre) => clics.push([id, ordre]), () => false);
+sc2.volets[1].lue = 0; sc2.volets[1].g.onclick();
+verifie(clics.length, 2, 'confirmation refusee : aucun ordre');
+sc2.volets[1].mvt = 0; sc2.volets[1].t = 500; sc2.volets[1].lue = 50; sc2.volets[1].g.onclick();
+verifie(clics.length, 3, "en mouvement : l'arret part meme si la confirmation est refusee");
+
+// Soleil lu sur la carte (plan facade-garage-portail-commande A5) : reponse de « Status 7 » (cle StatusTIM : Local, Sunrise, Sunset ; firmware
+// xdrv_09_timers.ino::GetSun et support_command.ino) -> minutes locales, lever, coucher ; absent ou illisible -> null (jour, jamais de nuit par defaut)
+const ST7 = {StatusTIM: {UTC: '2026-11-15T09:38:12', Local: '2026-11-15T10:38:12', Timezone: 99, Sunrise: '08:01', Sunset: '17:04'}};
+verifie(V.soleilDe(ST7), {m: 638, lever: 481, coucher: 1024}, 'soleilDe : Status 7 -> minutes locales (10:38), lever 08:01, coucher 17:04');
+verifie([V.soleilDe(null), V.soleilDe({}), V.soleilDe({StatusTIM: {Local: '2026-11-15T10:38:12'}}), V.soleilDe({StatusTIM: {Local: 'x', Sunrise: '08:01', Sunset: '17:04'}}),
+  V.soleilDe({StatusTIM: {Local: '2026-11-15T10:38:12', Sunrise: '8h', Sunset: '17:04'}})], [null, null, null, null, null],
+  'soleilDe : reponse absente, sans soleil (USE_SUNRISE absent), heure ou lever illisible -> null');
+const sol = V.soleilDe(ST7);
+verifie(V.nuitEtat(sol.m, sol.lever, sol.coucher, 'auto').o, 0, 'soleil de la carte a 10:38 : plein jour');
+verifie(V.nuitEtat(V.soleilDe(Object.assign({}, ST7, {StatusTIM: Object.assign({}, ST7.StatusTIM, {Local: '2026-11-15T23:00:00'})})).m, sol.lever, sol.coucher, 'auto').p > 0.9, true, 'soleil de la carte a 23:00 : nuit profonde');
+verifie([V.modeSuivant('auto'), V.modeSuivant('jour'), V.modeSuivant('nuit'), V.modeSuivant('x'), V.modeSuivant(null)], ['jour', 'nuit', 'auto', 'jour', 'jour'], 'modeSuivant : auto -> jour -> nuit -> auto, valeur inconnue -> jour');
+verifie([V.modeValide('auto'), V.modeValide('jour'), V.modeValide('nuit'), V.modeValide('x'), V.modeValide(null)], ['auto', 'jour', 'nuit', 'auto', 'auto'], 'modeValide : auto par defaut');
+const [csol, ssol] = dessin(GFIN_OK);
+verifie(!!ssol.modeNuit && ssol.modeNuit.texte.textContent, 'Auto', 'finition : libelle du mode de nuit « Auto »');
+V.poseMode(ssol, 'nuit');
+verifie([ssol.modeNuit.texte.textContent, ssol.modeNuit.mode], ['Nuit', 'nuit'], 'poseMode : libelle et mode Nuit');
+verifie(typeof ssol.modeNuit.g.onclick, 'function', 'mode de nuit : clic branche');
+verifie(!!dessin(GFIN)[1].modeNuit, false, 'sans finition : pas de bouton de mode');
+
+verifie(Number.isFinite(V.nuitEtat(300, 600, 600, 'auto').o) && Number.isFinite(V.nuitEtat(300, 600, 600, 'auto').p), true, 'nuit : lever = coucher : aucune valeur NaN');
 console.log(echecs.length ? echecs.length + ' echec(s) sur ' + nb + ' verification(s)' : '0 echec(s) sur ' + nb + ' verifications');
 process.exit(echecs.length ? 1 : 0);

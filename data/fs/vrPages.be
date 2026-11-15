@@ -175,6 +175,36 @@ vrPages.etatCamera = vrPages_etatCamera
 def vrPages_commandeCamera(etat)    import vrPages    return vrPages.commandeAppareil("camera", etat)    end
 vrPages.commandeCamera = vrPages_commandeCamera
 
+# Ordre donne depuis la facade (clic) a un volet qui porte un bloc facade et qui est actif : [ok, message].
+# ordre : "ouvre" | "ferme" (type garage, sens physique par commandeSens) ; "toggle" (type portail1 ou portail2 : meme effet que le bouton
+# poussoir, une impulsion) ; "stop" (tous). Jamais de ShutterPosition. Refuse un volet en reglage des durees (moteur).
+def vrPages_commandeVolet(id, ordre)
+    import string
+    import vrFonctions
+    var volets = drivers.find("voletRoulants")
+    var vr = nil
+    for v: (type(volets) == "instance" ? volets.find("environnement", {}).find("VRs", {}) : {})
+        if type(v) == "instance" && v.find("id") == id && v.find("activation", "OFF") == "ON" && type(v.find("facade")) == "instance"    vr = v    end
+    end
+    if vr == nil    return [false, "Volet non commandable depuis la façade"]    end
+    var nom = vr.find("nom", "Volet")
+    var type_ = vr["facade"].find("type", "")
+    var portail = (type_ == "portail1" || type_ == "portail2")
+    if vrFonctions.enReglage(id)    return [false, nom + " : réglage des durées en cours"]    end
+    if ordre == "stop"
+        tasmota.cmd(string.format("ShutterStop%i", id), boolMute)
+        return [true, nom + " arrêté"]
+    elif ordre == "toggle" && portail
+        tasmota.cmd(string.format("ShutterToggle%i", id), boolMute)
+        return [true, nom + " : impulsion envoyée"]
+    elif (ordre == "ouvre" || ordre == "ferme") && !portail
+        tasmota.cmd(vrFonctions.commandeSens(id, ordre), boolMute)
+        return [true, nom + (ordre == "ouvre" ? " : ouverture" : " : fermeture")]
+    end
+    return [false, "Ordre « " + str(ordre) + " » non accepté pour " + nom]
+end
+vrPages.commandeVolet = vrPages_commandeVolet
+
 # Chaine JSON sans aucun « < » (ni fermeture de balise, ni « <!-- » dans un <script>) : echappement unicode u003c, relu « < » par le JS
 def vrPages_json(v)
     import json
@@ -307,11 +337,15 @@ def vrPages_ordre()
             r = vrPages.commandeAppareil(action, webserver.has_arg("etat") ? webserver.arg("etat") : "")
             code = (r[0] ? 200 : 400)
             vrFonctions.log("VR_PAGES: " + r[1] + " (page d'accueil) !", (r[0] ? LOG_LEVEL_INFO : LOG_LEVEL_ERREUR))
+        elif (action == "volet")
+            r = vrPages.commandeVolet(id, webserver.has_arg("ordre") ? webserver.arg("ordre") : "")
+            code = (r[0] ? 200 : 400)
+            vrFonctions.log("VR_PAGES: " + r[1] + " (clic sur la façade) !", (r[0] ? LOG_LEVEL_INFO : LOG_LEVEL_ERREUR))
         else
             code = 400
             r = [false, "Action inconnue"]
         end
-        if (action != "camera" && action != "lampe")    vrFonctions.log("VR_PAGES: Ordre " + action + " du volet " + str(id) + " : " + str(r[0]) + " !", LOG_LEVEL_DEBUG)    end
+        if (action != "camera" && action != "lampe" && action != "volet")    vrFonctions.log("VR_PAGES: Ordre " + action + " du volet " + str(id) + " : " + str(r[0]) + " !", LOG_LEVEL_DEBUG)    end
         var reponse = {"ok": r[0], "message": r[1], "etat": vrReglage.etatPage()}     # evaluee AVANT l'ouverture
         ouverte = true
         vrPages.envoie(code, reponse)

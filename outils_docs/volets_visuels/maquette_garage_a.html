@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Garage et portail : proposition A (clics, jour et nuit automatiques)</title>
+<style>
+  body{font-family:verdana,sans-serif;background:#252525;color:#eaeaea;margin:0;padding:12px}
+  h1{font-size:18px} p{font-size:12px;color:#bbb;margin:4px 0 8px}
+  .carte{background:#2f2f2f;border-radius:6px;padding:10px;max-width:860px;margin:0 auto 14px}
+  svg{width:100%;display:block;background:linear-gradient(#8ab4d8,#c9dfee 55%,#eef3f7);border-radius:4px}
+  button{background:#1fa3ec;color:#fff;border:0;border-radius:.3rem;padding:8px 14px;font-size:13px;cursor:pointer;margin:0 6px 6px 0}
+  button.on{background:#0d6b9c;outline:2px solid #fff}
+  label{font-size:12px;margin-right:14px;white-space:nowrap}
+  input[type=number]{width:52px;background:#1d1d1d;color:#eee;border:1px solid #555;border-radius:3px;padding:2px 4px}
+  #etat{font-size:13px;margin:4px 0 0;min-height:18px}
+  #zone{position:relative}
+  #dem{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:#1f2a33;border:2px solid #fff;border-radius:8px;padding:14px 18px;max-width:70%;text-align:center;font-size:14px;display:none;box-shadow:0 6px 24px #000a}
+  #dem button{margin:10px 6px 0}#dem .non{background:#666}
+</style></head><body>
+<div class="carte">
+  <h1>Proposition A : commande par clic, jour et nuit selon le soleil</h1>
+  <div id="cmd">
+    <button onclick="bt('simple')">Bouton « simple ouverture »</button>
+    <button onclick="bt('double')">Bouton « double ouverture »</button>
+    <button id="bc" onclick="bascule('cam')">Caméra</button>
+    <button id="bl" onclick="bascule('lamp')">Lampe du garage</button>
+    <button id="bz" onclick="bascule('zones')">Zones de clic</button><br>
+    <label>Jour / nuit : <button id="mA" onclick="mode('auto')">Auto</button><button id="mJ" onclick="mode('jour')">Jour</button><button id="mN" onclick="mode('nuit')">Nuit</button></label>
+    <label><input type="checkbox" id="reel" checked> heure réelle</label>
+    <label>Heure simulée <input type="range" id="hsim" min="0" max="1439" value="720" style="width:260px"> <span id="hv">12:00</span></label><br>
+    <span id="soleil" style="font-size:12px;color:#bbb"></span><br>
+    <label>Durée d'ouverture d'un vantail <input type="number" id="tm" value="15" min="4" max="120"> s</label>
+    <label>Durée de fermeture <input type="number" id="td" value="15" min="4" max="120"> s</label>
+    <label>Décalage du 2e vantail <input type="number" id="dl" value="3" min="0" max="20"> s</label><br>
+    <label>Rideau <input type="range" id="rid" min="0" max="100" value="0"> <span id="ridv">0 %</span></label>
+    <label>Hauteur portail <input type="range" id="hau" min="80" max="170" value="110"> <span id="hauv">110</span></label>
+  </div>
+  <div id="zone"></div>
+  <div id="etat"></div>
+  <p>Fermé : « simple » ouvre le vantail droit seul, « double » ouvre le droit puis, après le décalage, le gauche. Pendant un mouvement, un appui sur l'un ou l'autre bouton arrête les moteurs ; l'appui suivant les fait repartir. Portail ouvert (en tout ou partie) et à l'arrêt : un appui le ferme, le gauche d'abord après le décalage si les deux sont ouverts.</p>
+</div>
+
+<script src="../../data/sd/js/volets.js"></script>
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg', AMAX = 92, YH = 190, D = 500, WL = 154, YB = 304, XG = 54, XD = 366, PW = 34;
+  var FACADE = {toit: 'unPan', decor: ['chevrefeuille', 'porte'], camera: {nom: 'Caméra'}, lampe: {nom: 'Lampe'},
+    ouvertures: [{type: 'garage', id: 1, nom: 'Volet Roulant Garage'}]};
+  var S = {cam: 0, lamp: 0, zones: 0}, M = 'auto', cibleRid = null,  R = {x: 0, tg: 0, wait: 0}, Lg = {x: 0, tg: 0, wait: 0};      // avancement 0 (ferme) a 1 (ouvert) de chaque vantail
+  var FORCE_FEU = (location.hash.match(/f=(\d)/) || [])[1] == null ? null : location.hash.indexOf('f=1') > -1, run = false, H = 110, rid = 0, sale = true, sc;
+
+  function el(par, nom, at) { var e = document.createElementNS(NS, nom); for (var k in at) e.setAttribute(k, at[k]); par.appendChild(e); return e; }
+  function alea(s) { return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
+  function val(id) { return Math.max(0, +document.getElementById(id).value || 0); }
+  function lisse(x) { return x * x * (3 - 2 * x); }
+  function feuilleVerte(r) { var c = r(); return c < 0.16 ? '#b4402f' : (c < 0.26 ? '#cf6a44' : (c < 0.55 ? '#356b31' : (c < 0.8 ? '#3f7d3a' : '#2c5a2a'))); }
+
+  // ---- Commande : deux boutons poussoirs ----
+  window.bascule = function (k) { S[k] = S[k] ? 0 : 1; };
+  window.mode = function (m) { M = m; };
+  window.bt = function (m) {
+    if (run) { run = false; sale = true; return; }                                   // appui pendant le mouvement : arret
+    var enCours = R.x != R.tg || Lg.x != Lg.tg;
+    if (enCours) { run = true; sale = true; return; }                                // appui a l'arret en route : on repart
+    var ferme = R.x < 0.005 && Lg.x < 0.005;
+    if (ferme) { R.tg = 1; R.wait = 0; Lg.tg = m == 'double' ? 1 : 0; Lg.wait = m == 'double' ? val('dl') : 0; }
+    else { Lg.tg = 0; Lg.wait = 0; R.tg = 0; R.wait = Lg.x > 0.005 ? val('dl') : 0; }   // fermeture : le gauche d'abord
+    run = true; sale = true;
+  };
+  function avance(f, dt) {
+    if (f.wait > 0) { f.wait -= dt; return; }
+    var d = f.tg - f.x, v = dt / Math.max(1, val(d > 0 ? 'tm' : 'td'));
+    f.x = Math.abs(d) <= v ? f.tg : f.x + (d > 0 ? v : -v);
+  }
+
+  // ---- Portail (vu de face, vantaux qui pivotent vers l'interieur) ----
+  function pt(f, u, v) {
+    var a = f.a * Math.PI / 180, s = 1 / (1 + u * WL * Math.sin(a) / D);
+    var x0 = f.hx + f.dir * u * WL * Math.cos(a), y0 = YB - 6 - H + v * H;
+    return [210 + (x0 - 210) * s, YH + (y0 - YH) * s];
+  }
+  function poly(g, f, liste, at) {
+    at.points = liste.map(function (q) { var c = pt(f, q[0], q[1]); return c[0].toFixed(1) + ',' + c[1].toFixed(1); }).join(' ');
+    return el(g, 'polygon', at);
+  }
+  function ligne(g, f, u0, v0, u1, v1, at) {
+    var a = pt(f, u0, v0), b = pt(f, u1, v1); at.x1 = a[0]; at.y1 = a[1]; at.x2 = b[0]; at.y2 = b[1]; return el(g, 'line', at);
+  }
+  function vantail(g, f) {
+    var i, B = 'rgba(255,255,255,0.6)', tout = [[0, 0], [1, 0], [1, 1], [0, 1]];
+    poly(g, f, tout, {fill: 'none', stroke: 'rgba(60,60,60,0.55)', 'stroke-width': 3.4});
+    poly(g, f, tout, {fill: 'rgba(255,255,255,0.38)', stroke: '#fff', 'stroke-width': 1.5});
+    poly(g, f, [[0.07, 0.08], [0.93, 0.08], [0.93, 0.92], [0.07, 0.92]], {fill: 'none', stroke: B, 'stroke-width': 1});
+    for (i = 0.10; i < 0.56; i += 0.04) ligne(g, f, i, 0.10, i, 0.90, {stroke: B, 'stroke-width': 0.7});
+    poly(g, f, [[0.56, 0.09], [0.67, 0.09], [0.795, 0.91], [0.685, 0.91]], {fill: 'rgba(255,255,255,0.5)', stroke: '#fff', 'stroke-width': 1});
+    for (i = 0; i < 7; i++) {
+      var v0 = 0.11 + i * 0.1143, u0 = 0.685 + i * 0.018;
+      poly(g, f, [[u0, v0], [0.91, v0], [0.91, v0 + 0.06], [u0 + 0.004, v0 + 0.06]], {fill: 'rgba(25,28,32,0.82)'});
+    }
+  }
+  function pilier(g, x) {
+    var top = YB - H - 6 - 28, h = 308 - top, i;
+    el(g, 'rect', {x: x, y: top, width: PW, height: h, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
+    for (i = top + 12; i < 308; i += 13) el(g, 'line', {x1: x, y1: i, x2: x + PW, y2: i, stroke: '#cfc8b0', 'stroke-width': 0.6});
+    el(g, 'rect', {x: x - 3, y: top - 5, width: PW + 6, height: 6, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
+  }
+
+  // ---- Decor ----
+  function sol(svg) {
+    var r = alea(5), i, c = ['#cfcdc6', '#aeaba3', '#dcdad3', '#b9b6ae', '#c4c1b9'];
+    el(svg, 'rect', {x: 0, y: 196, width: 540, height: 110, fill: '#bdbab3'});
+    for (i = 0; i < 520; i++) el(svg, 'ellipse', {cx: r() * 540, cy: 197 + r() * 108, rx: 1 + r() * 2.2, ry: 0.8 + r() * 1.3, fill: c[Math.floor(r() * 5)]});
+    el(svg, 'rect', {x: 0, y: 306, width: 540, height: 14, fill: '#d9d8d2'});
+    el(svg, 'line', {x1: 0, y1: 306, x2: 540, y2: 306, stroke: '#9a9992', 'stroke-width': 1});
+  }
+  function haie(svg) {                                                    // photinias : petits massifs feuillus, du sol jusqu'a 1,6 m, derriere le grillage
+    var r = alea(23), i, j, x, y, g = el(svg, 'g', {}), bases = [[418, 14], [446, 20], [480, 24], [514, 26]];
+    bases.forEach(function (b) {
+      var cx = b[0], rx = b[1] * 1.3, hh = 112 + r() * 14;
+      for (j = 0; j < 230; j++) {
+        y = 304 - r() * hh; x = cx + (r() - 0.5) * 2 * rx * (0.75 + 0.5 * Math.sin(Math.PI * Math.min(1, (304 - y) / hh + 0.08)));
+        el(g, 'ellipse', {cx: x, cy: y, rx: 4.6, ry: 2.9, fill: feuilleVerte(r), transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+      }
+    });
+  }
+  function grillage(svg) {
+    var g = el(svg, 'g', {}), pat = el(el(g, 'defs', {}), 'pattern', {id: 'mailles', width: 13, height: 13, patternUnits: 'userSpaceOnUse'}), x;
+    el(pat, 'rect', {width: 13, height: 13, fill: 'rgba(200,205,210,0.10)'});
+    el(pat, 'path', {d: 'M0,0 H13 M0,0 V13', stroke: '#6f7479', 'stroke-width': 2, fill: 'none'});
+    el(g, 'rect', {x: 400, y: 190, width: 140, height: 114, fill: 'url(#mailles)'});
+    el(g, 'rect', {x: 400, y: 187, width: 140, height: 5, fill: '#5f6469'});
+    el(g, 'rect', {x: 400, y: 300, width: 140, height: 4, fill: '#5f6469'});
+    for (x = 400; x < 540; x += 46) el(g, 'rect', {x: x, y: 187, width: 4.5, height: 117, fill: '#5f6469'});
+  }
+
+  // Ligne garage-poteau : t = 0 au coin du mur (loin, petit), t = 1 au poteau (pres, grand) ; off = decalage lateral en metres
+  function sur(t, off, hm) {
+    var k = 0.55 + 0.45 * t, u = 78 * k;
+    return {x: 404 + 40 * t + off * u, y: 200 + 104 * t - hm * u, k: k, u: u};
+  }
+  // Jasmin blanc (fleurs blanches) et bignone (trompettes orange) : memes points, melanges
+  function plante(g, r, q, dense) {
+    for (var c = 0; c < 9; c++) {
+      if (r() > dense) continue;
+      var x = q.x + (r() - 0.5) * 14 * q.k, y = q.y + (r() - 0.5) * 14 * q.k, a = r();
+      if (a < 0.34) el(g, 'circle', {cx: x, cy: y, r: (1.5 + r() * 1.4) * q.k, fill: '#fbfbf2'});                       // jasmin
+      else if (a < 0.52) { el(g, 'ellipse', {cx: x, cy: y, rx: 3.2 * q.k, ry: 2 * q.k, fill: '#e8661a', transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});   // bignone
+                           el(g, 'circle', {cx: x, cy: y, r: 0.9 * q.k, fill: '#b13e0c'}); }
+      else el(g, 'ellipse', {cx: x, cy: y, rx: 3.2 * q.k, ry: 1.9 * q.k, fill: r() < 0.5 ? '#3f7d3a' : '#5f9a48', transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+  }
+  // Trace d'une arche dont le plan suit la ligne : poteau 1, cintre, poteau 2 (memes indices d'une arche a l'autre)
+  function trace(t1, t2, off, hp, hr) {
+    var i, n = 40, th, f, T = {p1: [], c: [], p2: []};
+    for (i = 0; i <= 8; i++) T.p1.push(sur(t1, off, hp * i / 8));
+    for (i = 0; i <= n; i++) { th = Math.PI * i / n; f = (1 - Math.cos(th)) / 2; T.c.push(sur(t1 + (t2 - t1) * f, off, hp + hr * Math.sin(th))); }
+    for (i = 0; i <= 8; i++) T.p2.push(sur(t2, off, hp * i / 8));
+    return T;
+  }
+  function bois(g, T) {
+    var l = T.p1.concat(T.c, T.p2.slice().reverse());
+    el(g, 'polyline', {points: l.map(function (q) { return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' '), fill: 'none', stroke: '#7a5a43', 'stroke-width': 7 * T.p1[0].k, 'stroke-linejoin': 'round'});
+  }
+  function feuillage(g, r, T) {
+    var l = T.p1.concat(T.c, T.p2), n = T.c.length;
+    l.forEach(function (q, j) { plante(g, r, q, j >= 9 && j < 9 + n && Math.abs(j - 9 - n / 2) < n * 0.15 ? 0.55 : 1); });
+  }
+  // Deux arches paralleles a 30 cm, la 2e du cote de la lampe (a gauche, un peu vers le mur) ; entre les deux, des barreaux en bois
+  // comme les marches d'un escabeau, ou grimpent jasmin et bignone
+  function pergola(svg) {
+    var g = el(svg, 'g', {}), r = alea(41), hp = 1.6, hr = 0.65;
+    var T1 = trace(0.12, 0.58, 0.0, hp, hr), T2 = trace(0.09, 0.55, -0.3, hp, hr), i, k, m = [];
+    bois(g, T1);
+    var barreau = function (p, q) {
+      el(g, 'line', {x1: p.x, y1: p.y, x2: q.x, y2: q.y, stroke: '#8b6b4a', 'stroke-width': 3.4 * p.k, 'stroke-linecap': 'round'});
+      m.push({x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, k: p.k});
+    };
+    for (i = 1; i <= 7; i += 1.5) { k = Math.round(i); barreau(T1.p1[k], T2.p1[k]); barreau(T1.p2[k], T2.p2[k]); }
+    for (i = 3; i < T1.c.length - 2; i += 4) barreau(T1.c[i], T2.c[i]);
+    bois(g, T2);
+    feuillage(g, r, T1); feuillage(g, r, T2);
+    m.forEach(function (q) { plante(g, r, q, 1); plante(g, r, q, 1); });
+  }
+  function arbuste(svg, t, off, seed) {
+    var g = el(svg, 'g', {}), r = alea(seed), c = sur(t, off, 0), hh = 1.5 * c.u, rx = 0.5 * c.u, i, x, y;
+    for (i = 0; i < 90; i++) {
+      x = c.x + (r() - 0.5) * 2 * rx; y = c.y - r() * hh;
+      if (Math.abs(x - c.x) > rx * (0.55 + 0.7 * Math.sin(Math.PI * Math.min(1, (c.y - y) / hh + 0.1)))) continue;
+      el(g, 'ellipse', {cx: x, cy: y, rx: 5 * c.k, ry: 3 * c.k, fill: ['#2c5a2a', '#356b31', '#3f7d3a', '#4f9444'][Math.floor(r() * 4)], transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+    el(g, 'rect', {x: c.x - 1.5, y: c.y - 6 * c.k, width: 3, height: 6 * c.k, fill: '#5b4a2e'});
+  }
+  function arbre(svg, t, off, seed) {                                                // arbre : tronc de 1,5 m, couronne ronde jusqu'a 2,6 m
+    var g = el(svg, 'g', {}), r = alea(seed), c = sur(t, off, 0), i, x, y, cy = c.y - 1.9 * c.u, rx = 0.7 * c.u, ry = 0.55 * c.u;
+    el(g, 'rect', {x: c.x - 0.07 * c.u, y: c.y - 1.5 * c.u, width: 0.12 * c.u, height: 1.5 * c.u, fill: '#5b4a2e'});
+    for (i = 0; i < 420; i++) {
+      x = c.x + (r() - 0.5) * 2 * rx; y = cy + (r() - 0.5) * 2 * ry;
+      if ((x - c.x) * (x - c.x) / (rx * rx) + (y - cy) * (y - cy) / (ry * ry) > 1) continue;
+      el(g, 'ellipse', {cx: x, cy: y, rx: 5.5 * c.k, ry: 3.4 * c.k, fill: ['#4f9444', '#5f9a48', '#3f7d3a', '#6aa84f'][Math.floor(r() * 4)], transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+  }
+
+  // Photinia en arbre : tronc et branches qui montent jusqu'au haut du feuillage (20 a 30 cm au-dessus du poteau), feuillage dense, jeunes pousses rouges
+  function photinia(svg, t, off, seed) {
+    var g = el(svg, 'g', {}), r = alea(seed), c = sur(t, off, 0), ht = 2.1, i, x, y, cy = c.y - 1.45 * c.u, rx = 0.62 * c.u, ry = 0.7 * c.u;
+    var tr = function (hm, dx) { return (c.x + dx * c.u).toFixed(1) + ',' + (c.y - hm * c.u).toFixed(1); };
+    el(g, 'polyline', {points: tr(0, 0) + ' ' + tr(0.9, 0.02) + ' ' + tr(1.6, 0), fill: 'none', stroke: '#5b4a2e', 'stroke-width': 0.13 * c.u, 'stroke-linecap': 'round'});
+    [[-0.38, 1.35], [0.4, 1.4], [-0.2, 1.8], [0.22, 1.85], [0, ht - 0.05]].forEach(function (b) {
+      el(g, 'line', {x1: c.x, y1: c.y - 1.0 * c.u, x2: c.x + b[0] * c.u, y2: c.y - b[1] * c.u, stroke: '#5b4a2e', 'stroke-width': 0.055 * c.u, 'stroke-linecap': 'round'});
+    });
+    for (i = 0; i < 520; i++) {
+      x = c.x + (r() - 0.5) * 2 * rx; y = cy + (r() - 0.5) * 2 * ry;
+      if ((x - c.x) * (x - c.x) / (rx * rx) + (y - cy) * (y - cy) / (ry * ry) > 1) continue;
+      el(g, 'ellipse', {cx: x, cy: y, rx: 5.2 * c.k, ry: 3.2 * c.k, fill: feuilleVerte(r), transform: 'rotate(' + Math.floor(r() * 180) + ' ' + x + ' ' + y + ')'});
+    }
+  }
+  // Finition inspirée de la scène de Gemini : forêt d'automne derrière le toit, ombre douce, dégradé sur le mur, nuit et cônes de couverture
+  // (caméra et lampe du dépôt, éclairés par Volets.poseCamera / poseLampe ; zones élargies par rapport à la première version)
+  function finition(svg, s) {
+    var r = alea(11), g = el(svg, 'g', {}), i, d = el(svg, 'defs', {});
+    var f = el(d, 'filter', {id: 'ombre', x: '-10%', y: '-10%', width: '125%', height: '125%'});
+    el(f, 'feDropShadow', {dx: 0, dy: 3, stdDeviation: 3, 'flood-color': '#0f172a', 'flood-opacity': 0.3});
+    [['gcc', 'camCone', '#38bdf8', 0.5], ['gcl', 'lampCone', '#fde047', 0.55]].forEach(function (q) {
+      var lg = el(d, 'linearGradient', {id: q[1], x1: 0, y1: 0, x2: 0, y2: 1});
+      el(lg, 'stop', {offset: 0, 'stop-color': q[2], 'stop-opacity': q[3]}); el(lg, 'stop', {offset: 1, 'stop-color': q[2], 'stop-opacity': 0});
+    });
+    var mg = el(d, 'linearGradient', {id: 'murOmbre', x1: 0, y1: 0, x2: 0, y2: 1});
+    el(mg, 'stop', {offset: 0, 'stop-color': '#fff', 'stop-opacity': 0.0}); el(mg, 'stop', {offset: 1, 'stop-color': '#5a4a30', 'stop-opacity': 0.22});
+    [[40, 30, 90, 45, '#8f8b56'], [200, 20, 110, 48, '#a68a4d'], [360, 25, 110, 45, '#7c8450'], [490, 40, 80, 45, '#9a8347']].forEach(function (b) {
+      el(g, 'ellipse', {cx: b[0], cy: b[1], rx: b[2], ry: b[3], fill: b[4], opacity: 0.5});
+    });
+    [[50, 56, 40], [130, 136, 30], [250, 255, 26], [330, 336, 34], [450, 458, 36]].forEach(function (t, k) {
+      el(g, 'path', {d: 'M' + t[0] + ',0 L' + t[1] + ',0 L' + (t[1] + 2) + ',' + t[2] + ' L' + (t[0] - 1) + ',' + t[2] + ' Z', fill: ['#4f4a43', '#5b544b', '#635b51', '#4b453e', '#585148'][k]});
+    });
+    for (i = 0; i < 90; i++) el(g, 'circle', {cx: r() * 540, cy: 4 + r() * 62, r: 3.5 + r() * 7, fill: ['#b59449', '#a07a3a', '#6d7a47', '#c0a255', '#8a6a35'][Math.floor(r() * 5)], opacity: 0.55 + r() * 0.3});
+    svg.insertBefore(g, svg.firstChild);                       // derrière la façade
+    svg.insertBefore(d, svg.firstChild);
+    el(svg, 'rect', {x: 33, y: 46, width: 366, height: 150, fill: 'url(#murOmbre)', 'pointer-events': 'none'});   // mur : plus sombre vers le bas
+    s.nuit = el(svg, 'rect', {x: 0, y: 0, width: 540, height: 320, fill: '#070d19', opacity: 0, 'pointer-events': 'none', style: 'transition:opacity .6s'});
+    s.coneCam = el(svg, 'polygon', {points: '29,62 -30,300 300,300', fill: 'url(#camCone)', opacity: 0, 'pointer-events': 'none', style: 'transition:opacity .5s'});
+    s.coneLamp = el(svg, 'polygon', {points: '382,86 230,304 540,304', fill: 'url(#lampCone)', opacity: 0, 'pointer-events': 'none', style: 'transition:opacity .5s'});
+    s.svg = svg;
+  }
+  function scene(zone) {
+    var svg = Volets.dessine(zone, FACADE), s = {};
+    s.rideau = svg.volets && svg.volets[0];
+    svg.setAttribute('viewBox', '0 0 540 320');
+    sol(svg); haie(svg); pergola(svg); arbre(svg, 0.74, 0.95, 31); photinia(svg, 0.80, 0.1, 7); photinia(svg, 0.94, 0.1, 19); grillage(svg);
+    finition(svg, s);
+    s.dyn = el(svg, 'g', {});
+    s.dyn.setAttribute('filter', 'url(#ombre)');
+    return s;
+  }
+
+  // Feu de signalisation orange : cote grillage du poteau droit, un peu sous le sommet. Clignote toutes les 2 s (1 s allume, 1 s eteint)
+  // pendant tout mouvement, quel que soit le sens. Pas commande par un relais du serveur de garage : dessin seul, rien dans le persist.
+  function feu(d) {
+    var top = YB - H - 6 - 28, x = XD + PW, y = top + 16, on = FORCE_FEU != null ? FORCE_FEU : run && (Math.floor(performance.now() / 1000) % 2 == 0);
+    el(d, 'rect', {x: x - 1, y: y - 7, width: 6, height: 14, rx: 2, fill: '#3a3a3a', stroke: '#222', 'stroke-width': 0.6});     // boitier fixe sur le flanc du poteau
+    if (on) {
+      el(d, 'circle', {cx: x + 4, cy: y, r: 14, fill: 'rgba(255,150,20,0.28)'});
+      el(d, 'circle', {cx: x + 4, cy: y, r: 8, fill: 'rgba(255,170,40,0.45)'});
+    }
+    el(d, 'ellipse', {cx: x + 3, cy: y, rx: 4.2, ry: 5.2, fill: on ? '#ffa31a' : '#8a5a1c', stroke: '#5a3a0c', 'stroke-width': 0.8});
+    if (on) el(d, 'ellipse', {cx: x + 2, cy: y - 1.6, rx: 1.4, ry: 1.8, fill: '#fff1c4'});
+  }
+
+  function render(s) {
+    var d = s.dyn;
+    while (d.firstChild) d.removeChild(d.firstChild);
+    var G = {a: AMAX * lisse(Lg.x), hx: XG, dir: 1}, Dd = {a: AMAX * lisse(R.x), hx: XD, dir: -1};
+    var ferme = R.x < 0.005 && Lg.x < 0.005, col = ferme ? '#38d66b' : '#ff9a1f', ym = YB - 6 - H * 0.5, mg, mr, gg = el(d, 'g', {});
+    vantail(gg, G); vantail(gg, Dd);
+    pilier(d, 20); pilier(d, XD);
+    feu(d);
+    mg = pt(G, 1, 0.5); mr = pt(Dd, 1, 0.5);
+    el(d, 'rect', {x: mg[0] - 3, y: ym - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
+    el(d, 'rect', {x: mr[0], y: ym - 7, width: 3, height: 14, rx: 1, fill: '#8a8f94', stroke: '#444', 'stroke-width': 0.5});
+    el(d, 'circle', {cx: 210, cy: ym - 14, r: 8, fill: 'none', stroke: col, 'stroke-width': 1.5});
+    el(d, 'circle', {cx: 210, cy: ym - 14, r: 4, fill: col, stroke: '#222', 'stroke-width': 0.6});
+    el(d, 'text', {x: 210, y: YB - 6 - H - 6, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'}).textContent = ferme ? 'fermé ✔' : 'ouvert';
+    var enCours = R.x != R.tg || Lg.x != Lg.tg, etat = run ? 'en mouvement' : (enCours ? 'arrêté en route (un appui relance)' : 'à l\'arrêt');
+    document.getElementById('etat').textContent = 'Vantail droit ' + Math.round(R.x * 100) + ' % · vantail gauche ' + Math.round(Lg.x * 100) + ' % · ' + etat + ' · capteur de fermeture : ' + (ferme ? 'contact fermé' : 'contact ouvert');
+  }
+
+  function lit(id, f, suffixe) { document.getElementById(id).oninput = function () { f(+this.value); document.getElementById(id + 'v').textContent = this.value + (suffixe || ''); sale = true; }; }
+  lit('rid', function (x) { rid = x; }, ' %');
+  lit('hau', function (x) { H = x; });
+  sc = scene(document.getElementById('zone'));
+  // ---- Jour et nuit selon le soleil : latitude, longitude et fuseau lus au persist du P4 (Tasmota fait le meme calcul) ----
+  var LAT = 50.410931, LON = 3.085796;
+  function dernierDim(an, m) { var x = new Date(Date.UTC(an, m + 1, 0, 1)); x.setUTCDate(x.getUTCDate() - x.getUTCDay()); return x; }
+  function decalage(d) { return d >= dernierDim(d.getUTCFullYear(), 2) && d < dernierDim(d.getUTCFullYear(), 9) ? 120 : 60; }   // TimeDst 120, TimeStd 60
+  function soleil(d) {
+    var n = Math.floor((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5), rad = Math.PI / 180;
+    var gm = 2 * Math.PI / 365 * (n - 1);
+    var eq = 229.18 * (0.000075 + 0.001868 * Math.cos(gm) - 0.032077 * Math.sin(gm) - 0.014615 * Math.cos(2 * gm) - 0.040849 * Math.sin(2 * gm));
+    var dc = 0.006918 - 0.399912 * Math.cos(gm) + 0.070257 * Math.sin(gm) - 0.006758 * Math.cos(2 * gm) + 0.000907 * Math.sin(2 * gm) - 0.002697 * Math.cos(3 * gm) + 0.00148 * Math.sin(3 * gm);
+    var ha = Math.acos(Math.cos(90.833 * rad) / (Math.cos(LAT * rad) * Math.cos(dc)) - Math.tan(LAT * rad) * Math.tan(dc)) / rad, off = decalage(d);
+    return {lever: 720 - 4 * (LON + ha) - eq + off, coucher: 720 - 4 * (LON - ha) - eq + off, off: off};
+  }
+  function hhmm(m) { m = Math.round(m); return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + m % 60).slice(-2); }
+  var maintenant, so = soleil(new Date());
+  function minutes() {
+    var d = new Date(), reel = document.getElementById('reel').checked; so = soleil(d);
+    return reel ? (d.getUTCHours() * 60 + d.getUTCMinutes() + so.off) % 1440 : +document.getElementById('hsim').value;
+  }
+  function nuitF() {                                              // 0 = plein jour, 1 = pleine nuit, fondu de 35 min autour du lever et du coucher
+    if (M == 'jour') return 0; if (M == 'nuit') return 1;
+    var m = maintenant == null ? minutes() : maintenant, a = so.lever - 17.5, b = so.coucher - 17.5;
+    if (m < a) return 1; if (m < a + 35) return 1 - lisse((m - a) / 35); if (m < b) return 0; if (m < b + 35) return lisse((m - b) / 35); return 1;
+  }
+  // Profondeur de la nuit : crepuscule bleu et leger juste apres le coucher (et avant le lever), noir et plus opaque vers le milieu de la nuit (sinus)
+  function nuitEtat() {
+    var f = nuitF(), p = 0, m = maintenant == null ? minutes() : maintenant;
+    if (M == 'nuit') p = 1;
+    else if (f > 0) { var Ln = (so.lever - so.coucher + 1440) % 1440; p = Math.sin(Math.PI * Math.min(1, ((m - so.coucher + 1440) % 1440) / Ln)); }
+    var a = [0x2b, 0x3b, 0x6b], b = [0x04, 0x07, 0x0f], c = a.map(function (v, i) { return Math.round(v + (b[i] - v) * p); });
+    return {o: f * (0.30 + 0.32 * p), c: 'rgb(' + c.join(',') + ')', p: p};
+  }
+  var dernierSuivi = -1;
+  function suitTemps(t) {
+    var m = minutes(); maintenant = m;
+    if (Math.floor(t / 500) == dernierSuivi) return; dernierSuivi = Math.floor(t / 500);
+    var reel = document.getElementById('reel').checked;
+    document.getElementById('hsim').disabled = reel; if (reel) document.getElementById('hsim').value = m;
+    document.getElementById('hv').textContent = hhmm(m);
+    document.getElementById('soleil').textContent = 'Lever ' + hhmm(so.lever) + ' · coucher ' + hhmm(so.coucher) + ' · fuseau UTC+' + so.off / 60 + (so.off == 120 ? " (heure d'été)" : " (heure d'hiver)") + ' · 50,41 N 3,09 E, lus au persist du P4 · ' + (M == 'auto' ? 'mode automatique' : 'mode forcé : ' + M) + ' · profondeur de la nuit ' + Math.round(100 * nuitEtat().p) + ' %';
+    [['mA', 'auto'], ['mJ', 'jour'], ['mN', 'nuit']].forEach(function (q) { document.getElementById(q[0]).className = M == q[1] ? 'on' : ''; });
+  }
+
+  // ---- Commande par clic : confirmation, puis l'ordre (ici simulé ; sur la carte, POST /volets) ----
+  var dem = document.createElement('div'); dem.id = 'dem'; document.getElementById('zone').appendChild(dem);
+  function demande(msg, ok) {
+    dem.innerHTML = '<div></div><button>Confirmer</button><button class="non">Annuler</button>'; dem.firstChild.textContent = msg; dem.style.display = 'block';
+    var b = dem.getElementsByTagName('button'); b[0].onclick = function () { dem.style.display = 'none'; ok(); }; b[1].onclick = function () { dem.style.display = 'none'; };
+  }
+  var SECU = " Vérifiez que personne ni aucun véhicule n'est dans la zone du portail.";
+  var zg = el(sc.svg, 'g', {}), Z = {};
+  function zone(nom, x, y, w, h, agir) {
+    var g = el(zg, 'g', {style: 'cursor:pointer'}), z = Z[nom] = {over: false};
+    z.r = el(g, 'rect', {x: x, y: y, width: w, height: h, fill: 'rgba(31,163,236,0)', stroke: 'rgba(255,255,255,0)', 'stroke-width': 1.5, 'stroke-dasharray': '5 3'});
+    z.t = el(g, 'text', {x: x + w / 2, y: y + h / 2, 'text-anchor': 'middle', 'font-size': 9.5, style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke;pointer-events:none'});
+    g.onmouseenter = function () { z.over = true; }; g.onmouseleave = function () { z.over = false; }; g.onclick = agir;
+  }
+  function porteLibre() { return !run && R.x == R.tg && Lg.x == Lg.tg; }
+  function portail(m) {
+    if (run) { bt(m); return; }                                                   // arret : jamais de confirmation, c'est la securite
+    var ferme = R.x < 0.005 && Lg.x < 0.005;
+    if (!porteLibre()) demande('Reprendre le mouvement du portail ?' + SECU, function () { bt(m); });
+    else if (ferme) demande((m == 'simple' ? 'Ouvrir le vantail droit seul ?' : 'Ouvrir les deux vantaux (le droit, puis le gauche après ' + val('dl') + ' s) ?') + SECU, function () { bt(m); });
+    else demande('Fermer le portail ?' + SECU, function () { bt(m); });
+  }
+  zone('droit', 212, 190, 154, 106, function () { portail('simple'); });
+  zone('gauche', 54, 190, 154, 106, function () { portail('double'); });
+  zone('rideau', 70, 92, 176, 104, function () { var ferme = rid > 50 || cibleRid === 0; demande((ferme ? 'Fermer' : 'Ouvrir') + ' le rideau du garage ?', function () { cibleRid = ferme ? 0 : 100; }); });
+  if (sc.svg.camera) sc.svg.camera.g.onclick = function () { demande((S.cam ? 'Éteindre' : 'Allumer') + ' la caméra ?', function () { S.cam = S.cam ? 0 : 1; }); };
+  if (sc.svg.lampe) sc.svg.lampe.g.onclick = function () { demande((S.lamp ? 'Éteindre' : 'Allumer') + ' le projecteur ?', function () { S.lamp = S.lamp ? 0 : 1; }); };
+  function majZones() {
+    var ferme = R.x < 0.005 && Lg.x < 0.005;
+    var txt = run ? 'Arrêter' : (!porteLibre() ? 'Reprendre' : (ferme ? null : 'Fermer'));
+    Z.droit.t.textContent = txt || '① 1 vantail'; Z.gauche.t.textContent = txt || '② 2 vantaux'; Z.rideau.t.textContent = (rid > 50 ? 'Fermer le rideau' : 'Ouvrir le rideau');
+    Object.keys(Z).forEach(function (k) {
+      var z = Z[k], v = S.zones || z.over;
+      z.r.setAttribute('fill', v ? 'rgba(31,163,236,0.20)' : 'rgba(31,163,236,0)'); z.r.setAttribute('stroke', v ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0)');
+      z.t.style.opacity = v ? 1 : 0;
+    });
+  }
+
+  var h = location.hash, g = function (k) { var m = h.match(new RegExp(k + '=(\\d+)')); return m ? +m[1] : null; };
+  if (g('r') != null) { rid = g('r'); document.getElementById('rid').value = rid; document.getElementById('ridv').textContent = rid + ' %'; }
+  if (g('d') != null) R.x = R.tg = g('d') / 100;
+  ['cam:c', 'lamp:l', 'zones:z'].forEach(function (q) { var v = g(q.split(':')[1]); if (v != null) S[q.split(':')[0]] = v; });
+  if (g('n') != null) M = g('n') ? 'nuit' : 'jour';
+  if (g('t') != null) { document.getElementById('reel').checked = false; document.getElementById('hsim').value = g('t'); }
+  if (g('f') == 1) run = true;
+  if (g('g') != null) Lg.x = Lg.tg = g('g') / 100;
+
+  var t0 = performance.now(), clignote = -1;
+  function pas(t) {
+    var dt = Math.min(0.1, (t - t0) / 1000); t0 = t;
+    if (run) {
+      avance(R, dt); avance(Lg, dt); sale = true;
+      if (R.x == R.tg && Lg.x == Lg.tg) run = false;
+    }
+    if (run && Math.floor(t / 1000) != clignote) { clignote = Math.floor(t / 1000); sale = true; }
+    if (sc.svg.camera) { Volets.poseCamera(sc.svg.camera, S.cam ? 'ON' : 'OFF'); sc.coneCam.setAttribute('opacity', S.cam ? 1 : 0); }
+    if (sc.svg.lampe) { Volets.poseLampe(sc.svg.lampe, S.lamp ? 'ON' : 'OFF'); sc.coneLamp.setAttribute('opacity', S.lamp ? 1 : 0); }
+    var ne = nuitEtat(); sc.nuit.setAttribute('opacity', ne.o); sc.nuit.setAttribute('fill', ne.c);
+    suitTemps(t); majZones();
+    ['bc:cam', 'bl:lamp', 'bz:zones'].forEach(function (q) { document.getElementById(q.split(':')[0]).className = S[q.split(':')[1]] ? 'on' : ''; });
+    if (cibleRid != null) { var dr = 100 * dt / 15; rid = Math.abs(cibleRid - rid) <= dr ? cibleRid : rid + (cibleRid > rid ? dr : -dr); if (rid == cibleRid) cibleRid = null; document.getElementById('rid').value = rid; document.getElementById('ridv').textContent = Math.round(rid) + ' %'; sale = true; }
+    if (sale) { render(sc); if (sc.rideau) sc.rideau.pose(rid / 100); sale = false; }
+    requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+})();
+</script></body></html>

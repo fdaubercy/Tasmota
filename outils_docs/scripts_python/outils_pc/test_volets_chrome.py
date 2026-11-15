@@ -70,6 +70,13 @@ PAGES["p4"] = ({"toit": "unPan", "rafraichissement": R, "decor": ["chevrefeuille
     {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3,
      "inclinaison": None, "finsDeCourse": {"ouverture": FINS["ouverture"], "fermeture": FINS["fermeture"]}}]}, {1: 30})
 PAGES["maison"] = (dict(PAGES["rdc"][0], decor=["maison"], camera={"nom": "Caméra de façade", "id": 7}), {1: 30, 2: 40, 3: 0})
+PAGES["portail"] = ({"toit": "unPan", "rafraichissement": R, "decor": ["chevrefeuille", "porte", "pergola", "finition"], "camera": {"nom": "Caméra", "id": 4},
+    "lampe": {"nom": "Lampe", "id": 5}, "ouvertures": [
+    {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 0, "tempsMontee": 30, "tempsDescente": 30, "inclinaison": None},
+    {"id": 2, "nom": "Portail 1 vantail", "type": "portail1", "place": 4, "inverse": 0, "tempsMontee": 30, "tempsDescente": 30, "inclinaison": None,
+     "finsDeCourse": {"fermeture": "Capteur Fermeture Portail"}},
+    {"id": 3, "nom": "Portail 2 vantaux", "type": "portail2", "place": 5, "inverse": 0, "tempsMontee": 30, "tempsDescente": 30, "inclinaison": None,
+     "finsDeCourse": {"fermeture": "Capteur Fermeture Portail"}}]}, {1: 0, 2: 0, 3: 0})
 RIDEAU_C = {"toit": "unPan", "rafraichissement": 300, "decor": ["chevrefeuille", "porte", "pergola"], "ouvertures": [
     {"id": 1, "nom": "Volet Roulant Garage", "type": "garage", "place": 1, "inverse": 1, "tempsMontee": 3, "tempsDescente": 3,
      "inclinaison": None, "source": "/rideau?f=position&id=1", "finsDeCourse": {"ouverture": "Capteur Ouverture", "fermeture": "Capteur Fermeture"}}]}
@@ -115,6 +122,7 @@ class Carte(BaseHTTPRequestHandler):
     capteurs: dict | None = None                      # reponse de /volets?f=capteurs ; None : 500 en texte
     posts: list = []                                  # corps des POST /volets recus (camera)
     req_capteurs = 0
+    statut7: dict | None = None                       # reponse de /cm?cmnd=Status 7 ; None : 500 en texte
 
     def log_message(self, format, *args):
         pass
@@ -149,6 +157,8 @@ class Carte(BaseHTTPRequestHandler):
         nom, type_ = url.path.strip("/"), "text/html; charset=utf-8"
         if nom in ("rideau", "rideauc") and url.query:
             code, corps, type_ = self.position_rideau()
+        elif nom == "cm":
+            code, corps, type_ = ((500, "panne", "text/plain") if Carte.statut7 is None else (200, json.dumps(Carte.statut7), "application/json"))
         elif nom == "volets" and url.query == "f=capteurs":
             Carte.req_capteurs += 1
             code, corps, type_ = ((500, "panne", "text/plain") if Carte.capteurs is None
@@ -562,6 +572,75 @@ def sonde_maison(m, capture):
             "maison : la route échoue : « état inconnu », voyant gris")
 
 
+def clique(m, selecteur):
+    m.cdp.js("document.querySelector(" + json.dumps(selecteur) + ").dispatchEvent(new MouseEvent('click', {bubbles: true})); 1")
+
+
+def sonde_portail(m, capture):
+    Carte.capteurs, Carte.posts = {"2": {"fermeture": "ON"}, "3": {"fermeture": "ON"}, "camera": "ON", "lampe": "ON"}, []
+    verifie(bool(m.ouvre("portail")), True, "portail : page chargée")
+    verifie(vrai(attend(m.cdp, "!!document.querySelector('#vf [data-portail]') && document.querySelectorAll('#vf [data-vantail]').length === 2", 5)), True,
+            "portail : deux vantaux dessinés")
+    ok = vrai(attend(m.cdp, "document.querySelector('#vf [data-portail] text').textContent.indexOf('ferm') === 0", 6))
+    if not ok:
+        print("DEBUG", m.cdp.js("[document.querySelector('#vf [data-portail] text').textContent, document.querySelectorAll('#vf [data-portail] text').length]"), m.cdp.erreurs()[-3:], flush=True)
+    verifie(ok, True, "portail : capteur de fermeture ON : texte fermé")
+    verifie(vrai(attend(m.cdp, "document.querySelectorAll('#vf [data-cone]').length === 2 && [...document.querySelectorAll('#vf [data-cone]')].every(c => c.style.opacity === '1')", 6)),
+            True, "portail : caméra et lampe allumées : leurs deux cônes visibles")
+    Carte.capteurs = {"2": {"fermeture": "OFF"}, "3": {"fermeture": "OFF"}, "camera": "OFF", "lampe": "OFF"}
+    verifie(vrai(attend(m.cdp, "document.querySelector('#vf [data-portail] text').textContent === 'ouvert'", 6)), True, "portail : capteur OFF : ouvert")
+    verifie(vrai(attend(m.cdp, "[...document.querySelectorAll('#vf [data-cone]')].every(c => c.style.opacity === '0')", 6)), True, "portail : appareils éteints : cônes éteints")
+    if capture:
+        m.cdp.capture(str(Path(capture) / "facade_portail.png"))
+    # clic refusé : aucun POST ; confirmé : toggle du volet visé, question avec rappel de sécurité
+    m.cdp.js("window.confirm = () => false; 1")
+    clique(m, "#vf [data-vantail=droit]")
+    verifie(attend_post(1, 1.5), 0, "portail : clic refusé à la confirmation : aucun POST")
+    m.cdp.js("window.confirm = q => (window.question = q, true); 1")
+    clique(m, "#vf [data-vantail=droit]")
+    verifie(attend_post(1, 5), 1, "portail : clic confirmé sur le vantail droit : un POST")
+    verifie([Carte.posts[0] if Carte.posts else None, str(m.cdp.js("window.question")).startswith("Ouvrir : Portail 1 vantail ?")],
+            [{"action": "volet", "id": "2", "ordre": "toggle"}, True], "portail : vantail droit -> volet 2, toggle, question « Ouvrir »")
+    verifie(m.cdp.js("window.question").count("personne") > 0, True, "portail : rappel de sécurité dans la question")
+    clique(m, "#vf [data-vantail=gauche]")
+    verifie(attend_post(2, 5), 2, "portail : clic sur le vantail gauche : un second POST")
+    verifie(Carte.posts[1], {"action": "volet", "id": "3", "ordre": "toggle"}, "portail : vantail gauche -> volet 3 (double), toggle")
+    clique(m, "#vf g[data-id='1']")
+    verifie(attend_post(3, 5), 3, "portail : clic sur le rideau : un POST")
+    verifie(Carte.posts[2], {"action": "volet", "id": "1", "ordre": "ouvre"}, "portail : rideau fermé -> ordre « ouvre »")
+    # en mouvement : l'arret part sans confirmation, meme si la confirmation serait refusee
+    m.cdp.js("window.confirm = () => { window.demande = true; return false; }; window.demande = false; document.getElementById('s272').value = 60; 1")
+    time.sleep(0.8)
+    clique(m, "#vf [data-vantail=droit]")
+    verifie(attend_post(4, 5), 4, "portail : clic en mouvement : un POST")
+    verifie([Carte.posts[3], m.cdp.js("window.demande")], [{"action": "volet", "id": "2", "ordre": "stop"}, False], "portail : en mouvement -> stop, sans confirmation")
+
+
+
+def status7(local):
+    return {"StatusTIM": {"UTC": local, "Local": local, "Timezone": 99, "Sunrise": "08:01", "Sunset": "17:04"}}
+
+
+def sonde_soleil(m):
+    nuit = "(() => { const n = document.querySelector('#vf [data-nuit]'); return n ? [+n.getAttribute('opacity'), n.getAttribute('fill')] : null; })()"
+    Carte.capteurs, Carte.statut7 = {}, status7("2026-11-15T12:00:00")
+    verifie(bool(m.ouvre("portail")), True, "soleil : page chargée")
+    time.sleep(1.5)
+    verifie(m.cdp.js(nuit)[0], 0, "soleil : midi sur la carte : aucun voile de nuit")
+    verifie(m.cdp.js("document.querySelector('#vf [data-nuit]').parentNode.querySelectorAll('text')[0] ? 1 : 0"), 1, "soleil : texte du bouton de mode présent")
+    Carte.statut7 = status7("2026-11-15T23:30:00")
+    verifie(bool(m.ouvre("portail")), True, "soleil : page rechargée")
+    verifie(vrai(attend(m.cdp, "+document.querySelector('#vf [data-nuit]').getAttribute('opacity') > 0.55", 6)), True, "soleil : 23:30 sur la carte : nuit profonde (voile > 0,55)")
+    m.cdp.js("[...document.querySelectorAll('#vf svg g')].find(g => g.querySelector('title') && /Jour et nuit/.test(g.querySelector('title').textContent)).dispatchEvent(new MouseEvent('click', {bubbles: true})); 1")
+    verifie(vrai(attend(m.cdp, "+document.querySelector('#vf [data-nuit]').getAttribute('opacity') === 0", 4)), True, "soleil : clic sur le mode : « Jour » forcé, voile retiré")
+    verifie(m.cdp.js("window.localStorage.getItem('volets_nuit')"), "jour", "soleil : le mode est gardé dans le navigateur")
+    m.cdp.js("window.localStorage.removeItem('volets_nuit'); 1")
+    Carte.statut7 = None
+    verifie(bool(m.ouvre("portail")), True, "soleil : page rechargée, carte muette")
+    time.sleep(1.5)
+    verifie(m.cdp.js(nuit)[0], 0, "soleil : carte muette et jamais lue : pas de nuit")
+
+
 def principal():
     options = argparse.ArgumentParser(description="Sonde Chrome du dessin de la façade des volets.")
     options.add_argument("--js", default=str(RACINE / "data/sd/js/volets.js"), help="volets.js à éprouver")
@@ -581,11 +660,13 @@ def principal():
         sonde_p4(m, args.capture)
         sonde_rideau_capteurs(m, args.capture)
         sonde_maison(m, args.capture)
+        sonde_portail(m, args.capture)
+        sonde_soleil(m)
         verifie(bool(m.ouvre("sans")), True, "sans curseur : page chargée")
         time.sleep(0.3)
         verifie(m.cdp.js("[document.getElementById('vf').childElementCount, document.querySelectorAll('svg').length,"
                          " typeof window.Volets.demarre]"), [0, 0, "function"], "aucun s271 : rien n'est dessiné")
-        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x and PANNE not in x and not (("rideau?f=position" in x or "volets?f=capteurs" in x) and "500" in x)],
+        verifie([x for x in m.cdp.erreurs() if "favicon.ico" not in x and PANNE not in x and not (("rideau?f=position" in x or "volets?f=capteurs" in x or "cm?cmnd=Status" in x) and "500" in x)],
                 [], "aucune erreur dans la console (hors le 500 voulu du rideau)")
     except FileNotFoundError as erreur:
         print(f"BLOQUE : {erreur}")

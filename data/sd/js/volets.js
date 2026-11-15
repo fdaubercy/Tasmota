@@ -290,6 +290,7 @@
     c.s = s;
     c.voyant.style.fill = etat == 'ON' ? VERT : '#777';
     c.halo.style.display = etat == 'ON' ? '' : 'none';
+    if (c.cone) c.cone.style.opacity = etat == 'ON' ? '1' : '0';
     c.titre.textContent = c.nom + ' : ' + s + ' (clic pour ' + (etat == 'ON' ? 'éteindre' : 'allumer') + ')';
   }
 
@@ -323,6 +324,7 @@
     c.s = s;
     c.globe.style.fill = etat == 'ON' ? '#ffd54a' : '#a9adb0';
     c.halo.style.display = c.filament.style.display = etat == 'ON' ? '' : 'none';
+    if (c.cone) c.cone.style.opacity = etat == 'ON' ? '1' : '0';
     c.titre.textContent = c.nom + ' : ' + s + ' (clic pour ' + (etat == 'ON' ? 'éteindre' : 'allumer') + ')';
   }
 
@@ -386,15 +388,160 @@
     });
   }
 
+  // Finition de la facade (decor 'finition', 2026-11-15, plan facade-garage-portail-commande A2) : foret d'automne derriere le toit,
+  // mur plus sombre vers le bas, cones de couverture de la camera et de la lampe, couche de nuit. Sans 'finition' : dessin d'avant.
+  function foret(svg) {
+    var g = el(svg, 'g', {'data-foret': ''}), a = hasard(), i;
+    [[40, 12, 90, 24, '#8f8b56'], [180, 8, 110, 26, '#a68a4d'], [330, 10, 110, 24, '#7c8450']].forEach(function (b) {
+      el(g, 'ellipse', {cx: b[0], cy: b[1], rx: b[2], ry: b[3], fill: b[4], opacity: 0.5});
+    });
+    [[50, '#4f4a43'], [130, '#5b544b'], [250, '#635b51'], [330, '#4b453e']].forEach(function (q) {
+      el(g, 'rect', {x: q[0], y: 0, width: 3, height: 36, fill: q[1]});
+    });
+    for (i = 0; i < 60; i++) {
+      el(g, 'circle', {cx: Math.round(a() * 420), cy: Math.round(a() * 34), r: Math.round((2 + a() * 5) * 10) / 10,
+        fill: ['#b59449', '#a07a3a', '#6d7a47', '#c0a255', '#8a6a35'][Math.floor(a() * 5)], opacity: 0.55 + Math.round(a() * 30) / 100});
+    }
+  }
+  // Voile de nuit selon l'heure (minutes locales), le lever et le coucher (minutes) : fondu de 35 min autour de chacun, profondeur en sinus
+  // entre le coucher et le lever (crepuscule bleu et leger, noir vers le milieu de la nuit). mode : 'auto' (defaut), 'jour' ou 'nuit' (profondeur maximale).
+  function minutesDe(s) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(s == null ? '' : s));
+    return m && +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : null;
+  }
+  function nuitEtat(m, lever, coucher, mode) {
+    var f = 0, p = 0, lisse = function (x) { return x * x * (3 - 2 * x); };
+    if (mode == 'nuit') { f = 1; p = 1; }
+    else if (mode != 'jour' && m != null && lever != null && coucher != null) {
+      var a = lever - 17.5, b = coucher - 17.5;
+      f = m < a ? 1 : (m < a + 35 ? 1 - lisse((m - a) / 35) : (m < b ? 0 : (m < b + 35 ? lisse((m - b) / 35) : 1)));
+      var nuitLongue = (lever - coucher + 1440) % 1440;     // 0 si lever = coucher : pas de division par zero
+      if (f > 0 && nuitLongue > 0) p = Math.sin(Math.PI * Math.min(1, ((m - coucher + 1440) % 1440) / nuitLongue));
+    }
+    var c = [43, 59, 107].map(function (v, i) { return Math.round(v + ([4, 7, 15][i] - v) * p); });
+    return {o: f * (0.30 + 0.32 * p), p: p, c: 'rgb(' + c.join(',') + ')'};
+  }
+  // Soleil de la carte : reponse de « Status 7 » ({"StatusTIM": {"Local": "AAAA-MM-JJTHH:MM:SS", "Sunrise": "HH:MM", "Sunset": "HH:MM"}}, calcule
+  // par le firmware avec la latitude, la longitude et le fuseau du persist) -> minutes locales, lever, coucher ; null si absent ou illisible
+  function soleilDe(j) {
+    var s = j && j.StatusTIM, l = s && /T(\d{2}):(\d{2})/.exec(String(s.Local || '')), lever = s ? minutesDe(s.Sunrise) : null, coucher = s ? minutesDe(s.Sunset) : null;
+    return l && lever != null && coucher != null ? {m: +l[1] * 60 + +l[2], lever: lever, coucher: coucher} : null;
+  }
+  function modeValide(m) { return m == 'jour' || m == 'nuit' ? m : 'auto'; }
+  function modeSuivant(m) { return m == 'jour' ? 'nuit' : (m == 'nuit' ? 'auto' : 'jour'); }
+  function poseMode(svg, mode) {
+    if (!svg || !svg.modeNuit) return;
+    svg.modeNuit.mode = mode = modeValide(mode);
+    svg.modeNuit.texte.textContent = mode == 'jour' ? 'Jour' : (mode == 'nuit' ? 'Nuit' : 'Auto');
+  }
+  function poseNuit(svg, e) {
+    if (!svg || !svg.nuit) return;
+    var o = String(Math.round(e.o * 1000) / 1000);
+    if (svg.nuitO === o && svg.nuitC === e.c) return;          // image fixe : DOM inchange (accueil ouvert des jours)
+    svg.nuitO = o; svg.nuitC = e.c;
+    svg.nuit.setAttribute('opacity', o);
+    svg.nuit.setAttribute('fill', e.c);
+  }
+
+  // Portail de jardin (plan facade-garage-portail-commande A3) : volets de type 'portail1' (un vantail, bouton « simple ») et 'portail2' (deux
+  // vantaux, bouton « double »), dessines au premier plan et non dans la rangee des ouvertures. p = {1: % du portail1, 2: % du portail2}.
+  // Le vantail droit suit le plus ouvert des deux, le gauche le portail2 seul.
+  function vantaux(p) {
+    var a = borne(Number(p && p[1]) || 0), b = borne(Number(p && p[2]) || 0);
+    return {droit: Math.max(a, b) / 100, gauche: b / 100};
+  }
+  // Feu orange : clignote (1 s allume, 1 s eteint) pendant le mouvement et 1,5 s apres ; t et bouge en ms (bouge null = jamais bouge)
+  function feuPortail(t, bouge) {
+    return bouge != null && t - bouge < 1500 && Math.floor(t / 1000) % 2 == 0;
+  }
+  function fermeture(etat) {
+    return etat == 'ON' ? {ferme: true, texte: 'fermé ✔'} : (etat == 'OFF' ? {ferme: false, texte: 'ouvert'} : {ferme: null, texte: '?'});
+  }
+  function portail(svg, W, ouvPortail) {
+    var P = {etat: {1: 0, 2: 0}, g: el(svg, 'g', {'data-portail': ''}), feuAllume: null}, lisse = function (x) { return x * x * (3 - 2 * x); };
+    el(P.g, 'rect', {x: 0, y: 196, width: W, height: 124, fill: '#bdbab3', 'pointer-events': 'none'});
+    var mid = W / 2, pil = function (x) {
+      el(P.g, 'rect', {x: x, y: 176, width: 32, height: 134, fill: '#e8e2cf', stroke: '#c9c2aa', 'stroke-width': 0.6});
+      el(P.g, 'rect', {x: x - 3, y: 171, width: 38, height: 6, fill: '#b9b6ae', stroke: '#8f8c84', 'stroke-width': 0.6});
+    };
+    pil(22); pil(W - 54);
+    P.vantail = {};
+    [['gauche', 56, mid - 1, 'left center', -1], ['droit', mid + 1, W - 56, 'right center', 1]].forEach(function (q) {
+      var g = el(P.g, 'g', {'data-vantail': q[0], 'data-ouverture': '0'}), w = q[2] - q[1], i;
+      g.style.transformBox = 'fill-box'; g.style.transformOrigin = q[3];
+      el(g, 'rect', {x: q[1], y: 204, width: w, height: 102, fill: '#f1f5f9', stroke: '#cbd5e1', 'stroke-width': 1.5});
+      for (i = 1; i < 5; i++) el(g, 'line', {x1: q[1] + w * i / 9, y1: 212, x2: q[1] + w * i / 9, y2: 298, stroke: '#cbd5e1', 'stroke-width': 0.8});
+      for (i = 0; i < 5; i++) el(g, 'rect', {x: q[4] > 0 ? q[1] + w * 0.62 : q[1] + w * 0.38 - w * 0.34, y: 214 + i * 16, width: w * 0.34, height: 8, fill: '#2a2f36', opacity: 0.85});
+      P.vantail[q[0]] = {g: g, sens: q[4]};
+    });
+    P.feuH = el(P.g, 'circle', {cx: W - 38, cy: 190, r: 10, fill: 'rgba(255,150,20,.3)'}); P.feuH.style.display = 'none';
+    P.feu = el(P.g, 'ellipse', {cx: W - 38, cy: 190, rx: 3.4, ry: 4.4, fill: '#8a5a1c', stroke: '#5a3a0c', 'stroke-width': 0.8});
+    P.halo = P.feuH;
+    P.capteur = el(P.g, 'circle', {cx: mid, cy: 258, r: 5, fill: '#777', stroke: '#222', 'stroke-width': 0.6});
+    P.texte = el(P.g, 'text', {x: mid, y: 200, 'font-size': 9, 'text-anchor': 'middle', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'});
+    P.texte.textContent = '?';
+    P.pose = function () {
+      var v = vantaux({1: P.etat[1] * 100, 2: P.etat[2] * 100});
+      ['gauche', 'droit'].forEach(function (c) {
+        var x = lisse(v[c]), e = P.vantail[c];
+        e.g.setAttribute('data-ouverture', String(Math.round(v[c] * 100)));
+        e.g.style.transform = 'scaleX(' + (1 - 0.84 * x) + ') skewY(' + (e.sens * 8 * x) + 'deg)';
+      });
+    };
+    return P;
+  }
+  function poseFeuPortail(svg, allume) {
+    var P = svg.portail;
+    if (!P || P.feuAllume === allume) return;
+    P.feuAllume = allume;
+    P.feu.setAttribute('fill', allume ? '#ffa31a' : '#8a5a1c');
+    P.halo.style.display = allume ? '' : 'none';
+  }
+  function poseFermeturePortail(svg, etat) {
+    var P = svg.portail, f = fermeture(etat);
+    if (!P) return;
+    P.capteur.setAttribute('fill', f.ferme === true ? '#38d66b' : (f.ferme === false ? '#ff9a1f' : '#777'));
+    P.texte.textContent = f.texte;
+  }
+
+  // Commande par clic (plan facade-garage-portail-commande A4). Ordre decide d'apres le type, la position LUE (%) et le mouvement en cours :
+  // en mouvement = arret sans confirmation (securite) ; sinon rideau ouvre ou ferme, portail = une impulsion (toggle), toujours confirmee.
+  var SECURITE = " Vérifiez que personne ni aucun véhicule n'est dans la zone du portail.";
+  function enMouvement(t, mvt) { return mvt != null && t - mvt < 1500; }
+  function ordreClic(type, p, bouge, nom) {
+    if (p == null || isNaN(Number(p))) return null;                   // position inconnue : aucun ordre
+    if (bouge) return {ordre: 'stop', confirme: false, texte: 'Arrêter : ' + nom};
+    var portail = type == 'portail1' || type == 'portail2', ouvert = Number(p) > (portail ? 2 : 50), verbe = ouvert ? 'Fermer' : 'Ouvrir';
+    return {ordre: portail ? 'toggle' : (ouvert ? 'ferme' : 'ouvre'), confirme: true, texte: verbe + ' : ' + nom + (portail ? ' ?' + SECURITE : ' ?')};
+  }
+  // Branche le clic sur chaque ouverture (et sur les vantaux du portail) : envoie(id, ordre) apres confirmation(texte)
+  function brancheClics(svg, envoie, confirmation) {
+    svg.volets.forEach(function (v) {
+      var clic = function () {
+        var o = ordreClic(v.o.type, v.lue, enMouvement(v.t, v.mvt), String(v.o.nom || 'Volet'));
+        if (!o) { if (window.alert) window.alert(String(v.o.nom || 'Volet') + ' : position inconnue, commande impossible pour le moment'); return; }
+        if (o.confirme && !confirmation(o.texte)) return;
+        envoie(v.o.id, o.ordre);
+      };
+      v.g.onclick = clic;
+      v.g.style.cursor = 'pointer';
+      var vant = svg.portail && svg.portail.vantail[v.o.type == 'portail1' ? 'droit' : (v.o.type == 'portail2' ? 'gauche' : '')];
+      if (vant) { vant.g.onclick = clic; vant.g.style.cursor = 'pointer'; }
+    });
+  }
+
   // Dessine la facade dans 'conteneur' ; chaque ouverture : <g data-id data-ouverture>, son texte « nom NN % »
   function dessine(conteneur, facade) {
-    var ouv = facade.ouvertures || [], toit = facade.toit, maison = toit == 'deuxPans' || toit == 'unPan';
+    var toutes = facade.ouvertures || [], toit = facade.toit, maison = toit == 'deuxPans' || toit == 'unPan';
+    var estPortail = function (o) { return o.type == 'portail1' || o.type == 'portail2'; };
+    var ouv = toutes.filter(function (o) { return !estPortail(o); }), ouvPortail = toit == 'unPan' ? toutes.filter(estPortail) : [];
     var somme = 40 * (ouv.length - 1);
     ouv.forEach(function (o) { somme += LARG[o.type] || 64; });
     var W = Math.max(maison ? 300 : 240, somme + 80), x = (W - somme) / 2;
     // Decor (toit unPan seulement) : rideau a x = 70 ; porte 20 apres le dernier volet ; mur arrete avant la pergola
     var listeDecor = Array.isArray(facade.decor) ? facade.decor : [];
     var decor = toit == 'unPan' ? listeDecor : [], porte = decor.indexOf('porte') >= 0, perg = decor.indexOf('pergola') >= 0;
+    if (ouvPortail.length) W = Math.max(W, 420);
     var xMur = W - 20, alea = hasard(), maisonD = listeDecor.indexOf('maison') >= 0, pos = {};
     if (maisonD) {
       decor = [];
@@ -410,13 +557,22 @@
     var plancher = maison ? [66, 72] : [30, 38];
     var marches = function (xm) { return 100 + 9 * Math.floor(xm / 24); };
     while (conteneur.firstChild) conteneur.removeChild(conteneur.firstChild);
-    var svg = el(conteneur, 'svg', {viewBox: '0 0 ' + W + (maisonD ? ' 214' : ' 200'), width: '100%', style: 'display:block;margin:8px 0'});
+    var svg = el(conteneur, 'svg', {viewBox: '0 0 ' + W + (maisonD ? ' 214' : (ouvPortail.length ? ' 320' : ' 200')), width: '100%', style: 'display:block;margin:8px 0'});
     var defs = el(svg, 'defs', {});
     [['vf_lames', 10, 8, 6.5, 1.5, '#9aa3ab', '#6f777e'], ['vf_lamesG', 12, 10, 8, 2, '#b4bcc3', '#7d858c']].forEach(function (m) {
       var p = el(defs, 'pattern', {id: m[0], width: m[1], height: m[2], patternUnits: 'userSpaceOnUse'});
       el(p, 'rect', {width: m[1], height: m[2], fill: m[5]});
       el(p, 'rect', {y: m[3], width: m[1], height: m[4], fill: m[6]});
     });
+    var finition = toit == 'unPan' && !maisonD && decor.indexOf('finition') >= 0;
+    if (finition) {
+      [['vf_mur', '#5a4a30', 0, 0.22], ['vf_debord', '#000', 0.25, 0], ['vf_cam', '#38bdf8', 0.5, 0], ['vf_lamp', '#fde047', 0.55, 0]].forEach(function (q) {
+        var lg = el(defs, 'linearGradient', {id: q[0], x1: 0, y1: 0, x2: 0, y2: 1});
+        el(lg, 'stop', {offset: 0, 'stop-color': q[1], 'stop-opacity': q[2]});
+        el(lg, 'stop', {offset: 1, 'stop-color': q[1], 'stop-opacity': q[3]});
+      });
+      foret(svg);                                           // derriere le toit
+    }
     var trappe = ouv.some(function (o) { return o.type == 'trappe' || o.type == 'trappeEchelle'; });
     if (maisonD) {
       maisonFond(svg, W, pos);
@@ -436,6 +592,11 @@
       el(svg, 'rect', {x: 0, y: 0, width: W, height: 30, fill: '#e8e1d4'});
       el(svg, 'rect', {x: 0, y: 38, width: W, height: 154, fill: '#3b3631'});
       el(svg, 'rect', {x: 0, y: 192, width: W, height: 8, fill: '#777'});
+    }
+    if (finition) {                                         // mur plus sombre vers le bas, ombre du debord de toit
+      var xE = perg ? xMur : W - 20, yE = perg ? 44 + 16 * (xMur - 20) / (W - 40) : 60;
+      el(svg, 'polygon', {points: '20,44 ' + xE + ',' + yE + ' ' + xE + ',196 20,196', fill: 'url(#vf_mur)', 'data-ombre': '', 'pointer-events': 'none'});
+      el(svg, 'polygon', {points: '20,45 ' + xE + ',' + (yE + 1) + ' ' + xE + ',' + (yE + 12) + ' 20,56', fill: 'url(#vf_debord)', 'pointer-events': 'none'});
     }
     if (trappe && !maisonD) el(svg, 'rect', {x: maison ? 20 : 0, y: plancher[0], width: maison ? W - 40 : W, height: plancher[1] - plancher[0], fill: '#c9b79c'});
     if (ouv.some(function (o) { return o.type == 'trappeEchelle'; })) {       // escalier en bois fixe, de gauche (haut) a droite
@@ -471,6 +632,36 @@
     if (maisonD) maisonDevant(svg, pos);
     if (porte) portePleine(svg, x - 20);
     if (perg) pergola(svg, alea, xMur, 44 + 16 * (xMur - 20) / (W - 40), 196);
+    svg.portail = ouvPortail.length ? portail(svg, W, ouvPortail) : null;
+    if (svg.portail) {                                      // une entree par volet portail : pose(f) met a jour le vantail, g et textes factices pour pose()
+      ouvPortail.forEach(function (o) {
+        var g = el(svg.portail.g, 'g', {'data-id': o.id, 'data-ouverture': ''}), tx = el(g, 'text', {style: 'display:none'});
+        var v = {o: o, g: g, pct: el(tx, 'tspan', {}), cause: el(tx, 'tspan', {})};
+        v.pose = function (f) { svg.portail.etat[o.type == 'portail2' ? 2 : 1] = f; svg.portail.pose(); return g; };
+        svg.volets.push(v);
+      });
+    }
+    if (finition) {                                         // voile de nuit, puis les cones par-dessus (ils restent vifs la nuit)
+      svg.nuit = el(svg, 'rect', {x: 0, y: 0, width: W, height: ouvPortail.length ? 320 : 200, fill: 'rgb(43,59,107)', opacity: 0, 'pointer-events': 'none', 'data-nuit': ''});
+      var cone = function (pts, rempl, nom) {
+        var c = el(svg, 'polygon', {points: pts, fill: rempl, 'pointer-events': 'none', 'data-cone': nom});
+        c.style.opacity = '0'; c.style.transition = 'opacity .5s';
+        return c;
+      };
+      if (svg.camera) svg.camera.cone = cone('29,62 -20,196 190,196', 'url(#vf_cam)', 'camera');
+      if (svg.lampe) {
+        var lc = xMur - 18, ly = 45 + 16 * (lc - 20) / (W - 40) + 22;
+        svg.lampe.cone = cone(lc + ',' + ly + ' ' + (lc - 120) + ',196 ' + (lc + 45) + ',196', 'url(#vf_lamp)', 'lampe');
+      }
+    }
+    if (finition) {                                         // bouton Auto, Jour, Nuit en haut a droite ; le mode est garde dans ce navigateur
+      var bm = {g: el(svg, 'g', {style: 'cursor:pointer'}), mode: 'auto'};
+      bm.texte = el(bm.g, 'text', {x: W - 6, y: 11, 'font-size': 9, 'text-anchor': 'end', style: 'fill:#fff;stroke:#1d3a52;stroke-width:2.6px;paint-order:stroke'});
+      el(bm.g, 'title', {}).textContent = 'Jour et nuit : automatique (soleil de la carte), jour ou nuit forcés (clic pour changer)';
+      svg.modeNuit = bm;
+      poseMode(svg, 'auto');
+      bm.g.onclick = function () { poseMode(svg, modeSuivant(bm.mode)); try { window.localStorage.setItem('volets_nuit', bm.mode); } catch (e) { } };
+    }
     return svg;
   }
 
@@ -568,6 +759,28 @@
     clignote(v, coherence(v.suivi, v.lue, e, t), t);
   }
 
+  // Etat du capteur de fermeture du portail : OFF si un volet portail le dit ouvert, ON si tous ceux qui repondent le disent ferme, sinon inconnu
+  function etatFermeture(svg, lecture) {
+    var r = null;
+    svg.volets.forEach(function (v) {
+      if (String(v.o.type || '').indexOf('portail') != 0 || !lecture.j || !lecture.j[v.o.id]) return;
+      var e = lecture.j[v.o.id].fermeture;
+      if (e == 'OFF') r = 'OFF'; else if (e == 'ON' && r == null) r = 'ON';
+    });
+    return r;
+  }
+
+  // Soleil lu a /cm?cmnd=Status%207 toutes les 5 min ; entre deux lectures, l'heure avance avec l'horloge du navigateur. Echec ou reponse sans soleil : on
+  // garde la derniere lecture, et sans aucune lecture il n'y a pas de nuit (jamais de nuit par defaut).
+  function lisSoleil(etat) {
+    var suite = function () { setTimeout(function () { lisSoleil(etat); }, 300000); };
+    var options = {cache: 'no-store'};
+    if (window.AbortSignal && AbortSignal.timeout) options.signal = AbortSignal.timeout(4000);
+    fetch('/cm?cmnd=Status%207', options).then(function (r) { return r.json(); })
+      .then(function (j) { var s = soleilDe(j); if (s) { s.t0 = performance.now(); etat.s = s; } }, function () { }).then(suite, suite);
+  }
+  function minutesCarte(etat, t) { return etat.s ? (etat.s.m + (t - etat.s.t0) / 60000) % 1440 : null; }
+
   // Insere le dessin juste apres la table des curseurs (#s271) et l'anime ; rien sans #s271, sauf ouverture a 'source' (dessin dans #vf)
   function demarre(facade) {
     var s1 = document.getElementById('s271'), table = s1 && s1.closest('table'), vf = document.getElementById('vf');
@@ -581,18 +794,39 @@
     var svg = dessine(vf, facade), avant = null;
     var periode = facade.rafraichissement > 0 ? facade.rafraichissement : 2345, lecture = {j: null};
     svg.volets.forEach(function (v) { if (v.o.source) interroge(v, periode); });
-    if (svg.camera || svg.lampe || svg.volets.some(function (v) { return v.capteurs && !v.o.source; })) lisCapteurs(lecture, periode);
+    var soleil = {s: null};
+    if (svg.modeNuit) {
+      try { poseMode(svg, window.localStorage.getItem('volets_nuit')); } catch (e) { }
+      lisSoleil(soleil);
+    }
+    brancheClics(svg, function (id, ordre) {
+      fetch('/volets', {method: 'POST', body: new URLSearchParams({action: 'volet', id: String(id), ordre: ordre})})
+        .then(function (r) { return r.json(); }).then(function (j) { if (j && !j.ok && window.alert) window.alert(j.message); },
+          function () { if (window.alert) window.alert('Pas de réponse de la carte, commande non vérifiée'); });
+    }, function (texte) { return window.confirm(texte); });
+    if (svg.camera || svg.lampe || svg.portail || svg.volets.some(function (v) { return v.capteurs && !v.o.source; })) lisCapteurs(lecture, periode);
     function image() {
       requestAnimationFrame(image);                       // en tete : une exception de lit ou pose n'arrete pas l'animation
       var t = performance.now(), dt = avant == null ? 0 : t - avant;
       avant = t;
       svg.volets.forEach(function (v) {
         v.lue = null;                                       // position LUE (pas la dessinee), posee par anime
+        v.t = t;
+        if (v.prevD != null && v.prevD !== v.dessinee) v.mvt = t;
+        v.prevD = v.dessinee;
         try { anime(v, dt); } finally {
           if (v.capteurs) suitCapteurs(v, t, lecture);
           if (v.rapporteur) poseAngle(v.rapporteur, angleLu(v.o.id));
         }
       });
+      if (svg.portail) {
+        var bouge = svg.portail.bouge == null ? null : svg.portail.bouge, pos = svg.volets.map(function (v) { return String(v.o.type || '').indexOf('portail') == 0 ? v.dessinee : null; });
+        if (svg.portail.pos && JSON.stringify(pos) != JSON.stringify(svg.portail.pos)) svg.portail.bouge = bouge = t;
+        svg.portail.pos = pos;
+        poseFeuPortail(svg, feuPortail(t, bouge));
+        poseFermeturePortail(svg, etatFermeture(svg, lecture));
+      }
+      if (svg.nuit) poseNuit(svg, nuitEtat(minutesCarte(soleil, t), soleil.s && soleil.s.lever, soleil.s && soleil.s.coucher, svg.modeNuit ? svg.modeNuit.mode : 'auto'));
       if (svg.camera) poseCamera(svg.camera, lecture.j && lecture.j.camera);
       if (svg.lampe) poseLampe(svg.lampe, lecture.j && lecture.j.lampe);
     }
@@ -601,7 +835,11 @@
   }
 
   window.Volets = {ouverture: ouverture, ouvertureAngle: ouvertureAngle, poursuit: poursuit, dessine: dessine, demarre: demarre,
-    coherence: coherence, poseCapteurs: poseCapteurs, clignote: clignote, etatsCapteurs: etatsCapteurs, poseAngle: poseAngle, poseCamera: poseCamera, poseLampe: poseLampe};
+    coherence: coherence, poseCapteurs: poseCapteurs, clignote: clignote, etatsCapteurs: etatsCapteurs, poseAngle: poseAngle, poseCamera: poseCamera, poseLampe: poseLampe,
+    minutesDe: minutesDe, nuitEtat: nuitEtat, poseNuit: poseNuit, vantaux: vantaux, feuPortail: feuPortail, fermeture: fermeture,
+    poseFeuPortail: poseFeuPortail, poseFermeturePortail: poseFermeturePortail,
+    enMouvement: enMouvement, ordreClic: ordreClic, brancheClics: brancheClics,
+    soleilDe: soleilDe, modeValide: modeValide, modeSuivant: modeSuivant, poseMode: poseMode};
   if (typeof document !== 'undefined' && window.VOLETS) {
     try { demarre(window.VOLETS); } catch (e) { if (window.console) console.error('volets.js : ' + e.message); }
   }

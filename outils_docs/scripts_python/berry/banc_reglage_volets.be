@@ -798,6 +798,23 @@ modules["garage"]["environnement"]["interrupteurs"]["interrupteur1"]["etat"] = "
 webserver.raz({"f": "capteurs"})
 vrPages.route()
 verifie(size(json.load(webserver.texte())["1"]) == 0, "?f=capteurs : etat absent ou inconnu -> cle absente (inconnu, pastille grise)")
+# Portail de jardin (plan facade-garage-portail-commande A3) : volet de type portail1, capteur de fermeture seul (pas de cle ouverture)
+modules["garage"]["environnement"]["interrupteurs"]["interrupteur3"] = sw(3, "Capteur Fermeture Portail", "OFF")
+vr2["facade"] = {"type": "portail1", "place": 4, "finsDeCourse": {"module": "garage", "fermeture": 3}}
+f = vrPages.facade()
+var po = nil
+for x: f["ouvertures"]    if x["id"] == vr2["id"]    po = x    end    end
+verifie(po != nil && po["type"] == "portail1" && po["finsDeCourse"]["fermeture"] == "Capteur Fermeture Portail" && po["finsDeCourse"]["ouverture"] == nil, "facade : portail1 transmis, capteur de fermeture par son nom, sans ouverture")
+verifie(f["ouvertures"][size(f["ouvertures"]) - 1]["id"] == vr2["id"], "facade : le portail trie par place (4) en dernier")
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+c = json.load(webserver.texte())
+verifie(c[str(vr2["id"])]["fermeture"] == "OFF" && c[str(vr2["id"])].find("ouverture") == nil, "?f=capteurs : portail1 -> {fermeture: OFF} seul")
+modules["garage"]["environnement"]["interrupteurs"]["interrupteur3"]["etat"] = "ON"
+webserver.raz({"f": "capteurs"})
+vrPages.route()
+verifie(json.load(webserver.texte())[str(vr2["id"])]["fermeture"] == "ON", "?f=capteurs : fermeture du portail passee a ON")
+vr2.remove("facade")
 var modOrig = modules["garage"]
 modules.remove("garage")
 webserver.raz({"f": "capteurs"})
@@ -885,6 +902,48 @@ voletsMoteur["facade"].remove("lampe")
 webserver.raz({"action": "lampe", "etat": "ON"})
 vrPages.ordre()
 verifie(webserver.code == 400 && tasmota.power[4] == false, "POST lampe sans lampe declaree : 400, rien commande")
+
+print("17e. Commande par clic : POST action=volet (ouvre, ferme, toggle, stop), seulement pour un volet de la facade")
+vr1["facade"] = {"type": "garage", "place": 1}
+vr2["facade"] = {"type": "portail1", "place": 4}
+vr3["facade"] = {"type": "portail2", "place": 5}
+vr2["activation"] = "ON"
+var ordreVolet = def (id, o)
+    tasmota.cmds = []
+    webserver.raz({"action": "volet", "id": str(id), "ordre": o})
+    vrPages.ordre()
+    return json.load(webserver.texte())
+end
+rc = ordreVolet(vr1["id"], "ouvre")
+verifie(webserver.code == 200 && rc["ok"] && tasmota.cmds == [string.format("ShutterOpen%i", vr1["id"])], "volet garage : ouvre -> ShutterOpen<id> (sens physique, ShutterInvert pris en compte)")
+rc = ordreVolet(vr1["id"], "ferme")
+verifie(webserver.code == 200 && tasmota.cmds == [string.format("ShutterClose%i", vr1["id"])], "volet garage : ferme -> ShutterClose<id>")
+rc = ordreVolet(vr1["id"], "stop")
+verifie(webserver.code == 200 && tasmota.cmds == [string.format("ShutterStop%i", vr1["id"])], "volet garage : stop -> ShutterStop<id>")
+rc = ordreVolet(vr1["id"], "toggle")
+verifie(webserver.code == 400 && !rc["ok"] && size(tasmota.cmds) == 0, "volet garage : toggle refuse (sens decide par la page), rien commande")
+rc = ordreVolet(vr2["id"], "toggle")
+verifie(webserver.code == 200 && rc["ok"] && tasmota.cmds == [string.format("ShutterToggle%i", vr2["id"])], "portail : toggle -> ShutterToggle<id> (comme le bouton poussoir)")
+rc = ordreVolet(vr2["id"], "ouvre")
+verifie(webserver.code == 400 && size(tasmota.cmds) == 0, "portail : ouvre refuse (un seul poussoir, pas de sens), rien commande")
+rc = ordreVolet(vr2["id"], "stop")
+verifie(webserver.code == 200 && tasmota.cmds == [string.format("ShutterStop%i", vr2["id"])], "portail : stop -> ShutterStop<id>, sans confirmation cote carte")
+rc = ordreVolet(99, "stop")
+verifie(webserver.code == 400 && size(tasmota.cmds) == 0, "id inconnu : refuse, rien commande")
+rc = ordreVolet(vr1["id"], "n'importe quoi")
+verifie(webserver.code == 400 && size(tasmota.cmds) == 0, "ordre inconnu : refuse, rien commande")
+vr2["activation"] = "OFF"
+rc = ordreVolet(vr2["id"], "toggle")
+verifie(webserver.code == 400 && size(tasmota.cmds) == 0, "volet inactif : refuse, rien commande")
+vr2["activation"] = "ON"
+vr3.remove("facade")
+rc = ordreVolet(vr3["id"], "stop")
+verifie(webserver.code == 400 && size(tasmota.cmds) == 0, "volet sans bloc facade : refuse, rien commande")
+webserver.privilegie = false
+rc = ordreVolet(vr1["id"], "stop")
+verifie(size(tasmota.cmds) == 0, "acces non privilegie : rien commande")
+webserver.privilegie = true
+vr2["activation"] = "OFF"
 modules.remove("garage")
 modules.remove("autres")
 voletsMoteur["facade"].remove("decor")

@@ -1415,7 +1415,7 @@
 			"facade": {
 				"activation": "ON",
 				"toit": "unPan",
-				"decor": ["chevrefeuille", "porte", "pergola"],
+				"decor": ["chevrefeuille", "porte", "pergola", "finition"],
 				"camera": {"module": "garage", "id": 4},
 				"lampe": {"module": "garage", "id": 5}
 			},
@@ -1497,6 +1497,7 @@
 						"activation": "OFF",
 						"nom": "Portail 1 vantail",
 						"id": 2,
+						"facade": {"type": "portail1", "place": 4, "finsDeCourse": {"module": "garage", "fermeture": 3}},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 20,
@@ -1539,6 +1540,7 @@
 						"activation": "OFF",
 						"nom": "Portail 2 vantaux",
 						"id": 3,
+						"facade": {"type": "portail2", "place": 5, "finsDeCourse": {"module": "garage", "fermeture": 3}},
 						"etat": "STOPPED",
 						"position": 0,
 						"relais1": 22,
