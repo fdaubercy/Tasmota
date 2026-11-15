@@ -111,6 +111,19 @@ jobs:
           - tasmota32s3-garage-serveur-modbus
           - tasmota32s3-garage-capteurs-cuve-modbus
           - tasmota32s3-garage-rideau-garage-modbus
+          - tasmota32s3-garage-portail-jardin-modbus
+          - tasmota32-base
+          - tasmota32s3-base-N16R8-sans-ecran
+          - tasmota32-jardin-projecteur-led
+          - tasmota32s3-cave-serveur-rly
+          - tasmota32s3-cave-ecran
+          - tasmota32s3-rdc-grenier
+          - tasmota32s3-bureau-serveur-debits-pac
+          - tasmota32s3-bureau-ecran-debits-pac
+          - tasmota-base-1M
+          - tasmota-jardin-pompe-piscine
+          - tasmota-cave-lumiere-porte
+          - tasmota-rdc-tv-salon
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
