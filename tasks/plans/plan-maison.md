@@ -72,7 +72,7 @@ Décisions de conception (mes choix, à corriger) :
 
 ## A9 — Couche chauffage et débits
 - [x] Vue chauffage : PAC (cave), nourrice (bureau), eau chaude PAC -> nourrice, départs vers les pièces chauffées (RDC, 1er hors bureau, chambres du 2e) — preuve : capture Chrome 2026-11-15, sonde « vue chauffage : PAC et nourrice, traits d'eau », données dans placement.json > chauffage (réponses de l'utilisateur)
-- [ ] Affecter Débit 1 à 6 à leur pièce (7 pièces candidates pour 6 départs, ordre inconnu) ; aujourd'hui traits en pointillé
+- [x] Affecter Débit 1 à 6 à leur pièce — preuve : placement.json > chauffage.departs (liste de l'utilisateur du 2026-11-15), ronds numérotés relus en capture Chrome, banc test_plan_maison.py (2 cas chauffage)  ; D3 corrigé en salle de bain par l'utilisateur le 2026-11-15
 - [ ] Afficher les valeurs en direct des 6 débits (lecture de la carte des débits, à la demande comme « Tester les cartes »)
 
 ## Améliorations restantes
@@ -81,7 +81,7 @@ Décisions de conception (mes choix, à corriger) :
 - [ ] [projet] Lier la page aux façades animées (`volets.js`) : clic sur une pièce -> sa page d'accueil
 - [ ] [conversation] Confirmer les placements incertains de A1 (position de la cave)
 - [ ] [projet] Corriger les rattachements Wi-Fi : appareil réel de MAISON pour chaque carte (défaut Freebox Server, faux pour certaines), répéteur du salon sans SSID identifié (`wifi_manuel`)
-- [ ] [projet] Vérifier l'en-tête fixe dans un navigateur avec la barre « Annuaire » (décalage de 32 px estimé)
+- [x] [projet] Vérifier l'en-tête fixe dans un navigateur avec la barre « Annuaire » — preuve : confirmé par l'utilisateur le 2026-11-15 (« le bandeau fonctionne »)
 - [ ] [projet] Pousser les commits du plan de la maison (agent `preparateur-push` d'abord)
 - [ ] [projet] Lier le plan aux pages des cartes : clic sur une pièce ou une carte -> sa façade animée (`volets.js`) ou sa page d'accueil
 - [ ] [projet] Plan à l'échelle des pièces, si l'utilisateur fournit les dimensions ou un plan

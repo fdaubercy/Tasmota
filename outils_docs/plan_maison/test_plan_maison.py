@@ -2,6 +2,7 @@
 Usage : python outils_docs/plan_maison/test_plan_maison.py"""
 import contextlib
 import io
+import json
 import re
 import subprocess
 import sys
@@ -98,6 +99,10 @@ verifie("les titres d etage en gras", all(f'class="titreetage"' in page and t in
 verifie("liens du plan = traits annonces", len(re.findall(r'<g class="lien (?:serie|udp)', page.split('<svg class="reseau"')[0])) == n_liens)
 verifie("pas de mot de passe dans la page", not re.search(r"mdp|password|passwd", page, re.I))
 verifie("fiches : echappement de </", "</script" not in page.split("const F=")[1].split(",$=")[0])
+
+pl = json.loads((ICI / "placement.json").read_text(encoding="utf-8"))["chauffage"]["departs"]
+verifie("chauffage : six debits numerotes 1 a 6", sorted(d["debit"] for d in pl) == [1, 2, 3, 4, 5, 6])
+verifie("chauffage : un rond numerote par depart et par piece", page.count('class="dn"') == sum(len(d["pieces"]) for d in pl))
 
 print("\n%d echec(s)" % len(ECHECS))
 sys.exit(1 if ECHECS else 0)

@@ -310,14 +310,45 @@
   },
   "acquisition": "bureau/tasmota32s3-serveur-debits-pac",
   "departs": [
-   "salon",
-   "sam",
-   "cuisine",
-   "parentale",
-   "sdb",
-   "camille",
-   "axelgael"
+   {
+    "debit": 1,
+    "pieces": [
+     "cuisine",
+     "wc"
+    ]
+   },
+   {
+    "debit": 2,
+    "pieces": [
+     "salon",
+     "sam"
+    ]
+   },
+   {
+    "debit": 3,
+    "pieces": [
+     "sdb"
+    ]
+   },
+   {
+    "debit": 4,
+    "pieces": [
+     "parentale"
+    ]
+   },
+   {
+    "debit": 5,
+    "pieces": [
+     "camille"
+    ]
+   },
+   {
+    "debit": 6,
+    "pieces": [
+     "axelgael"
+    ]
+   }
   ],
-  "note": "Six départs répartis sur ces pièces (réponses du 2026-11-15 : RDC, 1er étage hors bureau, chambres du 2e). L'affectation Débit 1 à 6 -> pièce n'est pas connue : traits en pointillé."
+  "note": "Affectation des 6 débits donnée par l'utilisateur le 2026-11-15 : D1 cuisine + WC, D2 salon + salle à manger, D3 salle de bain (corrigé), D4 chambre parentale, D5 Camille, D6 Axel & Gaël."
  }
 }

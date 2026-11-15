@@ -346,10 +346,15 @@ def construit():
             jch[k] = (niv["x"] + pc["x"] + pc["w"] - (254 if e["piece"] in ("bureau", "cave") else 128), niv["y"] + 4, e)
         (px, py, _), (nx, ny, _) = jch["ch:pac"], jch["ch:nourrice"]
         out_ch.append(f'<g class="lien chl" data-de="ch:pac" data-vers="ch:nourrice"><path class="hyd" d="M{px + 59},{py + 10} L{nx + 59},{ny + 10}"/></g>')
-        for pid in ch.get("departs", []):
-            niv, pc = pieces[pid]
-            out_ch.append(f'<g class="lien chl" data-de="ch:nourrice" data-vers="{pid}"><path class="dep" d="M{nx + 59},{ny + 10} L{niv["x"] + pc["x"] + pc["w"] / 2:.0f},{niv["y"] + 12}"/>'
-                          f'<circle cx="{niv["x"] + pc["x"] + pc["w"] / 2:.0f}" cy="{niv["y"] + 12}" r="5"/></g>')
+        vus = {}
+        for dep in ch.get("departs", []):
+            for pid in dep["pieces"]:
+                niv, pc = pieces[pid]
+                k = vus.get(pid, 0)
+                vus[pid] = k + 1
+                ex, ey = niv["x"] + pc["x"] + pc["w"] / 2 + k * 30 - 15 * (vus[pid] > 1), niv["y"] + 12
+                out_ch.append(f'<g class="lien chl" data-de="ch:nourrice" data-vers="{pid}"><path class="dep" d="M{nx + 59},{ny + 10} L{ex:.0f},{ey}"/>'
+                              f'<circle cx="{ex:.0f}" cy="{ey}" r="9"/><text class="dn" x="{ex:.0f}" y="{ey + 3.5}" text-anchor="middle">{dep["debit"]}</text></g>')
         for k, (x, y, e) in jch.items():
             out_c.append(f'<g class="carte chn" data-id="{k}" tabindex="0"><rect x="{x}" y="{y}" width="118" height="20" rx="4"/>'
                          f'<text class="t2" x="{x + 59}" y="{y + 14}" text-anchor="middle" style="fill:var(--txt);font-weight:600">{html.escape("🔥 " + e["nom"])}</text></g>')
@@ -385,7 +390,7 @@ def construit():
         acq = conf["cartes"].get(ch.get("acquisition", ""), {}).get("libelle", "")
         fiches[k] = {"libelle": e["nom"], "dossier": "-", "puce": "Chauffage", "piece": pieces[e["piece"]][1]["nom"], "hote": "", "topic": "", "ip": "-",
                      "url": "", "role": "chauffage central", "mqtt": "-", "note": ch.get("note", "") + (f" Débits mesurés par : {acq}." if k == "ch:nourrice" and acq else ""),
-                     "liens": (["Alimente : " + ", ".join(pieces[q][1]["nom"] for q in ch.get("departs", []))] if k == "ch:nourrice" else ["Eau chaude vers la nourrice"])}
+                     "liens": (["Débit " + str(d["debit"]) + " : " + ", ".join(pieces[q][1]["nom"] for q in d["pieces"]) for d in ch.get("departs", [])] if k == "ch:nourrice" else ["Eau chaude vers la nourrice"])}
     leg_puces = "".join(f'<span><i class="carre" style="background:{c}"></i>{n}</span>' for n, c in PUCE_COUL.items())
     legende = (LEGENDE.replace("@SERIE@", COUL_SERIE).replace("@UDP@", COUL_UDP).replace("@MQTT@", COUL_MQTT)
                .replace("@PUCES@", leg_puces))
@@ -412,7 +417,7 @@ LEGENDE = """<div class="legende">
 <label class="seul-wifi"><input type="checkbox" data-type="wsec"><svg width="46" height="12"><path d="M2,6 L36,6" stroke="#7048e8" stroke-width="2.2" stroke-dasharray="7 5" opacity=".6"/></svg>pointillé = réseau de secours (masqué par défaut)</label>
 <label class="seul-wifi"><input type="checkbox" checked data-type="wre"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#d6336c" stroke-width="6"/><path d="M2,6 L44,6" stroke="var(--carte)" stroke-width="2.2"/></svg>Range Extender du maître</label>
 <span class="seul-chauffage"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#1098ad" stroke-width="5"/></svg>eau chaude PAC vers la nourrice</span>
-<span class="seul-chauffage"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#1098ad" stroke-width="2" stroke-dasharray="6 5"/></svg>départs vers les pièces chauffées (affectation Débit 1 à 6 à préciser)</span>
+<span class="seul-chauffage"><svg width="46" height="12"><path d="M2,6 L44,6" stroke="#1098ad" stroke-width="2"/></svg>départs vers les pièces chauffées (rond numéroté = Débit n)</span>
 <span class="puces l-comm">@PUCES@</span></div>"""
 
 MODELE = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -436,7 +441,7 @@ aside{flex:0 1 280px;background:var(--carte);border:1px solid var(--trait);borde
 .carte:hover rect:first-child,.carte:focus rect:first-child,.carte.sel rect:first-child{stroke:var(--accent);stroke-width:2.8}.carte.autonome{opacity:.8}.carte.apn rect{stroke-width:2;fill:var(--carte)}
 .wl path{fill:none}.wl .rail{stroke:#d6336c;stroke-width:6;stroke-linejoin:round}.wl .ame{stroke:var(--carte);stroke-width:2.2;stroke-linejoin:round}
 body:not(.v-wifi) .wl,body:not(.v-wifi) .apn,body:not(.v-wifi) .seul-wifi,body:not(.v-chauffage) .chl,body:not(.v-chauffage) .chn,body:not(.v-chauffage) .seul-chauffage{display:none}
-.chl path{fill:none}.chl .hyd{stroke:#1098ad;stroke-width:5}.chl .dep{stroke:#1098ad;stroke-width:2;stroke-dasharray:6 5}.chl circle{fill:#1098ad}.carte.chn rect{stroke:#1098ad;stroke-width:2;fill:var(--carte)}
+.chl path{fill:none}.chl .hyd{stroke:#1098ad;stroke-width:5}.chl .dep{stroke:#1098ad;stroke-width:2}.chl .dn{fill:#fff;font-size:10px;font-weight:700;pointer-events:none}.chl circle{fill:#1098ad}.carte.chn rect{stroke:#1098ad;stroke-width:2;fill:var(--carte)}
 .lbl{fill:var(--txt);font-size:10px;font-weight:700;paint-order:stroke;stroke:var(--piece);stroke-width:3px;pointer-events:none}.carte .re{fill:var(--doux);font-size:9.5px;pointer-events:none}
 body.v-wifi .lien.serie,body.v-wifi .lien.udp,body.v-wifi svg.reseau,body.v-wifi .l-comm,body.v-wifi .seul-reseau,body.v-chauffage .lien.serie,body.v-chauffage .lien.udp,body.v-chauffage svg.reseau,body.v-chauffage .l-comm,body.v-chauffage .seul-reseau{display:none}
 body.v-plan svg.reseau,body.v-reseau svg.plan{display:none}
