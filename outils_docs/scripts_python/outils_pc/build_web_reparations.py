@@ -32,7 +32,7 @@ def liste(dossier, serie):
         return {"regles": [], "avertissements": [rep.filtre_secrets(str(erreur))], "historique": serie.reparations()}
     sortie = [{**{k: v for k, v in asdict(r).items() if k != "_re"}, "origine": "base" if r.id in base else "locale",
                "supprimable": r.id not in base} for r in regles]
-    return {"regles": sortie, "avertissements": avert, "historique": serie.reparations()}
+    return {"regles": sortie, "avertissements": [rep.filtre_secrets(str(a)) for a in avert], "historique": serie.reparations()}
 
 
 def ia(chemin, demande, serie, racine, journal_de, diagnostique=build_reparations_ia.diagnostique):
@@ -52,12 +52,12 @@ def ia(chemin, demande, serie, racine, journal_de, diagnostique=build_reparation
 
 
 def supprime(dossier, id_):
-    regles, base, _, local = _regles(dossier)
-    if id_ in base:
-        raise RuntimeError("une règle de base ne se supprime pas (outils_docs/schemas/reparations_build.json)")
-    if id_ not in {r.id for r in regles}:
-        raise ValueError(f"règle inconnue : {id_!r}")
     with rep.VERROU_CATALOGUE:
+        regles, base, _, local = _regles(dossier)
+        if id_ in base:
+            raise RuntimeError("une règle de base ne se supprime pas (outils_docs/schemas/reparations_build.json)")
+        if id_ not in {r.id for r in regles}:
+            raise ValueError(f"règle inconnue : {id_!r}")
         donnees = rep._lit(local, False)
         donnees["regles"] = [d for d in donnees.get("regles", []) if not (isinstance(d, dict) and d.get("id") == id_)]
         provisoire = local.with_suffix(".tmp")
