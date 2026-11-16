@@ -37,7 +37,7 @@ from datetime import datetime
 from pathlib import Path
 
 PORT_DEFAUT = 7700
-DELAI_MAX = 24 * 3600           # tous les envs (~25 h) : au dela, le script rend la main (le build continue dans la page)
+DELAI_MAX = 48 * 3600           # tous les envs (25 envs, plus d'1 h chacun avec le FS) : au dela, le script rend la main (le build continue dans la page)
 CONSERVE_JOURS = 30
 CONFIG_DEFAUT = {"actif": True, "envs_exclus": [], "port": PORT_DEFAUT}
 RACINE = Path(__file__).resolve().parents[3]
@@ -256,6 +256,7 @@ def execute(config, dossier, dry_run=False, maintenant=None, pause=10):
         return termine(1, fin="arrete par Ctrl+C")
     resultat["envs"] = [{"env": e["env"], "resultat": e.get("resultat"), "secondes": e.get("secondes")}
                         for e in lus if e.get("type") == "fin_env"]
+    resultat["actions_vues"] = sorted({a for e in lus if e.get("type") == "debut" and e.get("env") for a in e.get("actions") or []})   # preuve que la page a bien lance compiler et buildfs
     fin = next((e for e in lus if e.get("type") == "fin"), {})
     resultat["fin"] = fin.get("resultat") or "inconnue"
     reussis = [e for e in resultat["envs"] if e["resultat"] == "succes"]

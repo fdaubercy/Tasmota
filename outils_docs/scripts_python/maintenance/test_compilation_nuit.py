@@ -55,6 +55,7 @@ class Faux:
                     base = len(outer.ancienne)
                     evts = outer.ancienne + [{"n": base + i + 1, "type": "fin_env", "env": e, "resultat": r, "secondes": 1.5}
                                               for i, (e, r) in enumerate(outer.resultats.items())]
+                    evts.append({"n": base + 90, "type": "debut", "env": "a", "actions": ["compiler", "buildfs"]})   # debut d'un env (la page en emet un par env)
                     evts.append({"n": base + 99, "type": "fin", "env": None, "resultat": "termine"})
                     depuis = int(self.path.split("depuis=")[1]) if "depuis=" in self.path else 0
                     corps = "".join(f"id: {e['n']}\ndata: {json.dumps(e)}\n\n" for e in evts if e["n"] > depuis)
@@ -108,6 +109,7 @@ verifie("nominal : 3 envs ecrivables, pas l'amont", [l["env"] for l in f.lance["
 verifie("nominal : actions compiler et buildfs, aucun televersement", f.lance["actions"] == ["compiler", "buildfs"])
 verifie("nominal : case fiches QR cochee", f.lance.get("publier_fiches") is True)
 verifie("nominal : case reparation par l'IA cochee", f.lance.get("ia_auto") is True)
+verifie("nominal : actions reellement lancees par la page relevees dans le bilan", res.get("actions_vues") == ["buildfs", "compiler"])
 verifie("nominal : resultat par env lu", [e["resultat"] for e in res["envs"]] == ["succes"] * 3)
 verifie("nominal : dernier.json ecrit", json.loads((d / "dernier.json").read_text(encoding="utf-8"))["code"] == 0)
 f.ferme()
