@@ -8,9 +8,13 @@ UTILISATION
 CE QUE FAIT LE SCRIPT
     1. lit `config.json` (dossier de donnees) : {"actif": true, "envs_exclus": [], "port": 7700} ;
     2. verifie que la page repond, sinon la demarre detachee (comme build/cible_build_web.py) ;
-    3. POST /lancer {actions: ["compiler"]} pour chaque env ecrivable du cenv (hors exclus). La page refuse
+    3. POST /lancer {actions: ["compiler", "buildfs"], publier_fiches: true, ia_auto: true} pour chaque env ecrivable
+       du cenv (hors exclus) : cases « Compiler », « Construire le FS », « Publier les fiches QR » et « Relancer apres
+       reparation par l'IA » cochees (rien n'est televerse). La page refuse
        (409) si un build tourne deja : le script n'attend pas, il note le refus et sort (code 2) ;
     4. attend la fin (GET /execution), relit les evenements `fin_env` (GET /flux) ;
+       La page n'est JAMAIS arretee par le script (demarree detachee, elle lui survit) : le matin, elle montre
+       encore la serie de la nuit.
     5. ecrit `resultat-AAAAMMJJ-HHMMSS.json` et `dernier.json` (ecriture atomique), purge au-dela de 30 jours.
 
 ARRETER UNE COMPILATION EN COURS
@@ -33,7 +37,7 @@ from datetime import datetime
 from pathlib import Path
 
 PORT_DEFAUT = 7700
-DELAI_MAX = 6 * 3600            # une nuit : au dela, le script rend la main (le build continue dans la page)
+DELAI_MAX = 24 * 3600           # tous les envs (~25 h) : au dela, le script rend la main (le build continue dans la page)
 CONSERVE_JOURS = 30
 CONFIG_DEFAUT = {"actif": True, "envs_exclus": [], "port": PORT_DEFAUT}
 RACINE = Path(__file__).resolve().parents[3]
@@ -228,7 +232,8 @@ def execute(config, dossier, dry_run=False, maintenant=None, pause=10):
     depuis = int(etat.get("numero") or 0)
     try:
         code, reponse = appel(port, "/lancer", {"lignes": [{"env": e, "methode": "ota", "port": "", "ip": ""} for e in choisis],
-                                                "actions": ["compiler"]})
+                                                "actions": ["compiler", "buildfs"],
+                                                "publier_fiches": True, "ia_auto": True})   # cases « construire le FS », « fiches QR » et « reparation par l'IA » cochees
         if code != 200:
             return termine(2, refus=f"lancement refuse (code {code}) : {reponse}")
         debut, echecs_reseau = time.monotonic(), 0
