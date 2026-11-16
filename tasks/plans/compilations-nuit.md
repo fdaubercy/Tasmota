@@ -4,7 +4,7 @@ titre: Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de
 objectif: Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire
 statut: clos
 cree: 2026-11-15
-maj: 2026-11-15
+maj: 2026-11-16
 famille: build
 liens: build-reparations, build-fin-partitions, menage-page
 ---
@@ -31,6 +31,7 @@ Port retenu : 7920 (libre dans `annuaire_registre.py`).
 
 ## A2 — Voie PC (tâche Windows qui pilote la page Build)
 - [x] Script `maintenance/compilation_nuit.py` : refuse si un build tourne (garde existante), démarre la page Build si absente, `POST /lancer` (compiler seulement, sans port), attend la fin, écrit un résumé JSON par env — preuve : banc 15/15, 2 mutants rouges, `--dry-run` réel sur :7700 = 25 envs écrivables ; démarrage détaché de la page NON essayé (page déjà lancée)
+- [x] Cases de la page Build cochées par le script (demande du 2026-11-16) : `actions` compiler + buildfs, `publier_fiches`, `ia_auto` ; attente portée à 24 h ; la page n'est jamais arrêtée par le script — preuve : commit 92c43a4b8, `test_compilation_nuit.py` 26 OK ; non essayé sur la vraie page (faux serveur)
 - [x] Journal et résultat dans `%LOCALAPPDATA%\outils_tasmota\compilations_nuit\` (30 jours) — preuve : `resultat-*.json` + `dernier.json` atomiques, purge à 30 jours (compilation_nuit.py::execute, banc « dernier.json écrit »)
 - [x] Enregistrement de la tâche planifiée Windows (`schtasks`, sans droits administrateur) — preuve : `compilation_nuit_tache.py` (créer, état, activer, désactiver, supprimer), banc 14 vérifications + mutant ; tâche réelle `Tasmota-CompilationNuit` créée DÉSACTIVÉE à 02:00, état relu (existe, inactif, prochaine N/A) ; réveil du PC et rattrapage non réglés (valeurs par défaut de schtasks)
 - [x] Banc `test_compilation_nuit.py` (faux serveur de build : refus pendant un build, échec d'un env, reprise) — preuve : exit 0, 15 vérifications (nominal, échec, exclusion, refus 409, désactivé, dry-run, Ctrl+C, config)
@@ -60,7 +61,16 @@ Port retenu : 7920 (libre dans `annuaire_registre.py`).
 - [x] Carte des documents de `CLAUDE.md`, mode d'emploi dans `outils_docs/README.md`, vérification `verifie_references_docs.py` — preuve : commit des docs, `verifie_references_docs.py` = 30 documents, 0 défaut ; aucun caractère de contrôle dans les 3 fichiers
 - [x] Essai réel d'une nuit complète sur chaque voie, résultat relu le matin — preuve : PARTIELLE, cochée à la demande de l'utilisateur le 2026-11-15 ; run manuel 43711767872 (matrice calculée par `choix`, 24 envs avec une exclusion), run 43708168486 (30/30 success) ; bouton « Écrire, commiter et pousser » essayé sur le vrai dépôt (commits 01dab2668, 018e950c2). RESTE À RELIRE : la première nuit planifiée sur GitHub (02:00 UTC) et le premier passage de la tâche PC (désactivée, à activer et lancer par l'utilisateur) ; aucun run `schedule` depuis le 2026-11-04
 
+## A6 — Première nuit sur le PC (2026-11-16) et ajustements
+- [x] Première passe de la tâche `Tasmota-CompilationNuit` (00:30) relue — preuve : 5 envs en SUCCESS d'environ 1 h chacun (tasmota32-base, s3-base-N16R8, s3-base-N16R8-sans-ecran, p4-base-wifi6, p4-base-devkit, journaux de `build/journaux/`), le 6e (p4r3-base-devkit) en cours à 06:10 ; la page Build (démarrée détachée par le script) montre la série entière et l'env en cours (constat de l'utilisateur)
+- [x] Fin du script à 0xC000013A (`-1073741510`, console fermée) expliquée — preuve : la page a survécu à la mort du script (pid de la page vivant, parent mort) ; l'utilisateur a confirmé avoir fermé la fenêtre console ; le verrou `en_cours.json` périmé est ignoré (`compilation_nuit.py::en_cours` → `pid_vivant`)
+- [x] Constat : la série des 25 envs dure plus d'un jour (environ 1 h par env) — preuve : événement `debut` du flux `/flux?depuis=0` (25 lignes), journaux à 1 h 02 à 1 h 17 par env ; décision de l'utilisateur : tous les envs chaque nuit, sans rotation ; la page refuse (409) la tâche suivante tant qu'une série tourne
+- [x] Le script coche les cases de la page Build (compiler + construire le FS, fiches QR, réparation par l'IA) et attend 24 h au plus — preuve : commit 92c43a4b8, `test_compilation_nuit.py` 26 OK ; non essayé sur la vraie page
+
 ## Améliorations restantes
+- [ ] [projet] Lancer la tâche `Tasmota-CompilationNuit` sans fenêtre console (masquée), pour qu'on ne puisse plus la fermer par erreur
+- [ ] [projet] Vérifier à la prochaine série réelle que les quatre cases agissent (premier événement `debut` du flux, fiches QR publiées, FS construit) ; elles n'étaient pas cochées sur la série du 2026-11-16
+- [ ] [projet] Bilan complet d'une série de plus de 24 h : attente du script portée à environ 36 h, ou bilan écrit par la page
 - [ ] [projet] Alerte Telegram si le plugin se connecte
 - [ ] [projet] Comparer la taille Flash/RAM d'une nuit à l'autre
 

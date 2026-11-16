@@ -134,9 +134,9 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 6 étapes, 1 amélioration | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 37 étapes, 1 amélioration | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 22 étapes, 2 améliorations | 2026-10-31 | 2026-10-31 |
+| [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | clos | ██████████ 100 % (29/29) | 5 améliorations | 2026-11-15 | 2026-11-16 |
 | [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) | Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic | clos | ██████████ 100 % (11/11) | 5 améliorations | 2026-11-15 | 2026-11-15 |
 | [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | clos | ██████████ 100 % (26/26) | 3 améliorations | 2026-11-14 | 2026-11-15 |
-| [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | clos | ██████████ 100 % (24/24) | 2 améliorations | 2026-11-15 | 2026-11-15 |
 | [Tuile « Sondes en cours » de l'annuaire : bancs et sondes Chrome de ce PC avec leur avancement réel](plans/sondes-en-cours.md) | Voir en un coup d'œil quelles sondes et quels bancs tournent sur ce PC, où ils en sont (vérifications faites, dernier cas, échecs en direct) et arrêter un Chrome de sonde orphelin | clos | ██████████ 100 % (20/20) | — | 2026-11-15 | 2026-11-15 |
 | [Classement des cartes par lieu dans les pages des outils PC](plans/classement-par-lieu.md) | Retrouver les cartes par emplacement dans la maison sur la page Build (bascule Famille/Lieu/Puce, intertitres de l'onglet Fichiers) et dans les listes de carte des autres pages | clos | ██████████ 100 % (21/21) | — | 2026-11-10 | 2026-11-11 |
 | [Lieu partagé depuis l'annuaire, lieu dans le syslog et le sniffeur MQTT](plans/lieu-partage-syslog-mqtt.md) | Choisir un lieu une fois dans l'annuaire et le retrouver dans les pages ouvertes, et ranger par lieu les lignes du syslog et les messages du sniffeur MQTT | clos | ██████████ 100 % (26/26) | — | 2026-11-11 | 2026-11-11 |
@@ -557,6 +557,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Vérifier si un 2e « maître » (id 0) perturbe la table discovery du P4
 - Amélioration [projet] : Réduire la partition FS (11,3 Mo) pour la cave si l'écriture de l'image gêne
 
+#### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 100 %
+
+- Amélioration [projet] : Lancer la tâche `Tasmota-CompilationNuit` sans fenêtre console (masquée), pour qu'on ne puisse plus la fermer par erreur
+- Amélioration [projet] : Vérifier à la prochaine série réelle que les quatre cases agissent (premier événement `debut` du flux, fiches QR publiées, FS construit) ; elles n'étaient pas cochées sur la série du 2026-11-16
+- Amélioration [projet] : Bilan complet d'une série de plus de 24 h : attente du script portée à environ 36 h, ou bilan écrit par la page
+- Amélioration [projet] : Alerte Telegram si le plugin se connecte
+- Amélioration [projet] : Comparer la taille Flash/RAM d'une nuit à l'autre
+
 #### [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) — 100 %
 
 - Amélioration [projet] : Écart avec le build précédent (variante C : champ `avant` à enregistrer par `build_memoire.enregistre`)
@@ -570,11 +578,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - Amélioration [projet] : Essai réel d'une relance qui réussit après un diagnostic de l'IA, sur une vraie panne (la case était cochée le 2026-11-15, le diagnostic s'est déclenché, la relance a échoué sur un autre défaut corrigé depuis : A6c ; la panne `uv` n'est pas revenue ensuite)
 - Amélioration [projet] : Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu)
 - Amélioration [projet] : Promouvoir une règle IA éprouvée dans `reparations_build.json` (commit de l'utilisateur) : à la main d'abord ; si une règle revient, bouton « Copier pour le dépôt » (JSON prêt à coller, règles `ia` seulement, aucune écriture dans le dépôt) ; pas de script de comptage. Mûre = plusieurs succès sur des journaux différents, motif précis, action de la liste fermée (décidé le 2026-11-15)
-
-#### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 100 %
-
-- Amélioration [projet] : Alerte Telegram si le plugin se connecte
-- Amélioration [projet] : Comparer la taille Flash/RAM d'une nuit à l'autre
 
 #### [Atelier des graphiques — destination « Graphiques » et bouton « Téléverser »](plans/atelier-destinations.md) — 96 %
 
