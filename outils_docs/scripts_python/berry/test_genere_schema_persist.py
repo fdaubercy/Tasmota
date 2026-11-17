@@ -1,4 +1,4 @@
-"""Banc de genere_schema_persist.py : cles posees par le code (CLES_DU_CODE), contrat relaisLie, grafana facultative.
+"""Banc de genere_schema_persist.py : cles posees par le code (CLES_DU_CODE), contrat relaisLie, grafana et decor facultatifs.
 
     python outils_docs/scripts_python/berry/test_genere_schema_persist.py      (code 0 = VERT)
 
@@ -65,6 +65,16 @@ porteur = next(p for p in g.liste_persists() if "grafana" in g.charge(p).get("di
 d = copy.deepcopy(g.charge(porteur))
 del d["diverses"]["historique"]["grafana"]
 verifie(d, True, "diverses.historique sans grafana : valide (" + g.nom_carte(porteur) + ")")
+
+# decor de la facade des volets facultatif (absent de 2 persists sur 5, vrPages.route accepte nil) : sans lui, reste valide
+def facade_decor(p):
+    f = g.charge(p).get("drivers", {}).get("voletRoulants", {}).get("facade")
+    return isinstance(f, dict) and "decor" in f
+
+porteur = next(p for p in g.liste_persists() if facade_decor(p))
+d = copy.deepcopy(g.charge(porteur))
+del d["drivers"]["voletRoulants"]["facade"]["decor"]
+verifie(d, True, "drivers.voletRoulants.facade sans decor : valide (" + g.nom_carte(porteur) + ")")
 
 print("BANC_SCHEMA_PERSIST : " + ("VERT" if not echecs else "ROUGE (%i echec(s))" % len(echecs)))
 sys.exit(1 if echecs else 0)

@@ -33,7 +33,8 @@ EXCEPTIONS A `required`
   - Enfants directs de `drivers`, `modules`, `environnement` : leur presence depend du
     materiel de la carte (Ethernet, ADS1115...), jamais requis (le rapport les marque
     « bloc materiel »). Leurs cles INTERNES, elles, suivent la regle.
-  - Blocs OPTIONNELS (constante OPTIONNELS, consultee AVANT SEUIL_REQUIS) : blocs qu'une
+  - Blocs ou cles OPTIONNELS (constante OPTIONNELS, consultee AVANT SEUIL_REQUIS ; ex. historique.grafana,
+    facade.decor) : blocs qu'une
     carte peut ne pas porter selon sa puce ou ses fonctions (historique et LED RGB absents des
     ESP32 sans PSRAM, coprocesseur et HostedESPC6 propres au P4...). Sans cette liste, la regle
     des 50 % les rendait obligatoires et --valide echouait sur le differentiel et la cave
@@ -103,7 +104,8 @@ BLOCS_MATERIEL = ("drivers", "modules", "environnement")   # enfants nommes par 
 # Blocs optionnels (chemins pointes depuis la racine) : jamais requis, quelle que soit leur frequence (voir l'en-tete)
 OPTIONNELS = ("diverses.historique", "drivers.leds.environnement.leds.ledRGB", "serveur.coprocesseur", "drivers.I2S",
               "drivers.Ethernet", "drivers.voletRoulants", "drivers.HostedESPC6",
-              "diverses.historique.grafana")   # bouton Grafana seulement si la cle existe (controleWeb.boutonGrafana)
+              "diverses.historique.grafana",   # bouton Grafana seulement si la cle existe (controleWeb.boutonGrafana)
+              "drivers.voletRoulants.facade.decor")   # decor de la facade facultatif : absent = pas de decor (vrPages.route lit f.find("decor"), nil si absente)
 
 NIVEAUX_MODULE = ["erreur", "info", "debug", "detail"]
 NIVEAUX_SORTIE = ["aucun", "erreur", "info", "debug", "detail"]

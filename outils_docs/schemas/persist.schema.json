@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Persist des cartes ESP32 (fork Tasmota)",
-  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 13 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
+  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 14 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
   "type": "object",
   "properties": {
     "diverses": {
@@ -1011,115 +1011,112 @@
               },
               "interrupteurs": {
                 "type": "object",
-                "patternProperties": {
-                  "^interrupteur\\d*$": {
-                    "type": "object",
-                    "properties": {
-                      "activation": {
-                        "type": "string",
-                        "description": "ON ou OFF : active ou non ce bloc.",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
-                      },
-                      "nom": {
-                        "type": "string"
-                      },
-                      "id": {
-                        "type": "integer",
-                        "description": "Identifiant ModBus / reseau de la carte."
-                      },
-                      "pin": {
-                        "type": "integer",
-                        "description": "Numero de GPIO (-1 = non affecte)."
-                      },
-                      "type": {
-                        "type": "integer"
-                      },
-                      "virtuel": {
-                        "type": "string"
-                      },
-                      "SwitchMode": {
-                        "type": "integer"
-                      },
-                      "etat": {
-                        "type": "string",
-                        "enum": [
-                          "ON",
-                          "OFF"
-                        ]
-                      },
-                      "relaisLie": {
-                        "type": "object",
-                        "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
-                        "properties": {
-                          "modules": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "ids": {
-                            "type": "array",
-                            "items": {
-                              "type": "integer"
-                            }
-                          },
-                          "type": {
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "nom": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer",
+                      "description": "Identifiant ModBus / reseau de la carte."
+                    },
+                    "pin": {
+                      "type": "integer",
+                      "description": "Numero de GPIO (-1 = non affecte)."
+                    },
+                    "type": {
+                      "type": "integer"
+                    },
+                    "virtuel": {
+                      "type": "string"
+                    },
+                    "SwitchMode": {
+                      "type": "integer"
+                    },
+                    "etat": {
+                      "type": "string",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "relaisLie": {
+                      "type": "object",
+                      "description": "Relais commandes par cet element (globalFonctions.be) : chaque id de `ids` recoit l'ordre `type` apres `delai` secondes. `type` et `delai` sont requis des que `ids` n'est pas vide.",
+                      "properties": {
+                        "modules": {
+                          "type": "array",
+                          "items": {
                             "type": "string"
-                          },
-                          "delai": {
+                          }
+                        },
+                        "ids": {
+                          "type": "array",
+                          "items": {
                             "type": "integer"
-                          },
-                          "desactiveCapteurs": {
-                            "type": "string",
-                            "enum": [
-                              "ON",
-                              "OFF"
-                            ],
-                            "description": "ON : marche manuelle, les capteurs actifs du module sont coupes tant que le relais est ON (globalFonctions.be, pompe vide-cave). Defaut OFF."
+                          }
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "delai": {
+                          "type": "integer"
+                        },
+                        "desactiveCapteurs": {
+                          "type": "string",
+                          "enum": [
+                            "ON",
+                            "OFF"
+                          ],
+                          "description": "ON : marche manuelle, les capteurs actifs du module sont coupes tant que le relais est ON (globalFonctions.be, pompe vide-cave). Defaut OFF."
+                        }
+                      },
+                      "required": [
+                        "ids"
+                      ],
+                      "if": {
+                        "properties": {
+                          "ids": {
+                            "minItems": 1
                           }
                         },
                         "required": [
                           "ids"
-                        ],
-                        "if": {
-                          "properties": {
-                            "ids": {
-                              "minItems": 1
-                            }
-                          },
-                          "required": [
-                            "ids"
-                          ]
-                        },
-                        "then": {
-                          "required": [
-                            "type",
-                            "delai"
-                          ]
-                        }
+                        ]
                       },
-                      "idModBus": {
-                        "type": "integer"
+                      "then": {
+                        "required": [
+                          "type",
+                          "delai"
+                        ]
                       }
                     },
-                    "required": [
-                      "activation",
-                      "nom",
-                      "id",
-                      "pin",
-                      "type",
-                      "virtuel",
-                      "SwitchMode",
-                      "etat",
-                      "relaisLie"
-                    ],
-                    "additionalProperties": true
-                  }
-                },
-                "additionalProperties": true
+                    "idModBus": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "activation",
+                    "nom",
+                    "id",
+                    "pin",
+                    "type",
+                    "virtuel",
+                    "SwitchMode",
+                    "etat",
+                    "relaisLie"
+                  ],
+                  "additionalProperties": true
+                }
               },
               "relais": {
                 "type": "object",
@@ -1256,6 +1253,15 @@
                     },
                     "appuiLong": {
                       "type": "integer"
+                    },
+                    "mqtt": {
+                      "type": "object",
+                      "properties": {
+                        "commande": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": true
                     }
                   },
                   "required": [
@@ -1466,6 +1472,18 @@
                     },
                     "idModBus": {
                       "type": "integer"
+                    },
+                    "mqtt": {
+                      "type": "object",
+                      "properties": {
+                        "chemin": {
+                          "type": "string"
+                        },
+                        "declencheur": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": true
                     }
                   },
                   "required": [
@@ -1919,6 +1937,9 @@
             },
             "additionalProperties": true
           },
+          "page": {
+            "type": "integer"
+          },
           "fenetre": {
             "type": "integer"
           },
@@ -2042,6 +2063,29 @@
                 "type": "integer"
               },
               "largeur": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": true
+          },
+          "facade": {
+            "type": "object",
+            "properties": {
+              "activation": {
+                "type": "string",
+                "description": "ON ou OFF : active ou non ce bloc.",
+                "enum": [
+                  "ON",
+                  "OFF"
+                ]
+              },
+              "decor": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "capteur": {
                 "type": "integer"
               }
             },
@@ -3037,43 +3081,40 @@
                   "required": [
                     "log"
                   ],
-                  "patternProperties": {
-                    "^TasmotaSlaveModBus\\d*$": {
-                      "type": "object",
-                      "properties": {
-                        "activation": {
-                          "type": "string",
-                          "description": "ON ou OFF : active ou non ce bloc.",
-                          "enum": [
-                            "ON",
-                            "OFF"
-                          ]
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Nom d'affichage du bloc."
-                        },
-                        "id": {
-                          "type": "integer",
-                          "description": "Identifiant ModBus / reseau de la carte."
-                        },
-                        "lectureGroupee": {
-                          "type": "string",
-                          "enum": [
-                            "ON",
-                            "OFF"
-                          ]
-                        }
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "activation": {
+                        "type": "string",
+                        "description": "ON ou OFF : active ou non ce bloc.",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
                       },
-                      "required": [
-                        "activation",
-                        "name",
-                        "id"
-                      ],
-                      "additionalProperties": true
-                    }
-                  },
-                  "additionalProperties": true
+                      "name": {
+                        "type": "string",
+                        "description": "Nom d'affichage du bloc."
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Identifiant ModBus / reseau de la carte."
+                      },
+                      "lectureGroupee": {
+                        "type": "string",
+                        "enum": [
+                          "ON",
+                          "OFF"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "activation",
+                      "name",
+                      "id"
+                    ],
+                    "additionalProperties": true
+                  }
                 }
               },
               "additionalProperties": true
@@ -3704,6 +3745,25 @@
                           },
                           "place": {
                             "type": "integer"
+                          },
+                          "finsDeCourse": {
+                            "type": "object",
+                            "properties": {
+                              "module": {
+                                "type": "string"
+                              },
+                              "ouverture": {
+                                "type": "integer"
+                              },
+                              "fermeture": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "module",
+                              "fermeture"
+                            ],
+                            "additionalProperties": true
                           }
                         },
                         "required": [
@@ -3713,6 +3773,9 @@
                         "additionalProperties": true
                       },
                       "inverse": {
+                        "type": "integer"
+                      },
+                      "impulsion": {
                         "type": "integer"
                       }
                     },
@@ -3750,6 +3813,42 @@
                 },
                 "toit": {
                   "type": "string"
+                },
+                "decor": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "camera": {
+                  "type": "object",
+                  "properties": {
+                    "module": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer",
+                      "description": "Identifiant ModBus / reseau de la carte."
+                    }
+                  },
+                  "required": [
+                    "module",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                },
+                "lampe": {
+                  "type": "object",
+                  "properties": {
+                    "module": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "integer",
+                      "description": "Identifiant ModBus / reseau de la carte."
+                    }
+                  },
+                  "additionalProperties": true
                 }
               },
               "required": [
@@ -3766,6 +3865,119 @@
             "log",
             "environnement"
           ],
+          "additionalProperties": true
+        },
+        "liaisonMqtt": {
+          "type": "object",
+          "properties": {
+            "activation": {
+              "type": "string",
+              "description": "ON ou OFF : active ou non ce bloc.",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "environnement": {
+              "type": "object",
+              "description": "Peripheriques et broches du bloc (cles variables selon la carte).",
+              "additionalProperties": true
+            },
+            "log": {
+              "type": "string",
+              "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
+              "enum": [
+                "erreur",
+                "info",
+                "debug",
+                "detail"
+              ]
+            },
+            "garde": {
+              "type": "object",
+              "properties": {
+                "fenetreMs": {
+                  "type": "integer"
+                },
+                "maxParElement": {
+                  "type": "integer"
+                },
+                "maxTotal": {
+                  "type": "integer"
+                },
+                "quarantaineMs": {
+                  "type": "integer"
+                },
+                "coupureMs": {
+                  "type": "integer"
+                },
+                "delaiAccuseMs": {
+                  "type": "integer"
+                },
+                "essaisMax": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            },
+            "esclaves": {
+              "type": "object",
+              "properties": {
+                "projecteur": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "topic": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "pompe": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "topic": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "cuve": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "topic": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            }
+          },
           "additionalProperties": true
         },
         "HostedESPC6": {
@@ -3836,6 +4048,12 @@
         }
       },
       "additionalProperties": true
+    },
+    "_incertain": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
