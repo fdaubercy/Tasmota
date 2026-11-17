@@ -40,6 +40,7 @@
 - [Aide/MODBUS.md](Aide/MODBUS.md) — **mode d'emploi** : commandes d'exemple (carte 16 relais, esclaves Tasmota), trames détaillées par code de fonction, activation dans Tasmota.
 - [ANALYSE_BERRY_MODBUS_DISCOVERY.md](ANALYSE_BERRY_MODBUS_DISCOVERY.md) — programmes ModBus Berry et table `/json/discovery.json`.
 - [AUDIT_MODBUS_2026-09-29.md](AUDIT_MODBUS_2026-09-29.md) — audit ModBus du garage (défauts, améliorations par priorité).
+- [ANALYSE_VOIE_MQTT_2026-11-16.md](ANALYSE_VOIE_MQTT_2026-11-16.md) — **analyse, rien codé** : une voie MQTT maître/esclaves à côté de ModBus série et UDP (deux architectures, éléments virtuels `MQTT_<nom>`, garde-fous anti-boucle, persist, coût CPU/RAM, esclaves non ESP32, tableaux par puce, questions ouvertes).
 
 ### Configuration des cartes et électronique
 - [schemas/persist.schema.json](schemas/persist.schema.json) *(généré)* — schéma des `_persist.json` (autocomplétion et contrôle dans VS Code).
