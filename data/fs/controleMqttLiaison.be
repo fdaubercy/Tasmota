@@ -149,11 +149,12 @@ class CONTROLE_MQTT_LIAISON : Driver
                     var v = d.find("virtuel", "OFF")
                     var mq = d.find("mqtt")
                     var chemin = isinstance(mq, map) ? mq.find("chemin") : nil
+                    var decl = isinstance(mq, map) ? mq.find("declencheur") : nil
                     if type(v) != "string" || string.find(v, "MQTT_") != 0 || type(chemin) != "string"    continue    end
                     var nom = v[5 ..]
                     if !self.esclaves.contains(nom)    continue    end
                     if !self.liens.contains(nom)    self.liens[nom] = []    end
-                    self.liens[nom].push([m, fam, cle, chemin])
+                    self.liens[nom].push([m, fam, cle, chemin, type(decl) == "string" ? decl : string.replace(chemin, ".", "#")])
                 end
             end
         end
@@ -180,7 +181,7 @@ class CONTROLE_MQTT_LIAISON : Driver
             if v == nil || type(v) == "instance"    continue    end
             try
                 import globalFonctions
-                globalFonctions.changementEtatCapteur(v, string.replace(e[3], ".", "#"), r, e[0], e[2])
+                globalFonctions.changementEtatCapteur(v, e[4], r, e[0], e[2])
             except .. as erreur, message
                 mqttLiaisonFonctions.log("LIAISON_MQTT_ERREUR: " + nom + "/" + e[3] + " : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
             end

@@ -751,7 +751,7 @@
 						}
 					},
 					"relai24": {
-						"activation": "ON",
+						"activation": "OFF",
 						"nom": "Projecteur LED jardin (essai voie MQTT)",
 						"afficheWeb": "ON",
 						"pin": -1,
@@ -849,6 +849,28 @@
 						"pin": -1,
 						"type": 4704,
 						"virtuel": "I2C_ADS1115",
+						"value": 0,
+						"limites": [],
+						"relaisLie": {
+							"modules": [],
+							"ids": [],
+							"type": "ON/OFF"
+						},
+						"publishMQTT": {
+							"topic": []
+						}
+					},
+					"analogique5": {
+						"activation": "ON",
+						"nom": "Volume cuve (voie MQTT)",
+						"id": 5,
+						"pin": -1,
+						"type": 4704,
+						"virtuel": "MQTT_cuve",
+						"mqtt": {
+							"chemin": "sensorsCuve.niveauCuve.volume",
+							"declencheur": "ANALOG#A5"
+						},
 						"value": 0,
 						"limites": [],
 						"relaisLie": {

@@ -294,9 +294,11 @@ sf("tele/jardin/projecteur_led/SENSOR", 0, '[1,2]', nil)
 var erreurs1 = 0
 for j: JOURNAL    if j[1] == LOG_LEVEL_ERREUR && string.find(j[0], "mal formé") >= 0    erreurs1 += 1    end    end
 verifie(size(globalFonctions.appels) == 2 && erreurs1 == 2, "SENSOR : JSON mal forme ou non objet, rejete et loggue en erreur (" + str(erreurs1) + ")")
+mqtt.abonnes["tele/pompe/SENSOR"]("tele/pompe/SENSOR", 0, '{"sensors":{"niveau":{"volume":7}}}', nil)
+verifie(size(globalFonctions.appels) == 3 && globalFonctions.appels[2][0] == 7 && globalFonctions.appels[2][1] == "ANALOG#A2" && globalFonctions.appels[2][3] == "a2", "SENSOR : mqtt.declencheur impose le declencheur quand le chemin ne le porte pas")
 mqtt.abonnes["tele/pompe/SENSOR"]("tele/pompe/SENSOR", 0, '{"COUNTER":{"C1":3}}', nil)
 D.mesures("inactif", '{"COUNTER":{"C1":3}}')                      # appel direct : aucun abonnement n'existe pour un esclave inactif
-verifie(size(globalFonctions.appels) == 2, "SENSOR : element lie a un esclave inactif ou sans chemin, jamais alimente")
+verifie(size(globalFonctions.appels) == 3, "SENSOR : element lie a un esclave inactif ou sans chemin, jamais alimente")
 
 # --- 7 quater. boutons et interrupteurs de l'esclave (A6) : stat/<topic>/RESULT {"Button1":{"Action":...}}
 var rf = mqtt.abonnes["stat/jardin/projecteur_led/+"]
