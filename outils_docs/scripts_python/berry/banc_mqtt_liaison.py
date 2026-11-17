@@ -36,6 +36,8 @@ MUTANTS = [
     ("valeur non convertie en texte (demande)", "        valeur = str(valeur)                       # 1 et", "        # 1 et"),
     ("1er retour sans etat connu pris pour un evenement", "if !connu    return \"initial\"    end                         # 1er", "# 1er"),
     ("plafond de renvois par appel retire", "elif maxi != nil && size(renvoyer) >= maxi", "elif false"),
+    ("etat connu jamais perime (G3)", "&& t - self.etats_t.find(cle, t - self.age_etat - 1) <= self.age_etat", ""),
+    ("age de l'etat non rafraichi par le retour", "self.etats_t[cle] = t", "self.etats_t[cle] = 0"),
 ]
 MUTANTS_DRIVER = [
     ("ordre publie sans accord des garde-fous", "if code == \"envoyer\"", "if true"),

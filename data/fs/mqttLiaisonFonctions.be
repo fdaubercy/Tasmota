@@ -24,7 +24,10 @@ class GardeMqtt
     static COUPURE_MS = 300000           # duree du coupe-circuit global
     static DELAI_ACCUSE_MS = 3000        # mesure du 2026-11-17 : reponses jusqu'a 1,6 s en Wi-Fi direct
     static ESSAIS_MAX = 3                # emissions au total (la premiere comprise) avant d'abandonner un ordre
+    static AGE_ETAT_MS = 30000           # au-dela, un etat connu n'est plus cru : l'ordre « identique » repart (le retour le confirme)
+    var age_etat
     var fenetre, max_element, max_total, quarantaine_ms, coupure_ms, delai_accuse, essais_max
+    var etats_t
     var etats, emis, quarantaine, totaux, coupe_actif, coupe_jusqua, attente
 
     def init(cfg)
@@ -36,6 +39,8 @@ class GardeMqtt
         self.coupure_ms = self.entier(c, "coupureMs", self.COUPURE_MS)
         self.delai_accuse = self.entier(c, "delaiAccuseMs", self.DELAI_ACCUSE_MS)
         self.essais_max = self.entier(c, "essaisMax", self.ESSAIS_MAX)
+        self.age_etat = self.entier(c, "ageEtatMs", self.AGE_ETAT_MS)
+        self.etats_t = {}             # cle -> instant du dernier retour de l'esclave
         self.etats = {}               # cle -> derniere valeur connue de l'esclave
         self.emis = {}                # cle -> instants des ordres emis (fenetre)
         self.quarantaine = {}         # cle -> instant de fin de quarantaine
@@ -123,7 +128,7 @@ class GardeMqtt
         valeur = str(valeur)                       # 1 et "1" sont la meme valeur (un retour MQTT est toujours du texte)
         var a = self.attente.find(cle)
         if a != nil && a["valeur"] == valeur    return "attente"    end
-        if a == nil && self.etats.find(cle) == valeur    return "identique"    end
+        if a == nil && self.etats.find(cle) == valeur && t - self.etats_t.find(cle, t - self.age_etat - 1) <= self.age_etat    return "identique"    end
         var b = self.bloque(cle, t)
         if b != nil    return b    end
         self.note(cle, t)
@@ -137,6 +142,7 @@ class GardeMqtt
         var connu = self.etats.contains(cle)
         var ancien = self.etats.find(cle)
         self.etats[cle] = valeur
+        self.etats_t[cle] = t
         var a = self.attente.find(cle)
         if a != nil
             if valeur == a["valeur"]

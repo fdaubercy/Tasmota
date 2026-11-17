@@ -175,6 +175,18 @@ for i: 0 .. 199                                    # 200 retours en 20 s
 end
 verifie(ordres == G.MAX_ELEMENT, "maitre fautif : " + str(ordres) + " ordres sur 200 tentatives (borne : " + str(G.MAX_ELEMENT) + ")")
 
+# --- 6 bis. G3 : un etat connu trop ancien n'est plus cru (un retour perdu laisserait un ordre refuse a tort)
+var fa = G()
+fa.recoit("p/r1", "ON", 1000)
+verifie(fa.demande("p/r1", "ON", 1000 + G.AGE_ETAT_MS) == "identique", "G3 : etat connu recent, ordre identique refuse")
+var fb = G()
+fb.recoit("p/r1", "ON", 1000)
+verifie(fb.demande("p/r1", "ON", 1001 + G.AGE_ETAT_MS) == "envoyer", "G3 : etat connu trop ancien, l'ordre identique repart")
+verifie(fb.recoit("p/r1", "ON", 1100 + G.AGE_ETAT_MS) == "accuse" && fb.demande("p/r1", "ON", 1200 + G.AGE_ETAT_MS) == "identique", "G3 : le retour rafraichit l'etat, l'ordre redevient identique")
+var fc = G({"ageEtatMs": 2000})
+fc.recoit("p/r1", "ON", 1000)
+verifie(fc.demande("p/r1", "ON", 3500) == "envoyer", "G3 : age lu dans le persist (ageEtatMs)")
+
 # --- 7 bis. LE DRIVER (controleMqttLiaison) : abonnements, ordres, retours, renvois, commande
 import mqtt
 import json
