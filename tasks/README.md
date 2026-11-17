@@ -13,7 +13,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-60 plans : 30 actif, 1 en-pause, 29 clos.
+60 plans : 28 actif, 1 en-pause, 31 clos.
 
 ### Attendent un geste hors de Claude (plans actifs)
 
@@ -59,7 +59,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - [sur carte] [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) — A7 — Vrai firmware ESP32 classique (essai) : Choisir l'env ESP32 de l'essai ; QEMU via WSL2 ou `idf_tools.py`
 - [sur carte] [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Bancs des deux générateurs VERT avec l'objet ; essai sur l'écran des débits, scan au téléphone
 - [sur carte] [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) — A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
-- [à vous] [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15) : Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
 - [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A16 — Page « QR code » sur chaque carte à écran (demande de l'utilisateur du 2026-11-13) : Bancs (modèle, description valide, deux générateurs), sonde Chrome de l'aperçu ; essai sur chaque carte (avec A20) — bancs verts (debits, lvgl, systeme, demarrage, tests atelier, sonde Chrome) ; essai sur carte restant (A20)
 - [sur carte] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A17 — Barre de navigation construite d'après les pages (demande du 2026-11-13, planification laissée à Claude) : Essai sur la carte (avec A20) ; commit
 - [à vous] [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — A19 — Page « Système » sur chaque carte à écran (décision de l'utilisateur du 2026-11-13) : Écran de la cave : accord de la session qui tient `tasks/plans/ecran-cave-vues-commandes.md` avant d'écrire (page à ajouter
@@ -129,7 +128,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
-| [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | actif | ██████████ 100 % (15/15) | 1 amélioration | 2026-11-15 | 2026-11-17 |
 | [Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)](plans/voie-mqtt.md) | Commander des esclaves, lire leurs capteurs et être averti de leurs changements d'état par MQTT, à côté de ModBus série et UDP, avec garde-fous anti-boucle et repli | actif | █████░░░░░ 46 % (27/53) | 26 étapes, 2 améliorations | 2026-11-16 | 2026-11-17 |
 | [PR amont Range Extender, Ethernet comme liaison montante (discussion arendst/Tasmota#25280)](plans/rgx-ethernet-uplink.md) | Faire démarrer l'AP du Range Extender quand seul l'Ethernet a une IP, en un PR propre accepté par arendst | actif | ████░░░░░░ 41 % (11/29) | 18 étapes, 3 améliorations | 2026-11-16 | 2026-11-16 |
 | [Faire évoluer TasMesh en amont (commandes de nœud à nœud, charge utile, clés par pair)](plans/tasmesh-evolution-amont.md) | Sonder arendst/Tasmota par une discussion courte, puis proposer de petits PR isolés sur TasMesh si les mainteneurs y sont favorables | actif | ████░░░░░░ 35 % (7/20) | 13 étapes, 1 amélioration | 2026-11-16 | 2026-11-16 |
@@ -139,7 +137,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan de la maison, liens, rôles maître/esclave et vue réseau](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande | actif | █████████░ 94 % (36/38) | 2 étapes, 3 améliorations | 2026-11-15 | 2026-11-15 |
 | [Cartes simulées hors ligne, au choix pour tout env du parc (page dans l'annuaire)](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou de scénario), choisie sur une page de l'annuaire, avec l'IP de la carte sous garde | actif | ████████░░ 75 % (18/24) | 6 étapes, 3 améliorations | 2026-11-14 | 2026-11-14 |
 | [Étiquettes QR code des cartes (page 7970) : impression, page de la carte, écran](plans/etiquettes-qrcode.md) | Composer par env un QR code stylé qui affiche l identité de la carte (hostname, IP, clés du persist), l imprimer en étiquette ou en planche A4, l afficher sur une page de la carte et sur son écran, et signaler quand il est périmé | actif | █████████░ 90 % (51/56) | 5 étapes | 2026-11-12 | 2026-11-14 |
-| [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | actif | ██████████ 98 % (40/41) | 1 étape, 1 amélioration | 2026-11-14 | 2026-11-14 |
 | [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) | Modifier sur le PC la disposition d'un écran tactile de carte (objets, boutons, pages) et y épingler des remarques, puis générer de la même description le pages.jsonl de HASPmota et le code LVGL pur en Berry | actif | █████████░ 88 % (74/91) | 17 étapes, 1 amélioration | 2026-11-11 | 2026-11-13 (A19 : page Système construite par l'atelier, faite pour l'écran des débits ; actions renumérotées dans l'ordre du plan, livraison sur la carte en dernier : A20 ; A18 catalogue d'icônes et A19 page Système ajoutées ; A17 : bancs, description, page faits) |
 | [Mesure des 6 débits de la nourrice de chauffage, écran TFT et page web](plans/debitmetres-chauffage.md) | Mesurer et afficher les débits des 6 départs de radiateur avec un ESP32-S3 Tasmota, sans gêner l'écran | actif | ██████░░░░ 60 % (35/51) | 16 étapes, 4 améliorations | 2026-11-08 | 2026-11-13 |
 | [Écran 7B de la cave, vues, commandes par ModBus, affichage par MQTT, veille et pannes des flotteurs](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement des autres cartes | actif | █████████░ 87 % (34/41) | 7 étapes | 2026-11-12 | 2026-11-13 |
@@ -160,6 +157,8 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Plan d'action de l'audit Berry (propositions P2.1 à P10.7)](plans/actions-audit-berry.md) | Mettre en œuvre, lot par lot et sur décision de l'utilisateur, les 78 propositions de l'audit Berry | actif | █████████░ 91 % (89/95) | 6 étapes, 1 amélioration | 2026-10-22 | 2026-10-26 |
 | [Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | actif | ░░░░░░░░░░ 0 % (0/37) | 37 étapes, 1 amélioration | 2026-10-26 | 2026-10-26 |
 | [Suites de l'audit de l'env S3 du serveur relais de la cave](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit | en-pause | ░░░░░░░░░░ 0 % (0/22) | 22 étapes, 2 améliorations | 2026-10-31 | 2026-10-31 |
+| [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) | Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents. | clos | ██████████ 100 % (15/15) | 1 amélioration | 2026-11-15 | 2026-11-17 |
+| [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) | Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde | clos | ██████████ 98 % (40/41) | 1 étape, 1 amélioration | 2026-11-14 | 2026-11-17 |
 | [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) | Vérifier chaque nuit que tous les envs du fork compilent, sur GitHub et/ou sur ce PC, et piloter (activer, désactiver, paramétrer, lancer) ces tâches depuis une page de l'annuaire | clos | ██████████ 100 % (29/29) | 5 améliorations | 2026-11-15 | 2026-11-16 |
 | [Pastille d'occupation des partitions à la fin d'une compilation (page Build)](plans/build-fin-partitions.md) | Montrer dans la ligne de chaque env compilé « Flash 87 % · RAM 32 % » (orange dès 90 %, rouge dès 95 %), avec un détail complet des partitions au clic | clos | ██████████ 100 % (11/11) | 5 améliorations | 2026-11-15 | 2026-11-15 |
 | [Réparation automatique des pannes de la page Build](plans/build-reparations.md) | La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit | clos | ██████████ 100 % (26/26) | 3 améliorations | 2026-11-14 | 2026-11-15 |
@@ -191,10 +190,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Suivi des plans de travail (extension VS Code + mod)](plans/suivi-plan.md) | Suivre l'avancement des plans en % dans une vue VS Code à droite, partagée entre conversations et postes | clos | ██████████ 100 % (23/23) | 5 améliorations | 2026-10-18 | 2026-10-18 |
 
 ### Points restants des plans non terminés
-
-#### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 100 %
-
-- Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
 
 #### [Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)](plans/voie-mqtt.md) — 46 %
 
@@ -332,11 +327,6 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A8 — QR code à l'écran des cartes (après l'atelier des écrans) : Commit
 - [sur carte] A10 — Fiches en ligne (GitHub Pages) et filtre durci : Essai réel : une carte publiée, QR code en mode lien imprimé, scanné au téléphone en 4G
 - A10 — Fiches en ligne (GitHub Pages) et filtre durci : Commit
-
-#### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 98 %
-
-- [à vous] A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15) : Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
-- Amélioration [projet] : Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles
 
 #### [Atelier des écrans (page 7960) : une description d'écran, deux interfaces générées](plans/atelier-ecrans.md) — 88 %
 
@@ -649,6 +639,15 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 - A6 — Allègement de l'env (P7, P9, P11) : Persist nettoyé : `TasmotaSlaveModBus2`, `diverses.historique.grafana`, `ledPower`
 - Amélioration [projet] : Vérifier si un 2e « maître » (id 0) perturbe la table discovery du P4
 - Amélioration [projet] : Réduire la partition FS (11,3 Mo) pour la cave si l'écriture de l'image gêne
+
+#### [Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page](plans/menage-appliquer.md) — 100 %
+
+- Amélioration [projet] : Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot
+
+#### [Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)](plans/menage-page.md) — 98 %
+
+- [à vous] A10 — Couverture de l'audit lisible, et abonnement au lieu du crédit API (demandes de l'utilisateur, 2026-11-15) : Abonnement : preuve que la page passe par la connexion claude.ai (`claude auth status` filtré : plus d'`apiKeySource`) et message qui explique la variable utilisateur ANTHROPIC_API_KEY ; décision de l'utilisateur sur sa suppression
+- Amélioration [projet] : Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles
 
 #### [Compilations de nuit (GitHub et PC) et tuile « Tâches planifiées » de l'annuaire](plans/compilations-nuit.md) — 100 %
 

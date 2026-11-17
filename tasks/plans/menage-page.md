@@ -2,9 +2,9 @@
 chantier: menage-page
 titre: Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)
 objectif: Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde
-statut: actif
+statut: clos
 cree: 2026-11-14
-maj: 2026-11-14
+maj: 2026-11-17
 famille: methode
 liens: build-reparations, atelier-visuels
 ---

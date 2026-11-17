@@ -2,7 +2,7 @@
 chantier: menage-appliquer
 titre: Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page
 objectif: Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents.
-statut: actif
+statut: clos
 cree: 2026-11-15
 maj: 2026-11-17
 famille: methode
