@@ -502,6 +502,54 @@ r = ma.annule(res["faits"], ap["head"], d, lambda: [])
 ma._head = vrai_head
 verifie((len(r["retablis"]), r["echec"] is not None), (0, True), "mutant : HEAD masque, git restore echoue de lui-meme apres le commit (la garde HEAD reste la premiere ligne de defense)")
 
+# 11. relecture de securite (Opus, 2026-11-16) : detection de build en echec = refus, fichier deplace modifie puis indexe, nom a crochets
+d = depot_neuf()
+ap = ma.previsualise(["S1"], lot_neuf(), d)
+try:
+    ma.applique(["S1"], ap["empreinte"], ap["head"], lot_neuf(), d, builds_en_cours=lambda: None, verifie_refs=lambda r: None)
+    verifie("accepte", "RuntimeError", "applique : detection de build en echec (None) = refus")
+except RuntimeError as e:
+    verifie(("impossible de savoir" in str(e), os.path.exists(d / "libre.txt")), (True, True), "applique : detection de build en echec (None) = refus, rien n'est applique")
+ap, res = lance(d, ["S1"])
+try:
+    ma.annule(res["faits"], ap["head"], d, lambda: None)
+    verifie("accepte", "RuntimeError", "annule : detection de build en echec (None) = refus")
+except RuntimeError as e:
+    verifie(("impossible de savoir" in str(e), os.path.exists(d / "libre.txt")), (True, False), "annule : detection de build en echec (None) = refus, rien n'est touche")
+d = depot_neuf()
+reponses = iter([[], None])                            # controle initial puis 2e ligne (la 1re ne rappelle pas la detection) : elle tombe
+ap = ma.previsualise(["S1", "S2"], lot_neuf(), d)
+res = ma.applique(["S1", "S2"], ap["empreinte"], ap["head"], lot_neuf(), d, builds_en_cours=lambda: next(reponses), verifie_refs=lambda r: None)
+verifie(([f["id"] for f in res["faits"]], res["echec"] and "impossible de savoir" in res["echec"]["motif"], os.path.exists(d / "-rf")), (["S1"], True, True),
+        "applique : la detection tombe pendant le lot, arret net apres la ligne faite")
+# deplace, puis legerement modifie et ajoute a l'index : git voit encore un renommage, mais le contenu indexe n'est plus celui de l'application
+d = depot_neuf()
+base_gros = "".join(f"ligne {i}\n" for i in range(40))                 # assez long pour que git garde la detection de renommage apres une modification
+ecrit(d, "gros.txt", base_gros)
+git(d, "add", "-A"); git(d, "commit", "-q", "-m", "gros fichier")
+ap, res = lance(d, ["G1"], props=[prop("G1", "gros.txt", "rangees/gros.txt")])
+verifie(bool(res["faits"][0].get("blob")), True, "application : l'empreinte du contenu indexe est notee pour un deplacement")
+ecrit(d, "rangees/gros.txt", base_gros + "une ligne en plus\n")
+git(d, "add", "-A")
+verifie(ma._statut(d, "gros.txt", "rangees/gros.txt"), "R  ", "preuve du banc : git voit encore un renommage (c'est la raison d'etre de l'empreinte)")
+r = ma.annule(res["faits"], ap["head"], d, lambda: [])
+verifie((r["retablis"], r["echec"] and "modifie puis ajoute" in r["echec"]["motif"], os.path.exists(d / "rangees/gros.txt")), ([], True, True),
+        "retour en arriere : un deplace modifie puis ajoute a l'index est refuse (git le voit encore comme un renommage)")
+# nom a crochets : le statut est litteral, il ne confond pas x[1].md avec x1.md
+d = depot_neuf()
+ecrit(d, "x[1].md"); ecrit(d, "x1.md", "autre\n")
+git(d, "add", "-A"); git(d, "commit", "-q", "-m", "crochets")
+p = prop("C1", "x[1].md", None, action="supprimer")
+ap = ma.previsualise(["C1"], [p], d)
+if ap["eligibles"]:
+    res = ma.applique(["C1"], ap["empreinte"], ap["head"], [p], d, builds_en_cours=lambda: [], verifie_refs=lambda r: None)
+    ecrit(d, "x1.md", "modifie\n")                     # le voisin change : le statut litteral de x[1].md ne doit pas le voir
+    r = ma.annule(res["faits"], ap["head"], d, lambda: [])
+    verifie(([x["id"] for x in r["retablis"]], os.path.exists(d / "x[1].md"), (d / "x1.md").read_text(encoding="utf-8")), (["C1"], True, "modifie\n"),
+            "retour en arriere : nom a crochets restaure sans toucher le voisin x1.md")
+else:
+    verifie(motifs(ap).get("C1", "")[:1] != "", True, "nom a crochets refuse a l'apercu (motif donne)")
+
 # mutants : le banc doit voir si on affaiblit un garde-fou de l'application
 d = depot_neuf()
 ap = ma.previsualise(["S1"], lot_neuf(), d)

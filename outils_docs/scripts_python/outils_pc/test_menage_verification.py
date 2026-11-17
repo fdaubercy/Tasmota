@@ -77,6 +77,22 @@ verifie((ve["existe"], ve["suivi"], ve["modifie"], ve["n_docs"], ve["n_code"], r
 r, ve = v(prop("docs/guide_ancien.md"))
 verifie((ve["n_docs"], ve["n_code"], r["risque"], r.get("risque_agent")), (1, 0, "moyen", "faible"), "renvoi dans un document : risque moyen")
 verifie(ve["renvois_docs"], ["docs/lisez.md"], "le renvoi est nomme")
+verifie(ve["extraits_docs"], [{"fichier": "docs/lisez.md", "ligne": 1, "texte": "voir docs/guide_ancien.md pour le detail"}], "l'extrait donne le numero de ligne et le texte du renvoi")
+# extraits : masques (secret), centres sur le renvoi, au plus 3 par document, et un echec de git ne perd pas la verification
+ecrit(racine, "docs/long.md", "a\n" * 5 + "x" * 200 + " docs/guide_ancien.md " + "y" * 200 + "\n" + "mot de passe : \"Secret-Tres-Long-1234\" docs/guide_ancien.md\n"
+      + "".join(f"ligne {i} docs/guide_ancien.md\n" for i in range(6)))
+git(racine, "add", "docs/long.md"); git(racine, "commit", "-q", "-m", "long")
+r, ve = v(prop("docs/guide_ancien.md"))
+ex = [e for e in ve["extraits_docs"] if e["fichier"] == "docs/long.md"]
+verifie((len(ex), ex[0]["ligne"], len(ex[0]["texte"]) <= 161, "docs/guide_ancien.md" in ex[0]["texte"], ex[0]["texte"].startswith("…")), (3, 6, True, True, True),
+        "extraits : 3 au plus par document, centre sur le renvoi, ligne tres longue tronquee")
+verifie(any("Secret-Tres-Long" in e["texte"] for e in ve["extraits_docs"]), False, "extraits : une valeur de secret n'est jamais affichee")
+git(racine, "rm", "-q", "docs/long.md"); git(racine, "commit", "-q", "-m", "retire long")
+git_vrai = mv._git
+mv._git = lambda racine_, args, delai_, codes=(0,): (_ for _ in ()).throw(subprocess.SubprocessError("boum")) if args[:2] == ["grep", "-I"] and "-n" in args else git_vrai(racine_, args, delai_, codes)
+r, ve = v(prop("docs/guide_ancien.md"))
+mv._git = git_vrai
+verifie((ve["disponible"], ve["n_docs"], ve["extraits_docs"]), (True, 1, []), "un echec de l'extrait ne perd pas la verification : renvois nommes, extraits vides")
 
 # 3. renvoi dans du code ou une configuration : risque eleve, par le chemin et par le nom sans extension
 r, ve = v(prop("outils/calculDesDebits.py"))

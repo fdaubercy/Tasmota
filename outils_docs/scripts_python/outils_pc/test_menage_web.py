@@ -14,7 +14,6 @@ import sys
 import tempfile
 import threading
 import time
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import acces_web
@@ -60,7 +59,7 @@ class Serveur:
         self.port = port_libre()
         self.acces = acces_web.Acces(self.port, True, "Menage du depot")
         self.etat = mw.Etat(RACINE, builds, programme=[sys.executable, str(FAUX)], dossier=TMP / "donnees", delai=20)
-        self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), mw.fabrique_gestionnaire(self.acces, self.etat))
+        self.serveur = mw.ServeurMenage(("127.0.0.1", self.port), mw.fabrique_gestionnaire(self.acces, self.etat))
         self.serveur.daemon_threads = True
         threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
 
@@ -158,6 +157,14 @@ mw.acces_web.est_local = lambda adresse: False
 verifie(s.req("POST", "/appliquer/annuler", {"application": 1})[0], 403, "annuler depuis un autre appareil : 403")
 mw.acces_web.est_local = _est_local
 s.etat.applications.extend([{"numero": 1, "head": "h", "faits": [{"id": "A"}]}, {"numero": 2, "head": "h", "faits": [{"id": "B"}, {"id": "C"}]}])
+st, tx = s.req("GET", "/appliquer/derniere")
+verifie((st, json.loads(tx)["application"], [f["id"] for f in json.loads(tx)["faits"]]), (200, 2, ["B", "C"]), "GET /appliquer/derniere : la derniere application de la pile (le bouton survit a un rechargement)")
+mw.menage_application._VERROU.acquire()
+try:
+    st, tx = s.req("POST", "/appliquer/apercu", {"ids": ["M2"]})
+    verifie((st, "en cours" in tx), (409, True), "apercu refuse pendant une application (git -n prendrait le verrou d'index du lot)")
+finally:
+    mw.menage_application._VERROU.release()
 verifie(s.req("POST", "/appliquer/annuler", {"application": 1})[0], 409, "annuler une application qui n'est pas la derniere : 409")
 verifie(s.req("POST", "/appliquer/annuler", {})[0], 409, "annuler sans numero : 409")
 vrai_annule = mw.menage_application.annule
@@ -171,6 +178,7 @@ verifie(s.req("POST", "/appliquer/annuler", {"application": 2})[0], 200, "annula
 verifie([a["numero"] for a in s.etat.applications], [1], "annulation terminee : la derniere application sort de la pile")
 mw.menage_application.annule = vrai_annule
 s.etat.applications.clear()
+verifie(json.loads(s.req("GET", "/appliquer/derniere")[1])["application"], None, "GET /appliquer/derniere : rien quand la pile est vide")
 verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "0" * 16, "head": "inconnu", "a_blanc": True})[0], 409, "a blanc : sans confirmation, mais meme refus d'un apercu perime (409)")
 verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "empreinte": "x", "head": "y", "a_blanc": "oui"})[0], 400, "a_blanc doit etre un booleen")
 verifie(s.req("POST", "/appliquer", {"ids": ["M2"], "confirme": True})[0], 400, "appliquer sans empreinte ni head : refuse")

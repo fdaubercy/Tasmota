@@ -69,7 +69,7 @@ pre{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px ui-monosp
 
 HTML = """
 <main>
-<header><h1>Ménage du dépôt</h1><span class="doux petit">Propositions de rangement : rien n'est déplacé ni supprimé dans le dépôt.</span>
+<header><h1>Ménage du dépôt</h1><span class="doux petit">Propositions de rangement. Seul « Appliquer pour de bon », après confirmation, supprime ou déplace des fichiers ; rien n'est jamais commité.</span>
 <label class="theme"><span>Mode sombre</span><input type="checkbox" id="theme"><span class="interrupteur"></span></label></header>
 <div class="colonnes">
 <div>
@@ -104,6 +104,7 @@ HTML = """
 <section class="carte"><h2>Propositions <span class="doux petit" id="n-props"></span></h2>
  <ul id="resume" class="doux resume"></ul>
  <div id="plan" hidden></div>
+ <section class="lot" id="lot-annule" hidden aria-live="polite"></section>
  <section class="lot" id="lot" hidden>
   <h3>Appliquer un lot (suppressions et déplacements sans aucun renvoi)</h3>
   <p class="doux petit">Cochez les propositions « sans renvoi » ci-dessous, puis voyez ce que git ferait. La vérification ne voit pas un renvoi construit dynamiquement
@@ -274,8 +275,10 @@ function propositionVue(p) {
   d.appendChild(el("p", null, p.constat));
   if (v && v.disponible && (v.n_code || v.n_docs)) {
     var rv = el("details", "renvois"); rv.appendChild(el("summary", null, "Renvois trouvés par la page"));
-    rv.appendChild(el("pre", null, v.renvois_code.map(function (f) { return "code/config  " + f; }).concat(
-      v.renvois_docs.map(function (f) { return "document     " + f; })).join("\n")));
+    var ex = v.extraits_docs || [], vus = {};
+    var docs = ex.map(function (e) { vus[e.fichier] = 1; return "document     " + e.fichier + ":" + e.ligne + "   " + e.texte; });      // la ligne a corriger a la main
+    v.renvois_docs.forEach(function (f) { if (!vus[f]) docs.push("document     " + f); });
+    rv.appendChild(el("pre", null, v.renvois_code.map(function (f) { return "code/config  " + f; }).concat(docs).join("\n")));
     d.appendChild(rv);
   }
   var c = el("details"); c.appendChild(el("summary", null, "Ce que ça casserait")); c.appendChild(el("pre", null, p.casserait)); d.appendChild(c);
@@ -332,10 +335,10 @@ function lotChange(garde) {
   $("b-apercu").disabled = !n; $("b-blanc").disabled = true; $("b-applique").disabled = true;
 }
 function rendLot(r) {
-  var dispo = r.propositions.filter(lotPossible).map(function (p) { return p.id; });
+  var dispo = r.propositions.filter(lotPossible).map(function (p) { return p.id; }), avant = S.lot.ids.length;
   S.lot.ids = S.lot.ids.filter(function (i) { return dispo.indexOf(i) >= 0; });
   $("lot").hidden = !dispo.length && !S.appliques.length;
-  if (!S.lot.apercu) lotChange(true);
+  if (!S.lot.apercu || S.lot.ids.length !== avant) lotChange(true);          // une ligne retiree du lot (Garder, Ignorer...) rend l'apercu faux
 }
 function ligneLot(texte, classe) { return el("div", classe || "doux petit", texte); }
 function apercuLot() {
@@ -369,27 +372,49 @@ function rendRenvois(z, rv) {
   z.appendChild(el("h4", null, titre));
   if (m) {
     var t = m[1] + " documents relus, " + m[2] + " renvoi(s) cassé(s)." + (bon ? " Aucun document ne cite un fichier que vous venez de supprimer ou déplacer." : " Chaque ligne « défaut » du détail nomme le document et le fichier qui manque.");
-    if (m[3]) t += " " + m[3] + " autre(s) renvoi(s) visent du code hors dépôt (amont Tasmota, bibliothèques) : non vérifiables, sans lien avec ce lot.";
+    if (m[3] && m[3] !== "0") t += " " + m[3] + " autre(s) renvoi(s) visent du code hors dépôt (amont Tasmota, bibliothèques) : non vérifiables, sans lien avec ce lot.";
     z.appendChild(ligneLot(t));
   } else z.appendChild(ligneLot(bon ? "Contrôle terminé sans défaut." : "Résultat du contrôle non reconnu : lisez le détail."));
   var dt = el("details"); dt.open = !bon; dt.appendChild(el("summary", null, "Détail du contrôle (sortie brute)")); dt.appendChild(el("pre", null, rv.sortie)); z.appendChild(dt);
 }
-function boutonAnnule(z, d) {
-  var l = el("div", "ligne"), b = el("button", "btn", "↶ Annuler cette application");
-  b.title = "Rétablit l'état d'avant (git restore, ou git mv à l'envers), tant que rien n'est commité";
-  b.onclick = function () { annuleLot(b, d); };
-  l.appendChild(b); z.appendChild(l);
+function chargeDerniere() {
+  // la derniere application REELLE du serveur : le bouton d'annulation vit ici, hors du bloc du lot (qu'un changement de selection vide)
+  return api("GET", "/appliquer/derniere").then(function (x) {
+    var z = $("lot-annule"); vide(z);
+    var d = x.ok ? x.donnees : null;
+    z.hidden = !(d && d.application);
+    if (z.hidden) return;
+    z.appendChild(el("h3", null, "Dernière application (non commitée)"));
+    z.appendChild(ligneLot(d.faits.length + " ligne(s) : " + d.faits.map(function (f) { return f.chemin; }).join(", ")));
+    var l = el("div", "ligne"), b = el("button", "btn", "↶ Annuler cette application");
+    b.title = "Rétablit l'état d'avant (git restore, ou git mv à l'envers), tant que rien n'est commité";
+    b.onclick = function () { annuleLot(b, d); };
+    l.appendChild(b); z.appendChild(l);
+  });
 }
+function occupe(oui) {
+  // pendant une application ou un retour en arriere : ni apercu ni nouvelle case (git prend le verrou d'index meme pour -n)
+  S.occupe = oui;
+  $("b-apercu").disabled = oui || !S.lot.ids.length;
+  Array.prototype.forEach.call(document.querySelectorAll(".lot-case input"), function (c) { c.disabled = oui; });
+}
+function resultatInconnu(x) { return x.statut === 0 || x.statut >= 500; }
 function annuleLot(b, d) {
   var t0 = Date.now(), tic, z = $("lot-resultat");
-  b.disabled = true; b.textContent = "Retour en arrière…";
+  b.disabled = true; b.textContent = "Retour en arrière…"; occupe(true);
   function attente() { message("en", "Retour en arrière en cours : " + d.faits.length + " ligne(s) à rétablir, depuis " + Math.round((Date.now() - t0) / 1000) + " s…"); }
   attente(); tic = setInterval(attente, 500);
   api("POST", "/appliquer/annuler", {application: d.application}).then(function (x) {
     // le message d'attente reste au moins 0,8 s : une annulation rapide serait sinon invisible
     setTimeout(function () {
-      clearInterval(tic);
+      clearInterval(tic); occupe(false);
       if (!x.ok) {
+        vide(z);
+        if (resultatInconnu(x)) {
+          message("ko", "Résultat du retour en arrière inconnu : relisez git status.");
+          z.appendChild(ligneLot("Résultat inconnu : " + x.texte + ". Des fichiers ont peut-être déjà été rétablis : relisez git status avant tout nouveau geste.", "etat ko"));
+          chargeDerniere(); return;
+        }
         b.disabled = false; b.textContent = "↶ Annuler cette application";
         message("ko", "Retour en arrière impossible : " + x.texte); z.appendChild(ligneLot("Retour en arrière refusé : " + x.texte, "etat ko")); return;
       }
@@ -401,14 +426,13 @@ function annuleLot(b, d) {
       r.retablis.forEach(function (a) { z.appendChild(ligneLot("↶ " + a.chemin + " (" + (a.action === "supprimer" ? "restauré" : "remis à sa place") + ")")); });
       if (r.echec) {
         z.appendChild(ligneLot("✗ arrêt sur " + r.echec.chemin + " : " + r.echec.motif, "etat ko"));
-        z.appendChild(ligneLot(r.restants.length + " ligne(s) non rétablie(s) : relisez git status."));
-        d.faits = d.faits.filter(function (f) { return r.restants.indexOf(f.id) >= 0; }); boutonAnnule(z, d);
+        z.appendChild(ligneLot(r.restants.length + " ligne(s) non rétablie(s) : relisez git status ; le bouton d'annulation permet de réessayer."));
         message("ko", "Retour en arrière incomplet : " + r.retablis.length + " rétablie(s), arrêt sur " + r.echec.chemin + ".");
       } else {
         z.appendChild(ligneLot("L'état est celui d'avant l'application : rien n'a été commité, les cases sont de nouveau cochables."));
         message("ok", "Retour en arrière terminé : " + r.retablis.length + " fichier(s) rétabli(s), l'état est celui d'avant l'application.");
       }
-      rend();
+      chargeDerniere(); rend();
     }, Math.max(0, 800 - (Date.now() - t0)));
   });
 }
@@ -416,12 +440,19 @@ function appliqueLot(aBlanc) {
   var a = S.lot.apercu, z = $("lot-resultat"); if (!a) return;
   if (!aBlanc && !window.confirm("Appliquer ces " + a.ids.length + " ligne(s) ? Les fichiers seront supprimés ou déplacés dans l'arbre de travail (rien n'est commité).")) return;
   var corps = {ids: a.ids, empreinte: a.empreinte, head: a.head}; if (aBlanc) corps.a_blanc = true; else corps.confirme = true;
-  $("b-blanc").disabled = $("b-applique").disabled = true; vide(z);
+  $("b-blanc").disabled = $("b-applique").disabled = true; vide(z); occupe(true);
   api("POST", "/appliquer", corps).then(function (x) {
+    occupe(false);
     if (!x.ok) {
+      if (resultatInconnu(x)) {                 // serveur injoignable ou en erreur : des fichiers ont pu etre touches, on ne dit surtout pas « refuse »
+        S.lot.apercu = null; lotChange(true);
+        message("ko", "Résultat de l'application inconnu : relisez git status.");
+        z.appendChild(ligneLot("Résultat inconnu : " + x.texte + ". Le serveur n'a pas confirmé : des fichiers ont peut-être déjà été supprimés ou déplacés. Relisez git status avant tout nouveau geste.", "etat ko"));
+        chargeDerniere(); return;
+      }
       z.appendChild(ligneLot((aBlanc ? "À blanc refusé : " : "Application refusée : ") + x.texte, "etat ko"));
       if (x.statut === 403 || x.statut === 409) { S.lot.apercu = null; $("b-blanc").disabled = $("b-applique").disabled = true; z.appendChild(ligneLot("Refaites l'aperçu avant de réessayer.")); }
-      else $("b-blanc").disabled = $("b-applique").disabled = false;
+      else $("b-blanc").disabled = $("b-applique").disabled = !S.lot.apercu;
       return;
     }
     var d = x.donnees;
@@ -434,9 +465,8 @@ function appliqueLot(aBlanc) {
       d.faits.forEach(function (f) { S.appliques.push(f.chemin); });                 // par CHEMIN : les identifiants de l'agent changent d'un audit a l'autre
       S.lot.ids = S.lot.ids.filter(function (i) { return faitsIds.indexOf(i) < 0; });
       if (d.renvois) { rendRenvois(z, d.renvois); }
-      z.appendChild(ligneLot("Relisez git status : rien n'est commité. Une erreur ? Le bouton ci-dessous rétablit l'état d'avant (ou, à la main : git restore --staged --worktree -- chemin)."));
-      if (d.application) boutonAnnule(z, d);
-      S.lot.apercu = null; rend();
+      z.appendChild(ligneLot("Relisez git status : rien n'est commité. Une erreur ? Le bouton « Annuler cette application », en haut de cette section, rétablit l'état d'avant (ou, à la main : git restore --staged --worktree -- chemin)."));
+      S.lot.apercu = null; chargeDerniere(); rend();
     } else { $("b-blanc").disabled = $("b-applique").disabled = !S.lot.apercu; }
   });
 }
@@ -567,7 +597,7 @@ $("b-applique").onclick = function () { appliqueLot(false); };
 $("b-stop").onclick = arrete;
 $("b-copie").onclick = copie;
 $("f-cat").onchange = $("f-risque").onchange = rend;
-chargeOptions().then(function () { chargeGardes(); etat(); });
+chargeOptions().then(function () { chargeGardes(); etat(); setTimeout(chargeDerniere, 400); });          // differe : pas 8 requetes d'un coup au chargement
 """ + menage_page_rapports.JS
 
 THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getItem('menage-theme'); } catch (e) {}"

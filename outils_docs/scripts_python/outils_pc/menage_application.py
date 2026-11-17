@@ -103,6 +103,16 @@ def argv_git(action, chemin, vers, simulation):
     return base + ["mv"] + (["-n"] if simulation else []) + ["--", chemin, vers]
 
 
+def verifie_pas_de_build(builds_en_cours, geste):
+    """Leve RuntimeError si un build tourne OU si la detection echoue (None : PowerShell en delai, CPU sature, donc souvent PENDANT un build) :
+    sans reponse sure on n'ecrit pas."""
+    enc = builds_en_cours()
+    if enc is None:
+        raise RuntimeError(f"impossible de savoir si un build tourne : {geste} refuse")
+    if enc:
+        raise RuntimeError("un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + f") : {geste} refuse")
+
+
 def argv_annule(action, chemin, vers):
     """La commande qui DEFAIT une ligne appliquee : un `git rm` se restaure (index et arbre), un `git mv` se refait a l'envers."""
     base = ["git", "--no-optional-locks"]
@@ -231,10 +241,18 @@ def _statut(racine, *chemins):
     """Premieres colonnes de `git status --porcelain` pour ces chemins (« D  », « R  »...), « » si rien. Un renommage ne se reconnait que si les DEUX
     chemins sont donnes (la destination seule apparait comme un ajout)."""
     try:
-        s = menage_verification._git(str(racine), ["status", "--porcelain", "--"] + list(chemins), DELAI_GIT)
+        s = menage_verification._git(str(racine), ["status", "--porcelain", "--"] + [":(literal)" + c for c in chemins], DELAI_GIT)
     except (OSError, subprocess.SubprocessError):
         return None
     return s[:3] if s.strip() else ""
+
+
+def _blob(racine, chemin):
+    """Empreinte du contenu INDEXE de ce chemin (vide si introuvable) : prouve au retour que le fichier deplace n'a pas ete modifie puis ajoute a l'index."""
+    try:
+        return menage_verification._git(str(racine), ["rev-parse", ":" + chemin], DELAI_GIT).strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def motif_non_annulable(fait, racine):
@@ -254,6 +272,8 @@ def motif_non_annulable(fait, racine):
         return "un fichier occupe de nouveau l'ancienne place"
     if _statut(racine, fait["chemin"], fait["vers"]) != "R  ":
         return "le deplacement n'est plus l'etat indexe tel qu'il a ete fait (fichier modifie depuis ?)"
+    if fait.get("blob") and _blob(racine, fait["vers"]) != fait["blob"]:
+        return "le fichier deplace a ete modifie puis ajoute a l'index depuis"
     return None
 
 
@@ -264,13 +284,17 @@ def annule(faits, head, racine, builds_en_cours, journal=None):
     if not _VERROU.acquire(blocking=False):
         raise RuntimeError("une application ou un retour en arriere est deja en cours")
     try:
-        enc = builds_en_cours()
-        if enc:
-            raise RuntimeError("un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + ") : retour en arriere refuse")
+        verifie_pas_de_build(builds_en_cours, "retour en arriere")
         if not head or _head(racine) != head:
             raise RuntimeError("un commit a eu lieu depuis l'application : le retour en arriere automatique est refuse (utilisez git revert)")
         retablis, echec = [], None
         for fait in reversed(faits):
+            if retablis:
+                try:
+                    verifie_pas_de_build(builds_en_cours, "retour en arriere")
+                except RuntimeError as erreur:
+                    echec = {"id": fait["id"], "chemin": fait["chemin"], "motif": str(erreur) + " : arret"}
+                    break
             motif = motif_non_annulable(fait, racine)
             ok, sortie = (False, motif) if motif else (None, "")
             if motif is None:
@@ -307,9 +331,7 @@ def applique(ids, empreinte, head, propositions, racine, builds_en_cours, verifi
     if not _VERROU.acquire(blocking=False):
         raise RuntimeError("une application est deja en cours")
     try:
-        enc = builds_en_cours()
-        if enc:
-            raise RuntimeError("un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + ") : application refusee")
+        verifie_pas_de_build(builds_en_cours, "application")
         r = previsualise(ids, propositions, racine)
         if r["head"] != head or r["empreinte"] != empreinte:
             raise RuntimeError("l'apercu n'est plus a jour (le depot ou le lot a change) : refaire l'apercu, rien n'a ete applique")
@@ -317,10 +339,12 @@ def applique(ids, empreinte, head, propositions, racine, builds_en_cours, verifi
             raise ValueError("aucune ligne eligible dans ce lot")
         faits, echec = [], None
         for e in r["eligibles"]:
-            enc = builds_en_cours()                  # un build peut demarrer pendant le lot : on revoit la garde a CHAQUE ligne
-            if enc and faits:
-                echec = {"id": e["id"], "chemin": e["chemin"], "motif": "un build a demarre pendant l'application : arret"}
-                break
+            if faits:                                # un build peut demarrer pendant le lot : on revoit la garde a CHAQUE ligne (la 1re vient d'etre controlee)
+                try:
+                    verifie_pas_de_build(builds_en_cours, "application")
+                except RuntimeError as erreur:
+                    echec = {"id": e["id"], "chemin": e["chemin"], "motif": str(erreur) + " : arret"}
+                    break
             cree = []
             try:
                 if e["action"] == "deplacer" and (os.path.lexists(os.path.join(str(racine), e["vers"])) or _protege(e["vers"], racine)):
@@ -349,6 +373,7 @@ def applique(ids, empreinte, head, propositions, racine, builds_en_cours, verifi
                 echec = {"id": e["id"], "chemin": e["chemin"], "motif": sortie}
                 break
             faits.append({"id": e["id"], "action": e["action"], "chemin": e["chemin"], "vers": e["vers"], "commande": e["commande"],
+                          "blob": _blob(racine, e["vers"]) if e["action"] == "deplacer" and not a_blanc else None,
                           "dossiers_crees": [os.path.relpath(d, str(racine)).replace(os.sep, "/") for d in cree]})
         restants = [e["id"] for e in r["eligibles"] if e["id"] not in {f["id"] for f in faits} and (not echec or e["id"] != echec["id"])]
         return {"a_blanc": bool(a_blanc), "faits": faits, "echec": echec, "restants": restants, "renvois": verifie_refs(racine) if faits and not a_blanc else None}

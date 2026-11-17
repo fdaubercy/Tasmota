@@ -195,6 +195,8 @@ class Audit:
         if erreurs:
             return False, "parametres refuses : " + " ; ".join(erreurs)
         enc = self.builds_en_cours()
+        if enc is None:
+            return False, "impossible de savoir si un build tourne : audit refuse"
         if enc:
             return False, "un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + ") : audit refuse"
         with self._verrou:

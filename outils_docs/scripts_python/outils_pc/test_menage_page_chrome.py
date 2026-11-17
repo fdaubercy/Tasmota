@@ -18,7 +18,6 @@ import tempfile
 import threading
 import time
 import urllib.request
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
@@ -58,6 +57,10 @@ TEMOINS = {       # nom -> (texte de la page, remplacement, verification qui doi
                             "retour : pendant le retour en arriere, bouton grise et message d'attente"),
     "retour-appliques-gardes": ("S.appliques = S.appliques.filter(function (c) { return chemins.indexOf(c) < 0; });", "S.appliques = S.appliques;",
                                 "retour : la ligne est de nouveau cochable"),
+    "lot-occupe": ('$("b-apercu").disabled = oui || !S.lot.ids.length;', '$("b-apercu").disabled = !S.lot.ids.length;',
+                   "lot : pendant l'application, « Voir ce que ça ferait » et les cases sont grises"),
+    "lot-inconnu-refuse": ("if (resultatInconnu(x)) {                 // serveur injoignable", "if (false) {                 // serveur injoignable",
+                           "lot : serveur injoignable pendant l'application, le resultat est annonce inconnu"),
     "pas-de-filtre-risque": ("(!risque || p.risque === risque)", "true", "filtre risque : seule la proposition du risque choisi"),
 }
 
@@ -118,9 +121,10 @@ class Montage:
         menage_page.PAGE = page
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
+        os.environ["OUTILS_TASMOTA_DOSSIER"] = str(self.t / "outils")          # hermetique : la barre commune ne lit ni ne sonde les vrais outils de l'utilisateur
         self.acces = acces_web.Acces(self.port, True, "Menage du depot")
         etat = mw.Etat(racine, lambda: [], programme=[sys.executable, str(faux_claude(self.t))], dossier=self.t / "donnees", delai=30)
-        self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), mw.fabrique_gestionnaire(self.acces, etat))
+        self.serveur = mw.ServeurMenage(("127.0.0.1", self.port), mw.fabrique_gestionnaire(self.acces, etat))
         self.serveur.daemon_threads = True
         threading.Thread(target=self.serveur.serve_forever, daemon=True).start()
         chrome = next((c for c in CHROMES if c.is_file()), None)
@@ -163,6 +167,7 @@ class Montage:
             self.serveur.shutdown()
             self.serveur.server_close()
         menage_page.PAGE = PAGE_ORIGINALE
+        os.environ.pop("OUTILS_TASMOTA_DOSSIER", None)
         shutil.rmtree(self.t, ignore_errors=True)
 
 
@@ -246,8 +251,25 @@ def scenario(m, temoin):
     clic(cdp, "b-applique")
     verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('Appliqu') >= 0", 6)), False, "lot : confirmation refusee, aucun resultat n'apparait")
     verifie((depot / "tasks" / "autre.md").exists(), True, "lot : confirmation refusee, rien n'est applique")
+    # serveur injoignable pendant l'application : jamais « refusee » (des fichiers ont pu etre touches)
+    cdp.js("window.__fetchVrai = window.fetch; window.fetch = function(u, o){ return String(u) === '/appliquer' ? Promise.reject(new Error('coupe')) : window.__fetchVrai.apply(this, arguments); }")
     cdp.js("window.confirm = function () { return true; }")
     clic(cdp, "b-applique")
+    if not verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('Résultat inconnu') >= 0", 10)), True,
+                   "lot : serveur injoignable pendant l'application, le resultat est annonce inconnu"):
+        print("   diagnostic : bloc lot =", cdp.js("document.getElementById('lot-resultat').textContent")[:300], "| etat =", cdp.js("document.getElementById('etat').textContent")[:200])
+    verifie(cdp.js("document.getElementById('lot-resultat').textContent.indexOf('refus') < 0 && document.getElementById('b-applique').disabled"), True,
+            "lot : serveur injoignable, jamais « refusee », « Appliquer » reste grise")
+    cdp.js("window.fetch = window.__fetchVrai")
+    clic(cdp, "b-apercu")
+    attend(cdp, "document.getElementById('b-blanc').disabled === false", 30)
+    cdp.js("window.confirm = function () { return true; }")
+    cdp.js("(function(){var r=window.fetch; window.fetch=function(u,o){var p=r.apply(this,arguments); return String(u) === '/appliquer' ? new Promise(function(ok){setTimeout(function(){ok(p)},1500)}) : p;};})()")
+    clic(cdp, "b-applique")
+    time.sleep(0.4)
+    verifie(cdp.js("document.getElementById('b-apercu').disabled && document.querySelectorAll('.lot-case input').length === 1 && "
+                   "Array.prototype.every.call(document.querySelectorAll('.lot-case input'), function(c){return c.disabled;})"), True,
+            "lot : pendant l'application, « Voir ce que ça ferait » et les cases sont grises")
     verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('non commit') >= 0", 20)), True, "lot : application confirmee, resultat affiche")
     etat_git = subprocess.run(["git", "status", "--short"], cwd=depot, capture_output=True).stdout.decode()
     nb_commits = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=depot, capture_output=True).stdout.decode().strip()
@@ -263,13 +285,16 @@ def scenario(m, temoin):
             "lot : un défaut de renvoi est annoncé et le détail s'ouvre")
     verifie(cdp.js("document.querySelectorAll('#lot img, #lot b').length < 3 && window.__pwn === undefined"), True, "lot : aucun HTML injecte")
     # retour en arriere : le bouton defait l'application, avec un message pendant et une confirmation apres (la reponse est ralentie pour que l'attente se voie)
-    verifie(cdp.js("Array.prototype.map.call(document.querySelectorAll('#lot-resultat button'),function(b){return b.textContent}).join('|')"), "↶ Annuler cette application",
+    verifie(cdp.js("Array.prototype.map.call(document.querySelectorAll('#lot-annule button'),function(b){return b.textContent}).join('|')"), "↶ Annuler cette application",
             "retour : le bouton « Annuler cette application » est propose apres l'application")
+    cdp.js("lotChange()")                                              # un changement de selection vide le bloc du lot : le bouton d'annulation, lui, reste (zone a part, alimentee par le serveur)
+    verifie(cdp.js("document.querySelectorAll('#lot-annule button').length === 1 && document.getElementById('lot-annule').hidden === false"), True,
+            "retour : le bouton d'annulation survit a un changement de selection")
     cdp.js("(function(){var r=window.fetch; window.fetch=function(u,o){var p=r.apply(this,arguments); return String(u).indexOf('/appliquer/annuler')>=0 ? "
            "new Promise(function(ok){setTimeout(function(){ok(p)},1500)}) : p;};})()")
-    clic_bouton(cdp, "#lot-resultat", "↶ Annuler cette application")
+    clic_bouton(cdp, "#lot-annule", "↶ Annuler cette application")
     time.sleep(0.4)
-    verifie(cdp.js("(function(){var b=document.querySelector('#lot-resultat button'); return !!b && b.disabled && b.textContent.indexOf('Retour en arri') >= 0 "
+    verifie(cdp.js("(function(){var b=document.querySelector('#lot-annule button'); return !!b && b.disabled && b.textContent.indexOf('Retour en arri') >= 0 "
                    "&& document.getElementById('etat').textContent.indexOf('Retour en arri') >= 0 && document.getElementById('etat').className.indexOf('en') >= 0;})()"), True,
             "retour : pendant le retour en arriere, bouton grise et message d'attente")
     verifie(bool(attend(cdp, "document.getElementById('lot-resultat').textContent.indexOf('Retour en arrière terminé') >= 0", 20)), True, "retour : confirmation affichee dans le bloc")
@@ -279,7 +304,7 @@ def scenario(m, temoin):
     verifie(((depot / "tasks" / "autre.md").exists(), "autre.md" in etat_git, subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=depot, capture_output=True).stdout.decode().strip()),
             (True, False, "1"), "retour : le fichier est revenu, git ne voit plus aucun changement, rien n'est commite")
     verifie(cdp.js("document.querySelectorAll('.lot-case input').length"), 1, "retour : la ligne est de nouveau cochable")
-    verifie(cdp.js("document.querySelectorAll('#lot-resultat button').length"), 0, "retour : plus de bouton d'annulation une fois defait")
+    verifie(cdp.js("document.querySelectorAll('#lot-annule button').length"), 0, "retour : plus de bouton d'annulation une fois defait")
     verifie(cdp.js("document.getElementById('b-copie').disabled"), False, "copier actif avec un rapport")
     verifie(cdp.js("document.getElementById('couverture').hidden === false && document.querySelectorAll('#couv .couv-ligne').length"), 7,
             "couverture : une ligne par controle demande (les non declares y figurent)")

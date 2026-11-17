@@ -183,6 +183,12 @@ decision du 2026-11-05), `berry/banc_graphiques.py` (**571**, banc de la page /g
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
+`outils_docs/scripts_python/outils_pc/menage_page.py` fait **614 lignes** et son banc `test_menage_application.py` **577**, et c'est **voulu**
+(decide le 2026-11-17 apres la relecture du plan `menage-appliquer`, exception plutot qu'un decoupage ; la page etait a 436 lignes avant le bloc
+« Appliquer un lot », l'annulation et le resume des renvois ; son bloc « Rapports sauvegardes » vit deja dans `menage_page_rapports.py`). Page
+unique de l'outil « Menage du depot » (HTML + CSS + JS dans des constantes servies par `menage_web.py`) ; le banc suit les gestes d'ecriture
+(application, retour en arriere, mutants) un a un, chaque cas lisible seul. Ne pas les decouper pour satisfaire le compteur.
+
 ## MONTER UN NOUVEAU POSTE
 
 Trois choses, dans cet ordre. Rien d'autre n'est necessaire.
@@ -1083,7 +1089,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     http://127.0.0.1:7995 (2026-11-14, plan `tasks/plans/menage-page.md`, v1 lecture seule ; tuile de l'annuaire, groupe Dépôt et références, arrêt libre ; tâche VS Code ; cible
     Custom détachée, `NOM_CIBLE` menage). Lance `claude -p --agent auditeur-menage` (outils de lecture, jamais d'écriture), valide le rapport JSON
     (`outils_docs/schemas/menage_rapport.schema.json`) et montre les propositions triées par risque ; refus pendant un build. Seule écriture : la liste « à garder »
-    hors dépôt (`%LOCALAPPDATA%\outils_tasmota\menage\garde.json`). `menage_verification.py` (A9) : contre-vérification des propositions par git, faite par la page et non par l'agent (existe, suivi, modifié = « en cours », renvois documents ou code, risque relevé). Couverture de l'audit (A10) : `couverture`, `limites`, `ecartes` du rapport (`menage_rapport.py`), carte dédiée de `menage_page.py` ; défaut `sonnet` effort `max`. Appliquer un lot (plan `menage-appliquer`) : `menage_application.py` (aperçu par `git rm -n` / `git mv -n`, application réelle ou à blanc, jamais de commit, noms Windows courts et `.git*` protégés), routes `/appliquer/apercu` et `/appliquer` de `menage_web.py` (ce PC seulement), bloc « Appliquer un lot » de `menage_page.py`. Bancs `test_menage_*.py`, sonde `test_menage_page_chrome.py`, `build/test_cible_menage.py`.
+    hors dépôt (`%LOCALAPPDATA%\outils_tasmota\menage\garde.json`). `menage_verification.py` (A9) : contre-vérification des propositions par git, faite par la page et non par l'agent (existe, suivi, modifié = « en cours », renvois documents ou code, risque relevé). Couverture de l'audit (A10) : `couverture`, `limites`, `ecartes` du rapport (`menage_rapport.py`), carte dédiée de `menage_page.py` ; défaut `sonnet` effort `max`. Appliquer un lot (plan `menage-appliquer`) : `menage_application.py` (aperçu par `git rm -n` / `git mv -n`, application réelle ou à blanc, jamais de commit, noms Windows courts et `.git*` protégés), routes `/appliquer/apercu`, `/appliquer`, `/appliquer/annuler` (retour en arrière de la dernière application, `menage_application.py::annule`, refusé après un commit ou si le fichier a été touché) et `/appliquer/derniere` de `menage_web.py` (écritures : ce PC seulement), bloc « Appliquer un lot » de `menage_page.py` ; rapports d'audit sauvegardés hors dépôt, rouverts sans nouvel audit (`/rapports`, `/rapports/ouvrir`, `menage_page_rapports.py`, `menage_lancement.py::ouvre_rapport`) ; `menage_verification.py` donne aussi la ligne et l'extrait de chaque renvoi dans un document. Bancs `test_menage_*.py`, sonde `test_menage_page_chrome.py`, `build/test_cible_menage.py`.
   - `cartes_simulees_web.py` (+ `cartes_simulees.py`, `cartes_simulees_reseau.py`, `cartes_simulees_page.py`, `berry/simule_carte_rideau.be`, `build/cible_cartes_simulees.py`) — page
     « Cartes simulées » http://127.0.0.1:7940 (2026-11-14, plan `tasks/plans/cartes-simulees.md` ; tuile de l'annuaire, groupe Bus et cartes, arrêt libre ; tâche VS Code ; cible
     Custom détachée, `NOM_CIBLE` cartes_simulees). Simule hors ligne une carte du parc : serveur local au port web de la vraie carte, identité réseau lue dans son persist,

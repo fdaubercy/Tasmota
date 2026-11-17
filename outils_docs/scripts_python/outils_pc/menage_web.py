@@ -4,8 +4,8 @@ UTILISATION
     python outils_docs/scripts_python/outils_pc/menage_web.py [--http 7995] [--local] [--sans-navigateur]
     Regle d'acces : acces_web.py (ce PC sans jeton, autre appareil avec le jeton du lien de la console).
 
-Rien n'est deplace, renomme ni supprime dans le depot (version 1, plan tasks/plans/menage-page.md). Seule ecriture : la liste « a garder »
-dans le dossier de donnees de l'outil, HORS depot (menage_memoire.py). L'audit lui-meme : menage_lancement.py (claude -p en lecture seule).
+L'audit est en LECTURE SEULE (menage_lancement.py). Les seules ecritures : la liste « a garder » et le journal des applications, HORS depot, et, apres confirmation
+explicite, l'application d'un lot (git rm / git mv, jamais de commit, ce PC seulement : menage_application.py, plan tasks/plans/menage-appliquer.md). L'audit lui-meme : menage_lancement.py (claude -p en lecture seule).
 
 Routes (les POST exigent l'en-tete X-Menage: 1 et la meme origine ; client de ce PC : Host local, parade au DNS rebinding) :
     GET  /          la page (menage_page.PAGE)
@@ -14,6 +14,7 @@ Routes (les POST exigent l'en-tete X-Menage: 1 et la meme origine ; client de ce
                     activite: actions de l'agent depuis la n-ieme (secrets masques)}
     GET  /rapport   le rapport valide, sans les propositions « ignorees cette fois » ni les chemins « a garder » ; 404 s'il n'y en a pas
     GET  /gardes    {gardes: [chemins]}
+    GET  /appliquer/derniere  {application: n | null, faits: [{id, action, chemin}]} : la derniere application reelle (bouton « Annuler » de la page)
     GET  /rapports  {rapports: [{nom, date, propositions}]} : rapports sauvegardes hors depot, le plus recent d'abord (A4 du plan menage-appliquer)
     POST /rapports/ouvrir {nom}  -> {message} : rouvre un rapport DE LA LISTE (jamais un chemin libre), revalide et recontre-verifie par git ; 404 nom inconnu, 400 illisible, 409 audit en cours
     POST /lancer    {zone, categories, anciennete_jours, modele, effort}  -> {message}
@@ -47,6 +48,10 @@ PORT_DEFAUT = 7995
 DEPOT = Path(__file__).resolve().parents[3]
 MAX_CORPS = 16 * 1024
 ENTETE = "X-Menage"
+
+
+class ServeurMenage(ThreadingHTTPServer):
+    request_queue_size = 64          # defaut de Python : 5. La page lance 6 a 8 requetes d'un coup au chargement : sous charge, une connexion etait refusee
 
 
 def builds_en_cours_defaut():
@@ -97,13 +102,24 @@ class Etat:
 
     def apercu(self, d):
         """Apercu (lecture seule) d'un lot de deplacements pris dans le rapport en cours : voir menage_application.previsualise."""
-        enc = self.audit.builds_en_cours()
-        if enc:
-            raise RuntimeError("un build est en cours (" + ", ".join(str(e) for e in list(enc)[:3]) + ") : apercu refuse")
+        menage_application.verifie_pas_de_build(self.audit.builds_en_cours, "apercu")
         r = self.rapport()
         if r is None:
             raise LookupError("pas de rapport")
-        return menage_application.previsualise(d.get("ids"), r["propositions"], self.racine)
+        if not menage_application._VERROU.acquire(blocking=False):     # `git rm -n` prend le verrou d'index : il ferait echouer le lot en cours
+            raise RuntimeError("une application ou un retour en arriere est en cours : apercu refuse")
+        try:
+            return menage_application.previsualise(d.get("ids"), r["propositions"], self.racine)
+        finally:
+            menage_application._VERROU.release()
+
+    def derniere(self):
+        """La derniere application REELLE de ce processus (bouton « Annuler » de la page, qui survit a un rechargement) ou {application: None}."""
+        with self._verrou:
+            if not self.applications:
+                return {"application": None, "faits": []}
+            a = self.applications[-1]
+            return {"application": a["numero"], "faits": [{"id": f["id"], "action": f.get("action"), "chemin": f.get("chemin")} for f in a["faits"]]}
 
     def applique(self, d):
         """Application REELLE d'un lot (git rm / git mv, rien de commite) : exige la confirmation explicite, l'empreinte et le HEAD de l'apercu."""
@@ -136,7 +152,8 @@ class Etat:
                                         journal=self.dossier / "applications.jsonl")
         with self._verrou:
             if not res["restants"]:
-                self.applications.pop()
+                if derniere in self.applications:         # remove, pas pop : une application empilee entre-temps (course) ne doit pas disparaitre a sa place
+                    self.applications.remove(derniere)
             else:
                 derniere["faits"] = [f for f in derniere["faits"] if f["id"] in set(res["restants"])]
         return res
@@ -242,6 +259,8 @@ def fabrique_gestionnaire(acces, etat):
                 self._json(r)
             elif chemin == "/gardes":
                 self._json({"gardes": etat.memoire.charge()})
+            elif chemin == "/appliquer/derniere":
+                self._json(etat.derniere())
             elif chemin == "/rapports":
                 self._json({"rapports": etat.audit.rapports()})
             else:
@@ -303,13 +322,13 @@ def principal():
     args = opt.parse_args()
     acces = acces_web.Acces(args.http, args.local, "Menage du depot")
     try:
-        serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(acces, Etat(DEPOT, builds_en_cours_defaut)))
+        serveur = ServeurMenage((acces.hote, args.http), fabrique_gestionnaire(acces, Etat(DEPOT, builds_en_cours_defaut)))
     except OSError as erreur:
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
         return 1
     serveur.daemon_threads = True
     acces.annonce(not args.sans_navigateur)
-    print("Ctrl+C pour arreter (rien n'est ecrit dans le depot).", flush=True)
+    print("Ctrl+C pour arreter (le depot n'est modifie que par « Appliquer pour de bon », apres confirmation dans la page).", flush=True)
     try:
         serveur.serve_forever()
     except KeyboardInterrupt:

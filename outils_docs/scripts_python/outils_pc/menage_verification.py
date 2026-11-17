@@ -19,6 +19,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import PurePosixPath
 
+import menage_rapport
+
 DELAI = 60            # par commande git
 DELAI_TOTAL = 240     # pour toutes les propositions
 MAX_RENVOIS = 30
@@ -46,7 +48,8 @@ def force_en_cours(proposition, verif):
 
 def _git(racine, args, delai, codes=(0,)):
     """Sortie de git ; leve subprocess.SubprocessError si le code n'est pas attendu (une erreur ne doit jamais passer pour « rien trouve »)."""
-    r = subprocess.run(["git", "--no-optional-locks", "-c", "core.quotepath=off"] + args, cwd=racine, capture_output=True, timeout=max(1, delai),
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}       # GIT_DIR, GIT_INDEX_FILE... : git lirait un autre depot ou index
+    r = subprocess.run(["git", "--no-optional-locks", "-c", "core.quotepath=off"] + args, cwd=racine, capture_output=True, timeout=max(1, delai), env=env,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if r.returncode not in codes:
         raise subprocess.SubprocessError(f"git {args[0]} : code {r.returncode}")
@@ -62,6 +65,32 @@ def _depot_git(racine, delai):
         return os.path.samefile(_git(racine, ["rev-parse", "--show-toplevel"], delai).strip(), racine)
     except (OSError, subprocess.SubprocessError):
         return False
+
+
+def _extraits(racine, docs, motifs, delai):
+    """Les LIGNES des documents qui citent la proposition : {fichier, ligne, texte}, au plus 3 par document et MAX_RENVOIS en tout. Le texte est masque
+    (secrets) et centre sur le renvoi. Un echec de git rend une liste vide : l'extrait est un confort, jamais une raison de perdre la verification."""
+    if not docs:
+        return []
+    cmd = ["grep", "-I", "-n", "-z", "-F"] + [x for m in motifs for x in ("-e", m)] + ["--"] + [":(literal)" + d for d in docs]
+    try:
+        sortie = _git(racine, cmd, delai, codes=(0, 1))
+    except (OSError, subprocess.SubprocessError):
+        return []
+    extraits, par_fichier = [], {}
+    for ligne in sortie.split("\n"):
+        fichier, _, reste = ligne.partition("\0")
+        numero, _, texte = reste.partition("\0")
+        if not fichier or not numero.isdigit() or par_fichier.get(fichier, 0) >= 3:
+            continue
+        par_fichier[fichier] = par_fichier.get(fichier, 0) + 1
+        texte = menage_rapport.masque(texte.strip())
+        place = min([i for i in (texte.find(m) for m in motifs) if i >= 0] or [0])
+        debut = max(0, place - 60)
+        extraits.append({"fichier": fichier, "ligne": int(numero), "texte": ("…" if debut else "") + texte[debut:debut + 160]})
+        if len(extraits) >= MAX_RENVOIS:
+            break
+    return extraits
 
 
 def _sur(chemin):
@@ -94,7 +123,8 @@ def _verifie_une(racine, p, delai, limite):
     existe = os.path.lexists(os.path.join(racine, chemin))
     return {"disponible": True, "erreur": None, "existe": existe, "suivi": suivi, "modifie": modifie, "perimee": not existe,
             "destination_existe": bool(vers) and _sur(vers) and os.path.lexists(os.path.join(racine, vers)),
-            "n_docs": len(docs), "n_code": len(code), "renvois_docs": docs[:MAX_RENVOIS], "renvois_code": code[:MAX_RENVOIS]}
+            "n_docs": len(docs), "n_code": len(code), "renvois_docs": docs[:MAX_RENVOIS], "renvois_code": code[:MAX_RENVOIS],
+            "extraits_docs": _extraits(racine, docs[:MAX_RENVOIS], motifs, restant())}
 
 
 def _applique(p, verif):
