@@ -433,3 +433,39 @@ gardes ; entree ecrite a la main, pas par le script.
 -   `0a8e654b2` Update change logs
 -   `815753ab7` Add GPIOViewer labels to GPIOs using web app v2.3.4 (#25257)
 -   `3e7e1ea12` Drop GPIO's labelled "None"
+
+## 2026-11-17 21:20 — 29 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**9 commit(s) ● a lire de pres.**
+
+-   `7b7314822` Fix PCF8574 OoB (#25272)
+-   `7b86da03e` Fix compile warning
+-   `ae5e7863c` Update platform version to 2026.11.51 (#25275)
+-   `c84dc1457` Update Arduino and Platform version in PR template
+-   `0060f3cf9` Bump version v16.0.0.5
+-   `707ef0d2c` Fix GPIOViewer labels
+- ● `8871c0a5d` Matter lights Level Control MinLevel 1 and On/Off behavior aligned with Matter 1.6.1 (#25279)
+-   `87904f396` Update ESP32 Platform and Framework version in CHANGELOG
+-   `3ed67aa96` README.md: Update canonical URL for TasmoAdmin (#25281)
+-   `e6be7d4b4` Update change logs
+-   `7378bcb76` FileDownload/FileUpload Type 8: transfer a file system file over MQTT (#25278)
+-   `4df7aff83` IR receive: optional check every loop and configurable save buffer (#25268)
+-   `d2c29d18e` Fix palette colors on monochrome universal displays (#25260)
+-   `c954eb2de` Update change logs
+-   `ae5adce41` update jpegdec v1.8.5 (#25282)
+- ● `b83f8fa55` Matter Boolean State StateChange event for Contact, Rain and Water Leak sensors (#25286)
+- ● `768a1a07f` Matter fix `Dimmer 0` behavior (#25287)
+- ● `c63d55f2d` Matter update revisions (#25288)
+-   `c7d439f35` Update change logs
+-   `e56e21440` TasMesh: fix ESP32 build with ESP-IDF 5.5 (#25289)
+-   `cbef8815f` Fix TashMesh and WizMote ESP-NOW support for IDF v5.5.5 (#25289)
+- ● `44ecfd0f2` Fix WizMote on ESP32 memory leak
+-   `87044a227` Add latest PR's to library
+-   `e1aa0ad1b` TasMesh: check the esp_now_init() result when starting the broker (#25290)
+- ● `b7b7c6ae5` Matter cluster and device type revisions aligned with Matter 1.6.1, fixed ReachableChanged for MQTT (#25292)
+- ● `3a3980724` Matter Fan advertising the unsupported Auto mode (#25293)
+- ● `a06a2a5b8` Matter Air Quality PM1, PM2.5 and PM10 reported in ppm instead of µg/m³, and TVOC in ppm instead of ppb (#25294)
+- ● `08465ca5b` Matter MRP sending unacknowledged messages 7 times instead of 5 (#25295)
+-   `1e03a6d9a` Re-fix PWMFrequency 2 on v16.0.0.5 (#25155)
