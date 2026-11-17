@@ -48,7 +48,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
     //  #warning *** ------------------- Le fichier 'user_config_override.ini' est appele ------------------- ***
     #if defined(CFG_HOLDER) && (CFG_HOLDER == 4617)
         #undef CFG_HOLDER
-		#define CFG_HOLDER 		1608			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
+		#define CFG_HOLDER 		1614			// [Reset 1] Change this value to load SECTION1 configuration parameters to flash
 
         // #pragma message(*** ------------------- Les paramètres flash seront remplacés ! ------------------- ***)
     #else
@@ -707,7 +707,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // ESP32-S3 N16R8 ont la MEME identite (IP, topic, client MQTT). Seul le template differe.
         #if defined(FIRMWARE_ESP32_CAVE_SERVEUR_RLY) || defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
             #undef CFG_HOLDER
-            #define CFG_HOLDER  1611    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            #define CFG_HOLDER  1612    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
@@ -1112,7 +1112,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // -- Options for firmware tasmota32-bureau-interrupteur-energie ------
         #elif defined(FIRMWARE_ESP32_BUREAU_INTERRUPTEUR_ENERGIE)
             #undef CFG_HOLDER
-            #define CFG_HOLDER  1610    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            #define CFG_HOLDER  1611    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
@@ -1526,6 +1526,8 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #endif
             #define USER_BACKLOG      "Backlog Module 0; Hostname SERVEUR-GRENIER-2EME"
         #elif defined(FIRMWARE_ESP32S3_GARAGE_SERVEUR_MODBUS)
+            #undef CFG_HOLDER
+            #define CFG_HOLDER  1615    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
