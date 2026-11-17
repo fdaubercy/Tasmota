@@ -1072,9 +1072,9 @@
    ],
    "specs": [],
    "cree": "2026-11-15",
-   "maj": "2026-11-15",
-   "pct": 93,
-   "etapes": "26/28",
+   "maj": "2026-11-16",
+   "pct": 86,
+   "etapes": "31/36",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/compilations-nuit.md",
    "urls_spec": []
   },
@@ -1129,9 +1129,9 @@
    ],
    "specs": [],
    "cree": "2026-11-15",
-   "maj": "2026-11-15",
-   "pct": 62,
-   "etapes": "10/16",
+   "maj": "2026-11-16",
+   "pct": 81,
+   "etapes": "13/16",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-appliquer.md",
    "urls_spec": []
   },
@@ -1149,8 +1149,8 @@
    "specs": [],
    "cree": "2026-11-15",
    "maj": "2026-11-15",
-   "pct": 87,
-   "etapes": "40/46",
+   "pct": 89,
+   "etapes": "41/46",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison.md",
    "urls_spec": []
   },
@@ -1170,6 +1170,61 @@
    "pct": 100,
    "etapes": "22/22",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/sondes-en-cours.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "rgx-ethernet-uplink",
+   "titre": "PR amont Range Extender, Ethernet comme liaison montante (discussion arendst/Tasmota#25280)",
+   "objectif": "Faire démarrer l'AP du Range Extender quand seul l'Ethernet a une IP, en un PR propre accepté par arendst",
+   "statut": "actif",
+   "famille": "modbus-reseau",
+   "parent": "",
+   "liens": [
+    "alerte-firmware-c6"
+   ],
+   "specs": [],
+   "cree": "2026-11-16",
+   "maj": "2026-11-16",
+   "pct": 34,
+   "etapes": "11/32",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/rgx-ethernet-uplink.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "tasmesh-evolution-amont",
+   "titre": "Faire évoluer TasMesh en amont (commandes de nœud à nœud, charge utile, clés par pair)",
+   "objectif": "Sonder arendst/Tasmota par une discussion courte, puis proposer de petits PR isolés sur TasMesh si les mainteneurs y sont favorables",
+   "statut": "actif",
+   "famille": "modbus-reseau",
+   "parent": "",
+   "liens": [
+    "rgx-ethernet-uplink"
+   ],
+   "specs": [],
+   "cree": "2026-11-16",
+   "maj": "2026-11-16",
+   "pct": 50,
+   "etapes": "15/30",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/tasmesh-evolution-amont.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "voie-mqtt",
+   "titre": "Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)",
+   "objectif": "Commander des esclaves, lire leurs capteurs et être averti de leurs changements d'état par MQTT, à côté de ModBus série et UDP, avec garde-fous anti-boucle et repli",
+   "statut": "actif",
+   "famille": "modbus-reseau",
+   "parent": "",
+   "liens": [
+    "rgx-ethernet-uplink",
+    "alerte-firmware-c6"
+   ],
+   "specs": [],
+   "cree": "2026-11-17",
+   "maj": "2026-11-17",
+   "pct": 44,
+   "etapes": "23/52",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-mqtt.md",
    "urls_spec": []
   }
  ]

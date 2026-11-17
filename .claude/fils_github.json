@@ -1,4 +1,32 @@
 [
-  {"depot": "arendst/Tasmota", "type": "discussions", "numero": 25280, "sujet": "Range Extender par l'Ethernet"},
-  {"depot": "thelastoutpostworkshop/gpio_viewer", "type": "issues", "numero": 207, "sujet": "GPIO Viewer, libelles des broches"}
+  {
+    "depot": "arendst/Tasmota",
+    "type": "discussions",
+    "numero": 25280,
+    "sujet": "Range Extender par l'Ethernet"
+  },
+  {
+    "depot": "thelastoutpostworkshop/gpio_viewer",
+    "type": "issues",
+    "numero": 207,
+    "sujet": "GPIO Viewer, libelles des broches"
+  },
+  {
+    "depot": "arendst/Tasmota",
+    "type": "issues",
+    "numero": 25289,
+    "sujet": "PR TasMesh : build ESP32 avec ESP-IDF 5.5"
+  },
+  {
+    "depot": "arendst/Tasmota",
+    "type": "issues",
+    "numero": 25290,
+    "sujet": "PR TasMesh : test de esp_now_init"
+  },
+  {
+    "depot": "arendst/Tasmota",
+    "type": "discussions",
+    "numero": 25297,
+    "sujet": "Discussion TasMesh : ESP32 comme noeud et commandes noeud a noeud"
+  }
 ]
