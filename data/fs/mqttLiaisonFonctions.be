@@ -153,7 +153,9 @@ class GardeMqtt
         return "evenement"
     end
 
-    def a_renvoyer(t)
+    # maxi : plafond de renvois rendus par appel (les autres restent echus pour le prochain passage) ; nil = sans plafond.
+    # Chaque renvoi est un publish, et un publish lent bloque loop() : jamais une rafale dans le meme appel.
+    def a_renvoyer(t, maxi)
         var renvoyer = []
         var echec = []
         var cles = []
@@ -165,6 +167,8 @@ class GardeMqtt
                     self.attente.remove(cle)
                     echec.push(cle)
                     self.log("LIAISON_MQTT_ERREUR: " + str(cle) + " sans accusé après " + str(a["essais"]) + " essais !", LOG_LEVEL_ERREUR)
+                elif maxi != nil && size(renvoyer) >= maxi
+                    # plafond atteint : cet ordre reste echu, il repart au prochain passage
                 elif self.bloque(cle, t) != nil
                     self.attente.remove(cle)
                     echec.push(cle)
@@ -180,7 +184,12 @@ class GardeMqtt
         return {"renvoyer": renvoyer, "echec": echec}
     end
 
-    # Leve quarantaines et coupe-circuit (commande ReglageMqttLiaison, A4)
+    # Etat resume (commande ReglageMqttLiaison etat)
+    def bilan()
+        return {"coupe": self.coupe_actif, "quarantaines": size(self.quarantaine), "attentes": size(self.attente), "elements": size(self.etats)}
+    end
+
+    # Leve quarantaines et coupe-circuit (commande ReglageMqttLiaison rearme)
     def rearme()
         self.quarantaine = {}
         self.emis = {}
@@ -190,6 +199,61 @@ class GardeMqtt
 end
 
 mqttLiaisonFonctions.GardeMqtt = GardeMqtt
+
+# Journal du module et du driver : cible liaisonMqtt (seuil drivers.liaisonMqtt.log), charte des logs du depot
+def mqttLiaisonFonctions_log(msg, niveau)
+    import logFonctions
+    logFonctions.log(msg, niveau, "liaisonMqtt")
+end
+mqttLiaisonFonctions.log = mqttLiaisonFonctions_log
+
+# Aide de la commande ReglageMqttLiaison, appelee SEULEMENT par diversFonctions.traiteAide :
+# sujet == nil -> [[nom, syntaxe, resume], ...] ; sujet == nom -> lignes de detail, ou nil
+def mqttLiaisonFonctions_aideReglage(sujet)
+    import string
+    if sujet == nil
+        return [["etat", "etat", "etat de la voie : coupe-circuit, quarantaines, ordres en attente"],
+                ["rearme", "rearme", "leve les quarantaines et le coupe-circuit"],
+                ["ordre", "ordre <esclave> <commande> <valeur>", "envoie un ordre en passant par les garde-fous (essai)"]]
+    end
+    var s = string.tolower(str(sujet))
+    if s == "etat"      return ["Rend {coupe, quarantaines, attentes, elements}."]    end
+    if s == "rearme"    return ["Vide quarantaines, comptages et coupe-circuit. Ne touche ni aux etats connus ni aux ordres en attente."]    end
+    if s == "ordre"     return ["esclave = cle de drivers.liaisonMqtt.esclaves. Commandes permises : Power, Power<n> (ON, OFF, 1, 0, true, false), Dimmer et CT (entier).", "Les autres commandes (Restart, Backlog, Br, TOGGLE...) sont refusees : invalide.", "Reponse : envoyer, identique, attente, quarantaine, coupe, invalide, inconnu ou hors_ligne (reseau, broker ou esclave Offline)."]    end
+    return nil
+end
+mqttLiaisonFonctions.aideReglage = mqttLiaisonFonctions_aideReglage
+
+def mqttLiaisonFonctions_reglage(cmd, idx, payload, payload_json)
+    import string
+    import json
+    import global
+    import diversFonctions
+    import mqttLiaisonFonctions                  # solidifie, le nom global du module n'existe pas (piege 2)
+    if diversFonctions.traiteAide("ReglageMqttLiaison", payload, mqttLiaisonFonctions.aideReglage, true)    return    end
+    var mots = []
+    for m: string.split(payload == nil ? "" : str(payload), " ")
+        if size(m) > 0    mots.push(m)    end
+    end
+    var sous = size(mots) > 0 ? string.tolower(mots[0]) : "etat"
+    var g = global.mqttLiaisonGarde
+    var rep = nil
+    var c = global.mqttLiaisonDriver
+    if g == nil                rep = {"erreur": "voie MQTT non chargee"}
+    elif sous == "etat"
+        rep = g.bilan()
+        if c != nil    rep["en_ligne"] = c.en_ligne    end
+    elif sous == "rearme"      g.rearme()    rep = {"rearme": true}
+    elif sous == "ordre"
+        if c == nil              rep = {"erreur": "driver absent (drivers.liaisonMqtt.activation a OFF ?)"}
+        elif size(mots) < 4      rep = {"erreur": "syntaxe : ordre <esclave> <commande> <valeur>"}
+        else                     rep = {"ordre": c.ordonne(mots[1], mots[2], mots[3])}
+        end
+    else                       rep = {"erreur": "sous-commande inconnue : " + sous}
+    end
+    tasmota.resp_cmnd(json.dump({"ReglageMqttLiaison": rep}))
+end
+mqttLiaisonFonctions.reglage = mqttLiaisonFonctions_reglage
 
 # init() : APPELEE AUTOMATIQUEMENT par 'import mqttLiaisonFonctions'. Seuils lus dans drivers.liaisonMqtt.garde du
 # persist (cles absentes = valeurs par defaut) ; l'instance vit dans global.mqttLiaisonGarde.

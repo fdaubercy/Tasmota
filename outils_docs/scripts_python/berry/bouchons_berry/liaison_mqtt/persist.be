@@ -1,6 +1,13 @@
-# Bouchon du module natif 'persist' pour banc_mqtt_liaison.be : find() sur une map ; seuils de garde-fous reduits
-# pour tester la lecture du persist (drivers.liaisonMqtt.garde).
+# Bouchon du module natif 'persist' pour banc_mqtt_liaison.be : find() sur une map. drivers.liaisonMqtt : seuils de
+# garde-fous reduits (lecture du persist) et esclaves declares (un actif a deux segments, un actif a un segment,
+# un inactif, un sans topic).
 var persist = module("persist")
-persist._p = {"drivers": {"liaisonMqtt": {"garde": {"maxParElement": 4, "delaiAccuseMs": 1500, "essaisMax": "x"}}}}
+persist._p = {"drivers": {"liaisonMqtt": {"activation": "ON", "garde": {"maxParElement": 4, "delaiAccuseMs": 1500, "essaisMax": "x"},
+    "esclaves": {"projecteur": {"activation": "ON", "topic": "jardin/projecteur_led"},
+                 "pompe": {"activation": "ON", "topic": "pompe"},
+                 "inactif": {"activation": "OFF", "topic": "x/inactif"},
+                 "a/b": {"activation": "ON", "topic": "q/r"},
+                 "joker": {"activation": "ON", "topic": "x/+"},
+                 "sanstopic": {"activation": "ON"}}}}}
 persist.find = def (k, d) return persist._p.find(k, d) end
 return persist

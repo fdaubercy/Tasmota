@@ -18,7 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from banc_coprocesseur import trouve_berry, trouve_racine  # noqa: E402  (meme dossier : module voisin)
 
-# (nom, texte du module, remplacement) : chaque mutant retire un garde-fou que le banc doit voir
+# (nom, texte du module, remplacement) : chaque mutant retire un garde-fou que le banc doit voir.
+# Les mutants du driver (controleMqttLiaison.be) sont dans MUTANTS_DRIVER, meme forme.
 MUTANTS = [
     ("limiteur par element retire (G4)", "if size(self.emis[cle]) >= self.max_element", "if false"),
     ("coupe-circuit global retire (G5)", "if size(self.totaux) >= self.max_total", "if false"),
@@ -34,6 +35,28 @@ MUTANTS = [
     ("cle ou valeur invalide acceptee", "if type(cle) == \"string\" && size(cle) > 0 && valeur != nil    return true    end", "return true"),
     ("valeur non convertie en texte (demande)", "        valeur = str(valeur)                       # 1 et", "        # 1 et"),
     ("1er retour sans etat connu pris pour un evenement", "if !connu    return \"initial\"    end                         # 1er", "# 1er"),
+    ("plafond de renvois par appel retire", "elif maxi != nil && size(renvoyer) >= maxi", "elif false"),
+]
+MUTANTS_DRIVER = [
+    ("ordre publie sans accord des garde-fous", "if code == \"envoyer\"", "if true"),
+    ("reseau ou broker non verifie avant un ordre", "self.en_ligne.find(nom) == false || !self.peut_emettre()", "self.en_ligne.find(nom) == false"),
+    ("esclave Offline (LWT) pas refuse", "self.en_ligne.find(nom) == false || !self.peut_emettre()", "!self.peut_emettre()"),
+    ("garde d'activation retiree", "find(\"activation\", \"OFF\") == \"ON\"", "find(\"activation\", \"OFF\") != \"JAMAIS\""),
+    ("esclave inactif pris en compte", "if e.find(\"activation\", \"OFF\") != \"ON\"    continue    end", "if false    continue    end"),
+    ("retour d'un esclave non declare accepte", "if nom == nil    return false    end", "if false    return false    end"),
+    ("liste blanche des commandes retiree", "if !self.COMMANDES.contains(base)    return nil    end", "if false    return nil    end"),
+    ("Power0 accepte", "if indice == \"0\"    return nil    end", "if false    return nil    end"),
+    ("TOGGLE pris pour ON", "|| v == \"true\"        v = \"ON\"", "|| v == \"true\" || v == \"toggle\"        v = \"ON\""),
+    ("Dimmer mal forme accepte", "if indice != \"\" || !self.chiffres(v)    return nil    end", "if false    return nil    end"),
+    ("Power sans indice non range sous POWER1", "if indice == \"\"    c = \"POWER1\"    end", "if false    c = \"POWER1\"    end"),
+    ("retour POWER non range sous POWER1", "if e == \"POWER\"    e = \"POWER1\"    end", "if false    e = \"POWER1\"    end"),
+    ("plafond de renvois par passage porte a 500", "static RENVOIS_PAR_PASSAGE = 5 ", "static RENVOIS_PAR_PASSAGE = 500 "),
+    ("nom d'esclave avec slash accepte", "|| string.find(nom, \"/\") >= 0", "|| false"),
+    ("topic en double accepte", "elif self.par_topic.contains(topic)", "elif false"),
+    ("topic avec joker accepte", "string.find(topic, \"+\") >= 0 || string.find(topic, \"#\") >= 0", "false"),
+    ("renvoi jamais publie", "if topic != nil    mqtt.publish(\"cmnd/\" + topic + \"/\" + e[0]", "if false    mqtt.publish(\"cmnd/\" + topic + \"/\" + e[0]"),
+    ("valeur nulle transmise aux garde-fous", "if v != nil && type(v) != \"instance\"", "if type(v) != \"instance\""),
+    ("LWT ignore", "self.en_ligne[nom] = (s == \"Online\")", "self.en_ligne[nom] = true"),
 ]
 
 
@@ -53,14 +76,18 @@ def main():
     print(sortie, end="" if sortie.endswith("\n") else "\n")
     vert = "BANC_MQTT_LIAISON: OK" in sortie
     if not args.sans_mutants:
-        source = (racine / "data" / "fs" / "mqttLiaisonFonctions.be").read_text(encoding="utf-8")
-        for nom, avant, apres in MUTANTS:
+        fichiers = {nom: (racine / "data" / "fs" / nom).read_text(encoding="utf-8")
+                    for nom in ("mqttLiaisonFonctions.be", "controleMqttLiaison.be")}
+        for fichier, mutants in (("mqttLiaisonFonctions.be", MUTANTS), ("controleMqttLiaison.be", MUTANTS_DRIVER)):
+          for nom, avant, apres in mutants:
+            source = fichiers[fichier]
             if source.count(avant) != 1:
-                print(f"KO   mutant '{nom}' : texte a muter introuvable (module modifie ?)")
+                print(f"KO   mutant '{nom}' : texte a muter introuvable ({fichier} modifie ?)")
                 vert = False
                 continue
             with tempfile.TemporaryDirectory() as tmp:
-                (Path(tmp) / "mqttLiaisonFonctions.be").write_text(source.replace(avant, apres), encoding="utf-8")
+                for autre, texte in fichiers.items():          # les DEUX modules, dont un seul est mute
+                    (Path(tmp) / autre).write_text(source.replace(avant, apres) if autre == fichier else texte, encoding="utf-8")
                 rouge = "BANC_MQTT_LIAISON: OK" not in lance(berry, racine, Path(tmp).as_posix())   # ECHEC ou plantage
             print(("OK   " if rouge else "KO   ") + f"mutant '{nom}' : banc rouge")
             vert = vert and rouge

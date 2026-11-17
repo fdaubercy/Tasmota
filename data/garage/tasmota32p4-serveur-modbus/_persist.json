@@ -927,6 +927,33 @@
 		}
 	},
 	"drivers": {
+		"liaisonMqtt": {
+			"activation": "OFF",
+			"log": "info",
+			"garde": {
+				"fenetreMs": 10000,
+				"maxParElement": 10,
+				"maxTotal": 60,
+				"quarantaineMs": 60000,
+				"coupureMs": 300000,
+				"delaiAccuseMs": 3000,
+				"essaisMax": 3
+			},
+			"esclaves": {
+				"projecteur": {
+					"activation": "ON",
+					"topic": "jardin/projecteur_led"
+				},
+				"pompe": {
+					"activation": "ON",
+					"topic": "jardin/pompe_piscine"
+				},
+				"cuve": {
+					"activation": "ON",
+					"topic": "jardin/cuve"
+				}
+			}
+		},
 		"leds": {
 			"activation": "ON",
 			"name": "Leds",

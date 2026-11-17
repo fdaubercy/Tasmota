@@ -21,6 +21,18 @@ var LOG_LEVEL_DEBUG = 3
 var LOG_LEVEL_DEBUG_PLUS = 4
 var JOURNAL = []
 
+class Driver end                                   # classe du firmware, absente de berry.exe
+class TasmotaStub
+    var cmds, pilotes, reseau, ms, reponses
+    def init() self.cmds = {} self.pilotes = [] self.reseau = true self.ms = 100000 self.reponses = [] end
+    def add_cmd(n, f) self.cmds[n] = f end
+    def add_driver(d) self.pilotes.push(d) end
+    def is_network_up() return self.reseau end
+    def millis() return self.ms end
+    def resp_cmnd(s) self.reponses.push(s) end
+end
+var tasmota = TasmotaStub()
+
 var echecs = 0
 def verifie(ok, libelle)
     print((ok ? "OK   " : "KO   ") + libelle)
@@ -162,6 +174,115 @@ for i: 0 .. 199                                    # 200 retours en 20 s
     end
 end
 verifie(ordres == G.MAX_ELEMENT, "maitre fautif : " + str(ordres) + " ordres sur 200 tentatives (borne : " + str(G.MAX_ELEMENT) + ")")
+
+# --- 7 bis. LE DRIVER (controleMqttLiaison) : abonnements, ordres, retours, renvois, commande
+import mqtt
+import json
+import controleMqttLiaison
+var D = global.mqttLiaisonDriver
+var garde = global.mqttLiaisonGarde
+verifie(D != nil && size(tasmota.pilotes) == 1 && tasmota.cmds.contains("ReglageMqttLiaison"), "driver : instance globale, add_driver et commande ReglageMqttLiaison")
+verifie(size(D.esclaves) == 2 && D.esclaves["projecteur"] == "jardin/projecteur_led" && D.esclaves["pompe"] == "pompe", "driver : seuls les esclaves actifs, valides et sans doublon sont declares")
+verifie(size(mqtt.abonnes) == 4 && mqtt.abonnes.contains("stat/jardin/projecteur_led/+") && mqtt.abonnes.contains("tele/pompe/LWT"), "driver : 2 abonnements par esclave, jamais de joker global")
+
+# ordres : reseau coupe -> rien n'est emis ni compte
+tasmota.reseau = false
+verifie(D.ordonne("projecteur", "Power1", "ON") == "hors_ligne" && size(mqtt.publies) == 0 && size(garde.attente) == 0, "ordre sans reseau : hors_ligne, rien publie, rien compte")
+tasmota.reseau = true
+mqtt.connecte = false
+verifie(D.ordonne("projecteur", "Power1", "ON") == "hors_ligne" && size(mqtt.publies) == 0, "ordre sans broker : hors_ligne")
+mqtt.connecte = true
+verifie(D.ordonne("inconnu", "Power1", "ON") == "inconnu" && D.ordonne("inactif", "Power1", "ON") == "inconnu", "esclave non declare ou inactif : inconnu")
+verifie(D.ordonne("projecteur", "Power1", "ON") == "envoyer" && size(mqtt.publies) == 1 && mqtt.publies[0][0] == "cmnd/jardin/projecteur_led/POWER1" && mqtt.publies[0][1] == "ON", "ordre : publie cmnd/<topic>/<commande>")
+verifie(D.ordonne("projecteur", "Power1", "ON") == "attente" && size(mqtt.publies) == 1, "meme ordre pendant l'attente : rien de plus publie")
+
+# retours : l'accuse n'est pas un evenement, un changement de l'esclave en est un
+var evenements = size(JOURNAL)
+mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led/RESULT", 0, '{"POWER1":"ON"}', bytes())
+verifie(size(garde.attente) == 0 && garde.etats["projecteur/POWER1"] == "ON", "retour RESULT attendu : ordre accuse")
+verifie(size(JOURNAL) == evenements, "accuse : aucun journal d'evenement")
+mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led/POWER1", 0, "OFF", bytes())
+verifie(garde.etats["projecteur/POWER1"] == "OFF" && JOURNAL[-1][1] == LOG_LEVEL_DEBUG && string.find(JOURNAL[-1][0], "évènement") > 0, "bouton local : evenement journalise en debug")
+var avant_json = size(JOURNAL)
+verifie(mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led/RESULT", 0, '{"Button1":{"Action":"SINGLE"},"POWER2":null}', bytes()) == false && !garde.etats.contains("projecteur/BUTTON1") && !garde.etats.contains("projecteur/POWER2") && size(JOURNAL) == avant_json, "objet Button et valeur nulle : ignores, sans etat ni erreur journalisee")
+verifie(mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led/RESULT", 0, "pas du json", bytes()) == false, "RESULT illisible : ignore sans exception")
+verifie(D.recu("stat/autre/chose/RESULT", '{"POWER1":"ON"}') == false && !garde.etats.contains("autre/POWER1"), "topic d'un esclave non declare : ignore")
+mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Offline", bytes())
+verifie(D.en_ligne["pompe"] == false, "LWT Offline : esclave hors ligne")
+mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Online", bytes())
+verifie(D.en_ligne["pompe"] == true, "LWT Online : esclave en ligne")
+mqtt.abonnes["stat/pompe/+"]("stat/pompe/RESULT", 0, '{"POWER":"ON"}', bytes())
+verifie(garde.etats.contains("pompe/POWER1"), "topic a un seul segment, esclave a un seul relais (POWER) : retour range sous POWER1")
+
+# renvois : ordre sans accuse
+var pub = size(mqtt.publies)
+D.ordonne("projecteur", "Power2", "ON")
+tasmota.ms = tasmota.ms + 1499
+D.every_second()
+verifie(size(mqtt.publies) == pub + 1, "avant le delai d'accuse : pas de renvoi")
+tasmota.ms = tasmota.ms + 1
+D.every_second()
+verifie(size(mqtt.publies) == pub + 2 && mqtt.publies[-1][0] == "cmnd/jardin/projecteur_led/POWER2" && mqtt.publies[-1][1] == "ON", "apres le delai : meme ordre republie (commande en majuscules, Tasmota ignore la casse)")
+tasmota.reseau = false
+tasmota.ms = tasmota.ms + 5000
+D.every_second()
+verifie(size(mqtt.publies) == pub + 2, "renvoi sans reseau : rien publie")
+tasmota.reseau = true
+
+# commande ReglageMqttLiaison
+var cmd = tasmota.cmds["ReglageMqttLiaison"]
+def reponse(payload)
+    tasmota.reponses = []
+    cmd("ReglageMqttLiaison", 0, payload, nil)
+    return json.load(tasmota.reponses[0])["ReglageMqttLiaison"]
+end
+verifie(reponse("etat").contains("quarantaines") && reponse("etat").contains("en_ligne") && reponse("")["coupe"] == false, "commande etat (avec en_ligne) et sans argument")
+var r_ordre = reponse("ordre pompe Power1 OFF")
+verifie(r_ordre["ordre"] == "envoyer" && reponse("ordre pompe Power1 OFF")["ordre"] == "attente", "commande ordre : passe par les garde-fous (envoyer puis attente)")
+verifie(reponse("ordre pompe")["erreur"] != nil && reponse("zzz")["erreur"] != nil, "commande : syntaxe et sous-commande inconnue refusees")
+garde.coupe_actif = true
+garde.quarantaine["x"] = 9999999
+verifie(reponse("rearme")["rearme"] == true && !garde.coupe_actif && size(garde.quarantaine) == 0, "commande rearme : leve coupe-circuit et quarantaines")
+
+# liste blanche et normalisation : seules les commandes a etat sont permises, avec des valeurs connues
+garde.attente = {}
+mqtt.publies = []
+verifie(D.ordonne("pompe", "Restart", "1") == "invalide" && D.ordonne("pompe", "Backlog", "Power1 ON") == "invalide" && D.ordonne("pompe", "Br", "x") == "invalide" && size(mqtt.publies) == 0, "commandes hors liste blanche (Restart, Backlog, Br) : invalide, rien publie")
+verifie(D.ordonne("pompe", "Power1", "TOGGLE") == "invalide" && D.ordonne("pompe", "Power0", "ON") == "invalide" && D.ordonne("pompe", "Dimmer", "abc") == "invalide" && D.ordonne("pompe", "Dimmer1", "50") == "invalide" && D.ordonne("pompe", "a/b", "ON") == "invalide" && D.ordonne("pompe", nil, "ON") == "invalide" && D.ordonne("pompe", "Power1", nil) == "invalide", "TOGGLE, Power0, Dimmer mal forme, commande avec slash, nil : invalide")
+verifie(size(mqtt.publies) == 0 && size(garde.attente) == 0, "ordres invalides : ni publie ni compte")
+verifie(D.ordonne("projecteur", "Power5", "true") == "envoyer" && mqtt.publies[-1][0] == "cmnd/jardin/projecteur_led/POWER5" && mqtt.publies[-1][1] == "ON", "valeur true normalisee en ON")
+verifie(D.ordonne("projecteur", "Dimmer", 50) == "envoyer" && mqtt.publies[-1][0] == "cmnd/jardin/projecteur_led/DIMMER" && mqtt.publies[-1][1] == "50", "Dimmer 50 : entier normalise en texte")
+verifie(D.ordonne("pompe", "Power", "OFF") == "envoyer" && mqtt.publies[-1][0] == "cmnd/pompe/POWER1", "Power sans indice : range sous POWER1")
+mqtt.abonnes["stat/pompe/+"]("stat/pompe/RESULT", 0, '{"POWER":"OFF"}', bytes())
+verifie(!garde.attente.contains("pompe/POWER1") && garde.etats["pompe/POWER1"] == "OFF", "...et accuse par le retour POWER d'un esclave a un seul relais")
+mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Offline", bytes())
+mqtt.publies = []
+verifie(D.ordonne("pompe", "Power", "ON") == "hors_ligne" && size(mqtt.publies) == 0, "esclave Offline (LWT) : ordre refuse, rien publie")
+mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Online", bytes())
+verifie(D.ordonne("pompe", "Power", "ON") == "envoyer", "esclave de retour Online : ordre accepte")
+
+# declarations d'esclaves invalides (l'init a deja ecarte a/b, joker et sanstopic)
+verifie(!D.declaration_valide("a/b", "t") && !D.declaration_valide("", "t") && !D.declaration_valide("n", "x/+") && !D.declaration_valide("n", "#") && !D.declaration_valide("n", "") && !D.declaration_valide("copie", "pompe") && D.declaration_valide("neuf", "autre/topic"), "declarations : nom avec slash, topic avec joker, vide ou en double refuses")
+verifie(size(D.esclaves) == 2, "persist : a/b, joker et sanstopic ignores a l'init")
+
+# plafond de renvois par passage : un publish lent bloque loop()
+garde.attente = {}
+garde.rearme()
+for i: 3 .. 10    D.ordonne("projecteur", "Power" + str(i), "ON")    end          # 8 ordres en attente
+var p0 = size(mqtt.publies)
+tasmota.ms = tasmota.ms + 1500
+D.every_second()
+verifie(size(mqtt.publies) == p0 + 5, "plafond : 5 renvois au plus par passage")
+D.every_second()
+verifie(size(mqtt.publies) == p0 + 8, "les ordres restants repartent au passage suivant")
+
+# garde d'activation : persist a OFF -> aucun driver
+import persist
+persist._p["drivers"]["liaisonMqtt"]["activation"] = "OFF"
+global.mqttLiaisonDriver = nil
+var avant = size(tasmota.pilotes)
+controleMqttLiaison.init(controleMqttLiaison)
+verifie(global.mqttLiaisonDriver == nil && size(tasmota.pilotes) == avant, "activation OFF : driver non cree ni ajoute")
 
 # --- 8. journal : erreurs aux seuils franchis
 var erreurs = 0
