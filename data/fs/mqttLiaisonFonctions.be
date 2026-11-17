@@ -195,6 +195,13 @@ class GardeMqtt
         return {"coupe": self.coupe_actif, "quarantaines": size(self.quarantaine), "attentes": size(self.attente), "elements": size(self.etats)}
     end
 
+    # Broker perdu longtemps : ordres en attente et etats connus ne valent plus rien (le prochain retour reconstruit les etats)
+    def oublie()
+        self.attente = {}
+        self.etats = {}
+        self.etats_t = {}
+    end
+
     # Leve quarantaines et coupe-circuit (commande ReglageMqttLiaison rearme)
     def rearme()
         self.quarantaine = {}
@@ -205,6 +212,38 @@ class GardeMqtt
 end
 
 mqttLiaisonFonctions.GardeMqtt = GardeMqtt
+
+# Surveillance du broker (plan voie-mqtt A7). Module pur : le driver lui passe « reseau et broker joignables ? » et l'instant.
+#   observe(connecte, t) -> "alerte" (perdu depuis alerte_ms, UNE fois) | "retour" (revenu apres une alerte, UNE fois) | "rien"
+# Une coupure plus courte que le delai ne produit ni alerte ni retour. Instants compares par difference (millis sur 32 bits).
+class SurveilleBroker
+    static ALERTE_MS = 120000            # perte du broker au-dela de laquelle l'alerte part (reglage alerteBrokerMs)
+    var alerte_ms, perdu, alerte
+
+    def init(cfg)
+        var v = isinstance(cfg, map) ? cfg.find("alerteBrokerMs") : nil
+        self.alerte_ms = (type(v) == "int" && v > 0) ? v : self.ALERTE_MS
+        self.perdu = nil
+        self.alerte = false
+    end
+
+    def observe(connecte, t)
+        if connecte
+            var etait = self.alerte
+            self.perdu = nil
+            self.alerte = false
+            return etait ? "retour" : "rien"
+        end
+        if self.perdu == nil    self.perdu = t    end
+        if !self.alerte && t - self.perdu >= self.alerte_ms
+            self.alerte = true
+            return "alerte"
+        end
+        return "rien"
+    end
+end
+
+mqttLiaisonFonctions.SurveilleBroker = SurveilleBroker
 
 # Journal du module et du driver : cible liaisonMqtt (seuil drivers.liaisonMqtt.log), charte des logs du depot
 def mqttLiaisonFonctions_log(msg, niveau)
@@ -268,6 +307,7 @@ def mqttLiaisonFonctions_init(m)
     import persist
     var cfg = persist.find("drivers", {}).find("liaisonMqtt", {}).find("garde", {})
     global.mqttLiaisonGarde = m.GardeMqtt(cfg)
+    global.mqttLiaisonVeille = m.SurveilleBroker(persist.find("drivers", {}).find("liaisonMqtt", {}))
     return m
 end
 mqttLiaisonFonctions.init = mqttLiaisonFonctions_init

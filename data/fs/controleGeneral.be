@@ -685,7 +685,13 @@ class CONTROLE_GENERAL : Driver
 											import global
 											var pilote = global.mqttLiaisonDriver
 											if (pilote != nil)
-												pilote.ordonne(string.split(virtuelRly, "_")[1], relais[cleRLY].find("mqtt", {}).find("commande", "Power1"), etat)
+												var reponse = pilote.ordonne(string.split(virtuelRly, "_")[1], relais[cleRLY].find("mqtt", {}).find("commande", "Power1"), etat)
+												# Voie MQTT indisponible (broker, esclave hors ligne ou coupe-circuit) : repli sur la seconde voie du relais (ex. "ModBus_TasmotaSlaveModBus1"), sinon l'ordre est perdu
+												var repli = relais[cleRLY].find("repli", "OFF")
+												if ((reponse == "hors_ligne" || reponse == "coupe") && type(repli) == "string" && repli != "OFF" && string.find(repli, "MQTT_") != 0)
+													logFonctions.log(string.format("GESTION_RELAIS: Voie MQTT indisponible, repli du relai n°%i sur %s !", nb + 1, repli), LOG_LEVEL_INFO)
+													virtuelRly = repli
+												end
 											else
 												logFonctions.log(string.format("GESTION_RELAIS_ERREUR: Voie MQTT inactive, ordre du relai n°%i non envoyé !", nb + 1), LOG_LEVEL_ERREUR)
 											end
@@ -693,9 +699,9 @@ class CONTROLE_GENERAL : Driver
 
 										# Vérifie si il doit y avoir emission d'un message ModBus
 										if (virtuelRly != "OFF" && string.find(virtuelRly, "MQTT_") != 0)
-											var typeConnex = string.split(relais[cleRLY]["virtuel"], "_")[0]
-											var moduleConnex = string.split(relais[cleRLY]["virtuel"], "_")[1]
-											var groupeConnex = re.search("([a-zA-Z0-9]+[^0-9$]+)", string.split(relais[cleRLY]["virtuel"], "_")[1])[0]
+											var typeConnex = string.split(virtuelRly, "_")[0]
+											var moduleConnex = string.split(virtuelRly, "_")[1]
+											var groupeConnex = re.search("([a-zA-Z0-9]+[^0-9$]+)", string.split(virtuelRly, "_")[1])[0]
 
 											if (!string.endswith(groupeConnex , "s"))
 												groupeConnex = groupeConnex + "s"

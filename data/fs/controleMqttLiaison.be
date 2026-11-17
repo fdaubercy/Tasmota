@@ -21,6 +21,8 @@ class CONTROLE_MQTT_LIAISON : Driver
     var esclaves          # nom -> topic Tasmota de l'esclave (declares et actifs)
     var par_topic         # topic -> nom
     var en_ligne          # nom -> true / false (LWT)
+    var ligne             # ligne d'alerte de l'accueil (broker injoignable), vide sinon
+    var resync            # topics dont l'etat reel est a relire apres le retour du broker
     var liens             # nom -> [[module, famille, cle, chemin]] des elements virtuels MQTT_<nom> (construit au 1er SENSOR)
 
     def init()
@@ -30,6 +32,8 @@ class CONTROLE_MQTT_LIAISON : Driver
         self.esclaves = {}
         self.par_topic = {}
         self.en_ligne = {}
+        self.ligne = ""
+        self.resync = []
         var liste = persist.find("drivers", {}).find("liaisonMqtt", {}).find("esclaves", {})
         for nom: liste.keys()
             var e = liste[nom]
@@ -260,14 +264,50 @@ class CONTROLE_MQTT_LIAISON : Driver
         return code
     end
 
-    # Ordres sans accuse : renvois bornes par les garde-fous, au plus RENVOIS_PAR_PASSAGE publish par seconde
+    # Ligne d'alerte de l'accueil, rafraichie ~2 s : chaine precalculee
+    def web_sensor()
+        if size(self.ligne) > 0    tasmota.web_send(self.ligne)    end
+    end
+
+    # Broker perdu : alerte (log erreur + accueil), oubli des ordres en attente et des etats connus ; retour : relecture des etats reels
+    def surveille()
+        import global
+        import mqttLiaisonFonctions
+        var v = global.mqttLiaisonVeille
+        var g = global.mqttLiaisonGarde
+        if v == nil || g == nil    return    end
+        var r = v.observe(self.peut_emettre(), tasmota.millis())
+        if r == "alerte"
+            g.oublie()
+            self.ligne = "{s}<span style='color:#f44;font-weight:bold;font-size:70%'>&#9888; Broker MQTT injoignable</span>{m}<span style='font-size:70%'>depuis plus de " + str(v.alerte_ms / 60000) + " min : voie MQTT coupée, états des esclaves inconnus</span>{e}"
+            mqttLiaisonFonctions.log("LIAISON_MQTT_ERREUR: broker injoignable depuis plus de " + str(v.alerte_ms / 1000) + " s, voie MQTT coupée !", LOG_LEVEL_ERREUR)
+        elif r == "retour"
+            self.ligne = ""
+            self.resync = []
+            for nom: self.esclaves.keys()
+                self.resync.push(self.esclaves[nom])
+            end
+            mqttLiaisonFonctions.log("LIAISON_MQTT: broker revenu, relecture de l'état des esclaves !", LOG_LEVEL_INFO)
+        end
+    end
+
+    # Ordres sans accuse : renvois bornes par les garde-fous, au plus RENVOIS_PAR_PASSAGE publish par seconde.
+    # Apres le retour du broker, relit l'etat reel de chaque esclave (cmnd/<topic>/Power sans valeur = question), meme plafond.
     def every_second()
         import mqtt
         import global
         import string
+        self.surveille()
         var g = global.mqttLiaisonGarde
-        if g == nil || size(g.attente) == 0 || !self.peut_emettre()    return    end
-        var r = g.a_renvoyer(tasmota.millis(), self.RENVOIS_PAR_PASSAGE)
+        var reste = self.RENVOIS_PAR_PASSAGE                 # un seul plafond de publish par seconde, relectures et renvois confondus
+        if size(self.resync) > 0 && self.peut_emettre()
+            while reste > 0 && size(self.resync) > 0
+                mqtt.publish("cmnd/" + self.resync.pop() + "/Power", "")
+                reste -= 1
+            end
+        end
+        if reste <= 0 || g == nil || size(g.attente) == 0 || !self.peut_emettre()    return    end
+        var r = g.a_renvoyer(tasmota.millis(), reste)
         for e: r["renvoyer"]
             var i = string.find(e[0], "/")
             var topic = self.esclaves.find(e[0][0 .. i - 1])

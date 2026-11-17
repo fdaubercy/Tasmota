@@ -23,13 +23,14 @@ var JOURNAL = []
 
 class Driver end                                   # classe du firmware, absente de berry.exe
 class TasmotaStub
-    var cmds, pilotes, reseau, ms, reponses
-    def init() self.cmds = {} self.pilotes = [] self.reseau = true self.ms = 100000 self.reponses = [] end
+    var cmds, pilotes, reseau, ms, reponses, web
+    def init() self.cmds = {} self.pilotes = [] self.reseau = true self.ms = 100000 self.reponses = [] self.web = [] end
     def add_cmd(n, f) self.cmds[n] = f end
     def add_driver(d) self.pilotes.push(d) end
     def is_network_up() return self.reseau end
     def millis() return self.ms end
     def resp_cmnd(s) self.reponses.push(s) end
+    def web_send(s) self.web.push(s) end
 end
 var tasmota = TasmotaStub()
 
@@ -187,6 +188,24 @@ var fc = G({"ageEtatMs": 2000})
 fc.recoit("p/r1", "ON", 1000)
 verifie(fc.demande("p/r1", "ON", 3500) == "envoyer", "G3 : age lu dans le persist (ageEtatMs)")
 
+# --- 6 ter. Surveillance du broker (A7) : alerte UNE fois apres le delai, retour UNE fois, rien pour une coupure courte
+var sb = mqttLiaisonFonctions.SurveilleBroker({"alerteBrokerMs": 5000})
+verifie(sb.observe(true, 0) == "rien" && sb.observe(false, 1000) == "rien" && sb.observe(false, 5999) == "rien", "broker : coupure plus courte que le delai, rien")
+verifie(sb.observe(false, 6000) == "alerte" && sb.observe(false, 9000) == "rien", "broker : alerte au delai, une seule fois")
+verifie(sb.observe(true, 9500) == "retour" && sb.observe(true, 9600) == "rien", "broker : retour signale une seule fois")
+var sc = mqttLiaisonFonctions.SurveilleBroker({"alerteBrokerMs": 5000})
+sc.observe(false, 100)
+verifie(sc.observe(true, 3000) == "rien" && sc.observe(false, 3100) == "rien" && sc.observe(false, 7000) == "rien", "broker : un retour avant le delai remet le compteur a zero")
+var sd = mqttLiaisonFonctions.SurveilleBroker({"alerteBrokerMs": 5000})
+sd.observe(false, 4294967000)                                   # millis 32 bits : le compteur repasse par zero
+verifie(sd.observe(false, 6000) == "alerte", "broker : delai compte par difference, comme millis sur 32 bits")
+verifie(mqttLiaisonFonctions.SurveilleBroker({}).alerte_ms == 120000 && mqttLiaisonFonctions.SurveilleBroker({"alerteBrokerMs": -1}).alerte_ms == 120000, "broker : delai par defaut 2 min, valeur invalide ignoree")
+var go = G()
+go.recoit("p/r1", "ON", 1000)
+go.demande("p/r2", "ON", 1000)
+go.oublie()
+verifie(size(go.attente) == 0 && go.demande("p/r1", "ON", 1100) == "envoyer", "broker perdu : ordres en attente et etats oublies, l'ordre identique repart")
+
 # --- 7 bis. LE DRIVER (controleMqttLiaison) : abonnements, ordres, retours, renvois, commande
 import mqtt
 import json
@@ -326,6 +345,38 @@ rf("stat/jardin/projecteur_led/RESULT", 0, '{"Button1":{"Etat":"SINGLE"}}', nil)
 verifie(size(ap) == n0 + 2, "bouton : cle inconnue, action non texte ou absente, ignores")
 rf("stat/jardin/projecteur_led/RESULT", 0, '{"POWER1":"ON"}', nil)
 verifie(size(ap) == n0 + 2, "un retour POWER n'est pas un evenement de bouton")
+
+# --- 7 quinquies. Le broker disparait en plein ordre (A7)
+garde.rearme()
+garde.oublie()
+tasmota.ms = 400000
+mqtt.connecte = true
+D.every_second()
+verifie(D.ordonne("projecteur", "Power1", "ON") == "envoyer" && size(garde.attente) == 1, "plein ordre : un ordre est en attente d'accuse")
+mqtt.connecte = false
+tasmota.ms = tasmota.ms + 60000
+D.every_second()
+verifie(size(garde.attente) == 1 && D.ligne == "", "broker coupe depuis 1 min : pas encore d'alerte, l'ordre attend")
+tasmota.ms = tasmota.ms + 121000
+var erreurs2 = 0
+for j: JOURNAL    if j[1] == LOG_LEVEL_ERREUR && string.find(j[0], "broker injoignable") >= 0    erreurs2 += 1    end    end
+D.every_second()
+var erreurs3 = 0
+for j: JOURNAL    if j[1] == LOG_LEVEL_ERREUR && string.find(j[0], "broker injoignable") >= 0    erreurs3 += 1    end    end
+verifie(erreurs3 == erreurs2 + 1 && size(D.ligne) > 0 && size(garde.attente) == 0 && garde.etats.find("projecteur/POWER1") == nil, "broker coupe plus de 2 min : alerte loggue en erreur, ligne d'accueil, ordres et etats oublies")
+var w0 = size(tasmota.web)
+D.web_sensor()
+verifie(size(tasmota.web) == w0 + 1 && string.find(tasmota.web[w0], "Broker MQTT injoignable") >= 0, "accueil : la ligne d'alerte est envoyee par web_sensor")
+tasmota.ms = tasmota.ms + 1000
+D.every_second()
+verifie(D.ordonne("projecteur", "Power1", "ON") == "hors_ligne" && size(garde.attente) == 0, "broker coupe : plus aucun ordre ne part ni ne reste en attente")
+var p1 = size(mqtt.publies)
+mqtt.connecte = true
+tasmota.ms = tasmota.ms + 1000
+D.every_second()
+verifie(D.ligne == "" && size(mqtt.publies) == p1 + size(D.esclaves), "broker revenu : alerte levee, etat reel relu pour chaque esclave")
+verifie(string.find(mqtt.publies[p1][0], "cmnd/") == 0 && string.endswith(mqtt.publies[p1][0], "/Power") && mqtt.publies[p1][1] == "", "broker revenu : la relecture est une question sans valeur")
+verifie(D.ordonne("projecteur", "Power1", "ON") == "envoyer", "apres le retour, un ordre repart normalement")
 
 # garde d'activation : persist a OFF -> aucun driver
 import persist

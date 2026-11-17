@@ -35,6 +35,9 @@ MUTANTS = [
     ("cle ou valeur invalide acceptee", "if type(cle) == \"string\" && size(cle) > 0 && valeur != nil    return true    end", "return true"),
     ("valeur non convertie en texte (demande)", "        valeur = str(valeur)                       # 1 et", "        # 1 et"),
     ("1er retour sans etat connu pris pour un evenement", "if !connu    return \"initial\"    end                         # 1er", "# 1er"),
+    ("alerte du broker avant le delai", "if !self.alerte && t - self.perdu >= self.alerte_ms", "if !self.alerte"),
+    ("alerte du broker repetee", "self.alerte = true", "self.alerte = false"),
+    ("retour du broker toujours signale", "return etait ? \"retour\" : \"rien\"", "return \"retour\""),
     ("plafond de renvois par appel retire", "elif maxi != nil && size(renvoyer) >= maxi", "elif false"),
     ("etat connu jamais perime (G3)", "&& t - self.etats_t.find(cle, t - self.age_etat - 1) <= self.age_etat", ""),
     ("age de l'etat non rafraichi par le retour", "self.etats_t[cle] = t", "self.etats_t[cle] = 0"),
@@ -66,6 +69,10 @@ MUTANTS_DRIVER = [
     ("action non texte acceptee", "if type(action) != \"string\"    return    end", "if false    return    end"),
     ("evenement livre a un element qui n'est pas un bouton", "if e[3] != cle || (e[1] != \"boutons\" && e[1] != \"capteurs\" && e[1] != \"interrupteurs\")    continue    end", "if e[3] != cle    continue    end"),
     ("declencheur impose ignore", "type(decl) == \"string\" ? decl :", "false ? decl :"),
+    ("alerte du broker sans oubli des ordres et etats", "g.oublie()", "g.etats_t = g.etats_t"),
+    ("retour du broker sans relecture des etats", "self.resync.push(self.esclaves[nom])", "nom = nom"),
+    ("ligne d'alerte jamais levee au retour", "            self.ligne = \"\"", "            self.ligne = self.ligne"),
+    ("ligne d'alerte jamais affichee", "if size(self.ligne) > 0    tasmota.web_send(self.ligne)    end", "if false    tasmota.web_send(self.ligne)    end"),
     ("LWT ignore", "self.en_ligne[nom] = (s == \"Online\")", "self.en_ligne[nom] = true"),
 ]
 
