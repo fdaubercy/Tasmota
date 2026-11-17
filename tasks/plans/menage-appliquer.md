@@ -4,7 +4,7 @@ titre: Ménage du dépôt, version 2 : appliquer un lot de propositions sans imp
 objectif: Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents.
 statut: actif
 cree: 2026-11-15
-maj: 2026-11-15
+maj: 2026-11-17
 famille: methode
 parent: menage-page
 liens: menage-page
@@ -49,10 +49,10 @@ liens: menage-page
 
 ## A5 — Essai réel et clôture
 - [x] Essai réel sur 1 ou 2 propositions choisies par l'utilisateur (candidats proposés : les deux fichiers verrou Word `~$…docx` de `outils_docs/Electronique/Connecteur ModBus/`), `git restore` ensuite si besoin — preuve : sortie de `git status` — preuve : essai réel du 2026-11-15 par la page, 2 suppressions appliquées (git rm des deux fichiers verrou Word ~$…docx de Connecteur ModBus) puis gardées par l'utilisateur ; git status : 2 lignes D, aucun commit par la page ; au passage : contrôle des renvois résumé en une phrase et bouton Annuler cette application (commit 9fa901709), demandés après l'essai
-- [ ] Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit
+- [x] Revue (`relecteur-pages-web`, `relecteur-outils-python`), `controleur-secrets`, documentation (README, CLAUDE.md), commit — preuve : deux relectures Opus (pages web, outils Python) et leurs correctifs ; banc web VERT 91, bancs application, vérification, lancement, rapport VERTS, sonde Chrome VERTE (1985 vérifications, 20 témoins détectés, 0 Chrome orphelin) ; controleur-secrets : rien à signaler ; CLAUDE.md (exception des 500 lignes) et README à jour ; commit 8a41ddac4
 
 ## A6 — Retour au plan précédent (menage-page)
-- [ ] Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan
+- [x] Revenir à `tasks/plans/menage-page.md` : cocher A7 (deux audits réels et décision sur la version 2, preuves : rapports de la passe 2 et décision de l'utilisateur), mettre `statut:` à jour si tout est coché, relancer `/suivi` pour rattacher la conversation à ce plan — preuve : A7 de menage-page cochée (voir ce plan)
 
 ## Améliorations restantes
 - [ ] [projet] Étape 2 (renvois dans les documents) : proposer la mise à jour des renvois dans le même lot

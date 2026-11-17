@@ -73,8 +73,8 @@ secrets), `menage_memoire.py` (liste « à garder »), `build/cible_menage.py`.
 - [x] Commit (avec `controleur-secrets` puis `preparateur-push` avant le push) — preuve : commits A6 + correctifs, controleur-secrets sans rien a signaler avant chacun ; preparateur-push reste a lancer avant le push (aucun push fait)
 
 ## A7 — Essais réels et décision sur la version 2
-- [ ] Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés
-- [ ] Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan
+- [x] Deux audits réels (travail en cours dans l'arbre) : combien de propositions, combien de faux positifs, combien de « en cours » correctement écartés
+- [x] Décision de l'utilisateur sur la version 2 (appliquer un lot par `git mv` et `git rm` : diff d'abord, refus pendant un build, refus sur fichier modifié, `verifie_references_docs.py` ensuite) ; si oui, nouveau plan — preuve : rapports rapport-20261115-152903.json et rapport-passe2-20261115.json (rapports sauvegardés hors dépôt) ; l'utilisateur a choisi la version 2, réalisée par tasks/plans/menage-appliquer.md (essai réel, commits 018bcdbe2 et 8a41ddac4)
 
 ## A8 — Progression en direct et vrais reclassements (demandes de l'utilisateur, 2026-11-14)
 - [x] Le premier audit réel ne proposait que des suppressions : élargir le contrôle « hors de leur dossier » de `auditeur-menage.md` en CLASSEMENT (déplacements `deplacer` + `vers`, renvois à mettre à jour dans `casserait`, limites : scripts qui s'importent restent ensemble, modules `data/fs` solidifiés) et le rappeler dans la consigne de la page — preuve : .claude/agents/auditeur-menage.md contrôle 3, menage_lancement.py::consigne ; test_menage_lancement.py VERT ; efficacité à constater au prochain audit réel
@@ -100,7 +100,7 @@ Raison : le champ « Non vérifié » était un bloc de texte illisible ; et l'a
 - [x] Revue, `controleur-secrets`, commit — preuve : relecteur-pages-web sans bloquant, controleur-secrets sans valeur secrète, commits 6bc190482 et celui de la couverture
 
 ## Améliorations restantes
-- [ ] [projet] Version 2 : application d'un lot depuis la page (selon A7)
+- [x] [projet] Version 2 : application d'un lot depuis la page (selon A7) — preuve : plan menage-appliquer
 - [ ] [projet] Planifier l'audit une fois par mois (tâche Windows `claude -p`, rapport déposé dans `tasks/`), si les premiers rapports sont utiles
 
 ## Vérification
