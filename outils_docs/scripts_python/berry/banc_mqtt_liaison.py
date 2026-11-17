@@ -56,6 +56,10 @@ MUTANTS_DRIVER = [
     ("topic avec joker accepte", "string.find(topic, \"+\") >= 0 || string.find(topic, \"#\") >= 0", "false"),
     ("renvoi jamais publie", "if topic != nil    mqtt.publish(\"cmnd/\" + topic + \"/\" + e[0]", "if false    mqtt.publish(\"cmnd/\" + topic + \"/\" + e[0]"),
     ("valeur nulle transmise aux garde-fous", "if v != nil && type(v) != \"instance\"", "if type(v) != \"instance\""),
+    ("SENSOR jamais traite", "elif suffixe == \"SENSOR\"", "elif false"),
+    ("message d'erreur SENSOR mal forme perdu", "SENSOR de \" + nom + \" mal formé", "SENSOR de \" + nom + \" ok"),
+    ("element d'un esclave non declare alimente", "if !self.esclaves.contains(nom)    continue    end", "if false    continue    end"),
+    ("declencheur sans # (famille non reconnue)", "string.replace(e[3], \".\", \"#\")", "e[3]"),
     ("LWT ignore", "self.en_ligne[nom] = (s == \"Online\")", "self.en_ligne[nom] = true"),
 ]
 

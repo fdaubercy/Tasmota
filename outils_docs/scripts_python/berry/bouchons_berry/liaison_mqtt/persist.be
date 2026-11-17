@@ -8,6 +8,10 @@ persist._p = {"drivers": {"liaisonMqtt": {"activation": "ON", "garde": {"maxParE
                  "inactif": {"activation": "OFF", "topic": "x/inactif"},
                  "a/b": {"activation": "ON", "topic": "q/r"},
                  "joker": {"activation": "ON", "topic": "x/+"},
-                 "sanstopic": {"activation": "ON"}}}}}
+                 "sanstopic": {"activation": "ON"}}}},
+    "modules": {"maison": {"environnement": {
+        "thermometres": {"t1": {"virtuel": "MQTT_projecteur", "mqtt": {"chemin": "DS18B20.Temperature"}}, "t2": {"virtuel": "OFF"}, "t3": {"virtuel": "MQTT_projecteur"}},
+        "analogiques": {"a1": {"virtuel": "MQTT_pompe", "mqtt": {"chemin": "ANALOG.A1"}}},
+        "compteurs": {"c1": {"virtuel": "MQTT_inactif", "mqtt": {"chemin": "COUNTER.C1"}}}}}}}
 persist.find = def (k, d) return persist._p.find(k, d) end
 return persist

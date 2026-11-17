@@ -21,6 +21,7 @@ class CONTROLE_MQTT_LIAISON : Driver
     var esclaves          # nom -> topic Tasmota de l'esclave (declares et actifs)
     var par_topic         # topic -> nom
     var en_ligne          # nom -> true / false (LWT)
+    var liens             # nom -> [[module, famille, cle, chemin]] des elements virtuels MQTT_<nom> (construit au 1er SENSOR)
 
     def init()
         import persist
@@ -40,6 +41,7 @@ class CONTROLE_MQTT_LIAISON : Driver
             self.par_topic[topic] = nom
             mqtt.subscribe("stat/" + topic + "/+", /t, i, s, b -> self.recu(t, s))
             mqtt.subscribe("tele/" + topic + "/LWT", /t, i, s, b -> self.recu(t, s))
+            mqtt.subscribe("tele/" + topic + "/SENSOR", /t, i, s, b -> self.recu(t, s))
         end
         mqttLiaisonFonctions.log("LIAISON_MQTT: " + str(size(self.esclaves)) + " esclave(s) déclaré(s) !", LOG_LEVEL_INFO)
         tasmota.add_cmd("ReglageMqttLiaison", / cmd, idx, payload, payload_json -> mqttLiaisonFonctions.reglage(cmd, idx, payload, payload_json))
@@ -118,10 +120,71 @@ class CONTROLE_MQTT_LIAISON : Driver
             mqttLiaisonFonctions.log("LIAISON_MQTT: " + nom + " " + str(s) + " !", LOG_LEVEL_DEBUG)
         elif suffixe == "RESULT"
             self.resultat(nom, s)
+        elif suffixe == "SENSOR"
+            self.mesures(nom, s)
         elif string.find(suffixe, "POWER") == 0
             self.etat(nom, suffixe, s)
         end
         return false
+    end
+
+    # Elements virtuels « MQTT_<nom> » (thermometres, analogiques, compteurs) du persist, avec la cle « mqtt.chemin » du JSON SENSOR
+    # (ex. « DS18B20.Temperature », « ANALOG.A1 »). Le chemin, points remplaces par #, sert de declencheur a
+    # globalFonctions.changementEtatCapteur, qui choisit la famille d'apres son texte (DS18B20, AM2301#, ANALOG#A, COUNTER#C).
+    def construit()
+        import persist
+        import string
+        self.liens = {}
+        var mods = persist.find("modules", {})
+        for m: mods.keys()
+            if type(mods[m]) != "instance"    continue    end
+            var env = mods[m].find("environnement", {})
+            if type(env) != "instance"    continue    end
+            for fam: ["thermometres", "analogiques", "compteurs"]
+                var l = env.find(fam, {})
+                if type(l) != "instance"    continue    end
+                for cle: l.keys()
+                    var d = l[cle]
+                    if type(d) != "instance"    continue    end
+                    var v = d.find("virtuel", "OFF")
+                    var mq = d.find("mqtt")
+                    var chemin = isinstance(mq, map) ? mq.find("chemin") : nil
+                    if type(v) != "string" || string.find(v, "MQTT_") != 0 || type(chemin) != "string"    continue    end
+                    var nom = v[5 ..]
+                    if !self.esclaves.contains(nom)    continue    end
+                    if !self.liens.contains(nom)    self.liens[nom] = []    end
+                    self.liens[nom].push([m, fam, cle, chemin])
+                end
+            end
+        end
+    end
+
+    # tele/<topic>/SENSOR : un JSON mal forme est rejete (erreur), une valeur absente est ignoree
+    def mesures(nom, s)
+        import json
+        import string
+        import mqttLiaisonFonctions
+        if self.liens == nil    self.construit()    end
+        var l = self.liens.find(nom)
+        if l == nil    return    end
+        var r = json.load(s)
+        if !isinstance(r, map)
+            mqttLiaisonFonctions.log("LIAISON_MQTT_ERREUR: SENSOR de " + nom + " mal formé, rejeté !", LOG_LEVEL_ERREUR)
+            return
+        end
+        for e: l
+            var v = r
+            for p: string.split(e[3], ".")
+                v = isinstance(v, map) ? v.find(p) : nil
+            end
+            if v == nil || type(v) == "instance"    continue    end
+            try
+                import globalFonctions
+                globalFonctions.changementEtatCapteur(v, string.replace(e[3], ".", "#"), r, e[0], e[2])
+            except .. as erreur, message
+                mqttLiaisonFonctions.log("LIAISON_MQTT_ERREUR: " + nom + "/" + e[3] + " : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
+            end
+        end
     end
 
     def resultat(nom, s)

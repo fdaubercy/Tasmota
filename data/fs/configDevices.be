@@ -223,6 +223,9 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 										logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le bus I2C n'est pas activé dans le firmware ou les ports I2C ne sont pas configurés !"), LOG_LEVEL_ERREUR)
 									end
 								end
+							elif (string.find(analogiques[cleAnalogiques]["virtuel"], "MQTT_") == 0)
+								# Alimentee par controleMqttLiaison (tele/<topic>/SENSOR), sans regle Tasmota
+								nbIOActivesJSON["analogiques"]["actives"]["nb"] = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) + 1
 							elif (string.find(analogiques[cleAnalogiques]["virtuel"], "ModBus_TasmotaSlaveModBus") > - 1)
 								if (drivers["ModBus"].find("activation", "OFF") == "ON" && drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][string.split(analogiques[cleAnalogiques]["virtuel"], "_")[1]].find("activation", "OFF") == "ON")
 									nbIOActivesJSON["analogiques"]["actives"]["nb"] = nbIOActivesJSON["analogiques"]["actives"].find("nb", 0) + 1

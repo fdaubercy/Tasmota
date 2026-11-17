@@ -13,6 +13,7 @@ if demarrage.prologue()
     # controleGeneral AVANT i2c_ads1115 (lit controleGeneral.nbIOActivesJSON). Sans condition : init() porte la garde.
     demarrage.charge(["controleGeneral", "controleLedTemoin", "i2c_ads1115", "i2c_mcp23017", "modBus_Conn16channels", "modBus_TasmotaSlaveModBus", "controleWeb"])
     demarrage.charge(["fsMqtt"])                                            # fichiers du FS recus par MQTT (page Build 7700)
+    demarrage.charge(["controleMqttLiaison"], "drivers.liaisonMqtt")        # voie MQTT maitre/esclaves, garde ON/OFF du persist (plan voie-mqtt A5)
     demarrage.charge(["controleUDP"], "serveur.udp")
     demarrage.charge(["controleModbus"])
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")

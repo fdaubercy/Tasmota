@@ -183,7 +183,7 @@ var D = global.mqttLiaisonDriver
 var garde = global.mqttLiaisonGarde
 verifie(D != nil && size(tasmota.pilotes) == 1 && tasmota.cmds.contains("ReglageMqttLiaison"), "driver : instance globale, add_driver et commande ReglageMqttLiaison")
 verifie(size(D.esclaves) == 2 && D.esclaves["projecteur"] == "jardin/projecteur_led" && D.esclaves["pompe"] == "pompe", "driver : seuls les esclaves actifs, valides et sans doublon sont declares")
-verifie(size(mqtt.abonnes) == 4 && mqtt.abonnes.contains("stat/jardin/projecteur_led/+") && mqtt.abonnes.contains("tele/pompe/LWT"), "driver : 2 abonnements par esclave, jamais de joker global")
+verifie(size(mqtt.abonnes) == 6 && mqtt.abonnes.contains("stat/jardin/projecteur_led/+") && mqtt.abonnes.contains("tele/pompe/LWT"), "driver : 3 abonnements par esclave (stat, LWT, SENSOR), jamais de joker global")
 
 # ordres : reseau coupe -> rien n'est emis ni compte
 tasmota.reseau = false
@@ -275,6 +275,27 @@ D.every_second()
 verifie(size(mqtt.publies) == p0 + 5, "plafond : 5 renvois au plus par passage")
 D.every_second()
 verifie(size(mqtt.publies) == p0 + 8, "les ordres restants repartent au passage suivant")
+
+# --- 7 ter. SENSOR : elements virtuels MQTT_<nom> (A5)
+import globalFonctions
+var sf = mqtt.abonnes["tele/jardin/projecteur_led/SENSOR"]
+verifie(sf != nil, "SENSOR : abonnement par esclave declare")
+sf("tele/jardin/projecteur_led/SENSOR", 0, '{"Time":"x","DS18B20":{"Id":"1","Temperature":21.5}}', nil)
+verifie(size(globalFonctions.appels) == 1 && globalFonctions.appels[0][0] == 21.5 && globalFonctions.appels[0][1] == "DS18B20#Temperature" && globalFonctions.appels[0][2] == "maison" && globalFonctions.appels[0][3] == "t1", "SENSOR : la valeur du chemin arrive a changementEtatCapteur avec son declencheur")
+mqtt.abonnes["tele/pompe/SENSOR"]("tele/pompe/SENSOR", 0, '{"ANALOG":{"A1":512}}', nil)
+verifie(size(globalFonctions.appels) == 2 && globalFonctions.appels[1][0] == 512 && globalFonctions.appels[1][1] == "ANALOG#A1" && globalFonctions.appels[1][3] == "a1", "SENSOR : un 2e esclave alimente son analogique")
+sf("tele/jardin/projecteur_led/SENSOR", 0, '{"Time":"x"}', nil)
+verifie(size(globalFonctions.appels) == 2, "SENSOR : chemin absent du JSON, element ignore")
+var erreurs0 = 0
+for j: JOURNAL    if j[1] == LOG_LEVEL_ERREUR    erreurs0 += 1    end    end
+sf("tele/jardin/projecteur_led/SENSOR", 0, '{"DS18B20":{"Temp', nil)
+sf("tele/jardin/projecteur_led/SENSOR", 0, '[1,2]', nil)
+var erreurs1 = 0
+for j: JOURNAL    if j[1] == LOG_LEVEL_ERREUR && string.find(j[0], "mal formé") >= 0    erreurs1 += 1    end    end
+verifie(size(globalFonctions.appels) == 2 && erreurs1 == 2, "SENSOR : JSON mal forme ou non objet, rejete et loggue en erreur (" + str(erreurs1) + ")")
+mqtt.abonnes["tele/pompe/SENSOR"]("tele/pompe/SENSOR", 0, '{"COUNTER":{"C1":3}}', nil)
+D.mesures("inactif", '{"COUNTER":{"C1":3}}')                      # appel direct : aucun abonnement n'existe pour un esclave inactif
+verifie(size(globalFonctions.appels) == 2, "SENSOR : element lie a un esclave inactif ou sans chemin, jamais alimente")
 
 # garde d'activation : persist a OFF -> aucun driver
 import persist

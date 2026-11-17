@@ -67,9 +67,9 @@ Réponses du 2026-11-17 : l'éclairage et la pompe de piscine n'ont **pas** de f
 - [ ] Non prouvé : solidification réelle des deux modules (seule la page Build :7700 la valide) et comportement de `ReglageMqttLiaison` après solidification
 
 ## A5 — Éléments virtuels `MQTT_<nom>` en lecture seule
-- [ ] Type `MQTT_` branché dans `configDevices.be` pour capteurs, thermomètres, compteurs, analogiques
-- [ ] Alimentation depuis `tele/+/SENSOR` et `stat/+/RESULT`
-- [ ] Banc : un JSON `SENSOR` simulé met à jour l'élément ; un JSON mal formé est rejeté et loggué en `erreur`
+- [x] Type `MQTT_` branché dans `configDevices.be` pour capteurs, thermomètres, compteurs, analogiques — preuve : seule la branche des analogiques manquait (thermomètres et compteurs comptent déjà tout virtuel actif et ignorent un groupe inconnu), ajoutée à `configDevices.be` ; capteurs (Switch) viennent en A6 ; chaque élément porte `virtuel: MQTT_<nom>` et `mqtt.chemin` (ex. `DS18B20.Temperature`, `ANALOG.A1`)
+- [x] Alimentation depuis `tele/<topic>/SENSOR` (par esclave déclaré, pas de joker) — preuve : `controleMqttLiaison.be::mesures` appelle `globalFonctions.changementEtatCapteur` avec le chemin en déclencheur ; `stat/+/RESULT` ne porte pas les mesures, donc non utilisé ; driver chargé par l'autoexec du P4 sous la garde `drivers.liaisonMqtt` (OFF), `banc_demarrage.py` vert après `--enregistre`
+- [x] Banc : un JSON `SENSOR` simulé met à jour l'élément ; un JSON mal formé est rejeté et loggué en `erreur` — preuve : `banc_mqtt_liaison.py` VERT, 37 mutants rouges (4 pour SENSOR) ; relecteur-berry et verificateur-solidification sans bloquant, persist mal typé durci
 - [ ] Essai sur carte : une mesure de la cuve visible sur le maître pendant 1 h, tas stable
 
 ## A6 — Commande, boutons et interrupteurs
