@@ -3,23 +3,42 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - Development
 
-## [16.0.0.4]
+## [16.0.0.5]
+### Added
+- IR receive optional check every loop (`#define IR_RCV_IN_LOOP`)  and configurable save buffer (`#define IR_FULL_RCV_SAVE_BUFFER`) (#25268)
+- MQTT optional FileDownload and FileUpload transferring a file system file (`#define USE_UFILESYS_MQTT`) (#25278)
+- Matter Boolean State StateChange event for Contact, Rain and Water Leak sensors (#25286)
+
+### Breaking Changed
+- Matter lights Level Control MinLevel 1 and On/Off behavior aligned with Matter 1.6.1 (#25279)
+
+### Changed
+- ESP32 Platform from 2026.11.50 to 2026.11.51, Framework (Arduino Core) from v3.3.12-2 to v3.3.12-3 and IDF v5.5.5 (#25275)
+- JPEGDEC library from v1.8.4 to v1.8.5 (#25282)
+- Matter cluster and device type revisions aligned with Matter 1.6.1, fixed ReachableChanged for MQTT
+
+### Fixed
+- GPIOViewer fails to execute, regression from platform 2026.11.50 with Framework v3.3.12-2 (#25275)
+- Display palette colors on monochrome universal displays (#25260)
+- TashMesh and WizMote ESP-NOW support for IDF v5.5.5 (#25289)
+- Matter Fan advertising the unsupported Auto mode
+- Matter Air Quality PM1, PM2.5 and PM10 reported in ppm instead of µg/m³, and TVOC in ppm instead of ppb
+- Matter MRP sending unacknowledged messages 7 times instead of 5
+
+### Removed
+
+
+## [16.0.0.4] 20261115
 ### Added
 - Device location and local pose with commands `Location`, `LocationRot`, `LocationScale`, `LocationClear` and `SetOption166` stored as JSON in file system or packed in ESP8266 settings (#25244)
 - Berry `tasmota.wakeup_cause()` mapped to `esp_sleep_get_wakeup_cause()` (#25251)
 - GPIOViewer labels to GPIOs using web app v2.3.4 (#25257)
-
-### Breaking Changed
-
 
 ### Changed
 - OpenTherm use RMT on ESP32, add command `ot_report` (#25254)
 
 ### Fixed
 - AHT20/AHT30 stale readings when used with deep sleep, with optional `#define USE_AHT_DIAG` (#25258)
-
-
-### Removed
 
 ## [16.0.0.3] 20261113
 ### Added
