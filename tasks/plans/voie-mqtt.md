@@ -73,10 +73,10 @@ Réponses du 2026-11-17 : l'éclairage et la pompe de piscine n'ont **pas** de f
 - [ ] Essai sur carte : une mesure de la cuve visible sur le maître pendant 1 h, tas stable
 
 ## A6 — Commande, boutons et interrupteurs
-- [ ] Type `MQTT_` branché dans `controleGeneral.be` (aiguillage des ordres) et `configDevices.be` (relais, boutons, interrupteurs)
-- [ ] Ordre `cmnd/<topic>/Power<n>` sans retain, avec accusé applicatif (republication limitée à N fois)
-- [ ] Évènement bouton ou interrupteur lu dans `stat/<topic>/RESULT` puis action `relaisLie` du maître
-- [ ] Banc : un ordre produit un message ; l'écho du `stat/` n'en produit aucun ; la quarantaine se déclenche sur rafale
+- [x] Type `MQTT_` branché dans `controleGeneral.be` (aiguillage des ordres) et `configDevices.be` (relais, boutons, interrupteurs) — preuve : `set_power_handler` appelle `mqttLiaisonDriver.ordonne` pour `virtuel: MQTT_<esclave>` (commande `mqtt.commande`, défaut Power1) et saute le bloc ModBus ; `configDevices` compte le relais actif ; boutons et interrupteurs n'ont pas de règle à poser (évènements lus par le driver). Relais d'essai `relai24` du P4 (projecteur LED jardin), `drivers.liaisonMqtt` à ON. Découverte : tout bloc de `drivers` doit porter `environnement` (`diversFonctions` veille, `controleGeneral` ligne des relais) : `environnement: {}` ajouté, `banc_demarrage` l'a révélé (4 erreurs de chargement avant)
+- [x] Ordre `cmnd/<topic>/Power<n>` sans retain, avec accusé applicatif (republication limitée à N fois) — preuve : `controleMqttLiaison.be::ordonne` (A4), banc 40 mutants
+- [x] Évènement bouton ou interrupteur lu dans `stat/<topic>/RESULT` puis action `relaisLie` du maître — preuve : `controleMqttLiaison.be::evenement` → `globalFonctions.changementEtatCapteur`, clé `mqtt.chemin` = `Button1` / `Switch1` ; banc (cas bouton, interrupteur, clé inconnue, action non texte)
+- [x] Banc : un ordre produit un message ; l'écho du `stat/` n'en produit aucun ; la quarantaine se déclenche sur rafale — preuve : `banc_mqtt_liaison.py` VERT, 40 mutants rouges ; non couvert : la branche de `set_power_handler` (aucun banc ne la joue), relue seulement
 - [ ] Essai sur carte avec l'éclairage d'essai `tasmota32-jardin-projecteur-led` (ESP32 sans PSRAM, choisi le 2026-11-17 ; mesurer son tas avant), 100 cycles, zéro boucle, zéro redémarrage. Le « Projecteur de Garage » (relai5 du P4, carte 16 relais en ModBus) n'est pas retenu : il n'a pas d'ESP derrière lui
 
 ## A7 — Coupe-circuit, alerte broker et repli automatique

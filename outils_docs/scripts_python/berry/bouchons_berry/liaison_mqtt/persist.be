@@ -10,8 +10,10 @@ persist._p = {"drivers": {"liaisonMqtt": {"activation": "ON", "garde": {"maxParE
                  "joker": {"activation": "ON", "topic": "x/+"},
                  "sanstopic": {"activation": "ON"}}}},
     "modules": {"maison": {"environnement": {
-        "thermometres": {"t1": {"virtuel": "MQTT_projecteur", "mqtt": {"chemin": "DS18B20.Temperature"}}, "t2": {"virtuel": "OFF"}, "t3": {"virtuel": "MQTT_projecteur"}},
+        "thermometres": {"t1": {"virtuel": "MQTT_projecteur", "mqtt": {"chemin": "DS18B20.Temperature"}}, "t2": {"virtuel": "OFF"}, "t3": {"virtuel": "MQTT_projecteur"}, "t4": {"virtuel": "MQTT_projecteur", "mqtt": {"chemin": "Button1"}}},
         "analogiques": {"a1": {"virtuel": "MQTT_pompe", "mqtt": {"chemin": "ANALOG.A1"}}},
+        "boutons": {"b1": {"virtuel": "MQTT_projecteur", "mqtt": {"chemin": "Button1"}}},
+        "interrupteurs": {"s1": {"virtuel": "MQTT_pompe", "mqtt": {"chemin": "Switch1"}}},
         "compteurs": {"c1": {"virtuel": "MQTT_inactif", "mqtt": {"chemin": "COUNTER.C1"}}}}}}}
 persist.find = def (k, d) return persist._p.find(k, d) end
 return persist

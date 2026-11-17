@@ -96,6 +96,9 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 									end
 								else logFonctions.log(string.format("CONFIG_DEV_BY_RULES: Le controle du ModBus et l'esclave ModBus %s ne sont pas activés !", string.split(relais[cleRLY]["virtuel"], "_")[1]), LOG_LEVEL_DEBUG_PLUS)
 								end									
+							elif (string.find(relais[cleRLY]["virtuel"], "MQTT_") == 0)
+								# Ordres publies par controleMqttLiaison (cmnd/<topic>/PowerN), voir controleGeneral
+								nbIOActivesJSON["relais"]["actives"]["nb"] = nbIOActivesJSON["relais"]["actives"].find("nb", 0) + 1
 							elif (string.find(relais[cleRLY]["virtuel"], "ModBus_TasmotaSlaveModBus") > - 1)
 								# Module ModBus activé
 								if (drivers["ModBus"]["activation"] == "ON" && drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"][string.split(relais[cleRLY]["virtuel"], "_")[1]]["activation"] == "ON")

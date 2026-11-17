@@ -278,6 +278,7 @@ verifie(size(mqtt.publies) == p0 + 8, "les ordres restants repartent au passage 
 
 # --- 7 ter. SENSOR : elements virtuels MQTT_<nom> (A5)
 import globalFonctions
+globalFonctions.appels = []                                    # un test plus haut a deja envoye un Button1 : on repart de zero
 var sf = mqtt.abonnes["tele/jardin/projecteur_led/SENSOR"]
 verifie(sf != nil, "SENSOR : abonnement par esclave declare")
 sf("tele/jardin/projecteur_led/SENSOR", 0, '{"Time":"x","DS18B20":{"Id":"1","Temperature":21.5}}', nil)
@@ -296,6 +297,21 @@ verifie(size(globalFonctions.appels) == 2 && erreurs1 == 2, "SENSOR : JSON mal f
 mqtt.abonnes["tele/pompe/SENSOR"]("tele/pompe/SENSOR", 0, '{"COUNTER":{"C1":3}}', nil)
 D.mesures("inactif", '{"COUNTER":{"C1":3}}')                      # appel direct : aucun abonnement n'existe pour un esclave inactif
 verifie(size(globalFonctions.appels) == 2, "SENSOR : element lie a un esclave inactif ou sans chemin, jamais alimente")
+
+# --- 7 quater. boutons et interrupteurs de l'esclave (A6) : stat/<topic>/RESULT {"Button1":{"Action":...}}
+var rf = mqtt.abonnes["stat/jardin/projecteur_led/+"]
+var n0 = size(globalFonctions.appels)
+rf("stat/jardin/projecteur_led/RESULT", 0, '{"Button1":{"Action":"SINGLE"}}', nil)
+var ap = globalFonctions.appels
+verifie(size(ap) == n0 + 1 && ap[n0][0] == "SINGLE" && ap[n0][1] == "Button1" && ap[n0][2] == "maison" && ap[n0][3] == "b1", "bouton : l'action de l'esclave arrive a changementEtatCapteur pour l'element virtuel")
+mqtt.abonnes["stat/pompe/+"]("stat/pompe/RESULT", 0, '{"Switch1":{"Action":"ON"}}', nil)
+verifie(size(ap) == n0 + 2 && ap[n0 + 1][0] == "ON" && ap[n0 + 1][1] == "Switch1" && ap[n0 + 1][3] == "s1", "interrupteur : l'action arrive a l'element virtuel de l'esclave concerne")
+rf("stat/jardin/projecteur_led/RESULT", 0, '{"Button2":{"Action":"SINGLE"}}', nil)
+rf("stat/jardin/projecteur_led/RESULT", 0, '{"Button1":{"Action":3}}', nil)
+rf("stat/jardin/projecteur_led/RESULT", 0, '{"Button1":{"Etat":"SINGLE"}}', nil)
+verifie(size(ap) == n0 + 2, "bouton : cle inconnue, action non texte ou absente, ignores")
+rf("stat/jardin/projecteur_led/RESULT", 0, '{"POWER1":"ON"}', nil)
+verifie(size(ap) == n0 + 2, "un retour POWER n'est pas un evenement de bouton")
 
 # garde d'activation : persist a OFF -> aucun driver
 import persist

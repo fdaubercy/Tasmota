@@ -749,6 +749,29 @@
 							"OFF": 0,
 							"delai": 0
 						}
+					},
+					"relai24": {
+						"activation": "ON",
+						"nom": "Projecteur LED jardin (essai voie MQTT)",
+						"afficheWeb": "ON",
+						"pin": -1,
+						"id": 24,
+						"type": 224,
+						"virtuel": "MQTT_projecteur",
+						"mqtt": {
+							"commande": "Power1"
+						},
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						}
 					}
 				},
 				"analogiques": {
@@ -928,7 +951,8 @@
 	},
 	"drivers": {
 		"liaisonMqtt": {
-			"activation": "OFF",
+			"activation": "ON",
+			"environnement": {},
 			"log": "info",
 			"garde": {
 				"fenetreMs": 10000,

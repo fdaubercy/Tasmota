@@ -60,6 +60,9 @@ MUTANTS_DRIVER = [
     ("message d'erreur SENSOR mal forme perdu", "SENSOR de \" + nom + \" mal formé", "SENSOR de \" + nom + \" ok"),
     ("element d'un esclave non declare alimente", "if !self.esclaves.contains(nom)    continue    end", "if false    continue    end"),
     ("declencheur sans # (famille non reconnue)", "string.replace(e[3], \".\", \"#\")", "e[3]"),
+    ("evenement de bouton jamais traite", "elif isinstance(v, map)                 self.evenement(nom, k, v)", "elif false                 self.evenement(nom, k, v)"),
+    ("action non texte acceptee", "if type(action) != \"string\"    return    end", "if false    return    end"),
+    ("evenement livre a un element qui n'est pas un bouton", "if e[3] != cle || (e[1] != \"boutons\" && e[1] != \"capteurs\" && e[1] != \"interrupteurs\")    continue    end", "if e[3] != cle    continue    end"),
     ("LWT ignore", "self.en_ligne[nom] = (s == \"Online\")", "self.en_ligne[nom] = true"),
 ]
 

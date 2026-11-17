@@ -614,7 +614,7 @@ class CONTROLE_GENERAL : Driver
 						# Pour chaque module activé
 						if tableau[i][cle].find("activation", "OFF") == "ON"
 							# Mise à jour des relais
-							var relais = tableau[i][cle]["environnement"].find("relais", false)
+							var relais = tableau[i][cle].find("environnement", {}).find("relais", false)
 
 							if (relais)
 								for cleRLY: relais.keys()
@@ -679,8 +679,20 @@ class CONTROLE_GENERAL : Driver
 											end
 										end
 
+										# Relais virtuel MQTT_<esclave> : ordre cmnd/<topic>/<commande> par la voie MQTT (plan voie-mqtt A6)
+										var virtuelRly = relais[cleRLY].find("virtuel", "OFF")
+										if (string.find(virtuelRly, "MQTT_") == 0 && relais[cleRLY]["id"] == nb + 1)
+											import global
+											var pilote = global.mqttLiaisonDriver
+											if (pilote != nil)
+												pilote.ordonne(string.split(virtuelRly, "_")[1], relais[cleRLY].find("mqtt", {}).find("commande", "Power1"), etat)
+											else
+												logFonctions.log(string.format("GESTION_RELAIS_ERREUR: Voie MQTT inactive, ordre du relai n°%i non envoyé !", nb + 1), LOG_LEVEL_ERREUR)
+											end
+										end
+
 										# Vérifie si il doit y avoir emission d'un message ModBus
-										if (relais[cleRLY].find("virtuel", "OFF") != "OFF")
+										if (virtuelRly != "OFF" && string.find(virtuelRly, "MQTT_") != 0)
 											var typeConnex = string.split(relais[cleRLY]["virtuel"], "_")[0]
 											var moduleConnex = string.split(relais[cleRLY]["virtuel"], "_")[1]
 											var groupeConnex = re.search("([a-zA-Z0-9]+[^0-9$]+)", string.split(relais[cleRLY]["virtuel"], "_")[1])[0]

@@ -140,7 +140,7 @@ class CONTROLE_MQTT_LIAISON : Driver
             if type(mods[m]) != "instance"    continue    end
             var env = mods[m].find("environnement", {})
             if type(env) != "instance"    continue    end
-            for fam: ["thermometres", "analogiques", "compteurs"]
+            for fam: ["thermometres", "analogiques", "compteurs", "boutons", "capteurs", "interrupteurs"]
                 var l = env.find(fam, {})
                 if type(l) != "instance"    continue    end
                 for cle: l.keys()
@@ -187,13 +187,32 @@ class CONTROLE_MQTT_LIAISON : Driver
         end
     end
 
+    # Bouton ou interrupteur de l'esclave (detache de son relais, SetOption73/114) : stat/<topic>/RESULT {"Button1":{"Action":"SINGLE"}}.
+    # L'element virtuel du maitre dont mqtt.chemin vaut cette cle recoit l'action, comme un bouton reel (relais lies du maitre).
+    def evenement(nom, cle, v)
+        import mqttLiaisonFonctions
+        if self.liens == nil    self.construit()    end
+        var action = v.find("Action")
+        if type(action) != "string"    return    end
+        for e: self.liens.find(nom, [])
+            if e[3] != cle || (e[1] != "boutons" && e[1] != "capteurs" && e[1] != "interrupteurs")    continue    end
+            try
+                import globalFonctions
+                globalFonctions.changementEtatCapteur(action, cle, v, e[0], e[2])
+            except .. as erreur, message
+                mqttLiaisonFonctions.log("LIAISON_MQTT_ERREUR: " + nom + "/" + cle + " : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
+            end
+        end
+    end
+
     def resultat(nom, s)
         import json
         var r = json.load(s)
         if !isinstance(r, map)    return    end
         for k: r.keys()
             var v = r[k]
-            if v != nil && type(v) != "instance"    self.etat(nom, k, v)    end      # les objets (Button1: {Action}) viennent en A6
+            if v != nil && type(v) != "instance"    self.etat(nom, k, v)
+            elif isinstance(v, map)                 self.evenement(nom, k, v)    end      # Button1 / Switch1 : {"Action": ...}
         end
     end
 
