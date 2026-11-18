@@ -606,11 +606,12 @@
    "famille": "modbus-reseau",
    "parent": "",
    "liens": [
-    "cave-s3-waveshare"
+    "cave-s3-waveshare",
+    "rgx-ethernet-uplink"
    ],
    "specs": [],
    "cree": "2026-11-03",
-   "maj": "2026-11-08",
+   "maj": "2026-11-18",
    "pct": 53,
    "etapes": "18/34",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-reseau-ethernet.md",
@@ -1021,7 +1022,7 @@
    "nom": "menage-page",
    "titre": "Page « Ménage du dépôt » dans l'annuaire des outils (lancer et lire un audit de rangement)",
    "objectif": "Une page de l'annuaire lance l'agent auditeur-menage avec des paramètres choisis, affiche ses propositions avec la preuve et ce qu'elles casseraient, et mémorise celles que l'utilisateur garde",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "methode",
    "parent": "",
    "liens": [
@@ -1030,9 +1031,9 @@
    ],
    "specs": [],
    "cree": "2026-11-14",
-   "maj": "2026-11-15",
-   "pct": 88,
-   "etapes": "38/43",
+   "maj": "2026-11-17",
+   "pct": 95,
+   "etapes": "41/43",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-page.md",
    "urls_spec": []
   },
@@ -1121,7 +1122,7 @@
    "nom": "menage-appliquer",
    "titre": "Ménage du dépôt, version 2 : appliquer un lot de propositions sans impact depuis la page",
    "objectif": "Depuis la page Ménage, appliquer par git mv et git rm les seules propositions dont git confirme qu'aucun fichier ne les cite, après un diff, avec refus pendant un build, sur fichier modifié ou destination prise, puis contrôle des renvois des documents.",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "methode",
    "parent": "menage-page",
    "liens": [
@@ -1129,9 +1130,9 @@
    ],
    "specs": [],
    "cree": "2026-11-15",
-   "maj": "2026-11-16",
-   "pct": 81,
-   "etapes": "13/16",
+   "maj": "2026-11-17",
+   "pct": 94,
+   "etapes": "15/16",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/menage-appliquer.md",
    "urls_spec": []
   },
@@ -1183,8 +1184,8 @@
     "alerte-firmware-c6"
    ],
    "specs": [],
-   "cree": "2026-11-16",
-   "maj": "2026-11-16",
+   "cree": "2026-11-17",
+   "maj": "2026-11-17",
    "pct": 34,
    "etapes": "11/32",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/rgx-ethernet-uplink.md",
@@ -1201,10 +1202,10 @@
     "rgx-ethernet-uplink"
    ],
    "specs": [],
-   "cree": "2026-11-16",
-   "maj": "2026-11-16",
-   "pct": 50,
-   "etapes": "15/30",
+   "cree": "2026-11-17",
+   "maj": "2026-11-18",
+   "pct": 41,
+   "etapes": "15/37",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/tasmesh-evolution-amont.md",
    "urls_spec": []
   },
@@ -1221,10 +1222,29 @@
    ],
    "specs": [],
    "cree": "2026-11-17",
-   "maj": "2026-11-17",
-   "pct": 44,
-   "etapes": "23/52",
+   "maj": "2026-11-18",
+   "pct": 48,
+   "etapes": "27/56",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-mqtt.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "plan-maison-echelle",
+   "titre": "Plan de la maison à l'échelle, étage par étage, avec éditeur web",
+   "objectif": "Remplacer les pièces schématiques du plan de la maison par un vrai plan à l'échelle (en mètres), un étage par onglet, éditable dans une page web, avec les équipements placés dessus",
+   "statut": "actif",
+   "famille": "modbus-reseau",
+   "parent": "plan-maison",
+   "liens": [
+    "cartes-simulees",
+    "debits-deux-cartes"
+   ],
+   "specs": [],
+   "cree": "2026-11-18",
+   "maj": "2026-11-18",
+   "pct": 0,
+   "etapes": "0/28",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison-echelle.md",
    "urls_spec": []
   }
  ]
