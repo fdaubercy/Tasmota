@@ -82,6 +82,23 @@ Résultat des PR (2026-11-17, `gh pr view`) : #25289 FUSIONNÉE par arendst à 1
 - [ ] Essai sur deux cartes réelles (broker ESP32 et nœud), par la page Build, preuve = journal de la carte
 - [ ] Agents `controleur-secrets` puis commit en français sans accents, PR en anglais
 
+## A4b — Banc d'essai sur cartes réelles (préparé le 2026-11-17, rien flashé)
+**REPORTÉ le 2026-11-18 (décision de l'utilisateur).** Raison : le seul ESP8266 disponible est la lumière de porte de cave
+(`tasmota-cave-lumiere-porte`, ESP8285, en service) et aucun ESP32 de rechange pour le broker. Reprendre quand un ESP8266 de test
+et un ESP32 libres existent (ou si l'utilisateur accepte d'immobiliser la lumière de porte, sauvegarde avant). Rien n'a été flashé,
+ni `user_config_override.h` ni aucun env modifié.
+Objectif choisi : prouver que le CODE ACTUEL de l'amont (après #25289 et #25290) fonctionne, comme état de référence avant tout travail sur
+l'ESP32 nœud. Matériel déclaré : UN ESP8266 libre (nœud). Aucun ESP32 libre déclaré : le broker manque (voir la première case).
+- [ ] Choisir la carte du broker (ESP32, Wi-Fi maison + MQTT) : une carte du parc utilisée brièvement avec restauration de sa configuration (sauvegarde de la page Build avant), ou un ESP32 de rechange
+- [ ] Env du nœud : ESP8266 1 Mo à partir de `tasmota-base-1M`, avec `USE_TASMESH` (+11 Ko de code, à vérifier contre la place libre de l'env) ; flash par câble (un nœud coupe Wi-Fi et serveur web une fois `MeshNode` lancé)
+- [ ] Env du broker : ESP32 avec `USE_TASMESH`, `USE_TASMESH_HEARTBEAT`, `TASMESH_OFFLINE_DELAY 3` (la dernière n'a aucune valeur par défaut). Ces lignes iraient dans `tasmota/user_config_override.h` : ACCORD DE L'UTILISATEUR requis avant (règle du dépôt), à poser par section d'env pour ne rien changer aux autres cartes
+- [ ] Même mot de passe Wi-Fi sur les deux cartes : la clé de chiffrement est le mot de passe du réseau Wi-Fi ACTIF (`MESHsetKey` lit `SET_STAPWD1 + Settings->sta_active`, 32 octets au plus) ; sur le nœud, le réseau actif au moment de `MeshNode` doit porter le même mot de passe, sinon aucun paquet n'est déchiffré
+- [ ] Séquence : broker en ligne, `MeshBroker` (relever MAC du point d'accès et canal dans le journal) ; sur le nœud `MeshChannel <canal>` puis `MeshNode <MAC du broker>` ; attendre l'heure reçue (`PACKET_TYPE_TIME`) et l'enregistrement du topic
+- [ ] Mesures à relever : enregistrement du nœud (liste du broker, page web), un `cmnd/<topic nœud>/...` court (moins de 160 caractères) du broker vers le nœud, un `tele/<topic nœud>/...` du nœud vers le broker, arrêt du nœud puis son LWT hors ligne (heartbeat)
+- [ ] Journaux gardés (syslog, page Build), compilés comme les autres : compilation par la page Build, jamais pendant un autre build, jamais `pio` direct
+
+Limites connues à ne pas masquer dans un message amont : pas de reconnexion automatique du nœud (la doc le dit), commandes de plus de 160 caractères perdues, aucune persistance (règles nécessaires pour relancer `MeshBroker` et `MeshNode` après un redémarrage).
+
 ## A5 — Sujets suivants (un à la fois, chacun après fusion du précédent)
 - [ ] Commandes de nœud à nœud (`PACKET_TYPE_COMMAND`, aujourd'hui « not used yet »)
 - [ ] Clés par pair (chiffrement), en réponse à la remarque de sécurité de #24814
