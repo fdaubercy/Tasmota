@@ -683,6 +683,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `PROTOCOLE_MODBUS.md` §9 (avec les resultats des essais). C1 a C6 appliques et valides sur les cartes le
   2026-10-17, dans les deux modes ; multicast du maitre par la box seulement si un esclave y est decouvert.
   `tasks/correctif-udp-interface-2026-10-17.diff` est historique : la reference est `data/fs/udpFonctions.be`.
+- Voie MQTT maitre/esclaves (2026-11-16, plan `tasks/plans/voie-mqtt.md`, analyse `outils_docs/ANALYSE_VOIE_MQTT_2026-11-16.md`) : le P4 du garage commande des esclaves Tasmota natifs (projecteur LED, pompe, cuve) par `cmnd/<topic>/...` avec garde-fous (G3 compare-avant-agir, G4 quarantaine, G5 coupe-circuit, accuses et renvois, alerte broker). `data/fs/mqttLiaisonFonctions.be` (SOLIDIFIE, pur, sans MQTT) et `controleMqttLiaison.be` (bloc `drivers.liaisonMqtt`, commande `ReglageMqttLiaison`), elements virtuels `MQTT_<nom>` dans `controleGeneral.be::set_power_handler`. Banc `berry/banc_mqtt_liaison.py` (mutants). Essais sur carte NON termines au 2026-11-19 (A6 : 26 ordres sur 200 non appliques, correction de la garde a eprouver ; montee intermittente de la memoire Berry du P4, cause inconnue). Mode d'emploi : `outils_docs/README.md` § « Voie MQTT maitre/esclaves ».
 - `outils_docs/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets
   en clair sur depot public, defauts G1-G8 actifs, L1-L13 latents, ameliorations par priorite).
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais

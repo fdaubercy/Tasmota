@@ -40,7 +40,7 @@
 - [Aide/MODBUS.md](Aide/MODBUS.md) — **mode d'emploi** : commandes d'exemple (carte 16 relais, esclaves Tasmota), trames détaillées par code de fonction, activation dans Tasmota.
 - [ANALYSE_BERRY_MODBUS_DISCOVERY.md](ANALYSE_BERRY_MODBUS_DISCOVERY.md) — programmes ModBus Berry et table `/json/discovery.json`.
 - [AUDIT_MODBUS_2026-09-29.md](AUDIT_MODBUS_2026-09-29.md) — audit ModBus du garage (défauts, améliorations par priorité).
-- [ANALYSE_VOIE_MQTT_2026-11-16.md](ANALYSE_VOIE_MQTT_2026-11-16.md) — **analyse, rien codé** : une voie MQTT maître/esclaves à côté de ModBus série et UDP (deux architectures, éléments virtuels `MQTT_<nom>`, garde-fous anti-boucle, persist, coût CPU/RAM, esclaves non ESP32, tableaux par puce, questions ouvertes).
+- [ANALYSE_VOIE_MQTT_2026-11-16.md](ANALYSE_VOIE_MQTT_2026-11-16.md) — **analyse** (écrite avant le code ; l'état réel est dans § « Voie MQTT maître/esclaves » plus bas) : une voie MQTT maître/esclaves à côté de ModBus série et UDP (deux architectures, éléments virtuels `MQTT_<nom>`, garde-fous anti-boucle, persist, coût CPU/RAM, esclaves non ESP32, tableaux par puce, questions ouvertes).
 
 ### Configuration des cartes et électronique
 - [schemas/persist.schema.json](schemas/persist.schema.json) *(généré)* — schéma des `_persist.json` (autocomplétion et contrôle dans VS Code).
@@ -819,6 +819,61 @@ le signalait. `data/fs/controleCoprocesseur.be` (solidifié sur le P4, exclu des
   ajustement est annoncé dans la page et visible dans le diff.
 - **Banc** : `python outils_docs/scripts_python/berry/banc_coprocesseur.py` (code 0 = vert ; inclut le rendu de la
   page dans Chrome ; `--sans-navigateur` pour la partie Berry seule).
+
+<hr></hr>
+
+## Voie MQTT maître/esclaves (P4 du garage vers des esclaves Tasmota natifs)
+
+Le maître commande des esclaves Tasmota qui n'ont pas de Berry (projecteur LED, pompe de la piscine, cuve) par leurs topics natifs `cmnd/<topic>/...`, sans passer par ModBus. Les retours `stat/<topic>/...` et `tele/<topic>/...` servent d'accusé et d'état. Modules : `data/fs/mqttLiaisonFonctions.be` (garde-fous, sans MQTT, testable sans carte) et `data/fs/controleMqttLiaison.be` (publish et subscribe). Plan `tasks/plans/voie-mqtt.md`, analyse `ANALYSE_VOIE_MQTT_2026-11-16.md`.
+
+**État au 2026-11-19** : le code et son banc sont faits, les essais sur carte ne sont pas terminés. Le re-test du 2026-11-19 (100 cycles ON/OFF du projecteur) a laissé 26 ordres sur 200 non appliqués en 6 s ; une correction de la garde (`mqttLiaisonFonctions.be::GardeMqtt`, ordres rapprochés) est commitée mais pas encore éprouvée sur carte. Une montée de la mémoire Berry du P4, intermittente, reste sans cause établie. Ne pas la présenter comme une voie validée.
+
+### Dans `_persist.json` (bloc `drivers.liaisonMqtt`)
+
+| Clé | Rôle | Défaut |
+|---|---|---|
+| `activation` | `ON` charge le driver ; `OFF` le laisse inerte | `OFF` |
+| `environnement` | obligatoire, `{}` suffit (tout bloc de `drivers` doit en porter un) | |
+| `log` | seuil de la cible `liaisonMqtt` (charte des logs) | |
+| `esclaves.<nom>.activation`, `.topic` | un esclave par entrée ; `topic` = Topic Tasmota de l'esclave, sans `+` ni `#`, unique | |
+| `garde.fenetreMs` | fenêtre glissante des comptages | 10000 |
+| `garde.maxParElement` | ordres par élément dans la fenêtre avant quarantaine | 10 |
+| `garde.maxTotal` | ordres au total dans la fenêtre avant coupe-circuit | 60 |
+| `garde.quarantaineMs` | durée de la quarantaine d'un élément | 60000 |
+| `garde.coupureMs` | durée du coupe-circuit global | 300000 |
+| `garde.delaiAccuseMs` | attente de l'accusé avant renvoi (mesuré jusqu'à 1,6 s en Wi-Fi direct) | 3000 |
+| `garde.essaisMax` | émissions au total, la première comprise, avant d'abandonner l'ordre | 3 |
+| `garde.ageEtatMs` | au-delà, un état connu n'est plus cru : l'ordre identique repart | 30000 |
+| `alerteBrokerMs` | broker injoignable depuis ce délai : alerte sur l'accueil et log `erreur` (une fois), puis un message au retour | 120000 |
+
+Une clé absente, non entière, nulle ou négative prend sa valeur par défaut. Les clés `garde.ageEtatMs` et `alerteBrokerMs` ne sont dans aucun persist du dépôt : les défauts s'appliquent.
+
+### Éléments virtuels `MQTT_<nom>`
+
+- **Relais** : `"virtuel": "MQTT_<esclave>"` et `"mqtt": {"commande": "Power1"}` (défaut `Power1`). L'ordre part par `controleMqttLiaison.be::ordonne`. Avec `"repli": "ModBus_TasmotaSlaveModBus1"` (ou une autre voie ModBus), un ordre refusé parce que l'esclave est hors ligne ou que le coupe-circuit est ouvert repart par cette seconde voie ; sans repli, il est perdu et un message `erreur` le dit.
+- **Capteurs, boutons, interrupteurs** : `"mqtt": {"chemin": "DS18B20.Temperature"}` (ou `ANALOG.A1`, `Button1`, `Switch1`), avec `"declencheur"` pour imposer la famille. Un appui local sur l'esclave arrive par `stat/<topic>/RESULT` ou `POWER` : le maître l'apprend sans renvoyer d'ordre.
+
+### Garde-fous
+
+- **G3** : pas d'ordre si l'état connu de l'esclave est déjà la valeur demandée et qu'il a moins de `ageEtatMs`.
+- **G4** : limiteur par élément, puis quarantaine ; **G5** : coupe-circuit global. Un maître fautif qui recommande l'inverse à chaque retour est borné à `maxParElement` ordres.
+- **Accusé** : le retour attendu d'un ordre n'est pas un évènement (pas d'écriture en boucle). Sans accusé après `delaiAccuseMs`, l'ordre est renvoyé jusqu'à `essaisMax`, puis abandonné et loggué. Au plus 5 publish par seconde, car un publish lent bloque `loop()`.
+- **Broker perdu** : voir `alerteBrokerMs` ; au retour, les ordres en attente et les états connus sont oubliés et chaque esclave est relu (`cmnd/<topic>/Power` sans valeur).
+- **Limite connue** : le message testament (LWT) n'est pas délivré quand c'est le broker lui-même qui s'arrête, les esclaves restent « en ligne » côté maître pendant la coupure.
+
+### Commande `ReglageMqttLiaison`
+
+| Sous-commande | Effet |
+|---|---|
+| `etat` (défaut) | `{coupe, quarantaines, attentes, elements, en_ligne}` |
+| `rearme` | lève quarantaines et coupe-circuit ; ne touche ni aux états connus ni aux ordres en attente |
+| `ordre <esclave> <commande> <valeur>` | envoie un ordre par les garde-fous (essai) ; commandes permises : `Power`, `Power<n>` (ON, OFF, 1, 0, true, false), `Dimmer`, `CT` ; `Power0`, `TOGGLE`, `Restart`, `Backlog`, `Br` sont refusés |
+
+Réponses de `ordre` : `envoyer`, `identique`, `attente`, `quarantaine`, `coupe`, `invalide`, `inconnu` ou `hors_ligne` (réseau, broker ou esclave Offline). `ReglageMqttLiaison help` donne l'aide en console.
+
+### Banc
+
+`python outils_docs/scripts_python/berry/banc_mqtt_liaison.py` (code 0 = vert ; chaque garde-fou retiré dans une copie du module doit faire échouer le banc : sans `--sans-mutants`, les mutants sont joués). Il ne prouve ni la solidification ni le comportement du vrai MQTT : un essai sur carte reste nécessaire (journal `/cs`, firmware recompilé par la page Build, car `mqttLiaisonFonctions` est solidifié).
 
 <hr></hr>
 
