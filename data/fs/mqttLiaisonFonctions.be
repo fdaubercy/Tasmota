@@ -132,7 +132,9 @@ class GardeMqtt
         var b = self.bloque(cle, t)
         if b != nil    return b    end
         self.note(cle, t)
-        self.attente[cle] = {"valeur": valeur, "essais": 1, "t": t}
+        var nouvelle = {"valeur": valeur, "essais": 1, "t": t}
+        if a != nil    nouvelle["avant"] = a["valeur"]    end                # ordre remplace : son retour tardif n'est pas un changement concurrent
+        self.attente[cle] = nouvelle
         return "envoyer"
     end
 
@@ -149,6 +151,7 @@ class GardeMqtt
                 self.attente.remove(cle)
                 return "accuse"
             end
+            if a.find("avant") == valeur    return "inchange"    end        # accuse tardif de l'ordre remplace : le nouvel ordre reste attendu (essai A6 du 2026-11-19)
             if !connu    return "initial"    end                         # 1er etat vu, sans doute l'ancien : l'ordre reste attendu
             if ancien == valeur    return "inchange"    end              # ancien etat repete : l'ordre n'est pas encore applique
             self.attente.remove(cle)                                     # changement concurrent : l'esclave a decide autre chose

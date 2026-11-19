@@ -39,6 +39,8 @@ MUTANTS = [
     ("alerte du broker repetee", "self.alerte = true", "self.alerte = false"),
     ("retour du broker toujours signale", "return etait ? \"retour\" : \"rien\"", "return \"retour\""),
     ("plafond de renvois par appel retire", "elif maxi != nil && size(renvoyer) >= maxi", "elif false"),
+    ("accuse tardif d'un ordre remplace pris pour un changement concurrent", "if a.find(\"avant\") == valeur    return \"inchange\"    end", "if false    return \"inchange\"    end"),
+    ("ordre remplace non memorise", "if a != nil    nouvelle[\"avant\"] = a[\"valeur\"]    end", "if false    nouvelle[\"avant\"] = 0    end"),
     ("etat connu jamais perime (G3)", "&& t - self.etats_t.find(cle, t - self.age_etat - 1) <= self.age_etat", ""),
     ("age de l'etat non rafraichi par le retour", "self.etats_t[cle] = t", "self.etats_t[cle] = 0"),
 ]

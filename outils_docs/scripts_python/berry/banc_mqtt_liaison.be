@@ -188,6 +188,26 @@ var fc = G({"ageEtatMs": 2000})
 fc.recoit("p/r1", "ON", 1000)
 verifie(fc.demande("p/r1", "ON", 3500) == "envoyer", "G3 : age lu dans le persist (ageEtatMs)")
 
+# --- 6 quater. Ordres rapproches (essai A6 du 2026-11-19, 26 ordres sur 200 jamais appliques) : l'accuse tardif d'un ordre
+# REMPLACE n'est ni un changement concurrent (il effacerait l'ordre en attente) ni un etat sur lequel fonder « identique »
+var ra = G()
+ra.recoit("p/r1", "OFF", 1000)
+ra.demande("p/r1", "ON", 2000)
+verifie(ra.demande("p/r1", "OFF", 2500) == "envoyer", "ordres rapproches : le 2e remplace le 1er")
+verifie(ra.recoit("p/r1", "ON", 3000) == "inchange", "accuse tardif du 1er ordre : ni evenement ni accuse")
+verifie(size(ra.attente) == 1 && ra.attente["p/r1"]["valeur"] == "OFF", "accuse tardif : le 2e ordre reste en attente")
+verifie(ra.demande("p/r1", "ON", 3200) == "envoyer", "apres l'accuse tardif : l'ordre inverse n'est pas pris pour « identique »")
+var rb = G()
+rb.recoit("p/r1", "OFF", 1000)
+rb.demande("p/r1", "ON", 2000)
+rb.demande("p/r1", "OFF", 2500)
+rb.recoit("p/r1", "ON", 3000)
+verifie(rb.recoit("p/r1", "OFF", 3500) == "accuse" && size(rb.attente) == 0, "le vrai accuse du 2e ordre le solde")
+var rc = G()                                    # un vrai changement concurrent reste un evenement
+rc.recoit("p/r1", "OFF", 1000)
+rc.demande("p/r1", "ON", 2000)
+verifie(rc.recoit("p/r1", "DIM", 2500) == "evenement" && size(rc.attente) == 0, "changement concurrent d'une autre valeur : evenement")
+
 # --- 6 ter. Surveillance du broker (A7) : alerte UNE fois apres le delai, retour UNE fois, rien pour une coupure courte
 var sb = mqttLiaisonFonctions.SurveilleBroker({"alerteBrokerMs": 5000})
 verifie(sb.observe(true, 0) == "rien" && sb.observe(false, 1000) == "rien" && sb.observe(false, 5999) == "rien", "broker : coupure plus courte que le delai, rien")
