@@ -24,6 +24,7 @@ class CONTROLE_MQTT_LIAISON : Driver
     var ligne             # ligne d'alerte de l'accueil (broker injoignable), vide sinon
     var resync            # topics dont l'etat reel est a relire apres le retour du broker
     var liens             # nom -> [[module, famille, cle, chemin]] des elements virtuels MQTT_<nom> (construit au 1er SENSOR)
+    var affiches          # nom -> [[libelle, module, famille, cle]] des elements MQTT_<nom> ACTIFS, relais compris (lignes « perime »)
 
     def init()
         import persist
@@ -149,12 +150,13 @@ class CONTROLE_MQTT_LIAISON : Driver
         import persist
         import string
         self.liens = {}
+        self.affiches = {}
         var mods = persist.find("modules", {})
         for m: mods.keys()
             if type(mods[m]) != "instance"    continue    end
             var env = mods[m].find("environnement", {})
             if type(env) != "instance"    continue    end
-            for fam: ["thermometres", "analogiques", "compteurs", "boutons", "capteurs", "interrupteurs"]
+            for fam: ["thermometres", "analogiques", "compteurs", "boutons", "capteurs", "interrupteurs", "relais"]
                 var l = env.find(fam, {})
                 if type(l) != "instance"    continue    end
                 for cle: l.keys()
@@ -164,9 +166,14 @@ class CONTROLE_MQTT_LIAISON : Driver
                     var mq = d.find("mqtt")
                     var chemin = isinstance(mq, map) ? mq.find("chemin") : nil
                     var decl = isinstance(mq, map) ? mq.find("declencheur") : nil
-                    if type(v) != "string" || string.find(v, "MQTT_") != 0 || type(chemin) != "string"    continue    end
+                    if type(v) != "string" || string.find(v, "MQTT_") != 0    continue    end
                     var nom = v[5 ..]
                     if !self.esclaves.contains(nom)    continue    end
+                    if d.find("activation") == "ON"                             # absente = inactif
+                        if !self.affiches.contains(nom)    self.affiches[nom] = []    end
+                        self.affiches[nom].push([str(d.find("nom", cle)), m, fam, cle])
+                    end
+                    if type(chemin) != "string"    continue    end              # relais : ordres seulement, pas de SENSOR
                     if !self.liens.contains(nom)    self.liens[nom] = []    end
                     self.liens[nom].push([m, fam, cle, chemin, type(decl) == "string" ? decl : string.replace(chemin, ".", "#")])
                 end
@@ -274,9 +281,29 @@ class CONTROLE_MQTT_LIAISON : Driver
         return code
     end
 
-    # Ligne d'alerte de l'accueil, rafraichie ~2 s : chaine precalculee
+    # Ligne d'alerte de l'accueil, rafraichie ~2 s : chaine precalculee ; puis les lignes « perime » (decision A2 du 2026-11-20)
     def web_sensor()
         if size(self.ligne) > 0    tasmota.web_send(self.ligne)    end
+        var t = self.perimes()
+        if size(t) > 0    tasmota.web_send(t)    end
+    end
+
+    # Une ligne par element MQTT_<nom> actif d'un esclave injoignable : tous pendant l'alerte du broker, ceux d'un esclave
+    # Offline (LWT) sinon. Mesure : derniere valeur du persist ; relais : etat reel inconnu. Chaine vide en temps normal.
+    def perimes()
+        import persist
+        var tous = size(self.ligne) > 0
+        var t = ""
+        for nom: self.esclaves.keys()
+            if !tous && self.en_ligne.find(nom) != false    continue    end
+            if self.liens == nil    self.construit()    end
+            for e: self.affiches.find(nom, [])
+                var d = persist.find("modules", {}).find(e[1], {}).find("environnement", {}).find(e[2], {}).find(e[3], {})
+                var v = e[2] == "relais" ? "état réel inconnu" : "dernière valeur " + str(d.find("value", "?"))
+                t += "{s}<span style='font-size:70%'>" + e[0] + "</span>{m}<span style='color:#f44;font-size:70%'>" + v + " (périmé)</span>{e}"
+            end
+        end
+        return t
     end
 
     # Broker perdu : alerte (log erreur + accueil), oubli des ordres en attente et des etats connus ; retour : relecture des etats reels

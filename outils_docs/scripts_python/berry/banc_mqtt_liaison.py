@@ -79,6 +79,12 @@ MUTANTS_DRIVER = [
     ("abonnement orphelin rejoue comme commande du maitre", "return string.find(topic, \"stat/\") == 0 || string.find(topic, \"tele/\") == 0", "return false"),
     ("commande du maitre avalee par la liaison", "return string.find(topic, \"stat/\") == 0 || string.find(topic, \"tele/\") == 0", "return true"),
     ("LWT ignore", "self.en_ligne[nom] = (s == \"Online\")", "self.en_ligne[nom] = true"),
+    ("lignes perime jamais envoyees", "if size(t) > 0    tasmota.web_send(t)    end", "if false    tasmota.web_send(t)    end"),
+    ("lignes perime en temps normal", "if !tous && self.en_ligne.find(nom) != false    continue    end", "if !tous && false    continue    end"),
+    ("esclave Offline pas marque perime", "if !tous && self.en_ligne.find(nom) != false    continue    end", "if !tous    continue    end"),
+    ("element inactif marque perime", "if d.find(\"activation\") == \"ON\"", "if true"),
+    ("relais affiche avec une valeur perimee", "e[2] == \"relais\" ?", "false ?"),
+    ("relais absents des lignes perime", "\"interrupteurs\", \"relais\"]", "\"interrupteurs\"]"),
 ]
 
 

@@ -389,7 +389,10 @@ for j: JOURNAL    if j[1] == LOG_LEVEL_ERREUR && string.find(j[0], "broker injoi
 verifie(erreurs3 == erreurs2 + 1 && size(D.ligne) > 0 && size(garde.attente) == 0 && garde.etats.find("projecteur/POWER1") == nil, "broker coupe plus de 2 min : alerte loggue en erreur, ligne d'accueil, ordres et etats oublies")
 var w0 = size(tasmota.web)
 D.web_sensor()
-verifie(size(tasmota.web) == w0 + 1 && string.find(tasmota.web[w0], "Broker MQTT injoignable") >= 0, "accueil : la ligne d'alerte est envoyee par web_sensor")
+verifie(size(tasmota.web) == w0 + 2 && string.find(tasmota.web[w0], "Broker MQTT injoignable") >= 0, "accueil : la ligne d'alerte est envoyee par web_sensor")
+var lp = size(tasmota.web) == w0 + 2 ? tasmota.web[w0 + 1] : ""
+verifie(string.find(lp, "Niveau pompe") >= 0 && string.find(lp, "dernière valeur 512 (périmé)") >= 0 && string.find(lp, "Relais pompe") >= 0 && string.find(lp, "état réel inconnu (périmé)") >= 0, "broker perdu : chaque element MQTT_ actif a sa ligne perime (mesure : derniere valeur, relais : etat inconnu)")
+verifie(string.find(lp, "Inactif pompe") < 0 && size(string.split(lp, "(périmé)")) == 3, "broker perdu : un element inactif ou sans nom/activation n'a pas de ligne")
 tasmota.ms = tasmota.ms + 1000
 D.every_second()
 verifie(D.ordonne("projecteur", "Power1", "ON") == "hors_ligne" && size(garde.attente) == 0, "broker coupe : plus aucun ordre ne part ni ne reste en attente")
@@ -400,6 +403,15 @@ D.every_second()
 verifie(D.ligne == "" && size(mqtt.publies) == p1 + size(D.esclaves), "broker revenu : alerte levee, etat reel relu pour chaque esclave")
 verifie(string.find(mqtt.publies[p1][0], "cmnd/") == 0 && string.endswith(mqtt.publies[p1][0], "/Power") && mqtt.publies[p1][1] == "", "broker revenu : la relecture est une question sans valeur")
 verifie(D.ordonne("projecteur", "Power1", "ON") == "envoyer", "apres le retour, un ordre repart normalement")
+var w1 = size(tasmota.web)
+D.web_sensor()
+verifie(size(tasmota.web) == w1, "temps normal (broker et esclaves en ligne) : ni alerte ni ligne perime")
+mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Offline", bytes())
+D.web_sensor()
+verifie(size(tasmota.web) == w1 + 1 && string.find(tasmota.web[w1], "Relais pompe") >= 0 && string.find(tasmota.web[w1], "Broker") < 0, "pompe Offline (LWT), broker en ligne : ses elements seuls marques perimes, sans alerte")
+mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Online", bytes())
+D.web_sensor()
+verifie(size(tasmota.web) == w1 + 1, "pompe de retour Online : plus de ligne perime")
 
 # garde d'activation : persist a OFF -> aucun driver
 import persist
