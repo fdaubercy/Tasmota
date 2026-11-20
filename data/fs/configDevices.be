@@ -41,6 +41,7 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
         		for cleRLY: relais.keys()
         			if type(relais[cleRLY]) != "instance"   continue    end
 					tasmota.yield()
+					var nbAvant = nbIOActivesJSON["relais"]["actives"].find("nb", 0)
 
         			# Si le relai est activé (réels + virtuels)
         			if diversFonctions.deviceActif(relais[cleRLY])
@@ -123,10 +124,17 @@ def configDevices_configDevicesByRules(modules, nbIOActivesJSON)
 							end
 						end
 					end
+
+					# Relais compte : retient le plus grand id (un id inactif fait un trou dans la numerotation)
+					var idRly = relais[cleRLY].find("id", 0)
+					if (nbIOActivesJSON["relais"]["actives"].find("nb", 0) > nbAvant && type(idRly) == "int" && idRly > nbIOActivesJSON["relais"]["actives"].find("idMax", 0))
+						nbIOActivesJSON["relais"]["actives"]["idMax"] = idRly
+					end
         		end
 
-				# Actualise le nombre de relais activés
-				tasmota.global.devices_present = nbIOActivesJSON["relais"]["actives"]["nb"]
+				# Nombre de POWER de Tasmota = plus grand id actif, PAS le nombre de relais actifs : sinon un relais au-dela n'a ni
+				# bouton ni commande (xdrv_27_esp32_shutter.ino::ExecuteCommandPowerShutter ignore device > devices_present)
+				tasmota.global.devices_present = nbIOActivesJSON["relais"]["actives"].find("idMax", 0)
         	end
 
 			# Les capteurs tout ou rien sont aussi des interrupteurs

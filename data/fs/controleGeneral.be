@@ -593,7 +593,7 @@ class CONTROLE_GENERAL : Driver
 		logFonctions.log("GLOBAL_POWER_HANDLER: idx=" + str(idx), LOG_LEVEL_DEBUG)
 		logFonctions.log("GLOBAL_POWER_HANDLER: idx(binaire)=" + str(diversFonctions.printBinaire(idx)), LOG_LEVEL_DEBUG)
 
-		for nb: 0 .. self.nbIOActivesJSON["relais"]["actives"]["nb"]
+		for nb: 0 .. self.nbIOActivesJSON["relais"]["actives"].find("idMax", 0)		# jusqu'au plus grand id (trous possibles), pas le nombre
 			if 1 & (idx >> (nb)) == 1
 				etat = "ON"
 			else etat = "OFF"

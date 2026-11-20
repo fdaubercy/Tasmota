@@ -230,6 +230,18 @@ def controlesReference(v)
     var nb = (classname(cg) == "CONTROLE_GENERAL") ? cg.nbIOActivesJSON : {}
     v("relais actifs comptes par configDevicesByRules (" + str(nb.find("relais", {}).find("actives", {}).find("nb")) + ")",
       nb.find("relais", {}).find("actives", {}).find("nb", 0) > 0)
+    # Tasmota numerote ses POWER de 1 a devices_present : un id inactif (trou) ne doit pas laisser un relais actif au-dela
+    # sans bouton ni commande (volet 3 sur le relais 22 et projecteur 24 du P4, 2026-11-20)
+    var idMax = 0
+    for m: persistCas.find("modules", {}).keys()
+        var mod = persistCas["modules"][m]
+        if !isinstance(mod, map) || mod.find("activation") != "ON"    continue    end
+        for r: mod.find("environnement", {}).find("relais", {})
+            if isinstance(r, map) && r.find("activation") == "ON" && r.find("id", 0) > idMax    idMax = r["id"]    end
+        end
+    end
+    v("devices_present = plus grand id de relais actif (" + str(tasmota.global.devices_present) + " pour " + str(idMax) + "), pas leur nombre",
+      idMax > 0 && tasmota.global.devices_present == idMax)
     v("/json/nbIOActives.json ecrit et a jour", LITTLEFS.fichiers.find("/json/nbIOActives.json") == json.dump(nb))
     for d: ["/json", "/sd", "/logs", "/.extensions"]    v("dossier " + d + " present (listeEtRepartitLesFichiers)", LITTLEFS.dossiers.contains(d))    end
     v("graphiques.json range de / vers /json", LITTLEFS.fichiers.contains("/json/graphiques.json") && !LITTLEFS.fichiers.contains("/graphiques.json"))

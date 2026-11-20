@@ -751,8 +751,8 @@
 						}
 					},
 					"relai24": {
-						"activation": "OFF",
-						"nom": "Projecteur LED jardin (essai voie MQTT)",
+						"activation": "ON",
+						"nom": "Projecteur Jardin",
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 24,
