@@ -104,7 +104,7 @@
 			}
 		},
 		"serveurFTP": {
-			"activation": "ON",
+			"activation": "OFF",
 			"utilisateur": "fdaubercy",
 			"mdp": "Lune5676"
 		},
