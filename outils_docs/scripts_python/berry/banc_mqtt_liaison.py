@@ -75,6 +75,7 @@ MUTANTS_DRIVER = [
     ("retour du broker sans relecture des etats", "self.resync.push(self.esclaves[nom])", "nom = nom"),
     ("ligne d'alerte jamais levee au retour", "            self.ligne = \"\"", "            self.ligne = self.ligne"),
     ("ligne d'alerte jamais affichee", "if size(self.ligne) > 0    tasmota.web_send(self.ligne)    end", "if false    tasmota.web_send(self.ligne)    end"),
+    ("retour d'un esclave rejoue comme commande du maitre", "return true                 # traite", "return false                 # traite"),
     ("LWT ignore", "self.en_ligne[nom] = (s == \"Online\")", "self.en_ligne[nom] = true"),
 ]
 

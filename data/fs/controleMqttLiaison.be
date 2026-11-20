@@ -129,7 +129,7 @@ class CONTROLE_MQTT_LIAISON : Driver
         elif string.find(suffixe, "POWER") == 0
             self.etat(nom, suffixe, s)
         end
-        return false
+        return true                 # traite : sinon Tasmota execute stat/<esclave>/POWER ON comme une commande du maitre (essai A6 du 2026-11-20)
     end
 
     # Elements virtuels « MQTT_<nom> » (thermometres, analogiques, compteurs) du persist, avec la cle « mqtt.chemin » du JSON SENSOR
