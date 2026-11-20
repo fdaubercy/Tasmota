@@ -1,0 +1,146 @@
+<!doctype html><meta charset="utf-8"><title>Navigateur FTP : maquettes</title><body style="font-family:system-ui;max-width:900px;margin:1em auto">
+<style>
+  .ftp { font: 13px/1.4 system-ui, sans-serif; border: 1px solid var(--border, #ccc); border-radius: 8px; overflow: hidden; background: var(--bg-secondary, #fafafa); }
+  .ftp .barre { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px; border-bottom: 1px solid var(--border, #ccc); }
+  .ftp .sel { padding: 3px 8px; border: 1px solid var(--border, #bbb); border-radius: 4px; background: var(--bg-primary, #fff); }
+  .ftp .pastille { color: #1a7f37; font-weight: 600; }
+  .ftp .bascule span { padding: 3px 10px; border: 1px solid var(--border, #bbb); }
+  .ftp .bascule span.on { background: #0969da; color: #fff; border-color: #0969da; }
+  .ftp .corps { display: flex; min-height: 190px; }
+  .ftp .arbre { width: 34%; padding: 8px; border-right: 1px solid var(--border, #ccc); white-space: pre; font-family: ui-monospace, monospace; font-size: 12px; }
+  .ftp .arbre b { color: #0969da; }
+  .ftp table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .ftp th, .ftp td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border, #e5e5e5); }
+  .ftp tr.coche td { background: rgba(9,105,218,.12); }
+  .ftp .actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-top: 1px solid var(--border, #ccc); }
+  .ftp .btn { padding: 3px 9px; border-radius: 4px; border: 1px solid var(--border, #bbb); background: var(--bg-primary, #fff); }
+  .ftp .btn.danger { color: #cf222e; border-color: #cf222e; }
+  .ftp .btn.prim { background: #0969da; color: #fff; border-color: #0969da; }
+  .ftp .moitie { width: 50%; padding: 8px; }
+  .ftp .moitie + .moitie { border-left: 1px solid var(--border, #ccc); }
+  .ftp .fleches { display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 0 6px; }
+  .ftp .bloc { border: 1px solid var(--border, #ccc); border-radius: 6px; padding: 8px; margin: 8px; background: var(--bg-primary, #fff); }
+  .ftp .bloc h4 { margin: 0 0 6px; font-size: 13px; }
+  .ftp .note { color: var(--text-secondary, #666); font-size: 12px; }
+</style>
+
+<h2>Navigateur FTP des cartes : trois interfaces</h2>
+<p class="subtitle">Cliquez sur celle qui vous convient (ou sur plusieurs si vous voulez en mélanger), puis répondez dans le terminal.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" >
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Explorateur à deux volets (recommandée)</h3>
+      <p>Arborescence à gauche, contenu du dossier à droite, actions en bas. Bascule Flash / SD. Raccourci « Journaux et historique ».</p>
+      <div class="ftp">
+        <div class="barre">
+          <span class="sel">Lieu : garage ▾</span>
+          <span class="sel">Carte : tasmota32p4-serveur-modbus ▾</span>
+          <span class="pastille">● FTP actif (SD)</span>
+          <span class="bascule"><span>Flash</span><span class="on">SD</span></span>
+          <span class="btn">Journaux et historique</span>
+        </div>
+        <div class="corps">
+          <div class="arbre">/
+├ <b>histo</b>
+├ energie
+├ sd
+│ ├ css
+│ ├ html
+│ ├ images
+│ └ js
+└ json</div>
+          <div style="flex:1">
+            <table>
+              <tr><th>☐</th><th>Nom</th><th>Taille</th><th>Modifié</th></tr>
+              <tr class="coche"><td>☑</td><td>mesures-2026-11.bin</td><td>412 Ko</td><td>20/11 10:12</td></tr>
+              <tr class="coche"><td>☑</td><td>mesures-2026-10.bin</td><td>1,1 Mo</td><td>31/10 23:59</td></tr>
+              <tr><td>☐</td><td>mesures-2026-09.bin</td><td>1,0 Mo</td><td>30/09 23:59</td></tr>
+              <tr><td>☐</td><td>debits-2026-11.bin</td><td>96 Ko</td><td>20/11 10:12</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="actions">
+          <span class="btn prim">Télécharger (2) en zip</span>
+          <span class="btn">Envoyer…</span>
+          <span class="btn">Nouveau dossier</span>
+          <span class="btn">Déplacer vers…</span>
+          <span class="btn">Renommer</span>
+          <span class="btn danger">Supprimer</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" >
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Double panneau PC ↔ carte</h3>
+      <p>Un dossier du PC à gauche, la carte à droite, flèches de copie entre les deux. La page doit pouvoir parcourir les disques du PC.</p>
+      <div class="ftp">
+        <div class="barre">
+          <span class="sel">Carte : tasmota32p4-serveur-modbus ▾</span>
+          <span class="pastille">● FTP actif (SD)</span>
+          <span class="bascule"><span>Flash</span><span class="on">SD</span></span>
+        </div>
+        <div class="corps">
+          <div class="moitie">
+            <div class="note">PC : …\sauvegardes_cartes\p4\histo</div>
+            <table>
+              <tr><th>Nom</th><th>Taille</th></tr>
+              <tr><td>mesures-2026-09.bin</td><td>1,0 Mo</td></tr>
+              <tr><td>mesures-2026-10.bin</td><td>1,1 Mo</td></tr>
+            </table>
+          </div>
+          <div class="fleches"><span class="btn">◀ copier</span><span class="btn">copier ▶</span></div>
+          <div class="moitie">
+            <div class="note">Carte : /histo</div>
+            <table>
+              <tr><th>Nom</th><th>Taille</th></tr>
+              <tr class="coche"><td>mesures-2026-11.bin</td><td>412 Ko</td></tr>
+              <tr><td>mesures-2026-10.bin</td><td>1,1 Mo</td></tr>
+              <tr><td>debits-2026-11.bin</td><td>96 Ko</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="actions">
+          <span class="btn">Nouveau dossier</span>
+          <span class="btn">Renommer</span>
+          <span class="btn danger">Supprimer</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" >
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Page par tâches</h3>
+      <p>Trois blocs guidés. Les dossiers des journaux et de l'historique sont connus de la page.</p>
+      <div class="ftp">
+        <div class="barre">
+          <span class="sel">Carte : tasmota32p4-serveur-modbus ▾</span>
+          <span class="pastille">● FTP joignable</span>
+        </div>
+        <div class="bloc">
+          <h4>1. Récupérer journaux et historique (SD)</h4>
+          ☑ /histo (4 fichiers, 2,6 Mo) &nbsp; ☑ /energie (2 fichiers, 80 Ko)
+          <div style="margin-top:6px"><span class="btn prim">Télécharger en zip</span></div>
+        </div>
+        <div class="bloc">
+          <h4>2. Fichiers de la flash</h4>
+          <span class="note">/json · /sd · autoexec.be · _persist.json …</span>
+          <div style="margin-top:6px"><span class="btn">Envoyer…</span> <span class="btn">Nouveau dossier</span> <span class="btn danger">Supprimer</span></div>
+        </div>
+        <div class="bloc">
+          <h4>3. Ranger</h4>
+          <span class="note">Glisser un fichier sur un dossier pour le déplacer (même support).</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<p>Choix du 2026-11-20 : modèle A.</p></body>
