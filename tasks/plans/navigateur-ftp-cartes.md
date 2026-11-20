@@ -4,7 +4,7 @@ titre: Navigateur FTP des cartes (page de l'annuaire, FTP allumé à la demande)
 objectif: Parcourir, télécharger, envoyer, ranger et supprimer les fichiers d'une carte par FTP depuis une page de l'annuaire, le FTP n'étant allumé que le temps de la session
 statut: actif
 cree: 2026-11-20
-maj: 2026-11-20
+maj: 2026-11-20 (A1 hors P4)
 famille: methode
 liens: menage-page, cartes-simulees
 spec: 2026-11-20-navigateur-ftp-cartes-design.md
@@ -57,10 +57,11 @@ Bancs : scripts à code de sortie (0 = vert), fonction `verifie(obtenu, attendu,
    en-tête (origine vérifiée), et elle seule (A4 `cas_beacon`).
 
 ## A1 — Persist : FTP coupé sur toutes les cartes du dépôt
-- [ ] Vérifier qu'aucun build ne tourne (`garde_build.py`), puis passer `serveur.serveurFTP.activation` de `"ON"` à `"OFF"` dans chaque `data/<lieu>/<carte>/_persist.json` (hors dossiers `*-sauvegarde`) par remplacement de texte limité au bloc `serveurFTP` : une seule ligne changée par fichier
-- [ ] Vérification : script jetable (scratchpad) qui relit chaque persist en `json.loads(..., strict=False)` et affiche `env : activation` ; attendu `OFF` partout, P4 et cuve compris ; `git diff --stat` = 1 ligne par fichier
-- [ ] `controleur-secrets` sur ce diff (lu), puis commit `chore(persist): serveur FTP coupe par defaut sur toutes les cartes`
-- [ ] Noter dans « Améliorations restantes » la liste des cartes dont le persist est à porter sur la carte (A7)
+- [x] Vérifier qu'aucun build ne tourne (`garde_build.py`), puis passer `serveur.serveurFTP.activation` de `"ON"` à `"OFF"` dans chaque `data/<lieu>/<carte>/_persist.json` (hors dossiers `*-sauvegarde`) par remplacement de texte limité au bloc `serveurFTP` : une seule ligne changée par fichier — preuve : 10 persist, `git diff -U0` = 10 fois `"activation": "ON"` -> `"OFF"`, bloc `serveurFTP` dans le contexte de chacun (P4 à part, étape suivante)
+- [ ] Persist du P4 (`data/garage/tasmota32p4-serveur-modbus/_persist.json`) : même changement, APRÈS le commit des modifications en cours d'une autre session dans ce fichier (choix de l'utilisateur du 2026-11-20)
+- [x] Vérification : script jetable (scratchpad) qui relit chaque persist en `json.loads(..., strict=False)` et affiche `env : activation` ; attendu `OFF` partout, P4 et cuve compris ; `git diff --stat` = 1 ligne par fichier — preuve : `OFF` partout sauf le P4 (`ON`, reporté), numstat `1 1` sur les 10 fichiers (rapport `.superpowers/sdd/navigateur-ftp-cartes/task-1-report.md`)
+- [x] `controleur-secrets` sur ce diff (lu), puis commit `chore(persist): serveur FTP coupe par defaut sur toutes les cartes` — preuve : contrôle OK, commit `4d56b759f` (10 fichiers, 10+/10-)
+- [x] Noter dans « Améliorations restantes » la liste des cartes dont le persist est à porter sur la carte (A7) — preuve : section « Améliorations restantes » ci-dessous
 
 ## A2 — Liste des cartes éligibles (`ftp_cartes_liste.py`)
 
@@ -74,11 +75,11 @@ Consomme `build_envs.liste_envs`, `lieux.identites`, `lieux.puce`.
 - [ ] Banc `outils_pc/test_ftp_cartes_liste.py`, mini-dépôt temporaire, cas rouges d'abord :
   - [ ] `cas_esclave` : persist avec `rangeExtender` `ON`, `id` 2, `ipMaitre` → exclue, raison contient « Range Extender »
   - [ ] `cas_persist_illisible` : JSON cassé → `est_esclave_rgx` rend None, carte exclue ; persist avec caractère de contrôle dans une chaîne → lu (strict=False)
-  - [ ] `cas_sans_use_ftp` : section `#elif defined(FIRMWARE_X)` avec `#undef USE_FTP` → exclue ; section sans `#undef` → gardée ; `#undef USE_FTP` sous un `#if !defined(FIRMWARE_X)` → doute → exclue
+  - [ ] `cas_sans_use_ftp` : section `#elif defined(FIRMWARE_X)` avec `#undef USE_FTP` → exclue ; section sans `#undef` → gardée ; `#undef USE_FTP` sous un `#if !defined(FIRMWARE_X)` → gardée pour l'env X, exclue pour un autre env de la section ; condition non évaluable → doute → exclue
   - [ ] `cas_puce` : env ESP8266 → exclue
   - [ ] `cas_adresse` : IP du `.h` → `adresse` = IP ; IP absente ou 0.0.0.0 → `adresse` = `<Hostname>.local`
   - [ ] `cas_identifiants` : `USER_FTP`/`PW_FTP` de la partie commune, remplacés par ceux de la section de l'env s'ils y sont redéfinis ; `json.dumps(liste(...))` ne contient pas le mot de passe
-  - [ ] `cas_depot_reel` : sur le vrai dépôt, la cuve (`tasmota32s3-capteurs-cuve-modbus`), le rideau et le portail sont exclus ; le P4 et `tasmota32s3-serveur-debits-pac` sont présents ; les 3 ESP32 sans PSRAM sont exclus
+  - [ ] `cas_depot_reel` : sur le vrai dépôt, la cuve (`tasmota32s3-capteurs-cuve-modbus`), le rideau et le portail sont exclus ; `tasmota32s3-bureau-serveur-debits-pac` est exclu (esclave de l'écran) ; le P4, l'écran des débits et la cave S3 sont présents ; les 3 ESP32 sans PSRAM sont exclus
 - [ ] Lancer le banc : rouge (module absent)
 - [ ] Écrire `ftp_cartes_liste.py` (lecture des sections du `.h` sur le modèle de `autoexec_gardes.py` / `build/verifie_lib_ignore.py`, sans modifier `build_envs.py`)
 - [ ] Banc vert, sortie collée en preuve ; témoin : retirer le test d'esclave fait rougir `cas_depot_reel`
@@ -161,6 +162,7 @@ Interfaces produites (consommées par la page, A5) :
 - [ ] Porter le persist à `OFF` sur les autres cartes listées en A1 ; cocher chacune dans « Améliorations restantes »
 
 ## Améliorations restantes
+- [ ] [projet] Porter le persist à `OFF` sur chaque carte (onglet « Fichiers » de la page Build), A7 : bureau ecran-debits-pac, bureau serveur-debits-pac, cave s3-ecran, cave s3-serveur-rly, étage 2 grenier, RDC grenier, garage P4 (après son commit), cuve, portail-jardin, rideau, garage s3-serveur-modbus
 - [ ] [projet] Page Build : `build_envs.adresse_par_maitre` lit les persist en strict, l'adresse de la cuve par le maître n'est pas calculée (IP à saisir à la main)
 
 ## Vérification
