@@ -259,6 +259,8 @@ verifie(mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led
 verifie(mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led/RESULT", 0, "pas du json", bytes()) == true, "RESULT illisible : ignore sans exception")
 verifie(mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led/POWER1", 0, "OFF", bytes()) == true, "retour POWER d'un esclave : traite, jamais rejoue comme commande du maitre (A6 du 2026-11-20)")
 verifie(D.recu("stat/autre/chose/RESULT", '{"POWER1":"ON"}') == false && !garde.etats.contains("autre/POWER1"), "topic d'un esclave non declare : ignore")
+verifie(D.mqtt_data("stat/ancien/esclave/POWER", 0, "ON", bytes()) == true && D.mqtt_data("tele/ancien/esclave/LWT", 0, "Online", bytes()) == true, "abonnement orphelin (esclave retire, BrRestart) : stat/ et tele/ jamais rejoues comme commande du maitre")
+verifie(D.mqtt_data("cmnd/garage/POWER1", 0, "ON", bytes()) == false && !garde.etats.contains("ancien/POWER1"), "commande du maitre (cmnd/) : laissee a Tasmota, sans etat retenu")
 mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Offline", bytes())
 verifie(D.en_ligne["pompe"] == false, "LWT Offline : esclave hors ligne")
 mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Online", bytes())

@@ -76,6 +76,8 @@ MUTANTS_DRIVER = [
     ("ligne d'alerte jamais levee au retour", "            self.ligne = \"\"", "            self.ligne = self.ligne"),
     ("ligne d'alerte jamais affichee", "if size(self.ligne) > 0    tasmota.web_send(self.ligne)    end", "if false    tasmota.web_send(self.ligne)    end"),
     ("retour d'un esclave rejoue comme commande du maitre", "return true                 # traite", "return false                 # traite"),
+    ("abonnement orphelin rejoue comme commande du maitre", "return string.find(topic, \"stat/\") == 0 || string.find(topic, \"tele/\") == 0", "return false"),
+    ("commande du maitre avalee par la liaison", "return string.find(topic, \"stat/\") == 0 || string.find(topic, \"tele/\") == 0", "return true"),
     ("LWT ignore", "self.en_ligne[nom] = (s == \"Online\")", "self.en_ligne[nom] = true"),
 ]
 

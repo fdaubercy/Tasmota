@@ -108,6 +108,16 @@ class CONTROLE_MQTT_LIAISON : Driver
         return tasmota.is_network_up() && mqtt.connected()
     end
 
+    # Tout message stat/ ou tele/ recu par le maitre est l'etat d'un autre appareil, jamais une commande pour lui :
+    # rendre true empeche Tasmota de le rejouer comme commande (stat/<esclave>/POWER ON -> POWER ON sur le maitre).
+    # Couvre aussi un abonnement orphelin : BrRestart (xdrv_52_9_berry.ino::BerryInit) ne desabonne pas du broker,
+    # les messages d'un esclave retire du persist arrivent encore sans abonne Berry. Les autres drivers recoivent
+    # quand meme le message (tasmota_class.be::event poursuit la distribution de mqtt_data).
+    def mqtt_data(topic, idx, data, databytes)
+        import string
+        return string.find(topic, "stat/") == 0 || string.find(topic, "tele/") == 0
+    end
+
     # Retour d'un esclave : stat/<topic>/RESULT, stat/<topic>/POWERn ou tele/<topic>/LWT
     def recu(topic, s)
         import string
