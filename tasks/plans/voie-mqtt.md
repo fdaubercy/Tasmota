@@ -6,7 +6,7 @@ cree: 2026-11-16
 maj: 2026-11-21
 objectif: Commander des esclaves, lire leurs capteurs et être averti de leurs changements d'état par MQTT, à côté de ModBus série et UDP, avec garde-fous anti-boucle et repli
 famille: modbus-reseau
-liens: rgx-ethernet-uplink, alerte-firmware-c6
+liens: rgx-ethernet-uplink, alerte-firmware-c6, voie-mqtt-bloc1
 ---
 # Voie MQTT maître/esclaves (architecture A)
 

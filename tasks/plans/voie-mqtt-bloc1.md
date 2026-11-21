@@ -29,7 +29,7 @@ Déjà fait dans cette conversation, rien n'est commité :
 
 ## A2 — Relevés de mémoire Berry du P4 (lecture seule)
 
-- [x] `sonde_fuite.py` du scratchpad relancée en arrière-plan juste après le démarrage dû au flash, sortie dans un nouveau journal (`sonde_fuite_20261121.log`), 8 h — preuve : lancée à 06:34:54, 77 s après le démarrage du P4 flashé ; journal `scratchpad/sonde_fuite_20261121.log`, tâche de fond `b5bafqmsz`, durée 8 h (fin vers 14:35)
+- [x] `sonde_fuite.py` du scratchpad relancée en arrière-plan juste après le démarrage dû au flash, sortie dans un nouveau journal (`sonde_fuite_20261121.log`), 8 h — preuve : lancée à 06:34:54, 77 s après le démarrage du P4 flashé ; journal `scratchpad/sonde_fuite_20261121.log` ; à 06:45:10 reprise en processus DÉTACHÉ (PID 9524, hors conversation, survit à la fermeture de VS Code) : script `%LOCALAPPDATA%\outils_tasmota\mesures_mqtt\sonde_fuite_p4.py`, journaux `sonde_fuite_p4_20261121.log` (relevés 06:34 à 06:45 repris) puis `sonde_fuite_p4_sortie.log`, 8 h (fin vers 14:45) ; ancienne tâche de fond arrêtée, un seul processus de sonde en vie
 - [x] Premier relevé lu (berry, obj, tas, pente) pour confirmer que la sonde tourne — preuve : 06:34:54 `up=77 berry=120 obj=2010 tas=247 pente=0.00` ; 06:35:24 `up=107 berry=120 obj=2016 tas=246 pente=0.00`
 - [ ] Bilan rendu à l'utilisateur au fil de l'eau : pente, captures déclenchées (seuil 0,2 Ko/s), redémarrages détectés. Rien n'est corrigé sans son accord
 
@@ -46,12 +46,12 @@ Déjà fait dans cette conversation, rien n'est commité :
 
 - [x] `tasks/plans/voie-mqtt.md` : A4 ligne 63 et A10 (doc, références, firmware validé, leçons) cochés avec preuves, `maj: 2026-11-21`, index régénéré — preuve : `voie-mqtt.md` du 2026-11-21 : étape schéma/modèle d'A4 et 3 des 5 étapes d'A10 (documentation, références, firmware) cochées avec preuves, `maj: 2026-11-21` ; reste en A10 le portail et les leçons du portail (laissées ouvertes)
 - [x] Agents `controleur-secrets` et `verificateur-solidification` (un `.be` de `data/` dans le lot), `relecteur-docs` au jugement ; rapports lus — preuve : `controleur-secrets` : aucun bloquant, 10 fichiers du lot ; `verificateur-solidification` : solidifiable, aucun bloquant ; `relecteur-docs` : 2 corrections retenues (cuve et projecteur ont du Berry, limite du LWT à l'arrêt du broker), appliquées à `PROTOCOLE_MODBUS.md` § 11, `verifie_references_docs.py` 0 défaut après correction ; 3 points écartés après vérification (S2X cité par `tasks/plans/envs-grenier-rdc-sonoff-cave.md`, lignes 31 et 40 du README = sommaire non touché, `ButtonTopic` à 0 = règle et non constat)
-- [ ] Commit proposé à l'utilisateur (fichiers nommés un par un, hunks pour les fichiers partagés) ; push seulement s'il le demande, après `preparateur-push`
+- [x] Commit proposé à l'utilisateur (fichiers nommés un par un, hunks pour les fichiers partagés) ; push seulement s'il le demande, après `preparateur-push` — preuve : commit `5394eb2c9` (10 fichiers nommés un par un, accord de l'utilisateur « oui commite, sans pousser »), `tasks/README.md`, organigramme, persist de la cave et fichiers FTP laissés hors du commit ; non poussé
 
 ## A5 — Retour au plan d'avant (`voie-mqtt`)
 
 - [ ] Résultat de ce bloc reporté dans `tasks/plans/voie-mqtt.md` : note datée du 2026-11-21 (recalage corrigé, schéma et modèle à jour, sonde mémoire relancée), étapes concernées cochées avec preuves, `maj:` à jour
-- [ ] Conversation rattachée de nouveau à `voie-mqtt` (`/suivi suivre voie-mqtt`), puis `/suivi detacher` sur ce plan-ci ; la barre d'avancement montre `voie-mqtt` en premier
+- [x] Conversation rattachée de nouveau à `voie-mqtt` (`/suivi suivre voie-mqtt`), puis `/suivi detacher` sur ce plan-ci ; la barre d'avancement montre `voie-mqtt` en premier — preuve : `/suivi` n'est pas lançable par moi ; rattachement obtenu en éditant `tasks/plans/voie-mqtt.md` avec l'outil Edit (lien `voie-mqtt-bloc1` ajouté à `liens:`), ce qui rattache la conversation à ce plan ; `~/.claude/suivi-plan/conversations/dca3c399-….json` donne `fichier: tasks/plans/voie-mqtt.md` le 2026-11-21 ~06:47
 - [ ] Ce plan passé en `statut: clos` quand A1 à A4 sont cochées, index `tasks/README.md` régénéré (`node .claude/hooks/index_plans.mjs`)
 - [ ] Reste de `voie-mqtt` relu et proposé à l'utilisateur, dans l'ordre : mémoire Berry du P4 (résultat de la sonde d'A2), essai du portail de jardin et du volet 3 en sa présence, puis A10 (documentation, firmware validé, leçons). Rien du portail n'est lancé sans lui
 
