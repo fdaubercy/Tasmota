@@ -22,6 +22,8 @@ from banc_coprocesseur import trouve_berry, trouve_racine  # noqa: E402  (meme d
 # Les mutants du driver (controleMqttLiaison.be) sont dans MUTANTS_DRIVER, meme forme.
 MUTANTS = [
     ("limiteur par element retire (G4)", "if size(self.emis[cle]) >= self.max_element", "if false"),
+    ("OFF d'une impulsion refuse tant que le ON est attendu", "if a != nil && a[\"valeur\"] == valeur    return \"attente\"    end", "if a != nil    return \"attente\"    end"),
+    ("renvoi de l'ancien ordre remplace (seconde impulsion)", "renvoyer.push([cle, a[\"valeur\"]])", "renvoyer.push([cle, a.find(\"avant\", a[\"valeur\"])])"),
     ("coupe-circuit global retire (G5)", "if size(self.totaux) >= self.max_total", "if false"),
     ("ordre identique a l'etat connu envoye (G3)", "if a == nil && self.etats.find(cle) == valeur", "if false"),
     ("accuse jamais reconnu (retour = evenement)", "if valeur == a[\"valeur\"]", "if false"),

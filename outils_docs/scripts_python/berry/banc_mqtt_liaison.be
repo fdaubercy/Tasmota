@@ -440,6 +440,64 @@ mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Offline", bytes())
 rp("stat/pompe/POWER", 0, "OFF", bytes())
 verifie(D.en_ligne["pompe"] == true && size(tasmota.poses) == 3, "etat recu d'un esclave marque Offline : il est en ligne (le recalage ne finit pas en « hors_ligne »)")
 
+# --- 7 septies. Impulsion (portail : ON puis OFF 0,5 s plus tard, PulseTime 5 de vrFonctions.be) vers un meme element, par le driver
+# La pompe sert de doublure : le chemin d'un ordre est le meme pour tout relais MQTT_<nom>. Garde du banc : 4 ordres par element en 10 s
+# (10 en production : 5 impulsions au plus).
+def repart()
+    garde.attente = {}
+    garde.etats = {}
+    garde.etats_t = {}
+    garde.rearme()
+    mqtt.publies = []
+    tasmota.poses = []
+    D.en_ligne["pompe"] = true
+end
+repart()
+verifie(D.ordonne("pompe", "Power1", "ON") == "envoyer", "impulsion : le ON part")
+tasmota.ms = tasmota.ms + 500
+verifie(D.ordonne("pompe", "Power1", "OFF") == "envoyer" && size(mqtt.publies) == 2 && mqtt.publies[0][1] == "ON" && mqtt.publies[1][1] == "OFF", "impulsion sans accuse : le OFF a 0,5 s n'est pas refuse comme « attente », les deux ordres partent dans l'ordre")
+tasmota.ms = tasmota.ms + 1500
+var n = size(mqtt.publies)
+D.every_second()
+verifie(size(mqtt.publies) == n + 1 && mqtt.publies[-1][1] == "OFF", "ON remplace par OFF, sans accuse : seul le OFF est renvoye, jamais le ON (une seconde impulsion du portail)")
+rp("stat/pompe/POWER", 0, "OFF", bytes())
+verifie(size(garde.attente) == 0, "accuse du OFF : plus rien n'est attendu")
+
+repart()
+D.ordonne("pompe", "Power1", "ON")
+rp("stat/pompe/POWER", 0, "ON", bytes())
+tasmota.ms = tasmota.ms + 500
+verifie(D.ordonne("pompe", "Power1", "OFF") == "envoyer", "impulsion acquittee : le OFF part a 0,5 s")
+rp("stat/pompe/POWER", 0, "OFF", bytes())
+verifie(size(garde.attente) == 0, "impulsion acquittee : plus rien n'est attendu")
+tasmota.ms = tasmota.ms + 5000
+verifie(D.ordonne("pompe", "Power1", "ON") == "envoyer", "deuxieme impulsion 5 s plus tard : le ON part (etat OFF connu, pas « identique »)")
+
+repart()
+D.ordonne("pompe", "Power1", "ON")
+tasmota.ms = tasmota.ms + 500
+D.ordonne("pompe", "Power1", "OFF")
+tasmota.poses = []
+rp("stat/pompe/POWER", 0, "ON", bytes())
+verifie(garde.attente.contains("pompe/POWER1") && garde.attente["pompe/POWER1"]["valeur"] == "OFF" && size(tasmota.poses) == 0, "accuse tardif du ON apres le OFF : le OFF reste attendu, le bouton du maitre n'est pas recale")
+
+# limite G4 : le OFF d'une impulsion peut etre refuse apres un ON accepte (renvoi compte) ; le ON n'est alors jamais renvoye
+repart()
+D.ordonne("pompe", "Power1", "ON")
+tasmota.ms = tasmota.ms + 500
+D.ordonne("pompe", "Power1", "OFF")
+tasmota.ms = tasmota.ms + 1500
+D.every_second()                                               # renvoi du OFF : 3e ordre emis
+tasmota.ms = tasmota.ms + 100
+verifie(D.ordonne("pompe", "Power1", "ON") == "envoyer", "G4 : le ON est le 4e ordre, accepte")
+tasmota.ms = tasmota.ms + 500
+var avant_g4 = size(mqtt.publies)
+verifie(D.ordonne("pompe", "Power1", "OFF") == "quarantaine" && size(mqtt.publies) == avant_g4, "G4 : le OFF serait le 5e ordre, refuse (le relais reste ON jusqu'au timer d'1 s de l'esclave, controleGeneral.be)")
+tasmota.ms = tasmota.ms + 1500
+D.every_second()
+verifie(size(mqtt.publies) == avant_g4 && size(garde.attente) == 0, "G4 : le ON sans accuse n'est PAS renvoye (une seconde impulsion), l'ordre est abandonne")
+repart()
+
 # garde d'activation : persist a OFF -> aucun driver
 import persist
 persist._p["drivers"]["liaisonMqtt"]["activation"] = "OFF"
