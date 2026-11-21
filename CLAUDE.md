@@ -1107,7 +1107,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     tâche VS Code ; cible Custom détachée, `NOM_CIBLE` ftp_cartes). Parcourt les fichiers de la Flash ou de la SD d'une carte par FTP : téléchargement (zip compris), envoi, dossier, déplacement,
     suppression. ÉCRIT sur les cartes, depuis ce PC seulement, jamais dans le dépôt ; fichiers protégés (`autoexec.be`, `_persist.json`, `.bec`, `.drvset*`, `/sd`, `/json`) : deux confirmations.
     Le FTP de la carte est allumé à la demande (`UfsFTP`) et éteint à la fin de session (Déconnecter, autre carte, fermeture de l'onglet, 15 min sans action, arrêt de l'outil) ;
-    persist `serveur.serveurFTP.activation` à `OFF` (13 des 14 persist de cartes, le P4 attend) et filet `data/fs/globalFonctions.be::regleFTP`. Esclaves du Range Extender absents (FTP injoignable).
+    persist `serveur.serveurFTP.activation` à `OFF` (les 14 persist de cartes du dépôt) et filet `data/fs/globalFonctions.be::regleFTP`. Esclaves du Range Extender absents (FTP injoignable).
     Arrêt libre mais brutal : l'annuaire tue le processus (`taskkill /T /F`), `atexit` ne passe pas et le FTP de la carte reste allumé (cliquer « Déconnecter » avant). Rien essayé sur une vraie
     carte (plan A7). Bancs `test_ftp_cartes_liste.py`, `test_ftp_cartes_session.py` (lent), `test_ftp_cartes_web.py`, sonde `test_ftp_cartes_page_chrome.py`, faux serveur `faux_ftp_carte.py`,
     `build/test_cible_ftp_cartes.py`. Mode d'emploi : `outils_docs/README.md` § « Navigateur FTP des cartes (page web) ».

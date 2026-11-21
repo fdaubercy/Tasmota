@@ -4,7 +4,7 @@ titre: Navigateur FTP des cartes (page de l'annuaire, FTP allumé à la demande)
 objectif: Parcourir, télécharger, envoyer, ranger et supprimer les fichiers d'une carte par FTP depuis une page de l'annuaire, le FTP n'étant allumé que le temps de la session
 statut: actif
 cree: 2026-11-20
-maj: 2026-11-21 (A5 faite, A6 en cours : 5 cases sur 6)
+maj: 2026-11-21 (A6 faite, commit 1e1891ba3 ; reste A7, essais sur cartes)
 famille: methode
 liens: menage-page, cartes-simulees
 spec: 2026-11-20-navigateur-ftp-cartes-design.md
@@ -58,9 +58,9 @@ Bancs : scripts à code de sortie (0 = vert), fonction `verifie(obtenu, attendu,
 
 ## A1 — Persist : FTP coupé sur toutes les cartes du dépôt
 - [x] Vérifier qu'aucun build ne tourne (`garde_build.py`), puis passer `serveur.serveurFTP.activation` de `"ON"` à `"OFF"` dans chaque `data/<lieu>/<carte>/_persist.json` (hors dossiers `*-sauvegarde`) par remplacement de texte limité au bloc `serveurFTP` : une seule ligne changée par fichier — preuve : 10 persist, `git diff -U0` = 10 fois `"activation": "ON"` -> `"OFF"`, bloc `serveurFTP` dans le contexte de chacun (P4 à part, étape suivante)
-- [ ] Persist du P4 (`data/garage/tasmota32p4-serveur-modbus/_persist.json`) : même changement, APRÈS le commit des modifications en cours d'une autre session dans ce fichier (choix de l'utilisateur du 2026-11-20)
+- [x] Persist du P4 (`data/garage/tasmota32p4-serveur-modbus/_persist.json`) : même changement, APRÈS le commit des modifications en cours d'une autre session dans ce fichier (choix de l'utilisateur du 2026-11-20) — preuve : accord de l'utilisateur du 2026-11-21 ; condition levée (l'autre session a commité, `a1e23a51a`, fichier propre avant) ; remplacement d'octets limité au bloc `serveurFTP`, `git diff --numstat` = `1 1`, seule ligne changée `"activation": "ON"` -> `"OFF"`, JSON relu en `strict=False` = `OFF` ; pas encore commité
 - [x] Vérification : script jetable (scratchpad) qui relit chaque persist en `json.loads(..., strict=False)` et affiche `env : activation` ; attendu `OFF` partout, P4 et cuve compris ; `git diff --stat` = 1 ligne par fichier — preuve : `OFF` partout sauf le P4 (`ON`, reporté), numstat `1 1` sur les 10 fichiers (rapport `.superpowers/sdd/navigateur-ftp-cartes/task-1-report.md`)
-- [x] `controleur-secrets` sur ce diff (lu), puis commit `chore(persist): serveur FTP coupe par defaut sur toutes les cartes` — preuve : contrôle OK, commit `4d56b759f` (10 fichiers, 10+/10-)
+- [x] `controleur-secrets` sur ce diff (lu), puis commit `chore(persist): serveur FTP coupe par defaut sur toutes les cartes` — preuve : contrôle OK, commit `4d56b759f` (10 fichiers, 10+/10-) ; message réel `chore(persist): serveur FTP coupe par defaut sur 10 cartes` (le P4 n'en faisait pas partie) ; recontrôlé le 2026-11-21 : `git show` = 10 fois `"activation": "ON"` -> `"OFF"`, 1 ligne par fichier, et relevé de l'arbre : 13 `OFF`, 1 `ON` (P4), 0 illisible
 - [x] Noter dans « Améliorations restantes » la liste des cartes dont le persist est à porter sur la carte (A7) — preuve : section « Améliorations restantes » ci-dessous
 
 ## A2 — Liste des cartes éligibles (`ftp_cartes_liste.py`)
@@ -152,7 +152,7 @@ Interfaces produites (consommées par la page, A5) :
 - [x] Vérifier qu'aucun build ne tourne ; `build/cible_ftp_cartes.py` copié de `cible_icones_catalogue.py` (`NOM_CIBLE = "ftp_cartes"`, `PORT_DEFAUT = "7450"`) ; import et `enregistre(env)` dans `build/pre_utilitaires_platformio.py`, `NOM_CIBLE` ajouté à la liste de sortie anticipée ; `'ftp_cartes'` ajouté à `CIBLES_OUTILS` de `.claude/hooks/garde_build.py` — preuve : aucun `platformio run` ni `scons` (seuls `annuaire_outils.py` et `build_web.py`, des outils) avant les éditions de `build/` et du hook ; `cible_ftp_cartes.py` créé, pré-script et hook édités
 - [x] Bancs `build/test_cible_ftp_cartes.py` (copie adaptée de `test_cible_icones_catalogue.py`) et `build/test_garde_build.py` verts — preuve : les deux VERT, code 0 ; mutants jetables en faux dépôt (`PORT_DEFAUT` 7451, `ftp_cartes` hors `CIBLES_OUTILS`, pré-script sans `NOM_CIBLE` ou sans `enregistre`) : tous ROUGE, témoin sans mutation VERT ; vraie page démarrée sur 17450 reconnue par `cible_ftp_cartes.repond`
 - [x] Section « Navigateur FTP des cartes (page web) » dans `outils_docs/README.md` (usage, FTP à la demande, persist à `OFF`, esclaves exclus, fichiers protégés) ; entrée dans la carte des documents de `CLAUDE.md` ; `verifie_references_docs.py` à 0 défaut ; `relecteur-docs` lu — preuve : README (section avant « Fabrique d'extensions »), `CLAUDE.md` (entrée et « les 22 `cible_*.py` »), `verifie_references_docs.py` 31 documents, 0 défaut, code 0 ; `relecteur-docs` lu : 0 bloquant, 0 à corriger, 3 mineurs (gras semé dans la prose du README retiré ; deux énumérations de 4 à 5 termes laissées, facultatif), 12 points vérifiés exacts (renvois, options, cible, tâche, 5 fins de session, décompte 13 persist sur 14 à `OFF`, 22 `cible_*.py`, fichiers sous 500 lignes)
-- [ ] `controleur-secrets` lu, commit `feat(ftp): navigateur FTP dans l'annuaire, cible et documentation`
+- [x] `controleur-secrets` lu, commit `feat(ftp): navigateur FTP dans l'annuaire, cible et documentation` — preuve : contrôle de secrets OK, 0 alerte sur 11 fichiers ; commit `1e1891ba3` (11 fichiers), sans trailer
 
 ## A7 — Essai sur les cartes réelles
 - [ ] Porter le persist à `OFF` sur le P4 et sur une S3 (onglet « Fichiers » de la page Build), puis vérifier `UfsFTP` → 0 après un redémarrage
@@ -168,7 +168,7 @@ Interfaces produites (consommées par la page, A5) :
 - [ ] [projet] Déplacer un fichier protégé (`autoexec.be`, `_persist.json`…) ne demande qu'une confirmation : seconde confirmation à décider avec l'utilisateur (relecture de A3)
 - [ ] [projet] `Session.ouvre` : une exception levée par `identifiants()` sur un changement de support laisse le FTP allumé jusqu'au `tic()` (15 min) ; `noms_ignores` grossit sans limite (relecture de A3)
 - [ ] [projet] `ftp_cartes_liste.GENERIQUES` est écrite en dur : un `FIRMWARE_*` amont inconnu y est jugé faux (carte listée, refus visible à l'allumage) ; test de concordance avec les bases du cenv à prévoir
-- [ ] [projet] Porter le persist à `OFF` sur chaque carte (onglet « Fichiers » de la page Build), A7 : bureau ecran-debits-pac, bureau serveur-debits-pac, cave s3-ecran, cave s3-serveur-rly, étage 2 grenier, RDC grenier, garage P4 (après son commit), cuve, portail-jardin, rideau, garage s3-serveur-modbus
+- [ ] [projet] Porter le persist à `OFF` sur chaque carte (onglet « Fichiers » de la page Build), A7 : bureau ecran-debits-pac, bureau serveur-debits-pac, cave s3-ecran, cave s3-serveur-rly, étage 2 grenier, RDC grenier, garage P4 (persist déjà à `OFF` dans le dépôt le 2026-11-21), cuve, portail-jardin, rideau, garage s3-serveur-modbus
 - [ ] [projet] Page Build : `build_envs.adresse_par_maitre` lit les persist en strict, l'adresse de la cuve par le maître n'est pas calculée (IP à saisir à la main)
 - [ ] [projet] A5 : le `pagehide` de n'importe quel onglet (ou d'un autre appareil muni du jeton) éteint le FTP ouvert par un autre onglet : identifiant d'onglet ou extinction au dernier onglet, à trancher (relecture de A4)
 - [ ] [projet] Arrêt brutal de l'outil (job de l'annuaire tué, console fermée) : `atexit` ne passe pas, le FTP de la carte reste allumé jusqu'au prochain redémarrage ou réseau (relecture de A4)

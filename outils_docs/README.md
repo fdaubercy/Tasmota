@@ -1937,8 +1937,8 @@ confirmations pour être supprimé, les autres une (`ftp_cartes_session.py::prot
 Choisir une carte envoie `UfsFTP` (SD si elle est montée, sinon Flash ; la SD est exigée si on la demande) ; l'outil éteint ensuite le FTP
 (`UfsFTP 0`) à la fin de la session, par cinq événements : « Déconnecter », le choix d'une autre carte, la fermeture de l'onglet (`sendBeacon` sur
 `/ferme`), 15 min sans action, et l'arrêt de l'outil (`atexit`). Le dépôt porte aussi un filet côté carte : `serveur.serveurFTP.activation` vaut `OFF`
-dans 13 des 14 persist de cartes du dépôt (hors le dossier `*-sauvegarde`, qui n'a pas de bloc), et `data/fs/globalFonctions.be::regleFTP` envoie `UFSFTP 0` à chaque
-connexion au réseau quand l'activation n'est pas `ON`. Le persist du P4 est encore à `ON` (des modifications d'une autre session l'attendent), et les
+dans les 14 persist de cartes du dépôt (hors le dossier `*-sauvegarde`, qui n'a pas de bloc), et `data/fs/globalFonctions.be::regleFTP` envoie `UFSFTP 0` à chaque
+connexion au réseau quand l'activation n'est pas `ON`. Les
 cartes réelles ne reçoivent ce réglage qu'au prochain téléversement de leur FS.
 
 ### Limites connues
