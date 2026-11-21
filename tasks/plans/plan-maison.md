@@ -7,7 +7,7 @@ maj: 2026-11-15
 source: tingly-popping-harbor.md
 objectif: Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui commande
 famille: modbus-reseau
-liens: debits-deux-cartes, cartes-simulees
+liens: debits-deux-cartes, cartes-simulees, plan-maison-echelle
 ---
 # Plan de la maison, liens, rôles maître/esclave et vue réseau
 
@@ -89,7 +89,7 @@ Décisions de conception (mes choix, à corriger) :
 - [x] [projet] Vérifier l'en-tête fixe dans un navigateur avec la barre « Annuaire » — preuve : confirmé par l'utilisateur le 2026-11-15 (« le bandeau fonctionne »)
 - [x] [projet] Pousser les commits du plan de la maison — preuve : poussé jusqu'à ec4ccf63b le 2026-11-15 ; le commit des débits est local
 - [x] [projet] Lier le plan aux pages des cartes par une icône ↗ sur chaque pastille (IP de la carte ; esclave derrière un maître : IP du maître, port 8080 + id - 1) — preuve : sonde Chrome (adresses P4 et cuve, absente sans adresse, le clic n'ouvre pas la fiche) ; clic sur une pièce non fait
-- [ ] [projet] Plan à l'échelle des pièces, si l'utilisateur fournit les dimensions ou un plan
+- [ ] [projet] Plan à l'échelle des pièces, si l'utilisateur fournit les dimensions ou un plan : repris et détaillé dans le plan `plan-maison-echelle` (2026-11-18)
 
 ## Vérification
 Régénérer la page, la lire dans Chrome headless (capture) et dans un navigateur : toutes les cartes de `data/` placées, liens identiques à ceux des persist, légende cohérente avec les traits dessinés, rendu lisible en noir et blanc. Aucune compilation, aucun appel réseau, aucun fichier de `data/fs` touché.

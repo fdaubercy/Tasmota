@@ -1145,7 +1145,8 @@
    "parent": "",
    "liens": [
     "debits-deux-cartes",
-    "cartes-simulees"
+    "cartes-simulees",
+    "plan-maison-echelle"
    ],
    "specs": [],
    "cree": "2026-11-15",
@@ -1218,13 +1219,14 @@
    "parent": "",
    "liens": [
     "rgx-ethernet-uplink",
-    "alerte-firmware-c6"
+    "alerte-firmware-c6",
+    "voie-mqtt-bloc1"
    ],
    "specs": [],
    "cree": "2026-11-17",
-   "maj": "2026-11-18",
-   "pct": 48,
-   "etapes": "27/56",
+   "maj": "2026-11-21",
+   "pct": 89,
+   "etapes": "59/66",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-mqtt.md",
    "urls_spec": []
   },
@@ -1236,15 +1238,71 @@
    "famille": "modbus-reseau",
    "parent": "plan-maison",
    "liens": [
+    "plan-maison",
     "cartes-simulees",
     "debits-deux-cartes"
    ],
    "specs": [],
    "cree": "2026-11-18",
-   "maj": "2026-11-18",
-   "pct": 0,
-   "etapes": "0/28",
+   "maj": "2026-11-19",
+   "pct": 4,
+   "etapes": "1/28",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison-echelle.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "navigateur-ftp-cartes",
+   "titre": "Navigateur FTP des cartes (page de l'annuaire, FTP allumé à la demande)",
+   "objectif": "Parcourir, télécharger, envoyer, ranger et supprimer les fichiers d'une carte par FTP depuis une page de l'annuaire, le FTP n'étant allumé que le temps de la session",
+   "statut": "actif",
+   "famille": "methode",
+   "parent": "",
+   "liens": [
+    "menage-page",
+    "cartes-simulees"
+   ],
+   "specs": [
+    "2026-11-20-navigateur-ftp-cartes-design.md"
+   ],
+   "cree": "2026-11-20",
+   "maj": "2026-11-21 (A6 faite, commit 1e1891ba3 ; reste A7, essais sur cartes)",
+   "pct": 72,
+   "etapes": "63/87",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/navigateur-ftp-cartes.md",
+   "urls_spec": [
+    "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-20-navigateur-ftp-cartes-design.md"
+   ]
+  },
+  {
+   "nom": "navigateur-ftp-cartes-a5-reprise",
+   "titre": "Reprise d'A5 du navigateur FTP des cartes (page et sonde Chrome)",
+   "objectif": "Vérifier, relire et commiter la page du navigateur FTP (A5), puis revenir au plan navigateur-ftp-cartes",
+   "statut": "clos",
+   "famille": "methode",
+   "parent": "navigateur-ftp-cartes",
+   "liens": [],
+   "specs": [],
+   "cree": "2026-11-21",
+   "maj": "2026-11-21 (A5 commitée 3003ca9e4, plan clos)",
+   "pct": 89,
+   "etapes": "16/18",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/navigateur-ftp-cartes-a5-reprise.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "voie-mqtt-bloc1",
+   "titre": "Voie MQTT, bloc 1 (bureau) et relevés de mémoire du P4",
+   "objectif": "Finir le travail de bureau du plan voie-mqtt (recalage, schéma, modèle, documentation) et relancer la surveillance de la mémoire Berry du P4",
+   "statut": "clos",
+   "famille": "voie-mqtt",
+   "parent": "voie-mqtt",
+   "liens": [],
+   "specs": [],
+   "cree": "2026-11-21",
+   "maj": "2026-11-21",
+   "pct": 91,
+   "etapes": "21/23",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-mqtt-bloc1.md",
    "urls_spec": []
   }
  ]

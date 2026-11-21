@@ -4,9 +4,9 @@ titre: Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, rep
 objectif: Qu'une carte en voie Ethernet garde tous ses services et ses esclaves, et ne devienne jamais injoignable si le câble tombe
 statut: actif
 cree: 2026-11-02
-maj: 2026-11-08
+maj: 2026-11-18
 famille: modbus-reseau
-liens: cave-s3-waveshare
+liens: cave-s3-waveshare, rgx-ethernet-uplink
 ---
 # Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi
 
@@ -55,8 +55,8 @@ en-têtes sont périmés). Les vrais trous sont les suivants.
 - [x] Agent `relecteur-berry` sur les modules touchés — preuve : relecture du 2026-11-08 des 8 modules, aucun bloquant ; seul point corrigé : `PROTOCOLE_MODBUS.md` citait `ipSTA` (verifie_references_docs 0 défaut). À voir sur carte : MAC de `Status 5` Wi-Fi coupé (S3 : eFuse STA, stable ; P4 : C6, garde de la MAC nulle)
 
 ## A3 — Esclaves en Wi-Fi quand le maître est en Ethernet
-- [ ] `xdrv_58_range_extender.ino` : montage du point d'accès si `WL_CONNECTED` OU `EthernetHasIP()` ; DNS pris sur l'Ethernet ; `RgxPort` sur l'IP Ethernet si la STA est absente ; modification minimale (fichier de l'amont, conflit possible à la synchro)
-- [ ] Ordre au démarrage : `WifiDisable` ne doit pas couper un point d'accès déjà monté (`WifiSetMode(WIFI_OFF)`, garde `wifi_down`)
+- [ ] Mené par le plan `tasks/plans/rgx-ethernet-uplink.md` (PR amont, worktree `Tasmota-pr-rgx`) : ne pas le refaire ici, cocher quand ce plan l'aura fusionné. `xdrv_58_range_extender.ino` : montage du point d'accès si `WL_CONNECTED` OU `EthernetHasIP()` ; DNS pris sur l'Ethernet ; `RgxPort` sur l'IP Ethernet si la STA est absente ; modification minimale (fichier de l'amont, conflit possible à la synchro)
+- [ ] Mené par le plan `rgx-ethernet-uplink` (à vérifier qu'il le couvre). Ordre au démarrage : `WifiDisable` ne doit pas couper un point d'accès déjà monté (`WifiSetMode(WIFI_OFF)`, garde `wifi_down`)
 - [ ] `configGlobal_voieReseau` : ne plus forcer le Range Extender à OFF, retirer `activationAvantEthernet` (annule la décision du 2026-11-02, à la demande de l'utilisateur) ; banc_boot cas 6-7 adaptés
 - [ ] Compilation de la cave S3 et du P4 par la page Build
 - [ ] Essai sur carte : un esclave sur le point d'accès joint le broker MQTT par le câble (trafic vu sortir par l'Ethernet, câble seul branché) ; `RgxPort` joignable depuis le LAN
