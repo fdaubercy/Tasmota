@@ -216,6 +216,19 @@ OUTILS = [
         "Console capturée : " + CONSOLE.format("assistant_persist") + ". Sauvegardes horodatées avant création : "
         "%LOCALAPPDATA%\\outils_tasmota\\fichiers_berry\\sauvegardes\\."),
     Outil(
+        "ftp_cartes", "Navigateur FTP des cartes", "Navigateur FTP des cartes", GROUPES[3],
+        "Parcourt les fichiers d'une carte (Flash ou SD) par FTP : récupère, envoie, range et supprime, le FTP de la carte n'étant allumé que le temps du besoin.",
+        "Page web à deux volets (les cartes du parc, puis les fichiers de la Flash ou de la SD) : télécharger un fichier ou un zip, envoyer un fichier, "
+        "créer un dossier, déplacer, supprimer. Le FTP de la carte est allumé à la demande (UfsFTP) puis éteint : bouton Déconnecter, autre carte, "
+        "fermeture de la page, 15 min sans action ou arrêt de l'outil. Les esclaves du Range Extender n'y figurent pas (leur FTP n'est pas joignable). "
+        "Cet outil ÉCRIT sur les cartes, depuis ce PC seulement : un fichier protégé (autoexec.be, autoexec.bat, _persist.json, .bec, .drvset*, dossiers /sd et "
+        "/json) demande deux confirmations pour être supprimé. Seul paramètre ici : le port de la page (7450). Rien n'est écrit dans le dépôt. "
+        "Arrêter l'outil par le bouton de l'annuaire coupe son processus sans lui laisser éteindre le FTP de la carte : cliquer d'abord sur Déconnecter.",
+        DOSSIER + "outils_pc/ftp_cartes_web.py",
+        [_port("http", 7450)],
+        "http",
+        "Console capturée : " + CONSOLE.format("ftp_cartes") + "."),
+    Outil(
         "atelier_graphiques", "Atelier des graphiques", "Atelier des graphiques", GROUPES[4],
         "Compose les pages de graphiques des cartes S3/P4 et écrit leur description dans le dépôt.",
         "Page web qui choisit, carte par carte, les pages de graphiques (séries du SENSOR, formules, couleurs, "
@@ -362,7 +375,7 @@ OUTILS = [
 # Pages qui lisent ?lieu= (classement par lieu) : l'annuaire leur passe le lieu de travail choisi.
 for _o in OUTILS:
     _o.lieu = _o.id in ("build", "fichiers_berry", "assistant_persist", "atelier_graphiques", "etiquettes_qr", "atelier_ecrans", "fabrique_tapp",
-                        "atelier_visuels", "syslog", "sniffeur_mqtt")
+                        "atelier_visuels", "syslog", "sniffeur_mqtt", "ftp_cartes")
 
 
 def par_id(id):

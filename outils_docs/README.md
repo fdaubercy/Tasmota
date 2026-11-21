@@ -1902,6 +1902,61 @@ Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO 
 `build/test_cible_assistant_persist.py`. Les bancs travaillent sur un dépôt d'essai temporaire (lecture seule des
 vrais persists) : aucun n'écrit dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
 
+## Navigateur FTP des cartes (page web)
+
+Page http://127.0.0.1:7450 pour parcourir les fichiers d'une carte par FTP : récupérer les logs et l'historique de la SD, ajouter ou
+supprimer des fichiers et des dossiers sur le FS, ranger. Cet outil écrit sur les cartes (envoi, création de dossier, déplacement,
+suppression), depuis ce PC seulement ; il n'écrit rien dans le dépôt. Spec `docs/superpowers/specs/2026-11-20-navigateur-ftp-cartes-design.md`,
+plan `tasks/plans/navigateur-ftp-cartes.md`.
+
+### Lancer la page
+
+- Tuile « Navigateur FTP des cartes » de l'annuaire (http://127.0.0.1:7600), groupe Configuration des cartes.
+- Tâche VS Code « Outil : navigateur FTP des cartes (http://127.0.0.1:7450) ».
+- Cible Custom détachée « Navigateur FTP des cartes (page web) » (`build/cible_ftp_cartes.py`, port par `custom_ftp_cartes_http`,
+  `pio run -e <env> -t ftp_cartes`). Comme toute cible, jamais pendant un build : lancer alors la tâche VS Code ou le script.
+- Ligne de commande : `python outils_docs/scripts_python/outils_pc/ftp_cartes_web.py [--http 7450] [--local] [--sans-navigateur]`.
+
+Depuis un autre appareil, lien à jeton affiché dans la console (`acces_web.py`), mais l'allumage du FTP et tous les gestes qui écrivent
+sont refusés (403) : ils ne passent que depuis ce PC.
+
+### Ce que montre la page
+
+Deux volets. À gauche, les cartes du parc, classées par lieu (`outils_pc/ftp_cartes_liste.py::liste`) : une carte est proposée si son env est
+de la famille « cartes », de puce ESP32, ESP32-S3 ou ESP32-P4, si `USE_FTP` n'est pas retiré de sa section de `user_config_override.h`, et si elle
+n'est pas esclave du Range Extender (derrière le NAPT du maître, son FTP n'est pas joignable). Au moindre doute la carte est exclue. À droite,
+les fichiers du support choisi, Flash ou SD. On peut télécharger un fichier ou un zip de plusieurs, envoyer un fichier (16 Mo au plus),
+créer un dossier, déplacer, supprimer. Un envoi qui écraserait un fichier existant n'a lieu que sur demande.
+
+Un fichier protégé (`autoexec.be`, `autoexec.bat`, `_persist.json`, `.bec`, `.drvset*`, et les dossiers `/sd` et `/json`) demande deux
+confirmations pour être supprimé, les autres une (`ftp_cartes_session.py::protege`). Les identifiants FTP sont lus côté serveur dans
+`user_config_override.h` et ne figurent dans aucune réponse ni aucun message.
+
+### Le FTP n'est allumé que le temps du besoin
+
+Choisir une carte envoie `UfsFTP` (SD si elle est montée, sinon Flash ; la SD est exigée si on la demande) ; l'outil éteint ensuite le FTP
+(`UfsFTP 0`) à la fin de la session, par cinq événements : « Déconnecter », le choix d'une autre carte, la fermeture de l'onglet (`sendBeacon` sur
+`/ferme`), 15 min sans action, et l'arrêt de l'outil (`atexit`). Le dépôt porte aussi un filet côté carte : `serveur.serveurFTP.activation` vaut `OFF`
+dans 13 des 14 persist de cartes du dépôt (hors le dossier `*-sauvegarde`, qui n'a pas de bloc), et `data/fs/globalFonctions.be::regleFTP` envoie `UFSFTP 0` à chaque
+connexion au réseau quand l'activation n'est pas `ON`. Le persist du P4 est encore à `ON` (des modifications d'une autre session l'attendent), et les
+cartes réelles ne reçoivent ce réglage qu'au prochain téléversement de leur FS.
+
+### Limites connues
+
+- **Arrêt brutal de l'outil.** L'annuaire arrête un outil par `taskkill /T /F` (`annuaire_lanceur.py::_tue_arbre`), et sa propre mort ferme le Job
+  Object qui tue ses outils : dans les deux cas Windows termine le processus sans lui laisser exécuter `atexit` ni `finally`. Le FTP de la carte reste
+  alors allumé. Seul Ctrl+C dans un terminal passe par la fin propre. Parade : cliquer « Déconnecter » avant d'arrêter l'outil ; après un arrêt brutal,
+  rouvrir la carte dans la page puis « Déconnecter » (ou la commande `UfsFTP 0`), ou redémarrer la carte une fois son persist à `OFF`. L'arrêt par une
+  tâche VS Code ou par la fin d'une cible n'a pas été vérifié.
+- Le serveur FTP de la carte n'accepte qu'un client à la fois : l'outil sérialise ses opérations, mais un autre client FTP ouvert en même temps
+  (FileZilla) bloque ou est bloqué.
+- Fermer un onglet éteint le FTP pour tous les onglets ouverts sur l'outil (la session est unique) ; à trancher.
+- Rien n'a encore été essayé sur une vraie carte (plan, étape A7) : les bancs parlent à un faux serveur FTP de carte.
+
+Bancs, dans `outils_docs/scripts_python/outils_pc/` avec le Python du penv PlatformIO : `test_ftp_cartes_liste.py`, `test_ftp_cartes_session.py`
+(lent, plus de 35 s), `test_ftp_cartes_web.py`, la sonde Chrome `test_ftp_cartes_page_chrome.py` et le faux serveur `faux_ftp_carte.py` ; pour la
+cible Custom, `build/test_cible_ftp_cartes.py`.
+
 ## Fabrique d'extensions (page web)
 
 Page http://127.0.0.1:7980 pour fabriquer une extension Tasmota (`.tapp`) et l'envoyer à une carte. Ce qu'est une

@@ -44,7 +44,7 @@ def lit(outil):
 def section_registre():
     print("== registre ==")
     ids = ["pont_serie", "sniffeur_modbus", "sniffeur_i2c", "testeur_udp", "sniffeur_mqtt", "syslog", "synchro_fork", "build",
-           "fichiers_berry", "assistant_persist", "atelier_graphiques", "etiquettes_qr", "atelier_ecrans", "fabrique_tapp", "organigramme_plans", "menage", "taches_planifiees", "sondes", "cartes_simulees", "atelier_visuels", "icones_catalogue", "plan_maison", "liens_web"]
+           "fichiers_berry", "assistant_persist", "ftp_cartes", "atelier_graphiques", "etiquettes_qr", "atelier_ecrans", "fabrique_tapp", "organigramme_plans", "menage", "taches_planifiees", "sondes", "cartes_simulees", "atelier_visuels", "icones_catalogue", "plan_maison", "liens_web"]
     verifie([o.id for o in reg.OUTILS], ids, "sept_outils : ids et ordre")
     verifie(all(o.groupe in reg.GROUPES for o in reg.OUTILS), True, "sept_outils : groupes connus")
     verifie([g for g in reg.GROUPES if not any(o.groupe == g for o in reg.OUTILS)], [], "sept_outils : aucun groupe vide")
@@ -347,10 +347,10 @@ def section_serveur():
 
     try:
         s, j = appel(port, "GET", "/registre")
-        verifie((s, len(j["outils"])), (200, 23), "routes_get : /registre a 23 outils")
+        verifie((s, len(j["outils"])), (200, 24), "routes_get : /registre a 24 outils")
         s, j = appel(port, "GET", "/etat")
-        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 23, True),
-                "routes_get : /etat a 23 entrees")
+        verifie((s, len(j["outils"]), isinstance(j["liens_reseau"], list)), (200, 24, True),
+                "routes_get : /etat a 24 entrees")
         verifie(isinstance(j.get("derniers"), dict), True, "routes_get : /etat porte derniers (dict)")
         verifie(appel(port, "GET", "/console?id=inconnu")[0], 404, "routes_get : console inconnue -> 404")
         verifie(appel(port, "GET", "/console?id=syslog")[1], {"lignes": []}, "routes_get : console vide")

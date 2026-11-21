@@ -1,12 +1,12 @@
 ---
 chantier: navigateur-ftp-cartes-a5-reprise
 titre: Reprise d'A5 du navigateur FTP des cartes (page et sonde Chrome)
-statut: actif
+statut: clos
 objectif: Vérifier, relire et commiter la page du navigateur FTP (A5), puis revenir au plan navigateur-ftp-cartes
 famille: methode
 parent: navigateur-ftp-cartes
 cree: 2026-11-21
-maj: 2026-11-21 (relectures faites, commit à venir)
+maj: 2026-11-21 (A5 commitée 3003ca9e4, plan clos)
 source: imperative-meandering-journal.md
 ---
 ## Contexte
@@ -35,15 +35,15 @@ Décisions déjà prises (journal `.superpowers/sdd/navigateur-ftp-cartes/progre
 
 ## A3 — Contrôle de secrets et commit
 - [x] `controleur-secrets` lancé et lu, sur la page, la sonde et le plan — preuve : contrôle de secrets OK : 978 lignes examinées, 0 alerte
-- [ ] Commit par chemins `feat(ftp): page du navigateur FTP` (français, sans accents, sans Co-Authored-By) ; `tasks/README.md` non commité
-- [ ] Case d'A5 cochée dans `tasks/plans/navigateur-ftp-cartes.md` avec le numéro du commit, puis prévenir l'utilisateur
+- [x] Commit par chemins `feat(ftp): page du navigateur FTP` (français, sans accents, sans Co-Authored-By) ; `tasks/README.md` non commité — preuve : commit `3003ca9e4`, `tasks/README.md` et les fichiers des autres sessions non commités
+- [x] Case d'A5 cochée dans `tasks/plans/navigateur-ftp-cartes.md` avec le numéro du commit, puis prévenir l'utilisateur — preuve : dernière case d'A5 cochée avec `3003ca9e4` ; utilisateur prévenu le 2026-11-21 (message de fin d'A5)
 
 ## A4 — Retour au plan d'avant
 Ce plan n'est qu'une reprise de l'action A5 du plan `tasks/plans/navigateur-ftp-cartes.md` (le plan d'avant, qui reste le plan
 de référence : spec, contraintes globales, A6 et A7). Il se referme quand A5 y est cochée.
-- [ ] A5 cochée dans `tasks/plans/navigateur-ftp-cartes.md` avec les preuves de ce plan (sonde verte, relecture, commit)
-- [ ] Ce plan passé à `statut: clos`, le journal `.superpowers/sdd/navigateur-ftp-cartes/progress.md` complété (« Task 5 (A5): complete »)
-- [ ] Retour au plan d'avant : l'utilisateur prévenu que A5 est finie, puis feu vert demandé pour A6 (annuaire, tâche VS Code avec accord requis, cible Custom, documentation)
+- [x] A5 cochée dans `tasks/plans/navigateur-ftp-cartes.md` avec les preuves de ce plan (sonde verte, relecture, commit) — preuve : dernière case d'A5 cochée avec le commit `3003ca9e4`
+- [x] Ce plan passé à `statut: clos`, le journal `.superpowers/sdd/navigateur-ftp-cartes/progress.md` complété (« Task 5 (A5): complete ») — preuve : en-tête `statut: clos` ; ligne « Task 5 (A5): complete » ajoutée au journal
+- [x] Retour au plan d'avant : l'utilisateur prévenu que A5 est finie, puis feu vert demandé pour A6 (annuaire, tâche VS Code avec accord requis, cible Custom, documentation) — preuve : feu vert de l'utilisateur le 2026-11-21 (« oui, lance A6 et ajoute la tâche VS Code ») ; A6 lancée dans le plan `navigateur-ftp-cartes`
 
 ## Améliorations restantes
 - [ ] [projet] Fermeture d'un onglet : décider si le FTP doit survivre tant qu'un autre onglet est ouvert (identifiant d'onglet) ; la règle actuelle suit la spec §7

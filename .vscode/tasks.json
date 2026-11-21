@@ -327,6 +327,16 @@
             "args": ["-u", "outils_docs/scripts_python/outils_pc/icones_catalogue_web.py", "--http", "7930"],
             "presentation": { "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            // Navigateur FTP des cartes : fichiers de la Flash et de la SD, FTP allume a la demande puis eteint.
+            // Aussi cible Custom « Navigateur FTP des cartes (page web) ».
+            "label": "Outil : navigateur FTP des cartes (http://127.0.0.1:7450)",
+            "type": "process",
+            "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\python.exe",
+            "args": ["-u", "outils_docs/scripts_python/outils_pc/ftp_cartes_web.py", "--http", "7450"],
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }

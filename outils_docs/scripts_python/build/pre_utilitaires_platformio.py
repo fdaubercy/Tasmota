@@ -728,6 +728,9 @@ cible_atelier_visuels.enregistre(env)
 # CIBLE CATALOGUE D'ICONES (meme menu Custom) : glyphes du firmware, PNG et sites, en lecture seule
 import cible_icones_catalogue
 cible_icones_catalogue.enregistre(env)
+# CIBLE NAVIGATEUR FTP DES CARTES (meme menu Custom) : fichiers d'une carte par FTP, allume a la demande
+import cible_ftp_cartes
+cible_ftp_cartes.enregistre(env)
 
 # Cibles qui ne sont PAS des builds : ne pas incrementer CFG_HOLDER, ne pas reecrire
 # platformio_override.ini ni copier d'image FS (bloc suivant).
@@ -750,12 +753,13 @@ cible_icones_catalogue.enregistre(env)
 #   - cartes_simulees : lancement detache (ou ouverture) de la page Cartes simulees ;
 #   - atelier_visuels : lancement detache (ou ouverture) de la page Atelier des visuels ;
 #   - icones_catalogue : lancement detache (ou ouverture) de la page Catalogue d'icones ;
+#   - ftp_cartes : lancement detache (ou ouverture) de la page Navigateur FTP des cartes ;
 #   - __idedata      : rafraichissement IntelliSense / Project Tasks par pioarduino
 #                       ('pio project init'), lance tout seul par VS Code.
 CIBLES_HORS_BUILD = (cible_pont_serie.NOM_CIBLE, cible_sniffeur_mqtt.NOM_CIBLE, cible_syslog_tasmota.NOM_CIBLE,
                      cible_sniffeur_modbus.NOM_CIBLE, cible_testeur_udp.NOM_CIBLE, cible_synchro_fork.NOM_CIBLE,
                      cible_annuaire.NOM_CIBLE, cible_build_web.NOM_CIBLE, cible_fichiers_berry.NOM_CIBLE,
-                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, cible_atelier_ecrans.NOM_CIBLE, cible_etiquettes_qr.NOM_CIBLE, cible_tapp.NOM_CIBLE, cible_menage.NOM_CIBLE, cible_taches_planifiees.NOM_CIBLE, cible_sondes.NOM_CIBLE, cible_cartes_simulees.NOM_CIBLE, cible_atelier_visuels.NOM_CIBLE, cible_icones_catalogue.NOM_CIBLE, "__idedata")
+                     cible_assistant_persist.NOM_CIBLE, cible_atelier_graphiques.NOM_CIBLE, cible_atelier_ecrans.NOM_CIBLE, cible_etiquettes_qr.NOM_CIBLE, cible_tapp.NOM_CIBLE, cible_menage.NOM_CIBLE, cible_taches_planifiees.NOM_CIBLE, cible_sondes.NOM_CIBLE, cible_cartes_simulees.NOM_CIBLE, cible_atelier_visuels.NOM_CIBLE, cible_icones_catalogue.NOM_CIBLE, cible_ftp_cartes.NOM_CIBLE, "__idedata")
 hors_build = any(cible in COMMAND_LINE_TARGETS for cible in CIBLES_HORS_BUILD)
 
 # ============================================================
