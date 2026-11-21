@@ -12,6 +12,7 @@ import io
 import json
 import sys
 import threading
+import time
 import zipfile
 
 import faux_ftp_carte as faux
@@ -294,6 +295,32 @@ def cas_allumage_delai():
         verifie(b.s.etat()["etat"], "erreur", "etat erreur")
 
 
+def cas_geste_pendant_changement_de_carte():
+    """Un geste garde ({env, support} attendus) lance pendant un changement de carte (UfsFTP 0 lent, verrou tenu) ne s'execute pas sur la nouvelle carte."""
+    with Banc() as b:
+        b.fichier("/a.bin")
+        b.s.ouvre(CARTE, "sd")
+        lente = b.s._commande
+        b.s._commande = lambda ip, cmnd, delai: (time.sleep(1.5) if cmnd == "UfsFTP 0" else None, lente(ip, cmnd, delai))[1]
+        autre = dict(CARTE, env="autre", adresse="localhost")           # meme faux serveur, autre adresse : ferme() de l'ancienne carte
+        t = threading.Thread(target=lambda: b.s.ouvre(autre, "sd"))
+        t.start()
+        time.sleep(0.4)                                                 # ouvre tient le verrou, _env pas encore change
+        verifie(b.s.etat()["env"], "essai", "fenetre ouverte : l'etat montre encore l'ancienne carte")
+        att = ("essai", "sd")
+        verifie(leve(fs.RefusFtp, b.s.supprime, "/a.bin", 1, att), "la session a change (carte ou support)", "supprime garde : refuse sous le verrou")
+        t.join(20)
+        verifie((b.s.etat()["env"], b.s.etat()["etat"]), ("autre", "actif"), "la nouvelle carte est ouverte")
+        verifie((b.srv.racine / "a.bin").exists(), True, "le fichier n'a pas ete supprime")
+        for nom, f in (("cree_dossier", lambda: b.s.cree_dossier("/d", att)), ("deplace", lambda: b.s.deplace("/a.bin", "/b.bin", att)),
+                       ("envoie", lambda: b.s.envoie("/", "n.bin", io.BytesIO(b"x"), False, att)), ("zip", lambda: b.s.zip(["/a.bin"], io.BytesIO(), att))):
+            verifie(leve(fs.RefusFtp, f), "la session a change (carte ou support)", nom + " garde : refuse")
+        verifie(sorted(p.name for p in b.srv.racine.iterdir()), ["a.bin"], "rien ecrit sur la carte")
+        verifie(leve(fs.RefusFtp, b.s.supprime, "/a.bin", 1, ("autre", "sd")), None, "paire conforme : accepte")
+        b.fichier("/c.bin")
+        verifie(leve(fs.RefusFtp, b.s.supprime, "/c.bin", 1, (None, "")), None, "paire indifferente : accepte")
+
+
 def cas_concurrence():
     with Banc() as b:
         b.fichier("/a.bin", b"A" * 5000)
@@ -413,7 +440,7 @@ def cas_mot_de_passe():
 if __name__ == "__main__":
     for cas in (cas_ouvre, cas_sd_inconnue, cas_ferme_toujours, cas_inactivite, cas_reconnexion, cas_carte_perdue,
                 cas_chemins, cas_protege, cas_supprime_detours, cas_noms_speciaux, cas_noms_hostiles,
-                cas_ouvre_refus_eteint, cas_allumage_delai, cas_concurrence, cas_liste_champs, cas_zip, cas_place, cas_ecrasement,
+                cas_ouvre_refus_eteint, cas_allumage_delai, cas_geste_pendant_changement_de_carte, cas_concurrence, cas_liste_champs, cas_zip, cas_place, cas_ecrasement,
                 cas_deplace, cas_sans_session, cas_adresse_invalide, cas_mot_de_passe):
         print(f"-- {cas.__name__}")
         cas()

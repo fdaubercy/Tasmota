@@ -233,9 +233,13 @@ class Session:
                 self.ferme("inactivite")
 
     # ---- operations -------------------------------------------------------------------------------------------
-    def _op(self, f):
-        """Execute f(ftp) sous verrou. NOOP de controle, session rouverte une fois si elle est tombee."""
+    def _op(self, f, attendu=None):
+        """Execute f(ftp) sous verrou. NOOP de controle, session rouverte une fois si elle est tombee.
+        `attendu` = (env, support) que la page croit voir (None ou "" = indifferent) : controle fait SOUS le verrou, donc apres un
+        changement de carte en cours (ouvre tient le verrou), et avant toute commande FTP."""
         with self._verrou:
+            if attendu and any(a not in (None, "") and a != v for a, v in zip(attendu, (self._env, self._support))):
+                raise RefusFtp("la session a change (carte ou support)")
             if not self._carte:
                 raise RefusFtp("aucune session ouverte : choisissez une carte")
             try:
@@ -302,7 +306,7 @@ class Session:
         chemin = valide_chemin(chemin)
         self._op(lambda ftp: ftp.retrbinary("RETR " + chemin, sortie.write))
 
-    def zip(self, chemins, sortie):
+    def zip(self, chemins, sortie, attendu=None):
         """Zip des fichiers et dossiers (recursif), noms relatifs a la racine de la carte."""
         chemins = [valide_chemin(c) for c in chemins]
 
@@ -319,7 +323,7 @@ class Session:
                 for c in chemins:
                     ajoute(ftp, z, c)
 
-        self._op(tout)
+        self._op(tout, attendu)
 
     def _libre(self):
         """Place libre en octets du support actif d'apres `Ufs`, None si inconnue."""
@@ -338,7 +342,7 @@ class Session:
         except Exception:
             return ""
 
-    def envoie(self, dossier, nom, flux, ecraser):
+    def envoie(self, dossier, nom, flux, ecraser, attendu=None):
         dossier = valide_chemin(dossier)
         if not nom or "/" in nom or valide_chemin("/" + nom) != "/" + nom or nom in (".", ".."):
             raise ValueError("nom de fichier invalide")
@@ -355,7 +359,7 @@ class Session:
                 raise RefusFtp("pas assez de place sur la carte : %d Ko libres pour %d Ko" % (libre // 1024, -(-taille // 1024)))
             ftp.storbinary("STOR " + cible, flux)
 
-        self._op(envoi)
+        self._op(envoi, attendu)
 
     def _supprime(self, ftp, chemin):
         if self._type(ftp, chemin) == "dossier":
@@ -365,19 +369,19 @@ class Session:
         else:
             ftp.delete(chemin)
 
-    def supprime(self, chemin, confirmations):
+    def supprime(self, chemin, confirmations, attendu=None):
         """Supprime un fichier ou un dossier (recursif). 1 confirmation, 2 pour un fichier protege."""
         chemin = valide_chemin(chemin)
         if chemin == "/":
             raise RefusFtp("la racine ne se supprime pas")
         if confirmations < (2 if protege(chemin) else 1):
             raise RefusFtp("suppression non confirmee" + (" (fichier protege : seconde confirmation)" if protege(chemin) else ""))
-        self._op(lambda ftp: self._supprime(ftp, chemin))
+        self._op(lambda ftp: self._supprime(ftp, chemin), attendu)
 
-    def cree_dossier(self, chemin):
+    def cree_dossier(self, chemin, attendu=None):
         chemin = valide_chemin(chemin)
-        self._op(lambda ftp: ftp.mkd(chemin))
+        self._op(lambda ftp: ftp.mkd(chemin), attendu)
 
-    def deplace(self, source, cible):
+    def deplace(self, source, cible, attendu=None):
         source, cible = valide_chemin(source), valide_chemin(cible)
-        self._op(lambda ftp: ftp.rename(source, cible))
+        self._op(lambda ftp: ftp.rename(source, cible), attendu)

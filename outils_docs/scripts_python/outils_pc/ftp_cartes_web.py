@@ -19,6 +19,8 @@ Routes (client de ce PC : Host local, parade au DNS rebinding ; les POST exigent
     POST /zip {chemins}          zip des fichiers et dossiers demandes
     POST /envoie?dossier=&nom=&ecraser=0|1   corps brut, 16 Mo au plus (413 avant toute ecriture) ; ce PC seulement
     POST /supprime {chemin, confirmations}   ce PC seulement
+    Gestes de la page (/envoie, /supprime, /dossier, /deplace, /zip) : {env, support} facultatifs (parametres de requete pour /envoie) ;
+    s'ils different de la session (autre onglet qui a change de carte ou de support) : 409, rien n'est ecrit.
     POST /dossier {chemin}                   ce PC seulement
     POST /deplace {source, cible}            ce PC seulement
 Refus : 400 (saisie, chemin), 403 (acces), 404 (carte ou route inconnue), 409 (refus de la session ou de la carte), 413, 500 (inattendu).
@@ -41,6 +43,7 @@ from urllib.parse import parse_qs, quote, urlsplit
 import acces_web
 import ftp_cartes_liste
 import ftp_cartes_session
+from ftp_cartes_page import PAGE
 from annuaire_outils import hote_autorise
 
 PORT_DEFAUT = 7450
@@ -53,8 +56,6 @@ ECRITURES = ("/ouvre", "/envoie", "/supprime", "/dossier", "/deplace")     # all
 # 'self' pour le service worker de repli et le manifeste ajoutes par acces_web.habille ; aucune ressource externe.
 CSP = ("default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
        "connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'")
-# Page provisoire : la vraie page est ftp_cartes_page.py (A5).
-PAGE = "<!doctype html><html lang='fr'><head><meta charset='utf-8'><title>Navigateur FTP des cartes</title></head><body><h1>Navigateur FTP des cartes</h1></body></html>"
 
 
 class ServeurFtp(ThreadingHTTPServer):
@@ -193,11 +194,17 @@ def fabrique_gestionnaire(acces, racine, session):
                 return None
             return self.rfile.read(longueur)
 
+        @staticmethod
+        def _attendu(src):
+            """(env, support) que la page croit voir ; le controle se fait sous le verrou de la session (ftp_cartes_session._op) :
+            ni ici ni avant, une ouverture de carte en cours pourrait encore changer la session entre le controle et le geste."""
+            return (src.get("env"), src.get("support"))
+
         def _post(self, chemin, q):
             if chemin == "/envoie":
                 brut = self._lit_corps(MAX_ENVOI)
                 if brut is not None:
-                    session.envoie(q.get("dossier", ""), q.get("nom", ""), io.BytesIO(brut), q.get("ecraser") == "1")
+                    session.envoie(q.get("dossier", ""), q.get("nom", ""), io.BytesIO(brut), q.get("ecraser") == "1", self._attendu(q))
                     self._json({"message": "envoye"})
                 return
             brut = self._lit_corps(MAX_CORPS)
@@ -214,19 +221,19 @@ def fabrique_gestionnaire(acces, racine, session):
                 if not isinstance(chemins, list) or not chemins:
                     raise ValueError("chemins : liste non vide attendue")
                 with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024) as tmp:
-                    session.zip(chemins, tmp)
+                    session.zip(chemins, tmp, self._attendu(d))
                     self._fichier(tmp, "carte.zip", "application/zip")
             elif chemin == "/supprime":
                 confirmations = d.get("confirmations", 0)
                 if not isinstance(confirmations, int) or isinstance(confirmations, bool):
                     raise ValueError("confirmations : entier attendu")
-                session.supprime(d.get("chemin"), confirmations)
+                session.supprime(d.get("chemin"), confirmations, self._attendu(d))
                 self._json({"message": "supprime"})
             elif chemin == "/dossier":
-                session.cree_dossier(d.get("chemin"))
+                session.cree_dossier(d.get("chemin"), self._attendu(d))
                 self._json({"message": "dossier cree"})
             elif chemin == "/deplace":
-                session.deplace(d.get("source"), d.get("cible"))
+                session.deplace(d.get("source"), d.get("cible"), self._attendu(d))
                 self._json({"message": "deplace"})
             else:
                 self._envoie(404, b"introuvable")

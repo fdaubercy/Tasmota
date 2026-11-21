@@ -194,6 +194,45 @@ def cas_beacon():
         verifie(b.ufsftp(), [1, 0, 1, 0], "UfsFTP 0 de nouveau")
 
 
+def cas_session_changee():
+    """Un geste qui nomme une autre carte ou un autre support que la session est refuse (409) sans rien ecrire ; sans env ni support : comme avant."""
+    with Banc() as b:
+        b.ouvre("sd")
+        b.fichier("/a.bin")
+        autre = {"env": ENV, "support": "flash"}
+        verifie(b.json("POST", "/supprime", {"chemin": "/a.bin", "confirmations": 1, **autre})[0], 409, "/supprime d'un autre support : 409")
+        verifie((b.srv.racine / "a.bin").exists(), True, "/supprime refuse : le fichier est toujours la")
+        verifie(b.json("POST", "/dossier", {"chemin": "/d", **autre})[0], 409, "/dossier d'un autre support : 409")
+        verifie((b.srv.racine / "d").exists(), False, "/dossier refuse : rien cree")
+        verifie(b.json("POST", "/deplace", {"source": "/a.bin", "cible": "/b.bin", **autre})[0], 409, "/deplace d'un autre support : 409")
+        verifie(b.json("POST", "/zip", {"chemins": ["/a.bin"], **autre})[0], 409, "/zip d'un autre support : 409")
+        verifie(b.req("POST", "/envoie?dossier=/&nom=n.bin&env=%s&support=flash" % ENV, b"xyz")[0], 409, "/envoie d'un autre support : 409")
+        verifie((b.srv.racine / "n.bin").exists(), False, "/envoie refuse : rien ecrit")
+        verifie(b.json("POST", "/supprime", {"chemin": "/a.bin", "confirmations": 1, "env": "autre-env", "support": "sd"})[0], 409, "/supprime d'une autre carte : 409")
+        verifie(b.json("POST", "/dossier", {"chemin": "/d", "env": ENV, "support": "sd"})[0], 200, "meme env et meme support : accepte")
+        verifie(b.req("POST", "/envoie?dossier=/&nom=n.bin", b"xyz")[0], 200, "sans env ni support : comme avant")
+        verifie(b.json("POST", "/ferme", {"env": "autre", "support": "flash"})[0], 200, "/ferme n'est pas garde")
+
+
+def cas_geste_pendant_changement_de_carte():
+    """Un POST garde arrive pendant un changement de carte (ouvre tient le verrou, UfsFTP 0 lent) : 409, rien n'est fait sur la nouvelle carte."""
+    with Banc() as b:
+        b.ouvre("sd")
+        b.fichier("/a.bin")
+        lente = b.session._commande
+        b.session._commande = lambda ip, cmnd, delai: (time.sleep(1.5) if cmnd == "UfsFTP 0" else None, lente(ip, cmnd, delai))[1]
+        autre = {"env": "autre", "lieu": "garage", "nom": "autre", "hote": "autre", "adresse": "localhost", "puce": "ESP32", "firmware": FIRMWARE}
+        t = threading.Thread(target=lambda: b.session.ouvre(autre, "sd"))
+        t.start()
+        time.sleep(0.4)
+        st, texte = b.json("POST", "/supprime", {"chemin": "/a.bin", "confirmations": 1, "env": ENV, "support": "sd"})
+        verifie((st, texte), (409, "la session a change (carte ou support)"), "/supprime pendant le changement de carte : 409")
+        t.join(20)
+        verifie((b.srv.racine / "a.bin").exists(), True, "le fichier est toujours la")
+        st, _ = b.json("POST", "/dossier", {"chemin": "/d", "env": ENV, "support": "sd"})
+        verifie((st, (b.srv.racine / "d").exists()), (409, False), "/dossier apres le changement : 409, rien cree")
+
+
 def cas_deux_onglets():
     with Banc() as b:
         b.ouvre("sd")
@@ -294,7 +333,7 @@ def cas_host_hostile():
 
 
 def main():
-    for cas in (cas_routes, cas_ecritures_ce_pc, cas_beacon, cas_deux_onglets, cas_envoi_trop_gros, cas_secret, cas_concurrence, cas_serveur, cas_host_hostile):
+    for cas in (cas_routes, cas_ecritures_ce_pc, cas_beacon, cas_session_changee, cas_geste_pendant_changement_de_carte, cas_deux_onglets, cas_envoi_trop_gros, cas_secret, cas_concurrence, cas_serveur, cas_host_hostile):
         print("---", cas.__name__)
         cas()
     print("\n%s" % ("VERT" if not ECHECS else "ROUGE : %d echec(s) : %s" % (len(ECHECS), "; ".join(ECHECS))))

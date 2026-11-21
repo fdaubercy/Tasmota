@@ -4,7 +4,7 @@ titre: Navigateur FTP des cartes (page de l'annuaire, FTP allumé à la demande)
 objectif: Parcourir, télécharger, envoyer, ranger et supprimer les fichiers d'une carte par FTP depuis une page de l'annuaire, le FTP n'étant allumé que le temps de la session
 statut: actif
 cree: 2026-11-20
-maj: 2026-11-21 (A4 faite)
+maj: 2026-11-21 (A5 faite)
 famille: methode
 liens: menage-page, cartes-simulees
 spec: 2026-11-20-navigateur-ftp-cartes-design.md
@@ -138,12 +138,12 @@ Interfaces produites (consommées par la page, A5) :
 - [x] Lancer le banc : rouge — preuve : ModuleNotFoundError sur `ftp_cartes_web` avant le code (`.superpowers/sdd/navigateur-ftp-cartes/task-4-report.md`)
 - [x] Écrire `ftp_cartes_web.py` sur le modèle de `icones_catalogue_web.py` (CSP, en-têtes) et des POST de `menage_web.py` (taille du corps bornée, `est_local`) — preuve : `ftp_cartes_web.py` (284 lignes) : CSP, Host, X-, est_local, corps borné, timeout 60 s, SO_EXCLUSIVEADDRUSE, atexit + fil tic 10 s
 - [x] Banc vert, sortie collée en preuve ; témoin : retirer le contrôle `est_local` de `/supprime` fait rougir `cas_ecritures_ce_pc` — preuve : VERT sur 3 lancements + 1 relance du relecteur (77 OK) ; témoin `/supprime` retiré des écritures → 3 KO sur `cas_ecritures_ce_pc`
-- [ ] `relecteur-outils-python` lu ; `controleur-secrets` lu, commit `feat(ftp): serveur web du navigateur FTP`
+- [x] `relecteur-outils-python` lu ; `controleur-secrets` lu, commit `feat(ftp): serveur web du navigateur FTP` — preuve : relecture Opus : 1 spec ❌ (`cas_secret`) + 2 importants corrigés en un tour, re-relecture 4/4 ADDRESSED ; contrôle de secrets OK ; commit `77a429cae`
 
 ## A5 — La page (interface A) et sa sonde Chrome (`ftp_cartes_page.py`)
-- [ ] Écrire `PAGE` d'après la maquette A et la spec §6 : listes Lieu et Carte (`remplitParLieu` de `lieux.JS`, `?lieu=`), pastille d'état, bascule Flash / SD (grisée si `sd` vaut False, « SD inconnue » si None), bouton « Historique et énergie » (SD puis `/histo`), « Déconnecter », arborescence chargée dossier par dossier, tableau à cases, barre d'actions ; confirmations (une, ou deux pour les fichiers protégés) ; `pagehide` → `navigator.sendBeacon("/ferme")` ; mode sombre ; aucun CDN
-- [ ] Sonde `outils_pc/test_ftp_cartes_page_chrome.py` (hermétique : serveur de l'outil + faux serveur de carte, Chrome headless au profil `sonde_ftp_cartes`) : choix d'une carte → pastille « actif » ; liste de `/histo` ; nom spécial affiché ; suppression d'un fichier protégé : 1 confirmation → toujours présent, 2 → supprimé ; fermeture de l'onglet → le faux serveur a reçu `UfsFTP 0` ; aucun message d'erreur de la console JS
-- [ ] Sonde verte, sortie collée en preuve ; Chrome `sonde_*` orphelins vérifiés arrêtés 15 s après
+- [x] Écrire `PAGE` d'après la maquette A et la spec §6 : listes Lieu et Carte (`remplitParLieu` de `lieux.JS`, `?lieu=`), pastille d'état, bascule Flash / SD (grisée si `sd` vaut False, « SD inconnue » si None), bouton « Historique et énergie » (SD puis `/histo`), « Déconnecter », arborescence chargée dossier par dossier, tableau à cases, barre d'actions ; confirmations (une, ou deux pour les fichiers protégés) ; `pagehide` → `navigator.sendBeacon("/ferme")` ; mode sombre ; aucun CDN — preuve : `ftp_cartes_page.py` (439 lignes), listes Lieu/Carte par `lieux.JS`, pastille 4 états, bascule Flash/SD, confirmations, `pagehide` + `sendBeacon`, mode sombre, aucun CDN ; copie figée de la session au clic (tour 2)
+- [x] Sonde `outils_pc/test_ftp_cartes_page_chrome.py` (hermétique : serveur de l'outil + faux serveur de carte, Chrome headless au profil `sonde_ftp_cartes`) : choix d'une carte → pastille « actif » ; liste de `/histo` ; nom spécial affiché ; suppression d'un fichier protégé : 1 confirmation → toujours présent, 2 → supprimé ; fermeture de l'onglet → le faux serveur a reçu `UfsFTP 0` ; aucun message d'erreur de la console JS — preuve : `test_ftp_cartes_page_chrome.py` (379 lignes), 77 vérifications ; rouge avant la page (22 échecs avec la page minimale)
+- [x] Sonde verte, sortie collée en preuve ; Chrome `sonde_*` orphelins vérifiés arrêtés 15 s après — preuve : sonde 6 passages de suite verts (77 OK), relancée verte par chaque relecteur ; 0 Chrome `sonde_` vivant 15 s après chaque lot
 - [ ] `relecteur-pages-web` lu, remarques traitées ; `controleur-secrets` lu, commit `feat(ftp): page du navigateur FTP`
 
 ## A6 — Intégration : annuaire, tâche VS Code, cible Custom, documentation
@@ -163,6 +163,8 @@ Interfaces produites (consommées par la page, A5) :
 - [ ] Porter le persist à `OFF` sur les autres cartes listées en A1 ; cocher chacune dans « Améliorations restantes »
 
 ## Améliorations restantes
+- [ ] [projet] Page A5, mineurs reportés (relectures du 2026-11-21) : message « Rallumer » ou « autre onglet » écrasé quand le sondage ferme une boîte ouverte au milieu d'un geste (et « Envoyé : 0 fichier(s) » trompeur) ; `effaceVues()` absent de la branche non JSON de `ouvrir` ; `/zip` et `/telecharge` sans la paire env/support (409 en texte brut pour le zip) ; `ouvrir` et `deconnecter` ne ferment pas une boîte ouverte ; B9 repli automatique sur la flash si `sd` vaut null ; B15 corps de 16 Mo envoyé deux fois si le fichier existe déjà ; `protege()` ne regarde que le chemin visé (un dossier contenant `autoexec.be` part avec une seule confirmation) ; `Session.deplace` ne vérifie pas que la cible existe ; la sonde n'a pas de cas pour l'arrêt au premier 409 des boucles multi-fichiers ni pour l'assertion « 409 » avant clic
+- [ ] [projet] Sondes à page habillée (`acces.habille`) : leur barre lit les vraies fiches de présence et interroge la vraie page Build ; `test_ftp_cartes_page_chrome.py` neutralise `acces_barre`, les autres sondes non
 - [ ] [projet] Déplacer un fichier protégé (`autoexec.be`, `_persist.json`…) ne demande qu'une confirmation : seconde confirmation à décider avec l'utilisateur (relecture de A3)
 - [ ] [projet] `Session.ouvre` : une exception levée par `identifiants()` sur un changement de support laisse le FTP allumé jusqu'au `tic()` (15 min) ; `noms_ignores` grossit sans limite (relecture de A3)
 - [ ] [projet] `ftp_cartes_liste.GENERIQUES` est écrite en dur : un `FIRMWARE_*` amont inconnu y est jugé faux (carte listée, refus visible à l'allumage) ; test de concordance avec les bases du cenv à prévoir
