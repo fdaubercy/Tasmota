@@ -852,6 +852,21 @@ Une clé absente, non entière, nulle ou négative prend sa valeur par défaut. 
 
 - **Relais** : `"virtuel": "MQTT_<esclave>"` et `"mqtt": {"commande": "Power1"}` (défaut `Power1`). L'ordre part par `controleMqttLiaison.be::ordonne`. Avec `"repli": "ModBus_TasmotaSlaveModBus1"` (ou une autre voie ModBus), un ordre refusé parce que l'esclave est hors ligne ou que le coupe-circuit est ouvert repart par cette seconde voie ; sans repli, il est perdu et un message `erreur` le dit.
 - **Capteurs, boutons, interrupteurs** : `"mqtt": {"chemin": "DS18B20.Temperature"}` (ou `ANALOG.A1`, `Button1`, `Switch1`), avec `"declencheur"` pour imposer la famille. Un appui local sur l'esclave arrive par `stat/<topic>/RESULT` ou `POWER` : le maître l'apprend sans renvoyer d'ordre.
+- **Bouton du maître recalé** : quand un état `POWER<n>` d'un esclave arrive et qu'aucun ordre n'est en attente, le relais actif du maître qui le commande est remis sur l'état réel (`controleMqttLiaison.be::recale`). L'ordre qui en découle est refusé « identique » par G3 : rien n'est renvoyé. Pendant un ordre en attente, rien n'est recalé.
+- **Périmé** : pendant l'alerte du broker, ou quand un esclave est annoncé `Offline` par son LWT, chaque élément `MQTT_<nom>` actif de cet esclave a une ligne « dernière valeur X (périmé) » (mesure) ou « état réel inconnu (périmé) » (relais) sur l'accueil du maître.
+
+### Régler un esclave sans Berry (Tasmota natif, ESP8266 compris)
+
+Rien à embarquer sur l'esclave : seul son topic compte. Relevé et règles du 2026-11-20 (lecture de `support_tasmota.ino::SendKey`) :
+
+| Réglage | Valeur | Pourquoi |
+|---|---|---|
+| `ButtonTopic`, `SwitchTopic` | `0` (défaut) | l'appui commute le relais local, même sans broker, et l'esclave publie son nouvel état. Un topic posé ferait publier `cmnd/<topic>/POWER<n> TOGGLE` sans commuter le relais local : **jamais le topic du maître**, ce serait un ordre natif hors garde-fous |
+| `SetOption73`, `SetOption114` | `0` si le bouton doit garder la main sur son relais (projecteur, pompe) ; `1` s'il doit seulement prévenir le maître | à `1`, l'esclave publie `{"Button1":{"Action":"SINGLE"}}` ou `{"Switch1":{"Action":"ON"}}`, lu par un élément `boutons` ou `interrupteurs` du maître (`mqtt.chemin` `Button1`, `Switch1`) |
+| `SetOption19` | `0` | à `1` (découverte Home Assistant), ces messages `Action` ne partent plus |
+| `ButtonRetain`, `SwitchRetain`, `PowerRetain` | `0` | un ordre ou un état retenu serait rejoué à chaque reconnexion |
+
+Côté maître : déclarer l'esclave dans `drivers.liaisonMqtt.esclaves` puis un relais `"virtuel": "MQTT_<esclave>"` (exemples du P4 : `relai24` « Projecteur Jardin », `relai25` « Pompe Piscine »). Le nombre de relais de Tasmota est le plus grand `id` actif (`configDevices.be`), un `id` au-delà des autres reste donc commandable.
 
 ### Garde-fous
 

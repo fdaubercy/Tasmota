@@ -23,8 +23,10 @@ var JOURNAL = []
 
 class Driver end                                   # classe du firmware, absente de berry.exe
 class TasmotaStub
-    var cmds, pilotes, reseau, ms, reponses, web
-    def init() self.cmds = {} self.pilotes = [] self.reseau = true self.ms = 100000 self.reponses = [] self.web = [] end
+    var cmds, pilotes, reseau, ms, reponses, web, puissances, poses
+    def init() self.cmds = {} self.pilotes = [] self.reseau = true self.ms = 100000 self.reponses = [] self.web = [] self.puissances = [false, false, false] self.poses = [] end
+    def get_power() return self.puissances.copy() end
+    def set_power(i, v) self.poses.push([i, v]) self.puissances[i] = v end
     def add_cmd(n, f) self.cmds[n] = f end
     def add_driver(d) self.pilotes.push(d) end
     def is_network_up() return self.reseau end
@@ -412,6 +414,28 @@ verifie(size(tasmota.web) == w1 + 1 && string.find(tasmota.web[w1], "Relais pomp
 mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Online", bytes())
 D.web_sensor()
 verifie(size(tasmota.web) == w1 + 1, "pompe de retour Online : plus de ligne perime")
+
+# --- 7 sexies. Recalage du relais du maitre sur l'etat reel de l'esclave (A9) : appui local, sans renvoyer d'ordre
+garde.attente = {}
+garde.rearme()
+tasmota.puissances = [false, false, false]
+tasmota.poses = []
+var rp = mqtt.abonnes["stat/pompe/+"]
+rp("stat/pompe/RESULT", 0, '{"POWER":"ON"}', bytes())
+verifie(size(tasmota.poses) == 1 && tasmota.poses[0][0] == 2 && tasmota.poses[0][1] == true, "appui local sur l'esclave : relais 3 du maitre (MQTT_pompe, Power1) remis a ON")
+rp("stat/pompe/POWER", 0, "ON", bytes())
+verifie(size(tasmota.poses) == 1, "etat du maitre deja juste : aucun set_power de plus")
+mqtt.abonnes["stat/jardin/projecteur_led/+"]("stat/jardin/projecteur_led/POWER1", 0, "OFF", bytes())
+verifie(size(tasmota.poses) == 1, "esclave sans relais actif lie au maitre : rien n'est recale")
+tasmota.ms = tasmota.ms + 1000
+tasmota.puissances[2] = false                                  # bouton du maitre appuye : son relais passe a OFF, puis l'ordre part
+verifie(D.ordonne("pompe", "Power1", "OFF") == "envoyer", "ordre OFF depuis le maitre : en attente d'accuse")
+rp("stat/pompe/POWER", 0, "ON", bytes())
+verifie(size(tasmota.poses) == 1 && garde.attente.contains("pompe/POWER1"), "ordre en attente : un etat ancien (ON) ne recale pas le maitre, l'ordre reste attendu")
+rp("stat/pompe/POWER", 0, "OFF", bytes())
+verifie(size(tasmota.poses) == 1 && !garde.attente.contains("pompe/POWER1"), "accuse OFF : ordre acquitte, relais du maitre deja juste")
+rp("stat/pompe/RESULT", 0, '{"POWER":"ON"}', bytes())
+verifie(size(tasmota.poses) == 2 && tasmota.poses[1][1] == true && size(garde.attente) == 0, "nouvel appui local : maitre recale a ON, aucun ordre en attente cree")
 
 # garde d'activation : persist a OFF -> aucun driver
 import persist

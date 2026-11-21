@@ -25,6 +25,7 @@ class CONTROLE_MQTT_LIAISON : Driver
     var resync            # topics dont l'etat reel est a relire apres le retour du broker
     var liens             # nom -> [[module, famille, cle, chemin]] des elements virtuels MQTT_<nom> (construit au 1er SENSOR)
     var affiches          # nom -> [[libelle, module, famille, cle]] des elements MQTT_<nom> ACTIFS, relais compris (lignes « perime »)
+    var relais_lies       # "nom/POWERn" -> [id] des relais actifs du maitre qui commandent cet etat (recalage)
 
     def init()
         import persist
@@ -151,6 +152,7 @@ class CONTROLE_MQTT_LIAISON : Driver
         import string
         self.liens = {}
         self.affiches = {}
+        self.relais_lies = {}
         var mods = persist.find("modules", {})
         for m: mods.keys()
             if type(mods[m]) != "instance"    continue    end
@@ -172,6 +174,12 @@ class CONTROLE_MQTT_LIAISON : Driver
                     if d.find("activation") == "ON"                             # absente = inactif
                         if !self.affiches.contains(nom)    self.affiches[nom] = []    end
                         self.affiches[nom].push([str(d.find("nom", cle)), m, fam, cle])
+                        var o = fam == "relais" && type(d.find("id")) == "int" ? self.normalise(isinstance(mq, map) ? mq.find("commande", "Power1") : "Power1", "ON") : nil
+                        if o != nil
+                            var k = nom + "/" + o[0]
+                            if !self.relais_lies.contains(k)    self.relais_lies[k] = []    end
+                            self.relais_lies[k].push(d["id"])
+                        end
                     end
                     if type(chemin) != "string"    continue    end              # relais : ordres seulement, pas de SENSOR
                     if !self.liens.contains(nom)    self.liens[nom] = []    end
@@ -251,6 +259,21 @@ class CONTROLE_MQTT_LIAISON : Driver
         var code = g.recoit(cle, valeur, tasmota.millis())
         if code == "evenement" && logFonctions.actif(LOG_LEVEL_DEBUG, "liaisonMqtt")
             mqttLiaisonFonctions.log("LIAISON_MQTT: " + cle + " = " + str(valeur) + " (évènement) !", LOG_LEVEL_DEBUG)
+        end
+        if code != "invalide" && !g.attente.contains(cle)    self.recale(cle, str(valeur))    end
+    end
+
+    # Relais du maitre lies a cet etat remis sur l'etat REEL de l'esclave (appui sur son bouton local, redemarrage) : sinon
+    # le bouton du maitre affiche un etat faux. set_power relance set_power_handler, dont l'ordre est refuse « identique »
+    # par G3 (etat connu et frais) : rien n'est renvoye. Jamais pendant un ordre en attente (appel ci-dessus) : un etat
+    # ancien relancerait l'ordre inverse et annulerait celui de l'utilisateur.
+    def recale(cle, valeur)
+        if valeur != "ON" && valeur != "OFF"    return    end
+        if self.liens == nil    self.construit()    end
+        var on = (valeur == "ON")
+        var p = tasmota.get_power()
+        for id: self.relais_lies.find(cle, [])
+            if id >= 1 && id <= size(p) && p[id - 1] != on    tasmota.set_power(id - 1, on)    end
         end
     end
 

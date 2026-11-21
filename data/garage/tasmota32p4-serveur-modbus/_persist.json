@@ -772,6 +772,29 @@
 							"OFF": 0,
 							"delai": 0
 						}
+					},
+					"relai25": {
+						"activation": "ON",
+						"nom": "Pompe Piscine",
+						"afficheWeb": "ON",
+						"pin": -1,
+						"id": 25,
+						"type": 224,
+						"virtuel": "MQTT_pompe",
+						"mqtt": {
+							"commande": "Power1"
+						},
+						"value": 0,
+						"etat": "OFF",
+						"timer": 0,
+						"publishMQTT": {
+							"topic": []
+						},
+						"timestamp": {
+							"ON": 0,
+							"OFF": 0,
+							"delai": 0
+						}
 					}
 				},
 				"analogiques": {
