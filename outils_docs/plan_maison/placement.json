@@ -150,9 +150,9 @@
   {
    "nom": "Jardin",
    "x": 740,
-   "y": 304,
+   "y": 264,
    "w": 380,
-   "h": 150,
+   "h": 190,
    "pieces": [
     {
      "id": "jardin",
@@ -225,6 +225,10 @@
    "piece": "jardin",
    "libelle": "Projecteur LED"
   },
+  "jardin/tasmota32-projecteur-barbecue": {
+   "piece": "jardin",
+   "libelle": "Projecteur barbecue"
+  },
   "jardin/tasmota-pompe-piscine": {
    "piece": "jardin",
    "libelle": "Pompe piscine"
@@ -245,6 +249,7 @@
  "etiquettes": {
   "cave/tasmota32-serveur-rly": "ancien code (même IP que le relais V2)",
   "garage/tasmota32s3-serveur-modbus": "variante S3 (même IP que le P4)",
+  "jardin/tasmota32-projecteur-barbecue": "coin du jardin accolé au garage, près du barbecue",
   "garage/tasmota32s3-capteurs-cuve-modbus": "sous le jardin"
  },
  "liens_manuels": [],

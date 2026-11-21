@@ -20,10 +20,10 @@ from test_fichiers_berry_creation import RACINE, depot_essai
 
 ECHECS = []
 # Releve du parc (mis a jour le 2026-11-13 : grenier du RDC, projecteur du jardin et ecran des debits devenus maitres,
-# l'acquisition des debits a pris l'id 1). A revoir a chaque carte maitre ou esclave ajoutee au depot.
+# l'acquisition des debits a pris l'id 1 ; 2026-11-21 : projecteur du barbecue, copie du projecteur du jardin). A revoir a chaque carte maitre ou esclave ajoutee au depot.
 MAITRES = {"data/bureau/tasmota32s3-ecran-debits-pac", "data/cave/tasmota32s3-serveur-rly", "data/etage2/tasmota32s3-grenier",
            "data/garage/tasmota32p4-serveur-modbus", "data/garage/tasmota32s3-serveur-modbus",
-           "data/jardin/tasmota32-projecteur-led", "data/rdc/tasmota32s3-grenier"}
+           "data/jardin/tasmota32-projecteur-barbecue", "data/jardin/tasmota32-projecteur-led", "data/rdc/tasmota32s3-grenier"}
 IDS_PRIS = [0, 1, 2, 3]
 P4 = "data/garage/tasmota32p4-serveur-modbus/_persist.json"
 BUREAU = "data/bureau/tasmota32-interrupteur-energie/_persist.json"
@@ -52,7 +52,7 @@ def refus(fonction, *args):
 
 def test_maitres_du_parc():
     ms = parc.maitres(RACINE)
-    verifie({m["dossier"] for m in ms}, MAITRES, "maitres_du_parc : les 7 dossiers")
+    verifie({m["dossier"] for m in ms}, MAITRES, "maitres_du_parc : les 8 dossiers")
     p4 = next(m for m in ms if m["dossier"].endswith("p4-serveur-modbus"))
     verifie(sorted(p4), ["ap", "dossier", "env", "hostname", "id", "ip"], "maitre : cles")
     verifie(p4["ap"], "SERVEUR-GARAGE-GATEWAY", "maitre P4 : AP reel (rangeExtender.AP.SSID)")
