@@ -5,9 +5,9 @@
 			"activation": "ON",
 			"enregistrement": "OFF",
 			"calibrage": {
-				"PowerCal": 12530,
-				"VoltageCal": 1950,
-				"CurrentCal": 3500
+				"PowerCal": 596,
+				"VoltageCal": 15187,
+				"CurrentCal": 251213
 			}
 		},
 		"typeESP": "ESP32",
