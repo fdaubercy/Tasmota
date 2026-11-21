@@ -96,6 +96,10 @@ def section_registre():
 
     sf = reg.par_id("synchro_fork")
     verifie((sf.dans_job, sf.route_occupe), (False, "/execution"), "synchro_hors_job")
+    fc = reg.par_id("ftp_cartes")
+    verifie((fc.dans_job, fc.route_occupe, "Déconnecter" in fc.arret_refuse), (False, "/execution", True),
+            "ftp_cartes : hors job (son tic() eteint le FTP), arret refuse en session (Deconnecter d'abord)")
+    verifie("coupe son processus" in fc.aide, False, "ftp_cartes : l'aide ne dit plus que l'arret coupe le FTP (il est refuse en session)")
     verifie(reg.par_id("pont_serie").dans_job, True, "pont dans_job")
     try:
         reg.par_id("zzz")

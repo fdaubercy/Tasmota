@@ -313,6 +313,182 @@ def cas_concurrence():
         verifie(sum(1 for c, _ in b.srv.commandes if c == "USER"), 1, "une seule connexion FTP")
 
 
+def cas_deplace_protege():
+    """Seconde confirmation du deplacement d'un fichier protege, dossier contenant un fichier protege, cible deja existante."""
+    with Banc() as b:
+        b.ouvre("sd")
+        b.fichier("/sd/autoexec.be", b"cfg")
+        b.fichier("/sd/x.txt")
+        b.fichier("/sd/dossier/_persist.json")
+        b.fichier("/sd/vieux/y.bin")
+        b.fichier("/sd/pris.txt", b"pris")
+        (b.srv.racine / "sd/archives").mkdir()
+        tout = {"source": "/sd/autoexec.be", "cible": "/sd/archives/autoexec.be"}
+        st, texte = b.json("POST", "/deplace", tout)
+        verifie((st, "seconde confirmation" in texte), (409, True), "/deplace d'un fichier protege sans confirmations : 409, « seconde confirmation »")
+        st, texte = b.json("POST", "/deplace", dict(tout, confirmations=1))
+        verifie((st, "seconde confirmation" in texte), (409, True), "/deplace d'un fichier protege, 1 confirmation : 409")
+        verifie((b.srv.racine / "sd/autoexec.be").exists(), True, "le fichier protege n'a pas bouge")
+        verifie([c for c, _ in b.srv.commandes if c in ("RNFR", "RNTO")], [], "le controle precede toute commande de modification")
+        for mauvais in ("oui", True, 1.5, None, [2]):
+            verifie(b.json("POST", "/deplace", dict(tout, confirmations=mauvais))[0], 400, "/deplace confirmations %r : 400" % (mauvais,))
+        verifie(b.json("GET", "/etat")[1]["etat"], "actif", "les refus laissent la session ouverte")
+        verifie(b.json("POST", "/deplace", dict(tout, confirmations=2))[0], 200, "/deplace d'un fichier protege, 2 confirmations : 200")
+        verifie((b.srv.racine / "sd/archives/autoexec.be").read_bytes(), b"cfg", "le fichier protege est arrive")
+        st, texte = b.json("POST", "/deplace", {"source": "/sd/dossier", "cible": "/sd/archives/dossier"})
+        verifie((st, "seconde confirmation" in texte), (409, True), "/deplace d'un dossier contenant _persist.json : 409, « seconde confirmation »")
+        verifie(b.json("POST", "/deplace", {"source": "/sd/dossier", "cible": "/sd/archives/dossier", "confirmations": 2})[0], 200, "meme dossier, 2 confirmations : 200")
+        verifie(b.json("POST", "/deplace", {"source": "/sd/x.txt", "cible": "/sd/archives/x.txt"})[0], 200, "deplacement ordinaire sans confirmations : 200")
+        st, texte = b.json("POST", "/deplace", {"source": "/sd/vieux/y.bin", "cible": "/sd/pris.txt"})
+        verifie((st, texte), (409, "la cible existe deja"), "/deplace sur une cible existante : 409")
+        verifie((b.srv.racine / "sd/pris.txt").read_bytes(), b"pris", "la cible n'est pas ecrasee")
+        verifie(b.json("POST", "/deplace", {"source": "/sd/vieux/y.bin", "cible": "/sd/pris.txt", "confirmations": 2})[0], 409, "meme avec deux confirmations : 409")
+        b.fichier("/sd/gros/a/autoexec.bat")
+        st, texte = b.json("POST", "/supprime", {"chemin": "/sd/gros", "confirmations": 1})
+        verifie((st, "seconde confirmation" in texte), (409, True), "/supprime d'un dossier contenant autoexec.bat, 1 confirmation : 409")
+        verifie((b.srv.racine / "sd/gros/a/autoexec.bat").exists(), True, "le dossier est intact")
+        verifie((b.json("GET", "/etat")[1]["etat"], b.json("GET", "/liste?chemin=/sd")[0]), ("actif", 200), "409 propre : session ouverte, liste servie")
+        verifie(b.ufsftp(), [1], "aucun UfsFTP 0 : la session n'a pas ete fermee")
+        verifie(b.json("POST", "/supprime", {"chemin": "/sd/gros", "confirmations": 2})[0], 200, "meme dossier, 2 confirmations : 200")
+        verifie((b.srv.racine / "sd/gros").exists(), False, "le dossier est supprime")
+
+
+def cas_paire_zip_telecharge():
+    """/zip et /telecharge acceptent la paire env/support : un ecart donne 409 avant toute commande FTP."""
+    with Banc() as b:
+        b.ouvre("sd")
+        b.fichier("/sd/a.bin", b"abc")
+        n = len(b.srv.commandes)
+        for ecart, libelle in (({"env": ENV, "support": "flash"}, "autre support"), ({"env": "autre-env", "support": "sd"}, "autre carte")):
+            st, corps, ent = b.req("GET", "/telecharge?chemin=/sd/a.bin&env=%s&support=%s" % (ecart["env"], ecart["support"]))
+            verifie((st, corps), (409, b"la session a change (carte ou support)"), "/telecharge, %s : 409" % libelle)
+            st, corps, ent = b.req("POST", "/zip", dict(ecart, chemins=["/sd/a.bin"]))
+            verifie((st, corps, ent.get("Content-Type")), (409, b"la session a change (carte ou support)", "text/plain; charset=utf-8"),
+                    "/zip, %s : 409, meme texte brut que les autres routes" % libelle)
+        verifie(len(b.srv.commandes), n, "aucune commande FTP envoyee pour ces refus")
+        verifie(b.req("GET", "/telecharge?chemin=/sd/a.bin&env=%s&support=sd" % ENV)[:2], (200, b"abc"), "/telecharge, paire conforme : 200")
+        verifie(b.req("GET", "/telecharge?chemin=/sd/a.bin")[:2], (200, b"abc"), "/telecharge sans paire : comme avant")
+        verifie(b.req("GET", "/telecharge?chemin=/sd/a.bin&support=sd")[:2], (200, b"abc"), "/telecharge avec le seul support conforme : 200")
+        verifie(b.req("GET", "/telecharge?chemin=/sd/a.bin&support=flash")[0], 409, "/telecharge avec le seul support different : 409")
+        verifie(b.req("POST", "/zip", {"chemins": ["/sd/a.bin"], "env": ENV, "support": "sd"})[0], 200, "/zip, paire conforme : 200")
+
+
+def cas_onglets_web():
+    """Le FTP ne s'eteint qu'au dernier onglet ; sans identifiant valide, /ferme ferme comme avant."""
+    A, B = "a" * 16, "b" * 32
+    with Banc() as b:
+        ent = {"Origin": "http://127.0.0.1:%d" % b.port}
+        b.json("POST", "/ouvre", {"env": ENV, "support": "sd", "onglet": A})
+        verifie(b.json("GET", "/etat?onglet=" + B)[1]["etat"], "actif", "GET /etat?onglet= : l'etat habituel")
+        verifie(b.json("POST", "/ferme", {"onglet": A}, avec_x=False, ent=ent)[1]["etat"], "actif", "le premier onglet part : la reponse montre la session active")
+        verifie((b.json("GET", "/etat")[1]["etat"], b.ufsftp()), ("actif", [1]), "FTP toujours allume : il reste un onglet")
+        verifie(b.json("POST", "/ferme", {"onglet": B}, avec_x=False, ent=ent)[0], 200, "le dernier onglet part : 200")
+        verifie((b.json("GET", "/etat")[1]["etat"], b.ufsftp()), ("eteint", [1, 0]), "UfsFTP 0 au dernier onglet")
+        for corps, libelle in (({}, "corps {}"), (b"", "corps vide"), (b"pas du json", "corps illisible"), ([1], "corps liste"),
+                               ({"onglet": 5}, "onglet non texte"), ({"onglet": "court"}, "onglet invalide"), ({"onglet": "A" * 16}, "onglet en majuscules"),
+                               (b"[" * 10000, "corps tres imbrique (RecursionError)")):
+            b.json("POST", "/ouvre", {"env": ENV, "support": "sd", "onglet": A})
+            b.json("GET", "/etat?onglet=" + B)
+            verifie(b.json("POST", "/ferme", corps, avec_x=False, ent=ent)[0], 200, "/ferme, %s : 200" % libelle)
+            verifie(b.json("GET", "/etat")[1]["etat"], "eteint", "/ferme, %s : ferme comme avant, malgre le second onglet" % libelle)
+        b.json("POST", "/ouvre", {"env": ENV, "support": "sd", "onglet": A})
+        b.json("GET", "/etat?onglet=" + B)
+        b.json("POST", "/ferme", {})                                   # Deconnecter : sans identifiant, il ferme toujours
+        verifie(b.json("GET", "/etat")[1]["etat"], "eteint", "Deconnecter ferme sans regarder les onglets")
+        b.json("POST", "/ouvre", {"env": ENV, "support": "sd", "onglet": A})
+        b.json("GET", "/etat?onglet=invalide")
+        verifie(b.json("POST", "/ferme", {"onglet": A}, avec_x=False, ent=ent)[0], 200, "un identifiant invalide au sondage n'enregistre rien")
+        verifie(b.json("GET", "/etat")[1]["etat"], "eteint", "A etait seul : ferme")
+        b.json("POST", "/ouvre", {"env": ENV, "support": "sd", "onglet": A})          # /ouvre enregistre l'onglet, sans sondage
+        b.json("POST", "/ouvre", {"env": ENV, "support": "sd", "onglet": B})          # second onglet : reprise de la session
+        b.json("POST", "/ferme", {"onglet": B}, avec_x=False, ent=ent)
+        verifie(b.json("GET", "/etat")[1]["etat"], "actif", "deux onglets enregistres par /ouvre : B part, A garde le FTP")
+        b.json("POST", "/ferme", {"onglet": A}, avec_x=False, ent=ent)
+        c = http.client.HTTPConnection("127.0.0.1", b.port, timeout=15)
+        c.putrequest("POST", "/ferme")
+        c.putheader("Content-Length", str(fw.MAX_CORPS + 1))
+        c.endheaders()
+        r = c.getresponse()
+        REPONSES.append(r.read())
+        c.close()
+        verifie(r.status, 413, "/ferme : meme borne MAX_CORPS que les autres POST")
+
+
+def cas_execution():
+    """GET /execution : vrai tant qu'une session FTP est ouverte (l'annuaire refuse alors d'arreter l'outil)."""
+    with Banc() as b:
+        verifie(b.json("GET", "/execution"), (200, {"en_cours": False}), "hors session : en_cours faux")
+        b.ouvre("sd")
+        verifie(b.json("GET", "/execution"), (200, {"en_cours": True}), "session ouverte : en_cours vrai")
+        verifie(b.json("GET", "/execution", distant=True), (200, {"en_cours": True}), "depuis un autre appareil avec jeton : lisible")
+        verifie(b.req("GET", "/execution", ent={"Cookie": ""}, distant=True)[0], 403, "depuis un autre appareil sans jeton : 403")
+        verifie(b.req("GET", "/execution", ent={"Host": "evil.example"})[0], 403, "Host hostile : 403")
+        verifie(b.json("POST", "/ferme", {})[0], 200, "Deconnecter")
+        verifie(b.json("GET", "/execution"), (200, {"en_cours": False}), "apres Deconnecter : en_cours faux")
+        b.ouvre("sd")
+        b.srv.perdre()                                                 # carte perdue : l'etat passe a « erreur » mais le FTP de la carte peut rester allume
+        verifie(b.json("GET", "/liste?chemin=/sd")[0], 409, "carte perdue : 409")
+        verifie((b.json("GET", "/etat")[1]["etat"], b.json("GET", "/execution")[1]), ("erreur", {"en_cours": True}), "etat « erreur » mais UfsFTP 0 pas encore envoye : en_cours vrai")
+        b.json("POST", "/ferme", {})
+        verifie(b.json("GET", "/execution")[1], {"en_cours": False}, "apres UfsFTP 0 : faux")
+    with Banc() as b:                                                  # pendant l'allumage (la commande Ufs tarde) : vrai, et la route repond
+        lente = b.session._commande
+        b.session._commande = lambda ip, c, d: (time.sleep(1.2) if c == "Ufs" else None, lente(ip, c, d))[1]
+        t = threading.Thread(target=lambda: b.ouvre("sd"))
+        t.start()
+        time.sleep(0.4)
+        verifie(b.json("GET", "/execution"), (200, {"en_cours": True}), "pendant l'allumage : en_cours vrai, sans attendre l'ouverture")
+        t.join(20)
+
+
+class FtpLeve(ftplib.FTP):
+    """Fabrique dont une etape leve une exception non reseau dont le message cite le faux mot de passe."""
+    etape, exception = "connect", ValueError
+
+    def connect(self, *a, **k):
+        if self.etape == "connect":
+            raise self.exception("secret " + MDP)
+        return super().connect(*a, **k)
+
+    def mlsd(self, *a, **k):
+        if self.etape == "mlsd":
+            raise self.exception("secret " + MDP)
+        return super().mlsd(*a, **k)
+
+
+def cas_secret_exceptions():
+    """Une exception NON reseau (ValueError, TypeError) venue des identifiants ou de la fabrique FTP ne porte jamais le mot de passe a la page."""
+    def jamais(fw):
+        raise ValueError("secret " + MDP)
+
+    cas = (("identifiants ValueError", "ident", ValueError), ("fabrique connect ValueError", "connect", ValueError),
+           ("fabrique connect TypeError", "connect", TypeError))
+    for nom, etape, exc in cas:
+        with Banc() as b:
+            if etape == "ident":
+                b.session._identifiants = jamais
+            else:
+                b.session._fabrique = type("F", (FtpLeve,), {"etape": etape, "exception": exc})
+            st, corps, _ = b.req("POST", "/ouvre", {"env": ENV, "support": "sd"})
+            verifie((MDP.encode("utf-8") in corps, st >= 400), (False, True), "/ouvre, %s : refus (%d), reponse sans mot de passe" % (nom, st))
+            etat = b.req("GET", "/etat")
+            verifie(MDP.encode("utf-8") in etat[1], False, "/etat apres /ouvre, %s : sans mot de passe" % nom)
+            verifie(b.json("GET", "/etat")[1]["etat"], "erreur", "/ouvre, %s : etat « erreur », rien d'allume en suspens" % nom)
+            verifie(b.ufsftp()[-1:] in ([], [0]), True, "/ouvre, %s : UfsFTP 0 si la carte avait ete allumee" % nom)
+    for nom, etape, exc in (("reconnexion ValueError", "connect", ValueError), ("mlsd TypeError", "mlsd", TypeError)):
+        with Banc() as b:
+            b.ouvre("sd")
+            b.session._fabrique = type("F", (FtpLeve,), {"etape": etape, "exception": exc})
+            if etape == "connect":
+                b.srv.coupe_client()
+            else:
+                b.session._quitte_ftp()
+                b.session._connecte()
+            st, corps, _ = b.req("GET", "/liste?chemin=/sd")
+            verifie((MDP.encode("utf-8") in corps, st), (False, 500), "/liste, %s : 500 sans le message de l'exception" % nom)
+            verifie(MDP.encode("utf-8") in b.req("GET", "/etat")[1], False, "/etat apres /liste, %s : sans mot de passe" % nom)
+
+
 def cas_serveur():
     with Banc() as b:
         try:
@@ -333,7 +509,8 @@ def cas_host_hostile():
 
 
 def main():
-    for cas in (cas_routes, cas_ecritures_ce_pc, cas_beacon, cas_session_changee, cas_geste_pendant_changement_de_carte, cas_deux_onglets, cas_envoi_trop_gros, cas_secret, cas_concurrence, cas_serveur, cas_host_hostile):
+    for cas in (cas_routes, cas_ecritures_ce_pc, cas_beacon, cas_session_changee, cas_geste_pendant_changement_de_carte, cas_deux_onglets, cas_envoi_trop_gros, cas_secret, cas_concurrence, cas_serveur, cas_host_hostile,
+                cas_deplace_protege, cas_paire_zip_telecharge, cas_onglets_web, cas_execution, cas_secret_exceptions):
         print("---", cas.__name__)
         cas()
     print("\n%s" % ("VERT" if not ECHECS else "ROUGE : %d echec(s) : %s" % (len(ECHECS), "; ".join(ECHECS))))

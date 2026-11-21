@@ -8,10 +8,15 @@ import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes e
 _sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))
 import suivi_sondes as _suivi; _suivi.suit_si_script_test()
 import json
+import re
+import shutil
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 
+import build_envs
 import ftp_cartes_liste as fl
 
 ECHECS = []
@@ -89,7 +94,7 @@ def cas_persist_illisible():
     verifie(fl.est_esclave_rgx(p), None, "persist casse : None")
     verifie(env in exclues(fl.liste(d)), True, "persist casse : carte exclue")
     p.write_text('{"serveur": {"hostname": "a\tb", "rangeExtender": {"activation": "OFF"}}}', encoding="utf-8")
-    verifie(fl.est_esclave_rgx(p), False, "caractere de controle dans une chaine : lu (strict=False)")
+    verifie(fl.est_esclave_rgx(p), False, "tolerant aux caracteres de controle dans une chaine : lu (strict=False)")
     verifie(fl.est_esclave_rgx(d / "absent.json"), None, "persist absent : None")
 
 
@@ -178,9 +183,109 @@ def cas_depot_reel():
         verifie(sorted(c), ["adresse", "env", "firmware", "hote", "lieu", "nom", "puce"], f"reel : champs de {c['env']}")
 
 
+# FIRMWARE_* de l'amont qu'on sait sans effet sur une carte du depot (ni generiques ni propres a une carte). Vide au 2026-11-21.
+AMONT_SANS_EFFET = ()
+
+
+def inconnus(racine):
+    """FIRMWARE_* qu'`ftp_cartes_liste._defini` jugerait faux a tort : -D de la chaine d'un env « cartes » (hors son propre
+    firmware, le dernier) qui ne sont pas dans GENERIQUES, et FIRMWARE_* du .h qui ne sont ni generiques ni propres a une carte."""
+    racine = Path(racine)
+    toutes, _ = build_envs._sections(racine)
+    cartes = [e for e in build_envs.liste_envs(racine) if e.famille == "cartes"]
+    connus = set(fl.GENERIQUES) | set(AMONT_SANS_EFFET)
+    trouves = {}
+    for e in cartes:
+        for section in build_envs._chaine(toutes, "env:" + e.nom):
+            flags = build_envs._valeur(toutes, section, "build_flags")     # `${env:X.build_flags}` suivis
+            for f in re.findall(r"-D\s*(FIRMWARE_\w+)", flags):
+                if f != e.firmware and f not in connus:
+                    trouves.setdefault(f, f"build_flags de {section} (chaine de {e.nom})")
+    propres = {e.firmware for e in cartes}
+    for f in sorted(set(re.findall(r"FIRMWARE_\w+", fl._lit_h(racine)))):
+        if f not in connus and f not in propres:
+            trouves.setdefault(f, "user_config_override.h")
+    return trouves
+
+
+
+
+def cas_concordance_generiques():
+    trouves = inconnus(RACINE)
+    for f, ou in trouves.items():
+        print(f"     {f} ({ou}) : ajouter a GENERIQUES ou a une section du .h")
+    verifie(sorted(trouves), [], "GENERIQUES couvre les FIRMWARE_* des bases du cenv et du .h (depot reel)")
+    # temoin : un -DFIRMWARE_INCONNU ajoute a une COPIE du cenv est nomme
+    d = Path(tempfile.mkdtemp(prefix="banc_ftp_conc_"))
+    (d / "tasmota").mkdir()
+    for f in (*build_envs.FICHIERS_INI, "tasmota/user_config_override.h"):
+        if (RACINE / f).is_file():
+            shutil.copy(RACINE / f, d / f)
+    cenv = d / build_envs.FICHIER_CENV
+    cenv.write_text(cenv.read_text(encoding="utf-8") + "\n[env:tasmota32s3-cave-mutant]\nextends = env:tasmota32s3\n"
+                    "build_flags = ${env:tasmota32s3.build_flags} -DFIRMWARE_INCONNU -DFIRMWARE_MUTANT_PROPRE\n", encoding="utf-8")
+    verifie(sorted(inconnus(d)), ["FIRMWARE_INCONNU"], "temoin : -DFIRMWARE_INCONNU d'une base est nomme (le dernier est le propre de l'env)")
+    shutil.rmtree(d, ignore_errors=True)
+
+
+def cas_cache():
+    env = "tasmota32s3-cave-a"
+    d = depot(sec("FIRMWARE_A"), {env: persist("carte1")}, {env: "FIRMWARE_A"})
+    appels = []
+    vraie = build_envs.liste_envs
+
+    def espion(racine):
+        appels.append(1)
+        time.sleep(0.2)
+        return vraie(racine)
+
+    build_envs.liste_envs = espion
+    try:
+        res = fl.liste(d)
+        verifie(fl.liste(d) is res and len(appels), 1, "cache : 2e appel sans changement = meme objet, liste_envs appele une fois")
+        fils = [threading.Thread(target=fl.liste, args=(d,)) for _ in range(4)]
+        [f.start() for f in fils]
+        [f.join() for f in fils]
+        verifie(len(appels), 1, "cache : appels simultanes sans changement, toujours un seul calcul")
+        # persist modifie (taille differente : la date seule peut etre identique sur une ecriture rapprochee)
+        p = d / "data/cave/tasmota32s3-a/_persist.json"
+        p.write_text(persist("carte-renommee"), encoding="utf-8")
+        res2 = fl.liste(d)
+        verifie((len(appels), [c["hote"] for c in res2["cartes"]]), (2, ["carte-renommee"]), "cache : persist modifie = recalcul")
+        # .h modifie
+        h = d / "tasmota" / "user_config_override.h"
+        h.write_text(h.read_text(encoding="utf-8").replace("#if defined(FIRMWARE_A)\n",
+                                                           '#if defined(FIRMWARE_A)\n#define WIFI_IP_ADDRESS "192.168.0.50"\n'), encoding="utf-8")
+        res_h = fl.liste(d)
+        verifie((len(appels), [c["adresse"] for c in res_h["cartes"]]), (3, ["192.168.0.50"]), "cache : user_config_override.h modifie = recalcul")
+        # fichier ini modifie
+        ini = d / "platformio_tasmota_cenv.ini"
+        ini.write_text(ini.read_text(encoding="utf-8") + "\n[env:tasmota32s3-cave-b]\nextends = env:tasmota32_base\nbuild_flags = -DFIRMWARE_B\n",
+                       encoding="utf-8")
+        fl.liste(d)
+        verifie(len(appels), 4, "cache : ini modifie = recalcul")
+        # persist ajoute
+        (d / "data/cave/tasmota32s3-b").mkdir(parents=True)
+        (d / "data/cave/tasmota32s3-b/_persist.json").write_text(persist("b"), encoding="utf-8")
+        res3 = fl.liste(d)
+        verifie((len(appels), sorted(c["env"] for c in res3["cartes"])), (5, [env, "tasmota32s3-cave-b"]), "cache : persist ajoute = recalcul")
+        fl.liste(d)
+        verifie(len(appels), 5, "cache : et de nouveau stable ensuite")
+        # prechauffage : un fil qui remplit le cache, sans lever pour un depot absent
+        d2 = depot(sec("FIRMWARE_A"), {env: persist("p")}, {env: "FIRMWARE_A"})
+        n = len(appels)
+        fl.prechauffe(d2).join()
+        res4 = fl.liste(d2)
+        verifie((len(appels) - n, bool(res4["cartes"])), (1, True), "prechauffe : un calcul, la premiere liste suivante n'en refait pas")
+        fl.prechauffe(Path("/depot-inexistant")).join()
+        verifie(True, True, "prechauffe : depot absent, aucune exception")
+    finally:
+        build_envs.liste_envs = vraie
+
+
 if __name__ == "__main__":
     for cas in (cas_esclave, cas_persist_illisible, cas_sans_use_ftp, cas_puce, cas_adresse, cas_identifiants,
-                cas_depot_reel):
+                cas_concordance_generiques, cas_cache, cas_depot_reel):
         print(f"-- {cas.__name__}")
         cas()
     print("\nECHECS : " + (", ".join(ECHECS) if ECHECS else "aucun"))

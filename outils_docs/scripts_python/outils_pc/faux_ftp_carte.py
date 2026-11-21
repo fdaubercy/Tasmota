@@ -221,6 +221,7 @@ class FauxFtpCarte:
         self.noms_pieges = list(noms_pieges)    # noms hostiles ajoutes a chaque liste (../x, a\b...)
         self.commandes, self.clients, self.compte, self.coupe_a = [], [], 0, None
         self.occupe = threading.Semaphore(1)
+        self._verrou_perdu = threading.Lock()   # perdre() : le fil est cree ET demarre avant que arrete() le joigne
         self.srv = _Serveur(("127.0.0.1", 0), _Handler)
         self.srv.faux = self
         self.port = self.srv.server_address[1]
@@ -249,10 +250,11 @@ class FauxFtpCarte:
     def perdre(self):
         """Carte perdue : plus aucun port ouvert."""
         self.coupe_client()
-        if self.ouvert:
-            self.ouvert = False
-            self._fil = threading.Thread(target=self._ferme, daemon=True)
-            self._fil.start()
+        with self._verrou_perdu:
+            if self.ouvert:
+                self._fil = threading.Thread(target=self._ferme, daemon=True)
+                self._fil.start()
+                self.ouvert = False
 
     def _ferme(self):
         self.srv.shutdown()

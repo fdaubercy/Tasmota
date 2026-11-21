@@ -2,6 +2,7 @@
 
 Hermetique : serveur de l'outil sur un port libre (jamais 7450) + faux serveur FTP de carte + fausse commande `UfsFTP` + mini-depot
 temporaire (`test_ftp_cartes_web.Banc`), Chrome headless au profil `sonde_ftp_cartes_*`. Aucune vraie carte, rien d'ecrit dans le depot.
+Suite des cas (onglets, deplacement, zip) : test_ftp_cartes_page_chrome_onglets.py.
 Verifie : choix d'une carte (pastille « actif »), liste de /histo, noms speciaux (accent, espace, #, balise hostile) affiches tels quels,
 zip du navigateur, suppression d'un fichier protege (1 confirmation : toujours la ; 2 : supprime), nouveau dossier, bascule Flash / SD
 (SD grisee sans SD), fermeture de l'onglet (le faux serveur recoit `UfsFTP 0`), mode sombre, telephone, aucune erreur de console.
@@ -26,6 +27,7 @@ import acces_barre                                                              
 import ftp_cartes_page as page_mod                                                  # noqa: E402
 import test_ftp_cartes_web as banc_web                                              # noqa: E402
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre      # noqa: E402
+from test_ftp_cartes_page_chrome_onglets import attend_sonde, attend_ufs, calme, clique, coche, espionne, ident, noms, oublie, pose_fichiers, posts, scenario_onglets, vus   # noqa: E402
 
 ECHECS = []
 HOSTILE = "<img src=x onerror=window.__pwn=1>.txt"
@@ -46,7 +48,7 @@ class Montage:
         chrome = next((c for c in CHROMES if c.is_file()), None)
         if chrome is None:
             raise FileNotFoundError("chrome.exe introuvable")
-        port_cdp = port_libre()
+        port_cdp = self.port_cdp = port_libre()
         self.chrome = subprocess.Popen([str(chrome), "--headless=new", f"--remote-debugging-port={port_cdp}", "--remote-allow-origins=*",
                                         f"--user-data-dir={self.t / 'profil'}", "--no-first-run", "--no-default-browser-check",
                                         "--disable-extensions", "--window-size=1280,1000", "about:blank"],
@@ -83,25 +85,10 @@ class Montage:
         shutil.rmtree(self.t, ignore_errors=True)
 
 
-def coche(cdp, nom):
-    cdp.js("(function(){var r=Array.prototype.find.call(document.querySelectorAll('#lignes tr'),function(t){return t.getAttribute('data-nom')===" + json.dumps(nom)
-           + "}); r.querySelector('input').click();})()")
-
-
-def noms(cdp):
-    return cdp.js("Array.prototype.map.call(document.querySelectorAll('#lignes tr'),function(t){return t.getAttribute('data-nom')})")
-
-
-def pose_fichiers(cdp, specs):
-    """Fichiers synthetiques [(nom, octets)] dans l'input #fichier puis evenement change (aucun fichier reel)."""
-    cdp.js("(function(){var d=new DataTransfer();" + "".join("d.items.add(new File([new Uint8Array(%d)],%s));" % (n, json.dumps(nom)) for nom, n in specs)
-           + "var i=document.getElementById('fichier'); i.files=d.files; i.dispatchEvent(new Event('change',{bubbles:true}));})()")
-
-
 class Tolere:
     """Les 409 voulus sont des lignes du journal reseau de Chrome : on ne tolere que ceux apparus pendant un bloc annonce."""
     def __init__(self, cdp):
-        self.cdp, self.ok, self.debut = cdp, set(), 0
+        self.cdp, self.ok, self.debut, self.n = cdp, set(), 0, 0      # n : 409 apparus pendant le dernier bloc (un 409 voulu qui n'arrive pas est un echec)
 
     def __enter__(self):
         time.sleep(0.3)
@@ -109,22 +96,21 @@ class Tolere:
 
     def __exit__(self, *_):
         time.sleep(0.5)
+        stable, derniere = 0, -1                           # les lignes du journal Chrome arrivent en differe : on attend qu'elles ne bougent plus (3 s au plus)
+        limite = time.monotonic() + 3
+        while stable < 2 and time.monotonic() < limite:
+            n = len(self.cdp.erreurs())
+            stable = stable + 1 if n == derniere else 0
+            derniere = n
+            time.sleep(0.25)
+        self.n = 0
         for i, e in enumerate(self.cdp.erreurs()):
             if i >= self.debut and "409" in e:
                 self.ok.add(i)
+                self.n += 1
 
     def restantes(self):
         return [e for i, e in enumerate(self.cdp.erreurs()) if i not in self.ok]
-
-
-def attend_ufs(b, condition, delai):
-    limite = time.monotonic() + delai
-    while time.monotonic() < limite and not condition(b.ufsftp()):
-        time.sleep(0.2)
-
-
-def clique(cdp, ident):
-    cdp.js("document.getElementById(" + json.dumps(ident) + ").click()")
 
 
 def scenario(m):
@@ -245,6 +231,7 @@ def scenario(m):
         clique(cdp, "boite-ok")
         verifie(bool(attend(cdp, "!document.getElementById('boite').hidden && document.getElementById('boite-texte').textContent.indexOf('protégé') >= 0", 10)), True,
                 "fichier protege : une seconde confirmation est demandee")
+    verifie(tol.n >= 1, True, "fichier protege : le serveur a bien rendu un 409")
     verifie(cdp.js("document.getElementById('boite-texte').textContent.indexOf('fichier de configuration de la carte') >= 0"), True, "fichier protege : dit pourquoi")
     verifie((b.srv.racine / "autoexec.be").exists(), True, "apres 1 confirmation : le fichier est toujours la")
     clique(cdp, "boite-ok")
@@ -254,17 +241,21 @@ def scenario(m):
     # B2 : un autre onglet change de support ; la page suit, et un geste de l'ancienne vue est refuse par le serveur
     attend(cdp, "document.getElementById('fil').textContent==='/' && document.querySelectorAll('#lignes tr').length>0", 10)
     coche(cdp, "histo")
+    calme(cdp)                                                # sans sondage : le geste part forcement avec l'ancienne paire (sinon pas de 409)
     with tol:
         verifie(b.ouvre("flash")[0], 200, "autre onglet : POST /ouvre flash")
         clique(cdp, "b-supp")
         clique(cdp, "boite-ok")
         verifie(bool(attend(cdp, "document.getElementById('msg').textContent.indexOf('autre onglet') >= 0", 12)), True, "autre onglet : la page l'annonce")
-    verifie(bool(attend(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0", 12)), True, "autre onglet : pastille Flash")
+    verifie(tol.n >= 1, True, "autre onglet : le serveur a bien rendu un 409")
+    calme(cdp, False)
+    cdp.js("sonde(true)")
+    verifie(bool(attend_sonde(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0", 25)), True, "autre onglet : pastille Flash")
     verifie((b.srv.racine / "histo").is_dir(), True, "autre onglet : le geste de l'ancienne vue n'a rien supprime")
     verifie(cdp.js("document.querySelectorAll('#lignes tr input:checked').length"), 0, "autre onglet : aucune case restee cochee")
     # B5 : session fermee ailleurs -> bouton Rallumer
     verifie(b.json("POST", "/ferme", {})[0], 200, "autre onglet : /ferme")
-    verifie(bool(attend(cdp, "!!document.getElementById('msg-action')", 12)), True, "session perdue : bouton Rallumer propose")
+    verifie(bool(attend_sonde(cdp, "!!document.getElementById('msg-action')", 25)), True, "session perdue : bouton Rallumer propose")
     clique(cdp, "msg-action")
     verifie(bool(attend(cdp, "document.getElementById('pastille').getAttribute('data-etat')==='actif' && document.getElementById('pastille').textContent.indexOf('Flash')>=0", 12)),
             True, "Rallumer : la session repart sur le meme support")
@@ -284,26 +275,29 @@ def scenario(m):
 
     b.fichier("/perime.bin", b"xx")
     relit_racine()
-    # (1) copie figee seule : la boite reste ouverte (fermeture par le sondage coupee), la confirmation part quand meme avec l'ANCIENNE session
+    espionne(cdp)
+    # (1) copie figee seule : la boite reste ouverte (fermeture par le sondage coupee) ; le geste est mort (la session a change) : la confirmation n'envoie RIEN
     coche(cdp, "perime.bin")
     clique(cdp, "b-supp")
     cdp.js("S.fermeBoite = null")
     n0 = suppressions()
+    oublie(cdp)
     with tol:
         verifie(b.ouvre("flash")[0], 200, "boite perimee : l'autre onglet passe sur la flash")
-        verifie(bool(attend(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0", 12)), True, "boite perimee : le sondage a mis la page a jour")
+        verifie(bool(attend_sonde(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0", 25)), True, "boite perimee : le sondage a mis la page a jour")
         verifie(cdp.js("document.getElementById('boite').hidden"), False, "boite perimee : la boite est restee ouverte (fermeture coupee)")
         clique(cdp, "boite-ok")
-        verifie(bool(attend(cdp, "document.getElementById('msg').textContent.indexOf('autre onglet') >= 0", 12)), True, "boite perimee : la confirmation est refusee par le serveur (409)")
+        verifie(bool(attend(cdp, "document.getElementById('msg').textContent.indexOf('autre onglet') >= 0", 12)), True, "boite perimee : le message du sondage reste affiche apres la confirmation")
     verifie((b.srv.racine / "perime.bin").exists(), True, "boite perimee : le fichier est toujours la")
     verifie(suppressions(), n0, "boite perimee : aucune suppression ni ecriture recue par le faux serveur")
+    verifie(len(posts(cdp, "/supprime")), 0, "boite perimee : la page n'a envoye aucun POST /supprime (garde cote client : le serveur aurait refuse en 409 sans rien ecrire)")
     # (2) la boite se ferme d'elle-meme quand la session change
     attend(cdp, "document.querySelectorAll('#lignes tr[data-nom=\"perime.bin\"]').length===1", 10)
     coche(cdp, "perime.bin")
     clique(cdp, "b-supp")
     verifie(cdp.js("document.getElementById('boite').hidden"), False, "boite : ouverte sur la flash")
     verifie(b.ouvre("sd")[0], 200, "boite : l'autre onglet repasse sur la SD")
-    verifie(bool(attend(cdp, "document.getElementById('boite').hidden", 12)), True, "boite : fermee par le sondage quand la session change")
+    verifie(bool(attend_sonde(cdp, "document.getElementById('boite').hidden", 25)), True, "boite : fermee par le sondage quand la session change")
     clique(cdp, "boite-ok")
     time.sleep(0.5)
     verifie((b.srv.racine / "perime.bin").exists() and suppressions() == n0, True, "boite fermee : rien n'a ete supprime")
@@ -345,19 +339,29 @@ def scenario(m):
     verifie(b.ufsftp()[-1:], [0], "pagehide : le faux serveur a recu UfsFTP 0")
     verifie(b.session.etat()["etat"], "eteint", "pagehide : session eteinte")
 
-    # B3 (b) vraie fermeture d'un onglet (Target.closeTarget), 15 s, une reprise avec une session rouverte
+    # B3 (b) vraie fermeture d'un onglet (Target.closeTarget), 15 s, une reprise avec une session rouverte. Le FTP ne s'eteint qu'avec le DERNIER
+    # onglet : la page 1 (toujours ouverte) ne doit donc plus se signaler pendant cet essai, sinon elle garde la session allumee.
+    calme(cdp)
+    mon1 = ident(cdp)
     for essai in (1, 2, 3):
+        b.session.onglets.reinitialise()                   # la page 1 a pu se signaler avant `calme` : elle ne compte plus (cause du rouge intermittent d'avant)
         b.ouvre("sd")
         n0 = len(b.ufsftp())
         cible = cdp.appel("Target.createTarget", url=m.url)["targetId"]
         cdp.appel("Target.activateTarget", targetId=cible)
-        time.sleep(3)                                      # la page du nouvel onglet a charge /etat (session ouverte)
+        attend_vu = time.monotonic() + 15
+        while time.monotonic() < attend_vu and not vus(b):  # le nouvel onglet s'est signale (sa page a charge /etat) : condition observable, pas une duree
+            time.sleep(0.2)
+        b.session.onglets.ferme(mon1)                      # un sondage de la page 1 parti avant `calme` a pu arriver apres le reinitialise
         cdp.appel("Target.closeTarget", targetId=cible)
         attend_ufs(b, lambda u: len(u) > n0 and u[-1] == 0, 15)
         if len(b.ufsftp()) > n0 and b.ufsftp()[-1] == 0:
             break
     verifie(b.ufsftp()[-1:], [0], "fermeture reelle d'un onglet : UfsFTP 0 (essai %d)" % essai)
     verifie(b.session.etat()["etat"], "eteint", "fermeture reelle d'un onglet : session eteinte")
+
+    # A8 : identifiant d'onglet, deux pages, seconde confirmation du deplacement, paire env/support, mineurs de la page
+    scenario_onglets(m, tol)
 
 
 def main():

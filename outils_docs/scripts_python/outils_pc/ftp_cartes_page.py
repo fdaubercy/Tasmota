@@ -1,9 +1,10 @@
 """Page « Navigateur FTP des cartes » (ftp_cartes_web.py), modele A de la spec : explorateur a deux volets (arbre, tableau, actions).
 
 Tout ce qui vient de la carte (noms de fichiers, messages) est insere par textContent ou creation de noeuds, jamais par innerHTML.
-Aucune ressource externe. Le FTP de la carte s'allume au choix d'une carte et s'eteint a « Deconnecter » ou a la fermeture de l'onglet
-(pagehide + sendBeacon sur /ferme) ; le serveur compte aussi 15 min d'inactivite. La page sonde /etat toutes les 5 s pour que la pastille
-suive (fermeture par un autre onglet, inactivite, carte redemarree). Sonde : test_ftp_cartes_page_chrome.py.
+Aucune ressource externe. Le FTP de la carte s'allume au choix d'une carte et s'eteint a « Deconnecter » ou a la fermeture du DERNIER onglet
+(pagehide + sendBeacon sur /ferme avec l'identifiant de l'onglet) ; le serveur compte aussi 15 min d'inactivite et 90 s sans sondage d'onglet.
+La page sonde /etat?onglet= toutes les 5 s pour que la pastille suive (fermeture par un autre onglet, inactivite, carte redemarree) et pour
+se signaler. Sonde : test_ftp_cartes_page_chrome.py (+ _onglets.py).
 """
 import json
 
@@ -58,7 +59,7 @@ td button{background:none;border:0;color:var(--bleu);font:inherit;cursor:pointer
 
 HTML = """
 <main>
-<header><h1>Navigateur FTP des cartes</h1><span class="doux petit">Le FTP de la carte est allumé à la demande et éteint à la déconnexion ou à la fermeture de la page.</span>
+<header><h1>Navigateur FTP des cartes</h1><span class="doux petit">Le FTP de la carte est allumé à la demande et éteint à la déconnexion, à la fermeture du dernier onglet, ou après 90 s sans sondage.</span>
 <label class="theme"><span>Mode sombre</span><input type="checkbox" id="theme"><span class="interrupteur"></span></label></header>
 <div class="cadre">
 <div class="barre">
@@ -93,7 +94,9 @@ HTML = """
 JS = r"""
 var MAX_ENVOI = 16 * 1024 * 1024;
 var AUTRE = "Un autre onglet a changé de carte ou de support : l'affichage suit la nouvelle session.";
-var S = {etat: {env: "", support: "", etat: "eteint", message: "", sd: null}, derniere: null, cartes: [], dossier: "/", entrees: [], coches: {}, noeuds: {}, occupe: 0, ecrit: false, fermeBoite: null};
+var S = {etat: {env: "", support: "", etat: "eteint", message: "", sd: null}, derniere: null, cartes: [], dossier: "/", entrees: [], coches: {}, noeuds: {}, occupe: 0, ecrit: false, fermeBoite: null, gen: 0};
+// Identifiant de cet onglet (16 octets, hexadecimal minuscule) : le serveur n'eteint le FTP qu'avec le dernier onglet qui s'est signale.
+var ONGLET = (function () { var a = new Uint8Array(16); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); })();
 function $(id) { return document.getElementById(id); }
 function vide(n) { while (n.firstChild) n.removeChild(n.firstChild); }
 function el(tag, classe, texte) { var e = document.createElement(tag); if (classe) e.className = classe; if (texte != null) e.textContent = texte; return e; }
@@ -114,10 +117,29 @@ function envCourant() { return S.etat.env && S.etat.etat !== "eteint" ? S.etat.e
 function sess() { return {env: S.etat.env, support: S.etat.support}; }      // la session que la page affiche : le serveur refuse si elle a change
 // Un geste d'ecriture fige session, dossier, liste et selection AVANT son premier await (boite de confirmation comprise) : apres un sondage
 // qui a change S.etat, la requete part quand meme avec l'ancienne paire, donc le serveur rend un vrai 409.
-function fige() { return {env: S.etat.env, support: S.etat.support, dossier: S.dossier, entrees: S.entrees, selection: selection()}; }
+function fige() { return {env: S.etat.env, support: S.etat.support, dossier: S.dossier, entrees: S.entrees, selection: selection(), gen: S.gen}; }
+// Session fermee ou changee, ou geste de navigation (ouvrir, deconnecter) : la boite ouverte se ferme et le geste en cours est « mort » (`mort(cible)`).
+// Il s'arrete en tete de chaque tour de sa boucle et apres chaque boite : aucun POST d'ecriture ne part plus, rien n'est ecrit a l'ecran
+// (le sondage ou l'action en cours a deja mis la page et son message a jour). Un POST deja parti n'est pas rattrape.
+function abandonne() { S.gen++; if (S.fermeBoite) S.fermeBoite(null); }
+function mort(cible) { return cible.gen !== S.gen; }
+function progres(cible, texte) { if (!mort(cible)) msg(texte); }          // le message d'avancement n'ecrase pas celui du sondage
+// Fin d'un geste d'ecriture : relit le dossier puis dit le resultat, sauf si la session a change entre-temps.
+async function fini(cible, erreur, ok) {
+  if (mort(cible)) return;
+  if (erreur === AUTRE) { msg(AUTRE, true); return; }          // 409 « session a change » : le sondage force (traite409) refait les vues, pas de relecture sous l'ancien etat
+  await ouvreDossier(S.dossier);
+  if (mort(cible)) return;
+  if (erreur) msg(erreur, true); else msg(ok);
+}
 function sessDe(c) { return {env: c.env, support: c.support}; }
 function perimee(r) { return r.status === 409 && r.texte === AUTRE; }
 
+function traite409(r) {
+  if (r.status === 409 && /session a change/.test(r.texte)) { r.texte = AUTRE; setTimeout(sonde, 0, true); }
+  return r;
+}
+function etatServeur() { return api("GET", "/etat?onglet=" + ONGLET); }
 function api(methode, url, corps) {
   var o = {method: methode, headers: {}};
   if (methode === "POST") {
@@ -127,10 +149,7 @@ function api(methode, url, corps) {
     else o.body = "{}";
   }
   return fetch(url, o).then(function (r) { return r.text().then(function (t) { return {ok: r.ok, status: r.status, texte: t}; }); },
-    function (e) { return {ok: false, status: 0, texte: "Serveur de l'outil injoignable : " + e.message}; }).then(function (r) {
-    if (r.status === 409 && /session a change/.test(r.texte)) { r.texte = AUTRE; setTimeout(sonde, 0, true); }
-    return r;
-  });
+    function (e) { return {ok: false, status: 0, texte: "Serveur de l'outil injoignable : " + e.message}; }).then(traite409);
 }
 
 // ---- etat, pastille, boutons --------------------------------------------------------------------------------------
@@ -215,16 +234,16 @@ function ouvreDossier(chemin) {
 
 // ---- session ------------------------------------------------------------------------------------------------------
 function ouvrir(env, support, repli) {
-  msg(""); S.occupe++;
+  abandonne(); msg(""); S.occupe++;
   majEtat({env: env, support: support, etat: "allumage", message: "", sd: null});
-  return api("POST", "/ouvre", {env: env, support: support}).then(function (r) {
+  return api("POST", "/ouvre", {env: env, support: support, onglet: ONGLET}).then(function (r) {
     S.occupe--;
     if (r.ok) {
       var e = json(r);
-      if (!e || typeof e.etat !== "string") { msg("Réponse illisible du serveur à l'allumage.", true); return sonde(true); }
+      if (!e || typeof e.etat !== "string") { effaceVues(); msg("Réponse illisible du serveur à l'allumage.", true); return sonde(true); }
       majEtat(e); effaceVues(); return ouvreDossier("/");
     }
-    return api("GET", "/etat").then(function (x) {
+    return etatServeur().then(function (x) {
       var e = json(x);
       if (e) majEtat(e);
       if (e && support === "sd" && !repli && e.sd === false) return ouvrir(env, "flash", true);
@@ -233,8 +252,8 @@ function ouvrir(env, support, repli) {
   });
 }
 function deconnecter() {
-  S.occupe++;
-  return api("POST", "/ferme").then(function () { return api("GET", "/etat"); }).then(function (x) {
+  abandonne(); S.occupe++;
+  return api("POST", "/ferme").then(etatServeur).then(function (x) {                // sans `onglet` : ferme toujours, meme si un autre onglet est ouvert
     S.occupe--; var e = json(x); if (e) majEtat(e); effaceVues(); $("carte").value = ""; msg("");
   });
 }
@@ -243,11 +262,12 @@ function rallumer() {
   choisitCarte(d.env); ouvrir(d.env, d.support, true);
 }
 function sonde(force) {
-  if (S.occupe && !force) return;
-  api("GET", "/etat").then(function (x) {
-    var e = json(x); if (!e || S.occupe) return;
+  if (S.occupe && !force) { fetch("/etat?onglet=" + ONGLET).catch(function () {}); return; }      // un geste long (zip) suspend le sondage : l'onglet se signale quand meme
+  var gen = S.gen;
+  etatServeur().then(function (x) {
+    var e = json(x); if (!e || S.occupe || S.gen !== gen) return;    // reponse perimee : un ouvrir, un deconnecter ou un changement de session a eu lieu depuis la requete
     var avant = S.etat;
-    if (S.fermeBoite && (e.env !== avant.env || e.support !== avant.support || e.etat !== "actif")) S.fermeBoite(null);   // confirmation perimee : la session a change
+    if (e.env !== avant.env || e.support !== avant.support || e.etat !== "actif") abandonne();   // session changee : confirmation perimee, geste en cours abandonne
     majEtat(e);
     if (avant.etat === "actif" && e.etat !== "actif") {
       effaceVues();
@@ -296,13 +316,13 @@ function decrit(liste, cible) {                                             // c
   return noms.join(", ") + (liste.length > 5 ? " et " + (liste.length - 5) + " autres" : "");
 }
 async function zip() {
-  var liste = selection(); if (!liste.length) return;
-  var une = liste.length === 1 && S.entrees.some(function (e) { return e.type === "fichier" && joint(S.dossier, e.nom) === liste[0]; });
-  if (une) { telecharge("/telecharge?chemin=" + encodeURIComponent(liste[0]), nomDe(liste[0])); return; }
+  var cible = fige(), liste = cible.selection; if (!liste.length) return;
+  var une = liste.length === 1 && cible.entrees.some(function (e) { return e.type === "fichier" && joint(cible.dossier, e.nom) === liste[0]; });
+  if (une) { telecharge("/telecharge?chemin=" + encodeURIComponent(liste[0]) + "&env=" + encodeURIComponent(cible.env) + "&support=" + encodeURIComponent(cible.support), nomDe(liste[0])); return; }
   S.occupe++;
   try {
-    var r = await fetch("/zip", {method: "POST", headers: {"X-Ftp-Cartes": "1", "Content-Type": "application/json"}, body: JSON.stringify(Object.assign({chemins: liste}, sess()))});
-    if (!r.ok) { msg(await r.text(), true); return; }
+    var r = await fetch("/zip", {method: "POST", headers: {"X-Ftp-Cartes": "1", "Content-Type": "application/json"}, body: JSON.stringify(Object.assign({chemins: liste}, sessDe(cible)))});
+    if (!r.ok) { msg(traite409({status: r.status, texte: await r.text()}).texte, true); return; }
     var u = URL.createObjectURL(await r.blob());
     telecharge(u, "carte.zip"); setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
   } catch (e) { msg("Zip impossible : " + e.message, true); } finally { S.occupe--; }
@@ -311,22 +331,34 @@ function envoie(fichiers) {
   return ecrit(async function () {
     var cible = fige(), n = fichiers.length, faits = 0, erreur = "";
     for (var i = 0; i < n; i++) {
+      if (mort(cible)) return;
       var f = fichiers[i];
       if (f.size > MAX_ENVOI) { erreur = "« " + f.name + " » dépasse 16 Mo : refusé avant tout envoi."; continue; }
-      msg("Envoi de « " + f.name + " » (" + (i + 1) + "/" + n + ")…");
       var url = "/envoie?dossier=" + encodeURIComponent(cible.dossier) + "&nom=" + encodeURIComponent(f.name) + "&env=" + encodeURIComponent(cible.env) + "&support=" + cible.support + "&ecraser=";
-      var r = await api("POST", url + "0", f);
-      if (r.status === 409 && /existe deja/.test(r.texte)) {
-        if (!await demande("« " + f.name + " » existe déjà dans " + cible.dossier + " : l'écraser ?", null, "Écraser")) continue;
+      var question = "« " + f.name + " » existe déjà dans " + cible.dossier + " : l'écraser ?";
+      // Deja dans la liste affichee : on demande AVANT d'envoyer le corps (un fichier de 16 Mo ne part qu'une fois). Absent de la liste (perimee) : repli sur le 409 de la carte.
+      var ecraser = cible.entrees.some(function (e) { return e.type === "fichier" && e.nom === f.name; });
+      if (ecraser && !await demande(question, null, "Écraser")) { if (mort(cible)) return; continue; }
+      progres(cible, "Envoi de « " + f.name + " » (" + (i + 1) + "/" + n + ")…");
+      var r = await api("POST", url + (ecraser ? "1" : "0"), f);
+      if (!ecraser && r.status === 409 && /existe deja/.test(r.texte)) {
+        if (!await demande(question, null, "Écraser")) { if (mort(cible)) return; continue; }
         r = await api("POST", url + "1", f);
       }
       if (r.ok) faits++; else erreur = r.texte;
       if (perimee(r)) break;                                          // session changee : on n'insiste pas fichier apres fichier
     }
-    $("fichier").value = "";
-    await ouvreDossier(S.dossier);
-    if (erreur) msg(erreur, true); else msg("Envoyé : " + faits + " fichier(s).");
+    await fini(cible, erreur, faits ? "Envoyé : " + faits + " fichier(s)." : "Aucun fichier envoyé.");
   });
+}
+// Suppression ou deplacement d'un element : sur le refus « seconde confirmation » du serveur (fichier protege, ou dossier qui en contient un : la page ne devine
+// rien, elle suit le 409), on redemande puis on renvoie avec confirmations: 2. Rend {r} (reponse finale) ou {r, annule} si l'utilisateur renonce.
+async function geste(route, corps, cible, verbe, vers) {
+  var nom = nomDe(corps.chemin || corps.source), r = await api("POST", route, Object.assign({}, corps, {confirmations: 1}, sessDe(cible)));
+  if (r.status !== 409 || !/seconde confirmation/.test(r.texte)) return {r: r};
+  if (!await demande("« " + nom + " » est protégé : fichier de configuration de la carte (démarrage ou réglages), ou dossier qui en contient un. Seconde confirmation : le " + verbe + " vraiment" + vers + " ?",
+    null, verbe.charAt(0).toUpperCase() + verbe.slice(1) + " quand même") || mort(cible)) return {r: r, annule: true};
+  return {r: await api("POST", route, Object.assign({}, corps, {confirmations: 2}, sessDe(cible)))};
 }
 function supprime() {
   return ecrit(async function () {
@@ -334,21 +366,14 @@ function supprime() {
     if (!await demande("Supprimer de la carte : " + decrit(liste, cible) + " ? Action irréversible.", null, "Supprimer")) return;
     var erreur = "", annule = "";
     for (var i = 0; i < liste.length; i++) {
-      var chemin = liste[i], n = 1;
-      msg("Suppression (" + (i + 1) + "/" + liste.length + ")…");
-      for (;;) {
-        var r = await api("POST", "/supprime", Object.assign({chemin: chemin, confirmations: n}, sessDe(cible)));
-        if (r.status === 409 && /seconde confirmation/.test(r.texte) && n < 2) {
-          if (!await demande("« " + nomDe(chemin) + " » est un fichier protégé : fichier de configuration de la carte (démarrage ou réglages). Seconde confirmation : le supprimer vraiment ?", null, "Supprimer quand même")) { annule = "Suppression annulée : " + nomDe(chemin); break; }
-          n = 2; continue;
-        }
-        if (!r.ok) erreur = r.texte;
-        break;
-      }
-      if (perimee(r)) break;                                          // session changee : plus rien n'est envoye
+      if (mort(cible)) return;
+      progres(cible, "Suppression (" + (i + 1) + "/" + liste.length + ")…");
+      var g = await geste("/supprime", {chemin: liste[i]}, cible, "supprimer", "");
+      if (g.annule) { if (mort(cible)) return; annule = "Suppression annulée : " + nomDe(liste[i]); }
+      else if (!g.r.ok) erreur = g.r.texte;
+      if (perimee(g.r)) break;                                        // session changee : plus rien n'est envoye
     }
-    await ouvreDossier(S.dossier);
-    if (erreur) msg(erreur, true); else msg(annule || "Supprimé.");
+    await fini(cible, erreur, annule || "Supprimé.");
   });
 }
 function deplace(renomme) {
@@ -360,14 +385,15 @@ function deplace(renomme) {
     var cibles = liste.map(function (c) { return renomme ? joint(dossierParent(c), saisie) : joint(saisie, nomDe(c)); });
     var pris = cibles.filter(function (t) { return dossierParent(t) === cible.dossier && cible.entrees.some(function (e) { return e.nom === nomDe(t); }); });
     if (pris.length) { msg("« " + nomDe(pris[0]) + " » existe déjà dans " + cible.dossier + " : rien n'est déplacé (pas d'écrasement).", true); return; }
-    var erreur = "";
+    var erreur = "", annule = "";
     for (var i = 0; i < liste.length; i++) {
-      msg((renomme ? "Renommage" : "Déplacement") + " (" + (i + 1) + "/" + liste.length + ")…");
-      var r = await api("POST", "/deplace", Object.assign({source: liste[i], cible: cibles[i]}, sessDe(cible)));
-      if (!r.ok) { erreur = r.texte; break; }                         // y compris session changee : on s'arrete au premier refus
+      if (mort(cible)) return;
+      progres(cible, (renomme ? "Renommage" : "Déplacement") + " (" + (i + 1) + "/" + liste.length + ")…");
+      var g = await geste("/deplace", {source: liste[i], cible: cibles[i]}, cible, renomme ? "renommer" : "déplacer", renomme ? " en « " + saisie + " »" : " vers " + saisie);
+      if (g.annule) { if (mort(cible)) return; annule = (renomme ? "Renommage" : "Déplacement") + " annulé : " + nomDe(liste[i]); break; }
+      if (!g.r.ok) { erreur = g.r.texte; break; }                     // y compris session changee ou cible existante : on s'arrete au premier refus
     }
-    await ouvreDossier(S.dossier);
-    if (erreur) msg(erreur, true); else msg(renomme ? "Renommé." : "Déplacé.");
+    await fini(cible, erreur, annule || (renomme ? "Renommé." : "Déplacé."));
   });
 }
 function nouveauDossier() {
@@ -377,8 +403,7 @@ function nouveauDossier() {
     if (!nom) return;
     if (/[\/\\]/.test(nom)) { msg("Un nom ne contient ni / ni \\.", true); return; }
     var r = await api("POST", "/dossier", Object.assign({chemin: joint(cible.dossier, nom)}, sessDe(cible)));
-    await ouvreDossier(S.dossier);
-    if (r.ok) msg("Dossier créé."); else msg(r.texte, true);
+    await fini(cible, r.ok ? "" : r.texte, "Dossier créé.");
   });
 }
 function bascule(support) {
@@ -403,12 +428,13 @@ $("tout").onchange = function () {
 };
 $("b-zip").onclick = zip;
 $("b-env").onclick = function () { $("fichier").click(); };
-$("fichier").onchange = function () { envoie(Array.prototype.slice.call(this.files)); };
+$("fichier").onchange = function () { var l = Array.prototype.slice.call(this.files); this.value = ""; envoie(l); };   // champ vide des le depart : re-choisir le meme fichier redeclenche change
 $("b-dos").onclick = nouveauDossier;
 $("b-dep").onclick = function () { deplace(false); };
 $("b-ren").onclick = function () { deplace(true); };
 $("b-supp").onclick = supprime;
-window.addEventListener("pagehide", function () { try { navigator.sendBeacon("/ferme", new Blob(["{}"], {type: "text/plain"})); } catch (e) {} });
+// Fermeture de CETTE page : le serveur n'eteint le FTP que si c'etait le dernier onglet (la reponse n'est pas lue : un autre onglet peut le garder allume).
+window.addEventListener("pagehide", function () { try { navigator.sendBeacon("/ferme", new Blob([JSON.stringify({onglet: ONGLET})], {type: "text/plain"})); } catch (e) {} });
 
 initArbre();
 api("GET", "/cartes").then(function (r) {
@@ -416,13 +442,13 @@ api("GET", "/cartes").then(function (r) {
   if (!d) { msg("Liste des cartes indisponible : " + r.texte, true); return null; }
   S.cartes = d.cartes; remplitLieux(); remplitCartes("");
   if (!d.cartes.length) msg("Aucune carte joignable par FTP (voir « exclues » de /cartes).", true);
-  return api("GET", "/etat");
+  return etatServeur();
 }).then(function (r) {
   var e = r && json(r); if (!e) return;
   majEtat(e);
   if (e.etat === "actif") { choisitCarte(e.env); ouvreDossier("/"); }
 });
-setInterval(sonde, 5000);
+setInterval(function () { sonde(); }, 5000);                        // `sonde` relue a chaque tour : la sonde Chrome peut la neutraliser
 """
 
 THEME_TETE = ("<script>(function () { var t = null; try { t = localStorage.getItem('ftp-theme'); } catch (e) {}"

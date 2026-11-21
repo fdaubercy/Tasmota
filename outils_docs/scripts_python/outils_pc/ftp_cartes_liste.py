@@ -8,9 +8,13 @@ qu'on ne sait pas evaluer autour de USE_FTP.
 Les identifiants FTP (USER_FTP / PW_FTP) ne sortent que par `identifiants()`, appelee par la session FTP : `liste()`
 n'en renvoie aucun. Spec : docs/superpowers/specs/2026-11-20-navigateur-ftp-cartes-design.md §8 et §9.
 Banc : test_ftp_cartes_liste.py.
+
+`liste()` est mise en cache par racine : valable tant que les fichiers qu'elle lit (ini des envs, user_config_override.h,
+persist des cartes) gardent (chemin, date, taille) ; `prechauffe()` la calcule en fond au demarrage de l'outil.
 """
 import json
 import re
+import threading
 from pathlib import Path
 
 import build_envs
@@ -168,8 +172,8 @@ def _parcourt(texte_h, firmware):
 
 def est_esclave_rgx(persist):
     """True si le persist declare la carte esclave d'un Range Extender (activation ON, id >= 1, ipMaitre), False sinon,
-    None si le persist est absent ou illisible. Lecture `strict=False` : les persist du P4 et de la cuve ont un
-    caractere de controle dans une chaine. NE PAS remplacer par build_envs.adresse_par_maitre (strict, et un persist
+    None si le persist est absent ou illisible. Lecture `strict=False` : tolerante aux caracteres de controle
+    dans une chaine (aucun persist du depot n'en porte au 2026-11-21). NE PAS remplacer par build_envs.adresse_par_maitre (strict, et un persist
     illisible y donne « pas esclave », l'inverse de la regle voulue)."""
     try:
         d = json.loads(Path(persist).read_text(encoding="utf-8"), strict=False)
@@ -214,7 +218,7 @@ def _hote(persist):
         return ""
 
 
-def liste(racine):
+def _calcule(racine):
     """{"cartes": [{env, lieu, nom, hote, adresse, puce, firmware}], "exclues": [{env, raison}]}. Sans identifiants."""
     racine = Path(racine)
     texte_h = _lit_h(racine)
@@ -250,3 +254,46 @@ def liste(racine):
         cartes.append({"env": e.nom, "lieu": lieux.lieu(e.nom), "nom": e.nom, "hote": hote, "adresse": adresse,
                        "puce": puce, "firmware": e.firmware})
     return {"cartes": cartes, "exclues": exclues}
+
+
+_CACHE, _VERROU = {}, threading.Lock()     # shortcut: un verrou pour toutes les racines (l'outil n'en sert qu'une), a scinder sinon
+
+
+def _cle(racine):
+    """Empreinte des fichiers que _calcule lit : (chemin, date ns, taille), None si absent. Un fichier ajoute, retire ou
+    modifie change la cle. Pas de delai fixe."""
+    chemins = [racine / f for f in build_envs.FICHIERS_INI] + [racine / "tasmota" / "user_config_override.h"]
+    chemins += sorted(racine.glob("data/*/*/_persist.json"))
+    cle = []
+    for c in chemins:
+        try:
+            s = c.stat()
+            cle.append((str(c), s.st_mtime_ns, s.st_size))
+        except OSError:
+            cle.append((str(c), None, None))
+    return tuple(cle)
+
+
+def liste(racine):
+    """Comme _calcule, mais rend le meme objet tant que _cle ne change pas (a ne pas modifier par l'appelant). La cle est
+    prise AVANT le calcul : un fichier modifie pendant le calcul force un recalcul au prochain appel."""
+    racine = Path(racine)
+    with _VERROU:                  # un appel simultane attend le calcul en cours au lieu de le refaire
+        cle = _cle(racine)
+        memo = _CACHE.get(racine)
+        if memo is None or memo[0] != cle:
+            memo = _CACHE[racine] = (cle, _calcule(racine))
+        return memo[1]
+
+
+def prechauffe(racine):
+    """Fil daemon qui remplit le cache (la premiere ouverture de la page n'attend pas ~1 s a 4 s). Une erreur est
+    ignoree ici : la vraie requete la rencontrera et la montrera."""
+    def travail():
+        try:
+            liste(racine)
+        except Exception:
+            pass
+    fil = threading.Thread(target=travail, daemon=True)
+    fil.start()
+    return fil

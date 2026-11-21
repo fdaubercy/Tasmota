@@ -46,7 +46,8 @@ SANS_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # 12
 TAILLE_MAX = 64 * 1024
 MSG_SYNCHRO = "Une operation de synchro est en cours : arret refuse"
 # Refus d'arret propre a l'outil (route_occupe repond en_cours) ; a defaut, celui de la synchro.
-MSG_OCCUPE = {"build": "Un lancement de build est en cours : arret refuse"}
+MSG_OCCUPE = {"build": "Un lancement de build est en cours : arret refuse",
+             "ftp_cartes": "Une session FTP est ouverte : deconnectez d'abord la carte dans la page de l'outil"}
 MSG_ARRET = "Arret non confirme : le processus vit encore"
 
 

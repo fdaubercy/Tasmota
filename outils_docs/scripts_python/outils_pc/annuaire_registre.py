@@ -220,14 +220,17 @@ OUTILS = [
         "Parcourt les fichiers d'une carte (Flash ou SD) par FTP : récupère, envoie, range et supprime, le FTP de la carte n'étant allumé que le temps du besoin.",
         "Page web à deux volets (les cartes du parc, puis les fichiers de la Flash ou de la SD) : télécharger un fichier ou un zip, envoyer un fichier, "
         "créer un dossier, déplacer, supprimer. Le FTP de la carte est allumé à la demande (UfsFTP) puis éteint : bouton Déconnecter, autre carte, "
-        "fermeture de la page, 15 min sans action ou arrêt de l'outil. Les esclaves du Range Extender n'y figurent pas (leur FTP n'est pas joignable). "
+        "fermeture de la dernière page ouverte, 15 min sans action ou arrêt de l'outil. Les esclaves du Range Extender n'y figurent pas (leur FTP n'est pas joignable). "
         "Cet outil ÉCRIT sur les cartes, depuis ce PC seulement : un fichier protégé (autoexec.be, autoexec.bat, _persist.json, .bec, .drvset*, dossiers /sd et "
-        "/json) demande deux confirmations pour être supprimé. Seul paramètre ici : le port de la page (7450). Rien n'est écrit dans le dépôt. "
-        "Arrêter l'outil par le bouton de l'annuaire coupe son processus sans lui laisser éteindre le FTP de la carte : cliquer d'abord sur Déconnecter.",
+        "/json, ou un dossier qui en contient un) demande deux confirmations pour être supprimé ou déplacé. Seul paramètre ici : le port de la page (7450). "
+        "Rien n'est écrit dans le dépôt. Pour l'arrêter : bouton Arrêter de l'annuaire (refusé tant qu'une session FTP est ouverte), ou Ctrl+C dans son terminal.",
         DOSSIER + "outils_pc/ftp_cartes_web.py",
         [_port("http", 7450)],
         "http",
-        "Console capturée : " + CONSOLE.format("ftp_cartes") + "."),
+        "Console capturée : " + CONSOLE.format("ftp_cartes") + ".",
+        dans_job=False, route_occupe="/execution",
+        arret_refuse="Tant qu'une session FTP est ouverte (l'outil le signale par /execution), l'arrêt est refusé : le FTP de la carte resterait allumé. "
+                     "Cliquer d'abord sur Déconnecter dans la page de l'outil."),
     Outil(
         "atelier_graphiques", "Atelier des graphiques", "Atelier des graphiques", GROUPES[4],
         "Compose les pages de graphiques des cartes S3/P4 et écrit leur description dans le dépôt.",

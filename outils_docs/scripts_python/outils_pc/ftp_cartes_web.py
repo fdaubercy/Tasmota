@@ -5,24 +5,29 @@ UTILISATION
     Regle d'acces : acces_web.py (ce PC sans jeton, autre appareil avec le jeton du lien de la console).
 
 Le FTP de la carte est allume a la demande (`UfsFTP`, ftp_cartes_session.py) et eteint a chaque fin de session : « Deconnecter », changement
-de carte, fermeture de la page (sendBeacon sur /ferme), 15 min sans action (fil d'horloge ci-dessous), arret de l'outil (atexit).
-Les identifiants FTP restent cote serveur : jamais dans une reponse.
+de carte, fermeture de la DERNIERE page (sendBeacon sur /ferme ; registre d'onglets, ftp_cartes_onglets.py), onglet disparu sans le dire
+(90 s sans sondage), 15 min sans action (fil d'horloge ci-dessous), arret de l'outil (atexit).
+Les identifiants FTP restent cote serveur : jamais dans une reponse. Refus : texte brut (text/plain), jamais du JSON.
 
 Routes (client de ce PC : Host local, parade au DNS rebinding ; les POST exigent l'en-tete X-Ftp-Cartes: 1 et la meme origine) :
     GET  /                       la page
     GET  /cartes                 ftp_cartes_liste.liste : {cartes, exclues}
-    GET  /etat                   {env, support, etat, message, sd}
+    GET  /etat[?onglet=<id>]     {env, support, etat, message, sd} ; avec `onglet` : la page se signale (sondage de la page)
+    GET  /execution              {en_cours: bool} : vrai tant que le FTP d'une carte est allume (l'annuaire refuse alors d'arreter l'outil)
     GET  /liste?chemin=          {chemin, entrees: [{nom, type, taille, date}]}
-    GET  /telecharge?chemin=     le fichier, en piece jointe
-    POST /ouvre {env, support}   allume le FTP de la carte (ce PC seulement) ; deja ouvert sur ce support : l'etat, sans reconnexion
-    POST /ferme {}               eteint le FTP ; SEULE route sans l'en-tete X (sendBeacon ne peut pas le poser), origine verifiee
-    POST /zip {chemins}          zip des fichiers et dossiers demandes
+    GET  /telecharge?chemin=[&env=&support=]   le fichier, en piece jointe
+    POST /ouvre {env, support[, onglet]}   allume le FTP de la carte (ce PC seulement) ; deja ouvert sur ce support : l'etat, sans reconnexion
+    POST /ferme {[onglet]}       SEULE route sans l'en-tete X (sendBeacon ne peut pas le poser), origine verifiee. Avec un `onglet` valide
+                                 (16 a 32 hexadecimaux) : n'eteint le FTP que si c'etait le dernier onglet ; sans identifiant (« Deconnecter »),
+                                 corps absent, vide ou illisible : eteint toujours. Repond l'etat.
+    POST /zip {chemins[, env, support]}   zip des fichiers et dossiers demandes
     POST /envoie?dossier=&nom=&ecraser=0|1   corps brut, 16 Mo au plus (413 avant toute ecriture) ; ce PC seulement
-    POST /supprime {chemin, confirmations}   ce PC seulement
-    Gestes de la page (/envoie, /supprime, /dossier, /deplace, /zip) : {env, support} facultatifs (parametres de requete pour /envoie) ;
-    s'ils different de la session (autre onglet qui a change de carte ou de support) : 409, rien n'est ecrit.
+    POST /supprime {chemin, confirmations}   ce PC seulement ; un fichier protege ou un dossier qui en contient un : 2 confirmations
+    Gestes de la page (/envoie, /supprime, /dossier, /deplace, /zip, /telecharge) : {env, support} facultatifs (parametres de requete pour
+    /envoie et /telecharge) ; s'ils different de la session (autre onglet qui a change de carte ou de support) : 409, rien n'est ecrit.
     POST /dossier {chemin}                   ce PC seulement
-    POST /deplace {source, cible}            ce PC seulement
+    POST /deplace {source, cible[, confirmations]}   ce PC seulement ; confirmations entier (400 sinon), 1 par defaut ; 2 pour un fichier
+                                 protege (source ou cible) ou un dossier qui en contient un ; cible deja existante : 409
 Refus : 400 (saisie, chemin), 403 (acces), 404 (carte ou route inconnue), 409 (refus de la session ou de la carte), 413, 500 (inattendu).
 Tout autre verbe : 405. Banc : test_ftp_cartes_web.py.
 """
@@ -157,14 +162,17 @@ def fabrique_gestionnaire(acces, racine, session):
             elif chemin == "/cartes":
                 self._json(ftp_cartes_liste.liste(racine))
             elif chemin == "/etat":
+                session.onglets.vu(q.get("onglet"))                  # sondage de la page : l'onglet est vivant (identifiant invalide ignore)
                 self._json(session.etat())
+            elif chemin == "/execution":
+                self._json({"en_cours": session.en_session()})       # lu par l'annuaire (annuaire_outils.route_occupee) avant un arret
             elif chemin == "/liste":
                 dossier = q.get("chemin", "/")
                 self._json({"chemin": dossier, "entrees": session.liste(dossier)})
             elif chemin == "/telecharge":
                 cible = q.get("chemin", "")
                 with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024) as tmp:
-                    session.lit(cible, tmp)
+                    session.lit(cible, tmp, self._attendu(q))
                     self._fichier(tmp, cible.rstrip("/").rsplit("/", 1)[-1] or "carte", "application/octet-stream")
             else:
                 self._envoie(404, b"introuvable")
@@ -200,6 +208,21 @@ def fabrique_gestionnaire(acces, racine, session):
             ni ici ni avant, une ouverture de carte en cours pourrait encore changer la session entre le controle et le geste."""
             return (src.get("env"), src.get("support"))
 
+        @staticmethod
+        def _confirmations(d, defaut):
+            n = d.get("confirmations", defaut)
+            if not isinstance(n, int) or isinstance(n, bool):
+                raise ValueError("confirmations : entier attendu")
+            return n
+
+        @staticmethod
+        def _onglet(brut):
+            """Identifiant d'onglet du corps de /ferme ; corps vide, illisible ou sans identifiant valide : None (on ferme comme avant)."""
+            try:
+                return _corps_json(brut).get("onglet")
+            except (ValueError, RecursionError):      # corps tres imbrique : illisible, on ferme comme avant
+                return None
+
         def _post(self, chemin, q):
             if chemin == "/envoie":
                 brut = self._lit_corps(MAX_ENVOI)
@@ -210,8 +233,8 @@ def fabrique_gestionnaire(acces, racine, session):
             brut = self._lit_corps(MAX_CORPS)
             if brut is None:
                 return
-            if chemin == "/ferme":                                   # le corps du beacon est ignore
-                self._json(session.ferme("page fermee"))
+            if chemin == "/ferme":
+                self._json(session.ferme_onglet(self._onglet(brut)))
                 return
             d = _corps_json(brut)
             if chemin == "/ouvre":
@@ -224,16 +247,13 @@ def fabrique_gestionnaire(acces, racine, session):
                     session.zip(chemins, tmp, self._attendu(d))
                     self._fichier(tmp, "carte.zip", "application/zip")
             elif chemin == "/supprime":
-                confirmations = d.get("confirmations", 0)
-                if not isinstance(confirmations, int) or isinstance(confirmations, bool):
-                    raise ValueError("confirmations : entier attendu")
-                session.supprime(d.get("chemin"), confirmations, self._attendu(d))
+                session.supprime(d.get("chemin"), self._confirmations(d, 0), self._attendu(d))
                 self._json({"message": "supprime"})
             elif chemin == "/dossier":
                 session.cree_dossier(d.get("chemin"), self._attendu(d))
                 self._json({"message": "dossier cree"})
             elif chemin == "/deplace":
-                session.deplace(d.get("source"), d.get("cible"), self._attendu(d))
+                session.deplace(d.get("source"), d.get("cible"), self._attendu(d), confirmations=self._confirmations(d, 1))
                 self._json({"message": "deplace"})
             else:
                 self._envoie(404, b"introuvable")
@@ -243,7 +263,7 @@ def fabrique_gestionnaire(acces, racine, session):
             carte = next((c for c in ftp_cartes_liste.liste(racine)["cartes"] if c["env"] == env), None)
             if carte is None:
                 raise LookupError("carte inconnue ou non joignable par FTP : %s" % env)
-            return session.ouvre_ou_reprend(carte, support)          # deuxieme onglet ou POST simultane : aucune reconnexion
+            return session.ouvre_ou_reprend(carte, support, d.get("onglet"))   # deuxieme onglet ou POST simultane : aucune reconnexion
 
         def _non(self):
             self._refuse(405, b"methode non permise")
@@ -266,6 +286,7 @@ def principal():
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
         return 1
     serveur.daemon_threads = True
+    ftp_cartes_liste.prechauffe(DEPOT)                          # la premiere liste de /cartes ne se calcule pas a l'ouverture de la page
     atexit.register(session.ferme, "arret de l'outil")          # filet : le FTP de la carte ne reste jamais allume
     arret = threading.Event()
 

@@ -310,6 +310,14 @@ def section_route_occupee(banc, git):
         verifie(banc.post("/arrete", {"id": "build"}), (409, {"erreur": "Un lancement de build est en cours : arret refuse"}),
                 "POST /arrete build en plein lancement -> 409, message du build (pas de la synchro)")
         verifie(banc.arrets, [], "409 build : rien arrete")
+        dossier = vide_presence()                       # A8 : le navigateur FTP en session refuse l'arret, avec SON message
+        ecrit_fiche(dossier, "Navigateur FTP des cartes", faux.server_address[1], os.getpid())
+        del banc.arrets[:]
+        verifie(banc.post("/arrete", {"id": "ftp_cartes"}), (409, {"erreur": ann.MSG_OCCUPE["ftp_cartes"]}),
+                "POST /arrete ftp_cartes en session (en_cours true) -> 409, message du FTP (pas de la synchro)")
+        verifie(banc.arrets, [], "409 ftp_cartes : rien arrete")
+        FauxSynchro.reponse = b'{"en_cours": false}'
+        verifie(banc.post("/arrete", {"id": "ftp_cartes"})[0], 200, "TEMOIN ftp_cartes hors session (en_cours false) -> 200")
     finally:
         faux.shutdown()
         faux.server_close()
