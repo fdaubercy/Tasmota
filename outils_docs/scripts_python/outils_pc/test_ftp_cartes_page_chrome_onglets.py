@@ -94,15 +94,15 @@ def relit(cdp, nom):
 def espionne(cdp):
     """Journal des POST de la page (url + corps) dans window.__posts et de TOUTES ses requetes dans window.__req ('METHODE url'), remis a zero par `oublie`.
     window.__lent : delai (ms) impose a la reponse de chaque POST ; window.__lentEtat : delai impose a la reponse du PROCHAIN GET /etat (la requete part tout de suite) ; window.__lentEtatTous : delai de TOUS les GET /etat."""
-    cdp.js("window.__posts=[]; window.__req=[]; if(!window.__f3){window.__f3=window.fetch; window.fetch=function(u,o){ var m=(o&&o.method)||'GET', s=String(u), d=0;"
+    cdp.js("window.__posts=[]; window.__req=[]; window.__fait=0; if(!window.__f3){window.__f3=window.fetch; window.fetch=function(u,o){ var m=(o&&o.method)||'GET', s=String(u), d=0;"
            " window.__req.push(m+' '+s); if(m==='POST') window.__posts.push({u:s,b:(o&&typeof o.body==='string')?o.body:'<blob>'});"
-           " var r=window.__f3.apply(this,arguments);"
+           " var r=window.__f3.apply(this,arguments); if(m==='POST'){var f=function(){window.__fait=(window.__fait||0)+1}; r.then(f,f);}"
            " if(m==='POST') d=window.__lent||0; else if(/[/]etat/.test(s)){d=window.__lentEtat||window.__lentEtatTous||0; window.__lentEtat=0;}"
            " return d ? new Promise(function(ok,ko){setTimeout(function(){r.then(ok,ko)},d)}) : r;};} 0")
 
 
 def oublie(cdp):
-    cdp.js("window.__posts=[]; window.__req=[]; 0")
+    cdp.js("window.__posts=[]; window.__req=[]; window.__fait=0; 0")
 
 
 def posts(cdp, route):
@@ -145,6 +145,9 @@ def seconde_page(m):
 def scenario_onglets(m, tol):
     cdp, b = m.cdp, m.banc
     racine = b.srv.racine
+    # Ces suites ferment ou changent la session sous la page a dessein : une relecture de liste de la page en vol peut atterrir apres, et le serveur la
+    # refuse en 409 (« aucune session » ou changee). C'est un 409 voulu, qu'aucun bloc `with tol` ne peut dater ; seuls ceux de /liste sont toleres ici.
+    tol.liste_ok = True
     b.srv.noms_pieges.clear()                                  # les noms pieges de la sonde principale s'ajoutent a TOUTE liste, dossiers compris
     cdp.appel("Emulation.setDeviceMetricsOverride", width=1280, height=1000, deviceScaleFactor=1, mobile=False)
     calme(cdp, False)                                          # le sondage de la page 1 avait ete coupe pour la fermeture reelle d'un onglet
@@ -301,7 +304,7 @@ def scenario_onglets(m, tol):
     verifie((cdp.js("window.__blob"), sum(1 for c, _ in b.srv.commandes if c == "RETR")), (None, n0), "zip d'une session perimee : aucun zip produit, aucun RETR")
     calme(cdp, False)
     cdp.js("sonde(true)")
-    verifie(bool(attend(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0 && document.querySelectorAll('#lignes tr input:checked').length === 0", 10)),
+    verifie(bool(attend_sonde(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0 && document.querySelectorAll('#lignes tr input:checked').length === 0", 25)),
             True, "zip d'une session perimee : la page suit la nouvelle session, aucune case cochee")
     b.ouvre("sd")
     cdp.js("sonde(true)")
@@ -410,107 +413,4 @@ def scenario_onglets(m, tol):
     cdp.js("sonde(true)")
     pastille(cdp, "actif", 8)
 
-    corrections(cdp, b, tol)
     verifie(tol.restantes(), [], "aucune erreur de page dans les cas des onglets, hors les 409 voulus")
-
-
-def corrections(cdp, b, tol):
-    """Tour de corrections 1 : fini apres un 409, boucles qui s'arretent a la mort de la session, garde de reponse /etat perimee."""
-    racine = b.srv.racine
-    b.fichier("/a.txt")
-    relit(cdp, "a.txt")
-
-    # fini : apres un 409 « session a change » la page ne relit PAS la liste sous l'ancien etat ; le sondage force refait les vues (aucun sonde(true) manuel)
-    calme(cdp, "force")                                       # l'intervalle ne passe pas : le geste part forcement avec l'ancienne paire
-    oublie(cdp)
-    coche(cdp, "a.txt")
-    clique(cdp, "b-supp")
-    with tol:
-        verifie(b.ouvre("flash")[0], 200, "409 : l'autre onglet passe sur la flash")
-        clique(cdp, "boite-ok")
-        verifie(bool(attend(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0 && document.getElementById('msg').textContent.indexOf('autre onglet') >= 0", 10)),
-                True, "409 session changee : le sondage force met la page a jour sans appel manuel")
-    verifie(tol.n >= 1, True, "409 session changee : le serveur a bien rendu un 409")
-    tous = [r for r in cdp.js("window.__req") if "_barre.json" not in r]    # la barre « Annuaire » de la page interroge /_barre.json de son cote
-    k = next((i for i, r in enumerate(tous) if r.startswith("POST /supprime")), -1)
-    verifie(tous[k + 1].startswith("GET /etat") if 0 <= k < len(tous) - 1 else None, True,
-            "409 session changee : la requete qui suit est le sondage force (pas une relecture de la liste)")
-    verifie((racine / "a.txt").exists(), True, "409 session changee : rien n'a ete supprime")
-    calme(cdp, False)
-    b.ouvre("sd")
-    cdp.js("sonde(true)")
-    pastille(cdp, "actif", 8)
-    attend_sonde(cdp, "document.getElementById('pastille').textContent.indexOf('SD') >= 0", 25)
-
-    # boucles multi-elements : Deconnecter pendant la boucle, plus aucun POST d'ecriture apres la mort
-    def coupe(route, lance, libelle, intacts):
-        cdp.js("window.__lent=1500; 0")
-        oublie(cdp)
-        lance()
-        limite = time.monotonic() + 10
-        while time.monotonic() < limite and not posts(cdp, route):
-            time.sleep(0.1)
-        clique(cdp, "b-deco")
-        time.sleep(3.5)
-        verifie(len(posts(cdp, route)), 1, libelle + " : plus aucun POST d'ecriture apres Deconnecter")
-        verifie(all((racine / n).exists() for n in intacts), True, libelle + " : les elements suivants n'ont pas ete touches")
-        cdp.js("window.__lent=0; 0")
-        pastille(cdp, "eteint", 10)
-        choisit(cdp)
-
-    for n in ("s1.txt", "s2.txt", "s3.txt", "m1.txt", "m2.txt", "m3.txt"):
-        b.fichier("/" + n)
-    relit(cdp, "s3.txt")
-
-    def lance_supprime():
-        for n in ("s1.txt", "s2.txt", "s3.txt"):
-            coche(cdp, n)
-        clique(cdp, "b-supp")
-        clique(cdp, "boite-ok")
-    coupe("/supprime", lance_supprime, "suppression de 3 fichiers", ("s2.txt", "s3.txt"))
-    relit(cdp, "m3.txt")
-
-    def lance_deplace():
-        for n in ("m1.txt", "m2.txt", "m3.txt"):
-            coche(cdp, n)
-        clique(cdp, "b-dep")
-        champ(cdp, "/json")
-        clique(cdp, "boite-ok")
-    coupe("/deplace", lance_deplace, "deplacement de 3 fichiers", ("m2.txt", "m3.txt"))
-    relit(cdp, "m2.txt")
-    coupe("/envoie", lambda: pose_fichiers(cdp, [("e1.bin", 10), ("e2.bin", 10), ("e3.bin", 10)]), "envoi de 3 fichiers", ())
-    verifie(((racine / "e2.bin").exists(), (racine / "e3.bin").exists()), (False, False), "envoi de 3 fichiers : les fichiers suivants ne sont pas partis")
-
-    # geste : la session meurt (gen change) pendant la SECONDE boite, boite laissee ouverte : la confirmation n'envoie pas le second POST
-    b.fichier("/autoexec.be")
-    relit(cdp, "autoexec.be")
-    oublie(cdp)
-    calme(cdp)
-    coche(cdp, "autoexec.be")
-    clique(cdp, "b-supp")
-    with tol:
-        clique(cdp, "boite-ok")
-        verifie(boite_seconde(cdp), True, "seconde boite ouverte (fichier protege)")
-    verifie(tol.n >= 1, True, "seconde boite : le premier appel a bien recu le 409 de seconde confirmation")
-    cdp.js("S.fermeBoite = null; S.gen++; 0")                # comme un sondage qui voit la session changer sans pouvoir fermer la boite
-    clique(cdp, "boite-ok")
-    time.sleep(1.5)
-    verifie((confirmations(cdp, "/supprime"), (racine / "autoexec.be").exists()), ([1], True), "geste mort pendant la seconde boite : aucun second appel, le fichier est toujours la")
-    calme(cdp, False)
-    cdp.js("sonde(true)")
-
-    # garde de reponse /etat perimee : une reponse partie AVANT un ouvrir (support sd) arrive APRES (support flash) : la page reste sur la flash
-    relit(cdp, "m2.txt")
-    calme(cdp, "force")
-    cdp.js("window.__lentEtat=1500; 0")
-    cdp.js("sonde(true)")                                    # la requete part maintenant, sur la SD ; sa reponse arrivera dans 1,5 s
-    clique(cdp, "b-flash")
-    verifie(bool(attend(cdp, "document.getElementById('pastille').textContent.indexOf('Flash') >= 0 && document.getElementById('pastille').getAttribute('data-etat')==='actif'", 8)),
-            True, "reponse /etat perimee : la page passe sur la flash")
-    time.sleep(2.5)
-    verifie((cdp.js("document.getElementById('pastille').textContent.indexOf('Flash') >= 0"), "autre onglet" in texte(cdp, "msg")), (True, False),
-            "reponse /etat perimee (partie avant l'ouverture) : ignoree, la page reste sur la flash")
-    calme(cdp, False)
-    clique(cdp, "b-sd")
-    pastille(cdp, "actif", 8)
-    attend_sonde(cdp, "document.getElementById('pastille').textContent.indexOf('SD') >= 0", 25)

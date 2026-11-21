@@ -28,6 +28,7 @@ import ftp_cartes_page as page_mod                                              
 import test_ftp_cartes_web as banc_web                                              # noqa: E402
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre      # noqa: E402
 from test_ftp_cartes_page_chrome_onglets import attend_sonde, attend_ufs, calme, clique, coche, espionne, ident, noms, oublie, pose_fichiers, posts, scenario_onglets, vus   # noqa: E402
+from test_ftp_cartes_page_chrome_corrections import corrections   # noqa: E402
 
 ECHECS = []
 HOSTILE = "<img src=x onerror=window.__pwn=1>.txt"
@@ -88,7 +89,7 @@ class Montage:
 class Tolere:
     """Les 409 voulus sont des lignes du journal reseau de Chrome : on ne tolere que ceux apparus pendant un bloc annonce."""
     def __init__(self, cdp):
-        self.cdp, self.ok, self.debut, self.n = cdp, set(), 0, 0      # n : 409 apparus pendant le dernier bloc (un 409 voulu qui n'arrive pas est un echec)
+        self.cdp, self.ok, self.debut, self.n, self.liste_ok = cdp, set(), 0, 0, False      # n : 409 apparus pendant le dernier bloc (un 409 voulu qui n'arrive pas est un echec)
 
     def __enter__(self):
         time.sleep(0.3)
@@ -110,7 +111,7 @@ class Tolere:
                 self.n += 1
 
     def restantes(self):
-        return [e for i, e in enumerate(self.cdp.erreurs()) if i not in self.ok]
+        return [e for i, e in enumerate(self.cdp.erreurs()) if i not in self.ok and not (self.liste_ok and "409" in e and "/liste" in e)]
 
 
 def scenario(m):
@@ -278,8 +279,10 @@ def scenario(m):
     espionne(cdp)
     # (1) copie figee seule : la boite reste ouverte (fermeture par le sondage coupee) ; le geste est mort (la session a change) : la confirmation n'envoie RIEN
     coche(cdp, "perime.bin")
-    clique(cdp, "b-supp")
-    cdp.js("S.fermeBoite = null")
+    # Pas de tick de 5 s (seuls les sondages forces passent) et clic + coupure de la fermeture dans UNE evaluation : un sondage en vol ne peut plus
+    # fermer la boite entre le clic et `S.fermeBoite = null` (cause du rouge intermittent « la boite est restee ouverte »).
+    calme(cdp, "force")
+    cdp.js("document.getElementById('b-supp').click(); S.fermeBoite = null; 0")
     n0 = suppressions()
     oublie(cdp)
     with tol:
@@ -289,6 +292,7 @@ def scenario(m):
         clique(cdp, "boite-ok")
         verifie(bool(attend(cdp, "document.getElementById('msg').textContent.indexOf('autre onglet') >= 0", 12)), True, "boite perimee : le message du sondage reste affiche apres la confirmation")
     verifie((b.srv.racine / "perime.bin").exists(), True, "boite perimee : le fichier est toujours la")
+    calme(cdp, False)
     verifie(suppressions(), n0, "boite perimee : aucune suppression ni ecriture recue par le faux serveur")
     verifie(len(posts(cdp, "/supprime")), 0, "boite perimee : la page n'a envoye aucun POST /supprime (garde cote client : le serveur aurait refuse en 409 sans rien ecrire)")
     # (2) la boite se ferme d'elle-meme quand la session change
@@ -362,6 +366,7 @@ def scenario(m):
 
     # A8 : identifiant d'onglet, deux pages, seconde confirmation du deplacement, paire env/support, mineurs de la page
     scenario_onglets(m, tol)
+    corrections(cdp, b, tol)
 
 
 def main():
