@@ -179,7 +179,7 @@ Meme outil, meme decision (2026-10-25, exception acceptee par l'utilisateur plut
 d'un envoi au Ctrl+C, OTA, pause « rebranchez la carte » ; la couper separerait un etat partage sous le meme
 verrou), et ses bancs `test_build_serie.py` (**1532**, +152 jusqu'au 2026-11-14 : cas des reparations de build ; +44 le 2026-11-13 : case « Publier les fiches QR »), `test_build_page_chrome.py` (**1103**),
 `test_build_ota_fs.py` (**925**, +78 le 2026-11-09 : place, fichiers identiques, remplacement, A17), `test_build_web.py` (**865**, +38 le 2026-11-14 : routes des reparations ; +30 le 2026-11-15 : IA et case `ia_auto`), `test_atelier_graphiques_page_chrome.py` (**773**, sonde de la page de l'atelier, +28 le 2026-11-11 : arrivee par ?lieu= ; +5 le 2026-11-08 : lien « Envoyer par la page Build » et liste vide,
-decision du 2026-11-05), `berry/banc_graphiques.py` (**571**, banc de la page /graphiques, decision du 2026-11-06), ainsi que `test_annuaire.py` (**524**,
+decision du 2026-11-05), `berry/banc_graphiques.py` (**571**, banc de la page /graphiques, decision du 2026-11-06), ainsi que `test_annuaire.py` (**535**,
 banc de l'annuaire) : un banc par module, chaque test lisible seul. Ne pas les decouper pour satisfaire le
 compteur.
 
@@ -188,6 +188,10 @@ compteur.
 « Appliquer un lot », l'annulation et le resume des renvois ; son bloc « Rapports sauvegardes » vit deja dans `menage_page_rapports.py`). Page
 unique de l'outil « Menage du depot » (HTML + CSS + JS dans des constantes servies par `menage_web.py`) ; le banc suit les gestes d'ecriture
 (application, retour en arriere, mutants) un a un, chaque cas lisible seul. Ne pas les decouper pour satisfaire le compteur.
+
+`outils_docs/scripts_python/outils_pc/test_annuaire.py` fait **535 lignes** (banc de l'annuaire, un cas lisible seul) et `test_ftp_cartes_web.py`
+**521** (banc du serveur du navigateur FTP des cartes : un cas par geste), et c'est **voulu** (decide le 2026-11-21 : exceptions plutot qu'un
+decoupage). Ne pas les decouper pour satisfaire le compteur.
 
 ## MONTER UN NOUVEAU POSTE
 
@@ -779,6 +783,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     est arrete (`acces_repli.py`, `/sw.js`, contexte securise seulement) ; routes publiques sans secret. Sondes
     `test_acces_repli_chrome.py` (installabilite jugee par Chrome, repli, barre) et `test_annuaire_lieux_chrome.py` (etat
     memorise) ; banc REEL `test_jeton_reel.py` (annuaire isole 17600 + vrai outil Build 17700, requetes depuis l'adresse reseau).
+  - `sonde_hermetique.py` (banc `test_sonde_hermetique.py`, 2026-11-21) : aide des sondes Chrome dont la page est habillee par `acces_web.habille()` :
+    `neutralise_barre()` coupe la barre commune (fiches de presence reelles, requete vers la vraie page Build :7700) et rend `restaure()`. Appelee par 7 sondes
+    (`test_acces_repli_chrome.py`, `test_atelier_visuels_page_chrome.py`, `test_cartes_simulees_page_chrome.py`, `test_icones_catalogue_page_chrome.py`, `test_sondes_page_chrome.py`, `test_plan_maison_page_chrome.py`, `test_taches_planifiees_page_chrome.py`) ;
+    les autres sondes d'une page habillee sont deja hermetiques par un `OUTILS_TASMOTA_DOSSIER` temporaire.
   - `test_rs485_pc.py` — test du bus ModBus depuis le PC par un convertisseur USB-RS485
     (Waveshare CH343) : ecoute du bus, envoi brut, lecture/commande de la carte 16 relais,
     recherche de son debit, emulation de la carte (pour tester le maitre P4 sans elle).
@@ -1102,14 +1110,15 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `NOM_CIBLE` icones_catalogue). Glyphes MDI du firmware (`outils_docs/schemas/icones_firmware.json`, police locale), usages relevés dans `ecran.json`, `pages.jsonl` et les `.be`,
     PNG de `data/` et `outils_docs/atelier_ecrans/images/`, sources de `ICONES_IMAGES_SOURCES.md`, codes absents du firmware. Bancs `test_icones_catalogue.py` (18 mutants),
     `test_icones_catalogue_web.py`, sonde `test_icones_catalogue_page_chrome.py`, `build/test_cible_icones_catalogue.py`. Mode d'emploi : `outils_docs/README.md` § « Catalogue d'icônes (page web) ».
-  - `ftp_cartes_web.py` (+ `ftp_cartes_liste.py`, `ftp_cartes_session.py`, `ftp_cartes_page.py`, `build/cible_ftp_cartes.py`) : page « Navigateur FTP des cartes » http://127.0.0.1:7450
+  - `ftp_cartes_web.py` (+ `ftp_cartes_liste.py`, `ftp_cartes_session.py`, `ftp_cartes_onglets.py`, `ftp_cartes_page.py`, `build/cible_ftp_cartes.py`) : page « Navigateur FTP des cartes » http://127.0.0.1:7450
     (2026-11-21, plan `tasks/plans/navigateur-ftp-cartes.md`, spec `docs/superpowers/specs/2026-11-20-navigateur-ftp-cartes-design.md` ; tuile de l'annuaire, groupe Configuration des cartes ;
     tâche VS Code ; cible Custom détachée, `NOM_CIBLE` ftp_cartes). Parcourt les fichiers de la Flash ou de la SD d'une carte par FTP : téléchargement (zip compris), envoi, dossier, déplacement,
-    suppression. ÉCRIT sur les cartes, depuis ce PC seulement, jamais dans le dépôt ; fichiers protégés (`autoexec.be`, `_persist.json`, `.bec`, `.drvset*`, `/sd`, `/json`) : deux confirmations.
-    Le FTP de la carte est allumé à la demande (`UfsFTP`) et éteint à la fin de session (Déconnecter, autre carte, fermeture de l'onglet, 15 min sans action, arrêt de l'outil) ;
-    persist `serveur.serveurFTP.activation` à `OFF` (les 14 persist de cartes du dépôt) et filet `data/fs/globalFonctions.be::regleFTP`. Esclaves du Range Extender absents (FTP injoignable).
-    Arrêt libre mais brutal : l'annuaire tue le processus (`taskkill /T /F`), `atexit` ne passe pas et le FTP de la carte reste allumé (cliquer « Déconnecter » avant). Rien essayé sur une vraie
-    carte (plan A7). Bancs `test_ftp_cartes_liste.py`, `test_ftp_cartes_session.py` (lent), `test_ftp_cartes_web.py`, sonde `test_ftp_cartes_page_chrome.py`, faux serveur `faux_ftp_carte.py`,
+    suppression. ÉCRIT sur les cartes, depuis ce PC seulement, jamais dans le dépôt ; fichiers protégés (`autoexec.be`, `_persist.json`, `.bec`, `.drvset*`, `/sd`, `/json`, ou un dossier qui en contient un) : deux confirmations pour les supprimer ET pour les déplacer.
+    Le FTP de la carte est allumé à la demande (`UfsFTP`) et éteint à la fin de session (Déconnecter, autre carte, fermeture du DERNIER onglet, 15 min sans action, arrêt de l'outil) ;
+    chaque onglet a un identifiant (`ftp_cartes_onglets.py`, sondage `GET /etat?onglet=`, `sendBeacon` sur `/ferme`) et un onglet disparu sans le dire est oublié après 90 s ; `/zip` et `/telecharge` portent la paire env/support (409 si la session a changé) ; liste `GET /cartes` en cache, préchauffée ;
+    persist `serveur.serveurFTP.activation` à `OFF` (les 15 persist du dépôt qui portent le bloc) et filet `data/fs/globalFonctions.be::regleFTP`. Esclaves du Range Extender absents (FTP injoignable).
+    Outil lancé HORS du job de l'annuaire (`dans_job=False`, `route_occupe="/execution"`) : « Arrêter » est REFUSÉ pendant une session ouverte (cliquer « Déconnecter » d'abord) ; un arrêt brutal hors annuaire laisse le FTP allumé (`atexit` ne passe pas). Rien essayé sur une vraie
+    carte (plan A7). Bancs `test_ftp_cartes_liste.py`, `test_ftp_cartes_session.py` (lent), `test_ftp_cartes_session_garde.py`, `test_ftp_cartes_onglets.py`, `test_ftp_cartes_web.py`, sonde `test_ftp_cartes_page_chrome.py` (appelle `test_ftp_cartes_page_chrome_onglets.py` et `_corrections.py`), faux serveur `faux_ftp_carte.py`,
     `build/test_cible_ftp_cartes.py`. Mode d'emploi : `outils_docs/README.md` § « Navigateur FTP des cartes (page web) ».
   - `taches_planifiees_web.py` (+ `taches_planifiees_page.py`, `_page_gestes.py`, `_github.py`, `_pc.py`, `_sante.py`, `_gestes.py`, `_actions.py`, `build/cible_taches_planifiees.py`) — page « Tâches planifiées » http://127.0.0.1:7920 (2026-11-15, plan `tasks/plans/compilations-nuit.md` ; tuile de l'annuaire, groupe Déploiement ; tâche VS Code ; cible Custom détachée, `NOM_CIBLE` taches_planifiees). Montre et pilote les compilations de nuit des envs perso, voie PC et voie GitHub : bandeau de santé recalculé à chaque ouverture (permissions, état du workflow, âge du dernier run planifié, car `actions/permissions` dit `enabled: true` même quand GitHub a désactivé le fork), gestes `POST /geste` (activer, heure, envs, lancer, arrêter ; jamais depuis un autre appareil, `X-Taches: 1`, un geste à la fois par verrou, lancer et arrêter en deux clics). Arrêter la voie PC arrête la série en cours de la page Build **même lancée à la main**. Bancs `test_taches_planifiees_{web,gestes,post}.py` (faux `gh`, faux `schtasks`, fausse page Build, dépôt temporaire), sonde `test_taches_planifiees_page_chrome.py` (hermétique, 5 témoins), `build/test_cible_taches_planifiees.py`. Mode d'emploi : `outils_docs/README.md` § « Compilations de nuit et tâches planifiées ».
   - `maintenance/compilation_nuit.py` (+ `compilation_nuit_tache.py`, `matrice_github.py`) — compilation de nuit (2026-11-15) : le script pilote la page Build (:7700, « compiler » seul, refus si un build ou un autre `compilation_nuit.py` tourne, verrou `en_cours.json`, bilan de SA série seulement) ; `compilation_nuit_tache.py` gère la tâche Windows `Tasmota-CompilationNuit` (créée **désactivée**, 02:00, sans réveil ni rattrapage) ; `matrice_github.py` calcule la matrice du workflow `.github/workflows/build_custom.yml` (cenv moins `outils_docs/compilations_nuit/envs_github.json`, fichier écrit, commité et poussé par le bouton de la page, qui refuse si des commits sont non poussés ou en retard). Résultats dans `%LOCALAPPDATA%\outils_tasmota\compilations_nuit\`. Bancs `test_compilation_nuit.py`, `test_compilation_nuit_tache.py`, `test_matrice_github.py` (mutants).

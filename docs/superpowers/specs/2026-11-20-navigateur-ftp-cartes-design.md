@@ -27,6 +27,10 @@ Ranger = déplacer ou renommer dans un même support (commandes FTP `RNFR`/`RNTO
 | Esclaves du Range Extender | Exclus : ni listés, ni joints, aucune redirection NAPT posée |
 | Construction | Outil PC Python du modèle des autres pages (façon n°1 ci-dessous) |
 
+Décisions du 2026-11-21 (§7 et §9) : déplacer un fichier protégé demande aussi une seconde confirmation ; le FTP ne
+s'éteint à la fermeture d'une page qu'avec le DERNIER onglet ouvert ; l'annuaire refuse d'arrêter l'outil pendant une
+session ouverte.
+
 ## 3. Buts, non-buts, anti-buts
 
 Buts : choisir une carte, parcourir la flash ou la SD, télécharger (fichier, sélection ou dossier en zip), envoyer
@@ -112,7 +116,7 @@ conversation, modèle A retenu).
 3. Fin de session, dans tous les cas suivants, `UfsFTP 0` est envoyé :
    - clic « Déconnecter » ;
    - choix d'une autre carte ;
-   - page fermée (`pagehide` + `navigator.sendBeacon`) ;
+   - dernière page fermée (`pagehide` + `navigator.sendBeacon` sur `POST /ferme`, voir le registre d'onglets ci-dessous) ;
    - 15 minutes sans action, décomptées par le serveur PC (pas par le navigateur) ;
    - arrêt de l'outil (arrêt normal et `atexit`).
 4. Filet : si l'outil meurt sans prévenir, le persist à `"OFF"` coupe le FTP au prochain redémarrage ou à la prochaine
@@ -122,6 +126,19 @@ conversation, modèle A retenu).
 
 Une seule carte active à la fois par instance de l'outil. Toutes les opérations FTP vers la carte passent par un
 verrou (le serveur de la carte n'accepte qu'un client).
+
+Registre d'onglets (`ftp_cartes_onglets.py`, décidé le 2026-11-21) : chaque page tire un identifiant de 16 à 32 caractères
+hexadécimaux et le joint à chaque sondage (`GET /etat?onglet=`, toutes les 5 s) et à l'ouverture (`POST /ouvre`). Le
+`sendBeacon` de `pagehide` poste `/ferme` avec cet identifiant : le serveur n'envoie `UfsFTP 0` que si aucun autre onglet
+n'est enregistré. Un onglet qui disparaît sans prévenir (plantage, veille) est oublié après 90 s sans sondage, et `tic()`
+éteint alors le FTP si c'était le dernier (90 s et non 15 s : Chrome ralentit à une fois par minute les minuteries d'un
+onglet caché). « Déconnecter » poste `/ferme` sans identifiant et ferme toujours, même avec d'autres onglets. Une session
+ouverte sans identifiant (client ancien, `curl`) n'est jamais « perdue » : seule l'inactivité la ferme.
+
+Arrêt de l'outil par l'annuaire : l'outil est lancé hors du job de l'annuaire (`dans_job=False`) et répond `GET /execution`
+(`{"en_cours": true}` tant que le FTP d'une carte est allumé) ; l'annuaire refuse alors « Arrêter » (« Déconnecter »
+d'abord). Hors session, l'arrêt ne laisse rien d'allumé. Un arrêt brutal par un autre moyen (`atexit` ne passe pas) laisse
+le FTP allumé : le filet du persist (point 4) reste le seul recours.
 
 Le serveur de la carte déconnecte un client resté 5 minutes sans commande (`ESPFtpServer.h`, `FTP_TIME_OUT 5`), ce
 qui n'éteint pas le serveur FTP. La session `ftplib` est donc rouverte sans bruit à l'opération suivante si elle est
@@ -135,17 +152,20 @@ Une carte apparaît si, et seulement si :
 - son env est de la famille « cartes » (`build_envs.liste_envs`) et sa puce est ESP32, S3 ou P4 ;
 - la section `#elif defined(FIRMWARE_...)` de son env dans `user_config_override.h` ne retire pas `USE_FTP` ;
 - elle n'est PAS esclave du Range Extender. Un persist illisible exclut la carte (on ne joint jamais une carte dont
-  on ne sait pas si elle est derrière un NAPT). Attention : les persist du P4 et de la cuve échouent à `json.loads`
-  strict (caractère de contrôle). `build_envs.adresse_par_maitre` ne convient PAS : elle lit en strict et rend « pas
-  esclave » sur un persist illisible, l'inverse de la règle voulue. L'outil a son propre lecteur (`strict=False`,
-  illisible = exclu) dans `ftp_cartes_liste.py` ; `build_envs.py` n'est pas modifié (il sert la page Build). Le banc
-  vérifie que la cuve réelle est exclue.
+  on ne sait pas si elle est derrière un NAPT). Le lecteur doit tolérer les caractères de contrôle dans une chaîne
+  (`strict=False`) : aucun persist du dépôt n'en porte au 2026-11-21 (les 16 se lisent en JSON strict, la première
+  affirmation de cette note, tenue pour vraie le 2026-11-20, était fausse), mais un persist de carte peut en recevoir un.
+  `build_envs.adresse_par_maitre` ne convenait PAS à l'origine : elle rendait « pas esclave » sur un persist illisible,
+  l'inverse de la règle voulue ; elle lit aussi en `strict=False` depuis le 2026-11-21. L'outil a son propre lecteur
+  (`strict=False`, illisible = exclu) dans `ftp_cartes_liste.py`. Le banc vérifie que la cuve réelle est exclue.
 - Contrôle de `USE_FTP` par env : lecture des sections du `.h` comme `outils_pc/autoexec_gardes.py` et
   `build/verifie_lib_ignore.py` (macros d'un env), pas une liste figée. Doute sur la lecture = carte exclue.
 
 Adresse : l'IP propre du `.h` si elle existe, sinon `<Hostname>.local` (mDNS résolu par ce PC depuis le 2026-11-13).
 Une carte sans IP dont le nom `.local` ne se résout pas reste listée ; l'erreur s'affiche à l'allumage.
-La liste est recalculée à chaque ouverture de la page.
+La liste est recalculée à chaque ouverture de la page, mais mise en cache : la clé est `(chemin, mtime_ns, taille)` des
+fichiers lus (ini, `user_config_override.h`, persist), la liste est préchauffée au démarrage de l'outil et ne se recalcule
+que si l'un d'eux a changé (décidé le 2026-11-21).
 
 ## 9. Sécurité
 
@@ -158,7 +178,16 @@ La liste est recalculée à chaque ouverture de la page.
 - Confirmations :
   - toute suppression et tout écrasement demandent une confirmation ;
   - une seconde confirmation est demandée pour `autoexec.be`, `autoexec.bat`, `_persist.json`, `*.bec`, `.drvset*`,
-    et pour la suppression des dossiers `/sd` et `/json` entiers.
+    et pour la suppression des dossiers `/sd` et `/json` entiers, SANS tenir compte de la casse (la SD est en FAT) ;
+  - la même seconde confirmation vaut pour DÉPLACER un de ces fichiers, `/sd` ou `/json` entiers compris (source ou cible protégée) et pour supprimer ou
+    déplacer un dossier qui en contient un, à n'importe quelle profondeur (parcours borné, limite atteinte = deux
+    confirmations) : le serveur répond 409 (« seconde confirmation ») et la page redemande ; `POST /deplace` et
+    `POST /supprime` portent `confirmations` (entier, 400 sinon) ;
+  - un déplacement vers une cible existante est refusé (409), jamais écrasé.
+- Les gestes de la page (dont `/zip` et `/telecharge`) portent la paire `env`/`support` ; si elle diffère de la session
+  (un autre onglet a changé de carte ou de support) : 409 « la session a changé », rien n'est écrit.
+- Le serveur n'envoie jamais le message brut d'une exception inattendue (il pourrait citer un mot de passe) : le type
+  seul.
 - Chemins reçus de la page validés côté serveur (pas de `..`, pas de caractère de contrôle, longueur bornée).
 - Téléchargements : flux direct vers le navigateur ; zip construit en mémoire ou en fichier temporaire hors dépôt.
   Rien n'est écrit dans le dépôt.
