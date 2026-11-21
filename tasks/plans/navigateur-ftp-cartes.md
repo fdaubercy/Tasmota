@@ -4,7 +4,7 @@ titre: Navigateur FTP des cartes (page de l'annuaire, FTP allumé à la demande)
 objectif: Parcourir, télécharger, envoyer, ranger et supprimer les fichiers d'une carte par FTP depuis une page de l'annuaire, le FTP n'étant allumé que le temps de la session
 statut: actif
 cree: 2026-11-20
-maj: 2026-11-20 (A2 faite)
+maj: 2026-11-21 (A4 faite)
 famille: methode
 liens: menage-page, cartes-simulees
 spec: 2026-11-20-navigateur-ftp-cartes-design.md
@@ -97,27 +97,27 @@ Interfaces produites :
 `valide_chemin(chemin: str) -> str` (ValueError) ; `protege(chemin: str) -> bool`.
 Erreurs métier : `class RefusFtp(Exception)` (message lisible, code HTTP 409 côté web).
 
-- [ ] Faux serveur `outils_pc/faux_ftp_carte.py` (pour les bancs) : `socketserver`, dossier temporaire, un seul client, PASV seul sur un port choisi, commandes `USER PASS PWD CWD TYPE PASV MLSD LIST RETR STOR DELE MKD RMD RNFR RNTO NOOP QUIT`, option `coupe_apres(n)` pour simuler une carte perdue ; faux `commande(ip, cmnd, delai)` qui journalise les `UfsFTP n`
-- [ ] Banc `outils_pc/test_ftp_cartes_session.py`, cas rouges d'abord :
-  - [ ] `cas_ouvre` : `ouvre(carte, "sd")` envoie `UfsFTP 1`, `"flash"` envoie `UfsFTP 2` ; `etat()["etat"] == "actif"`
-  - [ ] `cas_sd_inconnue` : `Ufs` sans réponse → `etat()["sd"] is None` ; `ouvre(..., "sd")` lève `RefusFtp` (jamais la flash sous l'étiquette SD)
-  - [ ] `cas_ferme_toujours` : `ferme()` envoie `UfsFTP 0` même si `quit()` FTP lève ; idem après `ouvre` d'une autre carte (l'ancienne reçoit `UfsFTP 0` avant que la nouvelle reçoive `UfsFTP 1`)
-  - [ ] `cas_inactivite` : horloge avancée de 899 s → `tic()` ne ferme pas ; 901 s → `UfsFTP 0`, raison « inactivite »
-  - [ ] `cas_reconnexion` : client FTP coupé par la carte (timeout 5 min simulé) → `liste()` rouvre la session une fois sans `UfsFTP` supplémentaire et réussit
-  - [ ] `cas_carte_perdue` : `coupe_apres(1)` + reconnexion impossible → `RefusFtp` lisible, `etat()["etat"] == "erreur"`
-  - [ ] `cas_chemins` : `valide_chemin` refuse `..`, `\x00`, `\n`, plus de 255 caractères ; accepte `/histo/mesures-2026-11.bin`
-  - [ ] `cas_protege` : `supprime("/autoexec.be", 1)` lève `RefusFtp` ; `supprime("/autoexec.be", 2)` supprime ; idem `/sd` et `/json` ; `/histo/x.bin` avec 1 confirmation supprime
-  - [ ] `cas_noms_speciaux` : `mesures 2026#é.bin` listé, lu, supprimé
-  - [ ] `cas_zip` : `zip(["/histo"])` contient les fichiers du dossier avec leurs chemins relatifs et leurs octets exacts
-  - [ ] `cas_place` : `Ufs` donne une place libre inférieure à la taille du flux → `RefusFtp` avant tout `STOR` ; place inconnue → envoi tenté
-  - [ ] `cas_ecrasement` : `envoie(..., ecraser=False)` sur un nom existant lève `RefusFtp` ; `ecraser=True` remplace
-  - [ ] `cas_deplace` : `deplace("/histo/a.bin", "/archives/a.bin")` (dossier existant) déplace
-  - [ ] `cas_mot_de_passe` : aucune valeur rendue par `etat()` ni message de `RefusFtp` ne contient le mot de passe
-- [ ] Lancer le banc : rouge
-- [ ] `ouvre` refuse une `adresse` qui ne correspond pas à `^[A-Za-z0-9.-]+$` (nom d'hôte venu du persist, remarque de la relecture de A2), cas `cas_adresse_invalide` du banc
-- [ ] Écrire `ftp_cartes_session.py` : un `threading.Lock` autour de toute opération FTP ; `mlsd()` avec repli `LIST` ; attente du port 21 par `socket.create_connection` répétée jusqu'à 10 s ; `ftplib` garde l'hôte du contrôle pour les données (adresse PASV ignorée, défaut de `ftplib`)
-- [ ] Banc vert, sortie collée en preuve ; témoin : supprimer l'envoi de `UfsFTP 0` dans `ferme` fait rougir `cas_ferme_toujours`
-- [ ] `relecteur-outils-python` sur les deux fichiers, remarques traitées ; `controleur-secrets` lu, commit `feat(ftp): session FTP allumee a la demande`
+- [x] Faux serveur `outils_pc/faux_ftp_carte.py` (pour les bancs) : `socketserver`, dossier temporaire, un seul client, PASV seul sur un port choisi, commandes `USER PASS PWD CWD TYPE PASV MLSD LIST RETR STOR DELE MKD RMD RNFR RNTO NOOP QUIT`, option `coupe_apres(n)` pour simuler une carte perdue ; faux `commande(ip, cmnd, delai)` qui journalise les `UfsFTP n` — preuve : faux_ftp_carte.py (265 lignes), commit `1aedba758`
+- [x] Banc `outils_pc/test_ftp_cartes_session.py`, cas rouges d'abord : — preuve : 22 cas (dont `cas_supprime_detours`, `cas_noms_hostiles`, `cas_ouvre_refus_eteint`, `cas_allumage_delai`, `cas_concurrence` ajoutés à la relecture), 131 OK
+  - [x] `cas_ouvre` : `ouvre(carte, "sd")` envoie `UfsFTP 1`, `"flash"` envoie `UfsFTP 2` ; `etat()["etat"] == "actif"`
+  - [x] `cas_sd_inconnue` : `Ufs` sans réponse → `etat()["sd"] is None` ; `ouvre(..., "sd")` lève `RefusFtp` (jamais la flash sous l'étiquette SD)
+  - [x] `cas_ferme_toujours` : `ferme()` envoie `UfsFTP 0` même si `quit()` FTP lève ; idem après `ouvre` d'une autre carte (l'ancienne reçoit `UfsFTP 0` avant que la nouvelle reçoive `UfsFTP 1`)
+  - [x] `cas_inactivite` : horloge avancée de 899 s → `tic()` ne ferme pas ; 901 s → `UfsFTP 0`, raison « inactivite »
+  - [x] `cas_reconnexion` : client FTP coupé par la carte (timeout 5 min simulé) → `liste()` rouvre la session une fois sans `UfsFTP` supplémentaire et réussit
+  - [x] `cas_carte_perdue` : `coupe_apres(1)` + reconnexion impossible → `RefusFtp` lisible, `etat()["etat"] == "erreur"`
+  - [x] `cas_chemins` : `valide_chemin` refuse `..`, `\x00`, `\n`, plus de 255 caractères ; accepte `/histo/mesures-2026-11.bin`
+  - [x] `cas_protege` : `supprime("/autoexec.be", 1)` lève `RefusFtp` ; `supprime("/autoexec.be", 2)` supprime ; idem `/sd` et `/json` ; `/histo/x.bin` avec 1 confirmation supprime
+  - [x] `cas_noms_speciaux` : `mesures 2026#é.bin` listé, lu, supprimé
+  - [x] `cas_zip` : `zip(["/histo"])` contient les fichiers du dossier avec leurs chemins relatifs et leurs octets exacts
+  - [x] `cas_place` : `Ufs` donne une place libre inférieure à la taille du flux → `RefusFtp` avant tout `STOR` ; place inconnue → envoi tenté
+  - [x] `cas_ecrasement` : `envoie(..., ecraser=False)` sur un nom existant lève `RefusFtp` ; `ecraser=True` remplace
+  - [x] `cas_deplace` : `deplace("/histo/a.bin", "/archives/a.bin")` (dossier existant) déplace
+  - [x] `cas_mot_de_passe` : aucune valeur rendue par `etat()` ni message de `RefusFtp` ne contient le mot de passe
+- [x] Lancer le banc : rouge — preuve : rouge constaté, module absent (rapport `task-3-report.md`)
+- [x] `ouvre` refuse une `adresse` qui ne correspond pas à `^[A-Za-z0-9.-]+$` (nom d'hôte venu du persist, remarque de la relecture de A2), cas `cas_adresse_invalide` du banc — preuve : `cas_adresse_invalide` vert
+- [x] Écrire `ftp_cartes_session.py` : un `threading.Lock` autour de toute opération FTP ; `mlsd()` avec repli `LIST` ; attente du port 21 par `socket.create_connection` répétée jusqu'à 10 s ; `ftplib` garde l'hôte du contrôle pour les données (adresse PASV ignorée, défaut de `ftplib`) — preuve : 375 lignes, commit `1aedba758`
+- [x] Banc vert, sortie collée en preuve ; témoin : supprimer l'envoi de `UfsFTP 0` dans `ferme` fait rougir `cas_ferme_toujours` — preuve : 131 OK, code 0 ; sans `UfsFTP 0` dans `ferme` : 9 KO ; `_allume` posé après l'envoi : 1 KO
+- [x] `relecteur-outils-python` sur les deux fichiers, remarques traitées ; `controleur-secrets` lu, commit `feat(ftp): session FTP allumee a la demande` — preuve : relecture Opus : 3 importants + zip-slip corrigés en un tour, re-relecture 6/6 ADDRESSED ; contrôle de secrets OK ; commit `1aedba758`
 
 ## A4 — Serveur web et routes (`ftp_cartes_web.py`)
 
@@ -127,17 +127,17 @@ Interfaces produites (consommées par la page, A5) :
 `POST /envoie?dossier=&nom=&ecraser=0|1` (corps brut, `MAX_ENVOI = 16 * 1024 * 1024`), `POST /supprime {chemin, confirmations}`, `POST /dossier {chemin}`, `POST /deplace {source, cible}`.
 `fabrique_gestionnaire(acces, racine, session)` ; `principal()` avec `--http 7450`, options `acces_web`, `atexit` qui appelle `session.ferme("arret de l'outil")`, fil d'horloge qui appelle `session.tic()` toutes les 10 s.
 
-- [ ] Banc `outils_pc/test_ftp_cartes_web.py` (serveur réel sur 127.0.0.1, port libre, faux serveur de carte d'A3, mini-dépôt), cas rouges d'abord :
-  - [ ] `cas_routes` : chaque route ci-dessus répond (200 ou 409 attendu), verbe inconnu → 405
-  - [ ] `cas_ecritures_ce_pc` : `POST /ouvre`, `/envoie`, `/supprime`, `/dossier`, `/deplace` depuis une adresse non locale (handler avec `client_address` simulé) → 403 ; `GET /liste` et `/telecharge` depuis cette adresse avec jeton → 200
-  - [ ] `cas_beacon` : `POST /ferme` sans en-tête `X-...` et origine locale → 200 et `UfsFTP 0` ; `POST /supprime` sans en-tête → refusé
-  - [ ] `cas_deux_onglets` : deux `GET /etat` successifs voient la même session ; un second `POST /ouvre` sur la même carte ne crée pas de seconde connexion FTP
-  - [ ] `cas_envoi_trop_gros` : `Content-Length` > `MAX_ENVOI` → 413, aucun `STOR` reçu par le faux serveur
-  - [ ] `cas_secret` : aucune réponse (`/cartes`, `/etat`, erreurs) ne contient le mot de passe du mini-dépôt
-  - [ ] `cas_host_hostile` : `Host: evil.example` → 403 (`hote_autorise`)
-- [ ] Lancer le banc : rouge
-- [ ] Écrire `ftp_cartes_web.py` sur le modèle de `icones_catalogue_web.py` (CSP, en-têtes) et des POST de `menage_web.py` (taille du corps bornée, `est_local`)
-- [ ] Banc vert, sortie collée en preuve ; témoin : retirer le contrôle `est_local` de `/supprime` fait rougir `cas_ecritures_ce_pc`
+- [x] Banc `outils_pc/test_ftp_cartes_web.py` (serveur réel sur 127.0.0.1, port libre, faux serveur de carte d'A3, mini-dépôt), cas rouges d'abord : — preuve : banc `test_ftp_cartes_web.py` : 9 cas (7 du plan + `cas_concurrence`, `cas_serveur`), 77 OK, VERT
+  - [x] `cas_routes` : chaque route ci-dessus répond (200 ou 409 attendu), verbe inconnu → 405 — preuve : `cas_routes` vert ; PUT, DELETE, HEAD, OPTIONS → 405 ; `filename*` d'un nom accentué vérifié
+  - [x] `cas_ecritures_ce_pc` : `POST /ouvre`, `/envoie`, `/supprime`, `/dossier`, `/deplace` depuis une adresse non locale (handler avec `client_address` simulé) → 403 ; `GET /liste` et `/telecharge` depuis cette adresse avec jeton → 200 — preuve : `cas_ecritures_ce_pc` vert
+  - [x] `cas_beacon` : `POST /ferme` sans en-tête `X-...` et origine locale → 200 et `UfsFTP 0` ; `POST /supprime` sans en-tête → refusé — preuve : `cas_beacon` vert ; mutants « X exigé sur /ferme » 4 KO, « origine non vérifiée » 2 KO (relecture)
+  - [x] `cas_deux_onglets` : deux `GET /etat` successifs voient la même session ; un second `POST /ouvre` sur la même carte ne crée pas de seconde connexion FTP — preuve : `cas_deux_onglets` vert, et `cas_concurrence` : deux /ouvre simultanés → un seul UfsFTP, un seul USER (`Session.ouvre_ou_reprend` sous verrou ; témoin sans elle : UfsFTP [1, 1])
+  - [x] `cas_envoi_trop_gros` : `Content-Length` > `MAX_ENVOI` → 413, aucun `STOR` reçu par le faux serveur — preuve : `cas_envoi_trop_gros` vert : 413, aucun STOR
+  - [x] `cas_secret` : aucune réponse (`/cartes`, `/etat`, erreurs) ne contient le mot de passe du mini-dépôt — preuve : `cas_secret` refait au tour de corrections : refus 530 citant le mot de passe → 409 masqué, RuntimeError forcée → 500 sans le mot de passe ; témoin « 500 = str(erreur) » ROUGE
+  - [x] `cas_host_hostile` : `Host: evil.example` → 403 (`hote_autorise`) — preuve : `cas_host_hostile` vert ; mutant sans `hote_autorise` 2 KO
+- [x] Lancer le banc : rouge — preuve : ModuleNotFoundError sur `ftp_cartes_web` avant le code (`.superpowers/sdd/navigateur-ftp-cartes/task-4-report.md`)
+- [x] Écrire `ftp_cartes_web.py` sur le modèle de `icones_catalogue_web.py` (CSP, en-têtes) et des POST de `menage_web.py` (taille du corps bornée, `est_local`) — preuve : `ftp_cartes_web.py` (284 lignes) : CSP, Host, X-, est_local, corps borné, timeout 60 s, SO_EXCLUSIVEADDRUSE, atexit + fil tic 10 s
+- [x] Banc vert, sortie collée en preuve ; témoin : retirer le contrôle `est_local` de `/supprime` fait rougir `cas_ecritures_ce_pc` — preuve : VERT sur 3 lancements + 1 relance du relecteur (77 OK) ; témoin `/supprime` retiré des écritures → 3 KO sur `cas_ecritures_ce_pc`
 - [ ] `relecteur-outils-python` lu ; `controleur-secrets` lu, commit `feat(ftp): serveur web du navigateur FTP`
 
 ## A5 — La page (interface A) et sa sonde Chrome (`ftp_cartes_page.py`)
@@ -163,9 +163,14 @@ Interfaces produites (consommées par la page, A5) :
 - [ ] Porter le persist à `OFF` sur les autres cartes listées en A1 ; cocher chacune dans « Améliorations restantes »
 
 ## Améliorations restantes
+- [ ] [projet] Déplacer un fichier protégé (`autoexec.be`, `_persist.json`…) ne demande qu'une confirmation : seconde confirmation à décider avec l'utilisateur (relecture de A3)
+- [ ] [projet] `Session.ouvre` : une exception levée par `identifiants()` sur un changement de support laisse le FTP allumé jusqu'au `tic()` (15 min) ; `noms_ignores` grossit sans limite (relecture de A3)
 - [ ] [projet] `ftp_cartes_liste.GENERIQUES` est écrite en dur : un `FIRMWARE_*` amont inconnu y est jugé faux (carte listée, refus visible à l'allumage) ; test de concordance avec les bases du cenv à prévoir
 - [ ] [projet] Porter le persist à `OFF` sur chaque carte (onglet « Fichiers » de la page Build), A7 : bureau ecran-debits-pac, bureau serveur-debits-pac, cave s3-ecran, cave s3-serveur-rly, étage 2 grenier, RDC grenier, garage P4 (après son commit), cuve, portail-jardin, rideau, garage s3-serveur-modbus
 - [ ] [projet] Page Build : `build_envs.adresse_par_maitre` lit les persist en strict, l'adresse de la cuve par le maître n'est pas calculée (IP à saisir à la main)
+- [ ] [projet] A5 : le `pagehide` de n'importe quel onglet (ou d'un autre appareil muni du jeton) éteint le FTP ouvert par un autre onglet : identifiant d'onglet ou extinction au dernier onglet, à trancher (relecture de A4)
+- [ ] [projet] Arrêt brutal de l'outil (job de l'annuaire tué, console fermée) : `atexit` ne passe pas, le FTP de la carte reste allumé jusqu'au prochain redémarrage ou réseau (relecture de A4)
+- [ ] [projet] `menage_web.py` et `icones_catalogue_web.py` héritent de `allow_reuse_address = 1` : deux instances sur le même port sous Windows (corrigé dans `ftp_cartes_web.py` par `SO_EXCLUSIVEADDRUSE`, relecture de A4)
 
 ## Vérification
 Plan fini quand A1 à A7 sont cochés avec preuve, le FTP de chaque carte du dépôt est à `OFF` dans son persist et sur

@@ -149,6 +149,14 @@ class Session:
             self._etat, self._message, self._derniere = "actif", "", self._horloge()
             return self.etat()
 
+    def ouvre_ou_reprend(self, carte, support):
+        """Deuxieme onglet ou POST simultane : meme carte et meme support deja actifs -> l'etat, sans UfsFTP ni reconnexion (sous verrou)."""
+        with self._verrou:
+            if self._etat == "actif" and self._carte == str(carte.get("adresse", "")) and self._support == support:
+                self._derniere = self._horloge()
+                return self.etat()
+            return self.ouvre(carte, support)
+
     def _refuse(self, message):
         """Refus dans ouvre : si le FTP de la carte est allume (changement de support), il est eteint d'abord."""
         if self._allume:
