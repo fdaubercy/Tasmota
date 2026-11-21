@@ -21,6 +21,7 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import acces_web                                                                # noqa: E402
+import sonde_hermetique                                                         # noqa: E402
 import taches_planifiees_page as page_mod                                       # noqa: E402
 import taches_planifiees_web as tw                                              # noqa: E402
 import test_taches_planifiees_web as banc                                       # noqa: E402
@@ -75,6 +76,7 @@ class Montage:
                             git=lambda a, r: (1, "git interdit dans la sonde"))
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
+        sonde_hermetique.neutralise_barre()   # la barre de habille() ne lit ni les vraies fiches ni :7700
         acces = acces_web.Acces(self.port, True, "Taches planifiees")
         self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), tw.fabrique_gestionnaire(acces, self.etat))
         self.serveur.daemon_threads = True

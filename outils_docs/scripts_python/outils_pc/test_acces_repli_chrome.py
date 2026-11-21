@@ -21,6 +21,7 @@ from pathlib import Path
 from threading import Thread
 
 import acces_web
+import sonde_hermetique
 import test_build_page_chrome as t
 
 verifie = t.verifie
@@ -29,6 +30,7 @@ NOM = "Outil d'essai"
 
 
 def serveur(port, habille):
+    sonde_hermetique.neutralise_barre()   # la barre de habille() ne lit ni les vraies fiches ni :7700
     acces = acces_web.Acces(port, True, NOM)
 
     class H(BaseHTTPRequestHandler):

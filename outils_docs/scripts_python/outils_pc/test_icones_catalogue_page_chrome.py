@@ -22,6 +22,7 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import acces_web                                                                # noqa: E402
+import sonde_hermetique                                                         # noqa: E402
 import atelier_ecrans_icones as ic                                              # noqa: E402
 import icones_catalogue_page as page_mod                                        # noqa: E402
 import icones_catalogue_web as web                                              # noqa: E402
@@ -62,6 +63,7 @@ class Montage:
         page_mod.PAGE = page
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
+        sonde_hermetique.neutralise_barre()   # la barre de habille() ne lit ni les vraies fiches ni :7700
         acces = acces_web.Acces(self.port, True, "Catalogue d'icones")
         self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), web.fabrique_gestionnaire(acces, racine))
         self.serveur.daemon_threads = True

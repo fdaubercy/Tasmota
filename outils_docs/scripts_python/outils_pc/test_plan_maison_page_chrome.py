@@ -19,6 +19,7 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import acces_web                                                                # noqa: E402
+import sonde_hermetique                                                         # noqa: E402
 import plan_maison_web as web                                                   # noqa: E402
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # noqa: E402
 
@@ -158,6 +159,7 @@ def main():
     chrome = serveur = None
     try:
         port = port_libre()
+        sonde_hermetique.neutralise_barre()   # la barre de habille() ne lit ni les vraies fiches ni :7700
         acces = acces_web.Acces(port, True, "Plan de la maison")
         serveur = ThreadingHTTPServer(("127.0.0.1", port), web.fabrique_gestionnaire(acces))
         serveur.daemon_threads = True

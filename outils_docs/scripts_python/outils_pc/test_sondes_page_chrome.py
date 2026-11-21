@@ -21,6 +21,7 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import acces_web                                                                # noqa: E402
+import sonde_hermetique                                                         # noqa: E402
 import sondes_page as page_mod                                                  # noqa: E402
 import sondes_web as sw                                                         # noqa: E402
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # noqa: E402
@@ -67,6 +68,7 @@ class Montage:
                             relit=lambda pid: next((dict(p) for p in self.procs if p["pid"] == pid), None))   # relecture neuve avant arret : la liste du banc, jamais PowerShell
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
+        sonde_hermetique.neutralise_barre()   # la barre de habille() ne lit ni les vraies fiches ni :7700
         acces = acces_web.Acces(self.port, True, "Sondes en cours")
         self.serveur = ThreadingHTTPServer(("127.0.0.1", self.port), sw.fabrique_gestionnaire(acces, self.etat))
         self.serveur.daemon_threads = True

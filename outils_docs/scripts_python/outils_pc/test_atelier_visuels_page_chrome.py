@@ -36,6 +36,8 @@ def verifie(obtenu, attendu, libelle):
 
 def mode_serveur(port):
     import atelier_visuels_web as avw
+    import sonde_hermetique
+    sonde_hermetique.neutralise_barre()   # la barre de habille() ne lit ni les vraies fiches ni :7700
     sys.argv = ["atelier_visuels_web.py", "--http", str(port), "--local", "--sans-navigateur"]
     return avw.principal()
 
