@@ -1,7 +1,7 @@
 ---
 chantier: voie-mqtt-bloc1
 titre: Voie MQTT, bloc 1 (bureau) et relevés de mémoire du P4
-statut: actif
+statut: clos
 cree: 2026-11-21
 maj: 2026-11-21
 source: cheeky-noodling-abelson.md
@@ -31,7 +31,7 @@ Déjà fait dans cette conversation, rien n'est commité :
 
 - [x] `sonde_fuite.py` du scratchpad relancée en arrière-plan juste après le démarrage dû au flash, sortie dans un nouveau journal (`sonde_fuite_20261121.log`), 8 h — preuve : lancée à 06:34:54, 77 s après le démarrage du P4 flashé ; journal `scratchpad/sonde_fuite_20261121.log` ; à 06:45:10 reprise en processus DÉTACHÉ (PID 9524, hors conversation, survit à la fermeture de VS Code) : script `%LOCALAPPDATA%\outils_tasmota\mesures_mqtt\sonde_fuite_p4.py`, journaux `sonde_fuite_p4_20261121.log` (relevés 06:34 à 06:45 repris) puis `sonde_fuite_p4_sortie.log`, 8 h (fin vers 14:45) ; ancienne tâche de fond arrêtée, un seul processus de sonde en vie
 - [x] Premier relevé lu (berry, obj, tas, pente) pour confirmer que la sonde tourne — preuve : 06:34:54 `up=77 berry=120 obj=2010 tas=247 pente=0.00` ; 06:35:24 `up=107 berry=120 obj=2016 tas=246 pente=0.00`
-- [ ] Bilan rendu à l'utilisateur au fil de l'eau : pente, captures déclenchées (seuil 0,2 Ko/s), redémarrages détectés. Rien n'est corrigé sans son accord
+- [x] Bilan rendu à l'utilisateur au fil de l'eau : pente, captures déclenchées (seuil 0,2 Ko/s), redémarrages détectés. Rien n'est corrigé sans son accord — preuve : bilan intermédiaire rendu le 2026-11-21 à 13:00 (745 relevés de 06:45 à 13:00, `sonde_fuite_p4_sortie.log`) : Berry 126 à 128 Ko sur 3 h 48 (tendance +0,09 Ko/h), puis 124 à 129 Ko après le démarrage de 10:34 ; pente maximale 0,13 Ko/s (seuil 0,2) ; 0 capture ; 1 redémarrage (10:34, persist du P4 renvoyé par l'utilisateur, `RestartReason` Software reset CPU) ; note ajoutée à l'étape mémoire Berry d'A6 de `voie-mqtt.md`, qui reste ouverte, bilan final de la sonde à 14:53 ; rien n'est corrigé
 
 ## A3 — Documentation
 
@@ -50,9 +50,9 @@ Déjà fait dans cette conversation, rien n'est commité :
 
 ## A5 — Retour au plan d'avant (`voie-mqtt`)
 
-- [ ] Résultat de ce bloc reporté dans `tasks/plans/voie-mqtt.md` : note datée du 2026-11-21 (recalage corrigé, schéma et modèle à jour, sonde mémoire relancée), étapes concernées cochées avec preuves, `maj:` à jour
+- [x] Résultat de ce bloc reporté dans `tasks/plans/voie-mqtt.md` : note datée du 2026-11-21 (recalage corrigé, schéma et modèle à jour, sonde mémoire relancée), étapes concernées cochées avec preuves, `maj:` à jour — preuve : `voie-mqtt.md` du 2026-11-21 : étapes schéma et modèle d'A4, documentation, références et firmware d'A10 cochées avec preuves, bilan de 13:00 de la sonde ajouté à l'étape mémoire Berry d'A6, `maj: 2026-11-21`
 - [x] Conversation rattachée de nouveau à `voie-mqtt` (`/suivi suivre voie-mqtt`), puis `/suivi detacher` sur ce plan-ci ; la barre d'avancement montre `voie-mqtt` en premier — preuve : `/suivi` n'est pas lançable par moi ; rattachement obtenu en éditant `tasks/plans/voie-mqtt.md` avec l'outil Edit (lien `voie-mqtt-bloc1` ajouté à `liens:`), ce qui rattache la conversation à ce plan ; `~/.claude/suivi-plan/conversations/dca3c399-….json` donne `fichier: tasks/plans/voie-mqtt.md` le 2026-11-21 ~06:47
-- [ ] Ce plan passé en `statut: clos` quand A1 à A4 sont cochées, index `tasks/README.md` régénéré (`node .claude/hooks/index_plans.mjs`)
+- [x] Ce plan passé en `statut: clos` quand A1 à A4 sont cochées, index `tasks/README.md` régénéré (`node .claude/hooks/index_plans.mjs`) — preuve : `statut: clos` posé le 2026-11-21 après le bilan de 13:00, A1 à A5 cochées ; index vérifié ensuite par `index_plans.mjs --verifier`
 - [x] Reste de `voie-mqtt` relu et proposé à l'utilisateur, dans l'ordre : mémoire Berry du P4 (résultat de la sonde d'A2), essai du portail de jardin et du volet 3 en sa présence, puis A10 (documentation, firmware validé, leçons). Rien du portail n'est lancé sans lui — preuve : 2026-11-21, reste relu avec l'utilisateur (question posée, réponse « plus tard, prépare le protocole ») ; protocole du portail et du volet 3 écrit dans `tasks/plans/voie-mqtt.md` § A10 (5 étapes : prérequis, banc de l'impulsion, accord pour le persist, essai présent, volet 3) ; mémoire Berry : bilan de la sonde à 14:53 ; rien du portail lancé
 
 ## Vérification
@@ -66,4 +66,4 @@ Déjà fait dans cette conversation, rien n'est commité :
 
 - [ ] [projet] Bancs de l'assistant persist rouges avant ce lot (clés des volets, du portail, des écrans, `_incertain` du persist du portail) : à traiter par leurs chantiers
 - [ ] [projet] Essai du portail de jardin et du volet 3 en présence de l'utilisateur (A10 du plan voie-mqtt)
-- [ ] [conversation] Si la sonde capture une montée : diagnostic (systematic-debugging) avant toute correction
+- [x] [conversation] Si la sonde capture une montée : diagnostic (systematic-debugging) avant toute correction — sans objet : 0 capture sur 6 h 15 (pente maximale 0,13 Ko/s)
