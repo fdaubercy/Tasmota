@@ -226,7 +226,8 @@ def adresse_par_maitre(persist):
     bloc a id 0 et pas d'ipMaitre. Un persist illisible ne donne pas d'adresse : l'IP reste a saisir.
     """
     try:
-        bloc = json.loads(Path(persist).read_text(encoding="utf-8"))["serveur"]["rangeExtender"] if persist else {}
+        # strict=False : un caractere de controle dans une chaine ne rend pas le persist illisible (aucun persist du depot n'en porte, verifie le 2026-11-21).
+        bloc = json.loads(Path(persist).read_text(encoding="utf-8"), strict=False)["serveur"]["rangeExtender"] if persist else {}
         ident, maitre = int(bloc.get("id") or 0), str(bloc.get("ipMaitre") or "")
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return ""

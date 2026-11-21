@@ -442,6 +442,9 @@ def test_adresse_par_maitre():
         verifie(be.adresse_par_maitre(p), "", "par_maitre : persist illisible -> pas d'adresse")
         persist(p.parent, {"activation": "ON", "id": "3", "ipMaitre": "10.0.0.1"})
         verifie(be.adresse_par_maitre(p), "10.0.0.1:8082", "par_maitre : id 3 -> port 8082")
+        # Un persist peut porter un caractere de controle (ici une tabulation) dans une chaine : JSON strict le refuse, la lecture tolerante l'accepte.
+        p.write_text('{"serveur": {"rangeExtender": {"activation": "ON", "id": 2, "ipMaitre": "10.0.0.1"}, "note": "a\tb"}}', encoding="utf-8")
+        verifie(be.adresse_par_maitre(p), "10.0.0.1:8081", "par_maitre : caractere de controle dans une chaine -> adresse calculee")
 
 
 def principal():
