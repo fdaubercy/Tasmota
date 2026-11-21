@@ -1272,3 +1272,23 @@ Réalisé pour la cave (plan `tasks/plans/ecran-cave-vues-commandes.md`) ; le gr
   `stat/<cave>/STATUS10` et `tele/<cuve>/SENSOR` (topics dans `modules.ecranCave.sources` de son persist) ; chaque
   valeur est datée et grisée après `modules.ecranCave.peremption` (900 s). Pas d'écriture du maître dans les registres
   de l'écran : MQTT suffit, et un état périmé interdit la touche.
+
+## 11. Voie MQTT maître/esclaves : ce qui ne passe PAS par le ModBus (état au 2026-11-21)
+
+Le P4 du garage commande aussi des esclaves par MQTT (`cmnd/<topic>/Power1`), avec des commandes Tasmota natives : rien à
+embarquer sur l'esclave et aucune trame ModBus pour ces ordres. Projecteur LED (`jardin/projecteur_led`), pompe de piscine
+(`jardin/pompe_piscine`, Sonoff S2X ESP8266, sans Berry) et cuve (`jardin/cuve`, derrière le NAPT du P4, qui garde par ailleurs
+son ModBus et son Berry). Plan `tasks/plans/voie-mqtt.md`, analyse
+`outils_docs/ANALYSE_VOIE_MQTT_2026-11-16.md`, mode d'emploi `outils_docs/README.md` § « Voie MQTT maître/esclaves ».
+
+- **Cadre.** Chaque ordre passe par la garde `mqttLiaisonFonctions.be` (compare-avant-agir, limiteur par élément, quarantaine,
+  coupe-circuit global, accusé et renvois) avant d'être publié par `controleMqttLiaison.be::ordonne`. L'état réel revient par
+  `stat/<topic>/POWERn` et `RESULT`, l'esclave étant surveillé par son LWT (limite connue : le LWT n'est pas délivré quand le
+  broker lui-même s'arrête, les esclaves restent « en ligne » côté maître pendant la coupure, voir le README).
+- **Ce que le ModBus ne fait pas ici.** Le projecteur et la pompe n'ont pas de fiche ModBus : ils n'ont donc aucun repli. Une
+  coupure du broker les rend injoignables (alerte sur l'accueil du P4, éléments `MQTT_<nom>` marqués périmés) ; mesuré le
+  2026-11-20, l'alerte monte après 2 min 04 s et se lève 68 s après le retour du broker, sans redémarrage de carte.
+- **Bouton du maître.** Un changement fait sur l'esclave (appui local, redémarrage) est reporté sur le relais du P4 qui le
+  commande, sans renvoyer d'ordre (`controleMqttLiaison.be::recale`).
+- **Réglage de l'esclave.** `ButtonTopic` et `SwitchTopic` restent à `0` : un topic posé ferait publier à l'esclave des ordres
+  natifs vers le maître, hors garde-fous (tableau complet dans le README).

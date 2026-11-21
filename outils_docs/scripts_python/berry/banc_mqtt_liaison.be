@@ -436,6 +436,9 @@ rp("stat/pompe/POWER", 0, "OFF", bytes())
 verifie(size(tasmota.poses) == 1 && !garde.attente.contains("pompe/POWER1"), "accuse OFF : ordre acquitte, relais du maitre deja juste")
 rp("stat/pompe/RESULT", 0, '{"POWER":"ON"}', bytes())
 verifie(size(tasmota.poses) == 2 && tasmota.poses[1][1] == true && size(garde.attente) == 0, "nouvel appui local : maitre recale a ON, aucun ordre en attente cree")
+mqtt.abonnes["tele/pompe/LWT"]("tele/pompe/LWT", 0, "Offline", bytes())
+rp("stat/pompe/POWER", 0, "OFF", bytes())
+verifie(D.en_ligne["pompe"] == true && size(tasmota.poses) == 3, "etat recu d'un esclave marque Offline : il est en ligne (le recalage ne finit pas en « hors_ligne »)")
 
 # garde d'activation : persist a OFF -> aucun driver
 import persist

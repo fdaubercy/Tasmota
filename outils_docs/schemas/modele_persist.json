@@ -590,7 +590,10 @@
 							"nom": "Volet Roulant Garage",
 							"id": 1,
 							"inverse": 1,
-							"facade": {"type": "fenetre", "place": 1},
+							"facade": {
+								"type": "fenetre",
+								"place": 1
+							},
 							"etat": "STOPPED",
 							"position": 0,
 							"relais1": 2,
@@ -1288,6 +1291,21 @@
 							"virtuel": "OFF"
 						}
 					}
+				},
+				"drivers.liaisonMqtt": {
+					"activation": "OFF",
+					"environnement": {},
+					"log": "info",
+					"garde": {
+						"fenetreMs": 10000,
+						"maxParElement": 10,
+						"maxTotal": 60,
+						"quarantaineMs": 60000,
+						"coupureMs": 300000,
+						"delaiAccuseMs": 3000,
+						"essaisMax": 3
+					},
+					"esclaves": {}
 				}
 			}
 		}

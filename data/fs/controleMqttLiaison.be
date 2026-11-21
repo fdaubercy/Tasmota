@@ -260,7 +260,9 @@ class CONTROLE_MQTT_LIAISON : Driver
         if code == "evenement" && logFonctions.actif(LOG_LEVEL_DEBUG, "liaisonMqtt")
             mqttLiaisonFonctions.log("LIAISON_MQTT: " + cle + " = " + str(valeur) + " (évènement) !", LOG_LEVEL_DEBUG)
         end
-        if code != "invalide" && !g.attente.contains(cle)    self.recale(cle, str(valeur))    end
+        if code == "invalide"    return    end
+        self.en_ligne[nom] = true                                           # il vient de parler : un LWT Offline ancien ne vaut plus
+        if !g.attente.contains(cle)    self.recale(cle, str(valeur))    end
     end
 
     # Relais du maitre lies a cet etat remis sur l'etat REEL de l'esclave (appui sur son bouton local, redemarrage) : sinon

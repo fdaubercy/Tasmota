@@ -85,7 +85,8 @@ MUTANTS_DRIVER = [
     ("element inactif marque perime", "if d.find(\"activation\") == \"ON\"", "if true"),
     ("relais affiche avec une valeur perimee", "e[2] == \"relais\" ?", "false ?"),
     ("relais absents des lignes perime", "\"interrupteurs\", \"relais\"]", "\"interrupteurs\"]"),
-    ("recalage pendant un ordre en attente", "if code != \"invalide\" && !g.attente.contains(cle)    self.recale", "if code != \"invalide\"    self.recale"),
+    ("recalage pendant un ordre en attente", "if !g.attente.contains(cle)    self.recale", "if true    self.recale"),
+    ("etat recu sans remettre l'esclave en ligne", "self.en_ligne[nom] = true  ", "self.en_ligne[nom] = self.en_ligne.find(nom)  "),
     ("relais du maitre jamais recale", "p[id - 1] != on    tasmota.set_power(id - 1, on)", "p[id - 1] != on    id = id"),
     ("relais deja juste repose", "&& p[id - 1] != on    tasmota.set_power", "    tasmota.set_power"),
 ]
