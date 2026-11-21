@@ -105,7 +105,8 @@ BLOCS_MATERIEL = ("drivers", "modules", "environnement")   # enfants nommes par 
 OPTIONNELS = ("diverses.historique", "drivers.leds.environnement.leds.ledRGB", "serveur.coprocesseur", "drivers.I2S",
               "drivers.Ethernet", "drivers.voletRoulants", "drivers.HostedESPC6",
               "diverses.historique.grafana",   # bouton Grafana seulement si la cle existe (controleWeb.boutonGrafana)
-              "drivers.voletRoulants.facade.decor")   # decor de la facade facultatif : absent = pas de decor (vrPages.route lit f.find("decor"), nil si absente)
+              "drivers.voletRoulants.facade.decor",   # decor de la facade facultatif : absent = pas de decor (vrPages.route lit f.find("decor"), nil si absente)
+              "serveur.discovery.ecoute")   # absent = AUTO : ecoute des autres cartes seulement avec PSRAM (discoveryFonctions.ecoute)
 
 NIVEAUX_MODULE = ["erreur", "info", "debug", "detail"]
 NIVEAUX_SORTIE = ["aucun", "erreur", "info", "debug", "detail"]
@@ -114,6 +115,8 @@ SORTIES = ("serie", "web", "mqtt", "syslog")
 
 DESCRIPTIONS = {
     "activation": "ON ou OFF : active ou non ce bloc.",
+    "ecoute": ("Ecoute des autres cartes par la decouverte (abonnements MQTT et table complete) : ON, OFF, ou AUTO (defaut) = ON seulement avec PSRAM ; OFF = mode annonce seule, "
+               "la carte publie quand meme sa fiche (discoveryFonctions.ecoute)."),
     "log": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
     "general": "Seuil de log de la cible 'general' : erreur, info, debug ou detail.",
     "profil": "Nom du profil de logs actif (cle de `profils`).",
@@ -230,6 +233,8 @@ class Inference:
         vocab = None
         if cle == "activation":
             vocab = ON_OFF
+        elif cle == "ecoute":
+            vocab = ON_OFF + ["AUTO"]
         elif cle in ("log", "general"):
             vocab = NIVEAUX_MODULE
         elif cle in SORTIES and "profils" in chemin.split("."):

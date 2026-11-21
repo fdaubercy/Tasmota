@@ -49,14 +49,20 @@ class CONTROLE_DISCOVERY : Driver
         tasmota.add_rule("Mqtt", def(value, trigger, msg) discoveryFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleDiscovery_Mqtt")
 		# tasmota.add_rule("Time", def(value, trigger, msg) discoveryFonctions.changementEtatDemarrage(value, trigger, msg) end, "controleDiscovery_Time")
 
-        # S'abonne aux messages MQTT reçus pour le module de découverte
-        # Les réponses sont gérés par la fonction 'mqtt_data'
-        mqtt.subscribe("tasmota/discovery/+/#", /topic, idx, data, databytes -> discoveryFonctions.mqtt_discovery(topic, idx, data, databytes))
+        # Écoute des autres cartes, sauf en mode « annonce seule » (ESP32 sans PSRAM, ou serveur.discovery.ecoute OFF) :
+        # la fiche de la carte est quand même construite, rangée et publiée par les règles ci-dessus (voir discoveryFonctions.ecoute)
+        if (discoveryFonctions.ecoute())
+            # S'abonne aux messages MQTT reçus pour le module de découverte
+            # Les réponses sont gérés par la fonction 'mqtt_data'
+            mqtt.subscribe("tasmota/discovery/+/#", /topic, idx, data, databytes -> discoveryFonctions.mqtt_discovery(topic, idx, data, databytes))
 
-        # Détecte les messages MQTT LWT (Last Will and Testament) pour supprimer les modules Tasmota du json discovery en cas de déconnexion du réseau local
-        mqtt.subscribe("tele/+/LWT", /topic, idx, data, databytes -> discoveryFonctions.mqtt_lwt(topic, idx, data, databytes))
-        mqtt.subscribe("tele/+/+/LWT", /topic, idx, data, databytes -> discoveryFonctions.mqtt_lwt(topic, idx, data, databytes))
-        mqtt.subscribe("tele/+/+/+/LWT", /topic, idx, data, databytes -> discoveryFonctions.mqtt_lwt(topic, idx, data, databytes))
+            # Détecte les messages MQTT LWT (Last Will and Testament) pour supprimer les modules Tasmota du json discovery en cas de déconnexion du réseau local
+            mqtt.subscribe("tele/+/LWT", /topic, idx, data, databytes -> discoveryFonctions.mqtt_lwt(topic, idx, data, databytes))
+            mqtt.subscribe("tele/+/+/LWT", /topic, idx, data, databytes -> discoveryFonctions.mqtt_lwt(topic, idx, data, databytes))
+            mqtt.subscribe("tele/+/+/+/LWT", /topic, idx, data, databytes -> discoveryFonctions.mqtt_lwt(topic, idx, data, databytes))
+        else
+            discoveryFonctions.log("CONTROLE_DISCOVERY: Annonce seule : fiche publiee, pas d'ecoute des autres cartes !", LOG_LEVEL_INFO)
+        end
 
         # Ajoute les commandes personnalisées si le module est activé
 		tasmota.add_cmd('ReglageDiscovery', / cmd, idx, payload, payload_json -> discoveryFonctions.reglageDiscovery(cmd, idx, payload, payload_json))

@@ -3,7 +3,8 @@
 var mqtt = module("mqtt")
 mqtt.publies = []
 mqtt.publish = def (topic, payload, retain) mqtt.publies.push([topic, payload, retain]) end
-mqtt.subscribe = def (topic, fonction) end
+mqtt.abonnements = []                  # section 29 : topics auxquels le module s'abonne
+mqtt.subscribe = def (topic, fonction) mqtt.abonnements.push(topic) end
 mqtt.connecte = true                   # renvoye par connected() ; un test le passe a false (broker coupe)
 mqtt.connected = def () return mqtt.connecte end
 return mqtt

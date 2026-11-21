@@ -34,6 +34,22 @@ def discoveryFonctions_roleLocal()
 end
 discoveryFonctions.roleLocal = discoveryFonctions_roleLocal
 
+# Mode « annonce seule » (2026-11-21). La carte publie et range TOUJOURS sa propre fiche (regles Wifi, Eth et Mqtt de
+# controleDiscovery : un esclave l'envoie au maitre par ImAlive en la lisant dans son discovery.json). Ce que ce mode
+# coupe, c'est l'ECOUTE des autres cartes (abonnements 'tasmota/discovery/+/#' et LWT) : chaque message relit et reparse
+# toute la table (~14 Ko pour 13 cartes), au-dela de ce que tient un ESP32 sans PSRAM (limite Berry ~57 Ko, boucle de
+# redemarrage constatee sur le projecteur de barbecue). Sans ecoute, la carte reste listee chez les autres (decouverte
+# native de Tasmota) mais sa propre page /discovery ne montre qu'elle.
+# Persist serveur.discovery.ecoute : "ON" ou "OFF" impose le choix ; absent ou "AUTO" -> ON seulement avec PSRAM
+# (tasmota.memory() ne porte la cle 'psram' que sur une carte qui en a une).
+def discoveryFonctions_ecoute()
+    var choix = serveur.find("discovery", {}).find("ecoute", "AUTO")
+    if (choix == "ON")     return true     end
+    if (choix == "OFF")    return false    end
+    return (tasmota.memory().find("psram") != nil)
+end
+discoveryFonctions.ecoute = discoveryFonctions_ecoute
+
 # Egalite de CONTENU de deux valeurs JSON (maps et listes comparees recursivement).
 # En Berry, '==' entre deux maps compare les OBJETS : json.load(x) == json.load(x) vaut false.
 # Les tests "le met a jour si different" etaient donc toujours vrais : discovery.json etait

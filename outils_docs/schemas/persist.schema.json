@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Persist des cartes ESP32 (fork Tasmota)",
-  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 14 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
+  "description": "Genere par outils_docs/scripts_python/berry/genere_schema_persist.py a partir de 15 persists. Cle `required` si presente dans >= 50 % des exemplaires du parent et au moins 2, sauf blocs optionnels (OPTIONNELS du script). Ne pas editer a la main : regenerer.",
   "type": "object",
   "properties": {
     "diverses": {
@@ -42,7 +42,11 @@
               "additionalProperties": true
             },
             "enregistrement": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
             }
           },
           "required": [
@@ -763,6 +767,15 @@
                 "info",
                 "debug",
                 "detail"
+              ]
+            },
+            "ecoute": {
+              "type": "string",
+              "description": "Ecoute des autres cartes par la decouverte (abonnements MQTT et table complete) : ON, OFF, ou AUTO (defaut) = ON seulement avec PSRAM ; OFF = mode annonce seule, la carte publie quand meme sa fiche (discoveryFonctions.ecoute).",
+              "enum": [
+                "ON",
+                "OFF",
+                "AUTO"
               ]
             }
           },
@@ -3927,6 +3940,23 @@
               "type": "object",
               "properties": {
                 "projecteur": {
+                  "type": "object",
+                  "properties": {
+                    "activation": {
+                      "type": "string",
+                      "description": "ON ou OFF : active ou non ce bloc.",
+                      "enum": [
+                        "ON",
+                        "OFF"
+                      ]
+                    },
+                    "topic": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "barbecue": {
                   "type": "object",
                   "properties": {
                     "activation": {

@@ -151,6 +151,27 @@ moins une sortie. Un profil « normal » sobre allège donc vraiment la carte.
 
 <hr></hr>
 
+## La découverte des cartes : mode « annonce seule » (ESP32 sans PSRAM)
+
+Le module `discovery` fait deux choses : il **annonce** la carte (sa fiche est construite à la connexion, rangée dans son
+`/json/discovery.json`, publiée en retenu sur `tasmota/discovery/<MAC>/<rôle>`, et un esclave l'envoie à son maître par
+ImAlive) et il **écoute** les autres cartes (abonnements `tasmota/discovery/+/#` et LWT, qui relisent et reparsent toute la
+table à chaque message : ~14 Ko pour 13 cartes). L'écoute dépasse ce que tient un ESP32 sans PSRAM (limite Berry ~57 Ko :
+redémarrages, constatés sur le différentiel le 2026-11-02 et sur le projecteur de barbecue le 2026-11-21).
+
+`serveur.discovery.ecoute` règle l'écoute, sans toucher à l'annonce :
+
+| Valeur | Effet |
+|---|---|
+| absente ou `"AUTO"` | écoute seulement si la carte a une PSRAM (`tasmota.memory()` porte la clé `psram`) : S3 et P4 inchangés |
+| `"ON"` / `"OFF"` | impose le choix, PSRAM ou non |
+
+En annonce seule, la carte reste listée sur la page `/discovery` des autres (fiche native de Tasmota, plus la fiche du
+fork) ; sa propre page ne montre qu'elle. Un ESP32 sans PSRAM utilisé comme **esclave** (`serveur.udp.id` > 0) doit avoir
+`serveur.discovery.activation` à `"ON"` : sans sa fiche, son maître ne le voit pas. Les projecteurs du jardin et du
+barbecue sont réglés ainsi (`activation` `"ON"`, `ecoute` `"OFF"`). Code : `data/fs/discoveryFonctions.be::ecoute`,
+`data/fs/controleDiscovery.be` ; banc `berry/test_discovery.be` (section 29).
+
 ## Les graphiques des mesures (cartes S3/P4)
 
 Les cartes ESP32-S3 et P4 tiennent un historique de leurs mesures (`data/fs/historiqueFonctions.be`) :
@@ -1924,38 +1945,63 @@ sont refusés (403) : ils ne passent que depuis ce PC.
 
 Deux volets. À gauche, les cartes du parc, classées par lieu (`outils_pc/ftp_cartes_liste.py::liste`) : une carte est proposée si son env est
 de la famille « cartes », de puce ESP32, ESP32-S3 ou ESP32-P4, si `USE_FTP` n'est pas retiré de sa section de `user_config_override.h`, et si elle
-n'est pas esclave du Range Extender (derrière le NAPT du maître, son FTP n'est pas joignable). Au moindre doute la carte est exclue. À droite,
+n'est pas esclave du Range Extender (derrière le NAPT du maître, son FTP n'est pas joignable). Au moindre doute la carte est exclue. La liste
+(`GET /cartes`) est mise en cache, invalidée par `(chemin, mtime_ns, taille)` des ini, de `user_config_override.h` et des `_persist.json` lus, et
+préchauffée au démarrage de l'outil : le calcul prend environ 1 s, une ouverture trop précoce n'attend que la fin de celui qui est en cours, les suivantes répondent en une dizaine de
+millisecondes. Le banc vérifie aussi que `GENERIQUES` (les firmwares sans effet sur le FTP) couvre tous les `FIRMWARE_*` des envs cartes. À droite,
 les fichiers du support choisi, Flash ou SD. On peut télécharger un fichier ou un zip de plusieurs, envoyer un fichier (16 Mo au plus),
-créer un dossier, déplacer, supprimer. Un envoi qui écraserait un fichier existant n'a lieu que sur demande.
+créer un dossier, déplacer, supprimer. Un envoi qui écraserait un fichier existant n'a lieu que sur demande, et un déplacement vers un nom
+déjà pris est refusé (409), jamais écrasé. Tous les gestes de la page portent la paire carte et support (`env`, `support`), y compris
+`/zip` et `/telecharge` : si un autre onglet a changé de carte ou de support entre-temps, le serveur répond 409 « la session a changé » et ne
+touche à rien, la page le traite comme les autres 409.
 
-Un fichier protégé (`autoexec.be`, `autoexec.bat`, `_persist.json`, `.bec`, `.drvset*`, et les dossiers `/sd` et `/json`) demande deux
-confirmations pour être supprimé, les autres une (`ftp_cartes_session.py::protege`). Les identifiants FTP sont lus côté serveur dans
+Un fichier protégé (`autoexec.be`, `autoexec.bat`, `_persist.json`, `.bec`, `.drvset*`, et les dossiers `/sd` et `/json`, majuscules
+comprises car la SD est en FAT) demande deux confirmations pour être supprimé et deux pour être déplacé, les autres une ou aucune
+(`ftp_cartes_session.py::protege`). Il en va de même d'un dossier qui en contient un, supprimé ou déplacé : le serveur le cherche (parcours
+borné, la limite atteinte comptant comme « oui »), répond 409 et la page demande la seconde confirmation. Les identifiants FTP sont lus côté serveur dans
 `user_config_override.h` et ne figurent dans aucune réponse ni aucun message.
 
 ### Le FTP n'est allumé que le temps du besoin
 
 Choisir une carte envoie `UfsFTP` (SD si elle est montée, sinon Flash ; la SD est exigée si on la demande) ; l'outil éteint ensuite le FTP
-(`UfsFTP 0`) à la fin de la session, par cinq événements : « Déconnecter », le choix d'une autre carte, la fermeture de l'onglet (`sendBeacon` sur
-`/ferme`), 15 min sans action, et l'arrêt de l'outil (`atexit`). Le dépôt porte aussi un filet côté carte : `serveur.serveurFTP.activation` vaut `OFF`
-dans les 14 persist de cartes du dépôt (hors le dossier `*-sauvegarde`, qui n'a pas de bloc), et `data/fs/globalFonctions.be::regleFTP` envoie `UFSFTP 0` à chaque
+(`UfsFTP 0`) à la fin de la session, par cinq événements : « Déconnecter » (ferme toujours, même avec d'autres onglets ouverts), le choix d'une
+autre carte, la fermeture du DERNIER onglet, 15 min sans action, et l'arrêt propre de l'outil (`atexit`). Chaque onglet se présente par un
+identifiant de 16 à 32 caractères hexadécimaux, tiré à l'ouverture de la page et envoyé à chaque sondage (`GET /etat?onglet=`, toutes les 5 s) et
+à l'ouverture (`POST /ouvre`) ; en fermant, la page poste `/ferme` avec cet identifiant (`sendBeacon`) et le serveur n'éteint le FTP que s'il ne
+reste aucun autre onglet (`ftp_cartes_onglets.py`). Un onglet qui disparaît sans prévenir (plantage, veille) est oublié après 90 s sans sondage,
+et le FTP s'éteint alors si c'était le dernier (le délai de 90 s, et non 15 s, tient au ralentissement des minuteries d'un onglet caché par Chrome).
+Une session ouverte sans identifiant (client ancien, `curl`) n'est jamais « perdue » : seule l'inactivité la ferme. Le dépôt porte aussi un filet côté carte : `serveur.serveurFTP.activation` vaut `OFF`
+dans les 15 persist du dépôt qui portent le bloc (le dossier `*-sauvegarde` n'en a pas), et `data/fs/globalFonctions.be::regleFTP` envoie `UFSFTP 0` à chaque
 connexion au réseau quand l'activation n'est pas `ON`. Les
 cartes réelles ne reçoivent ce réglage qu'au prochain téléversement de leur FS.
 
 ### Limites connues
 
-- **Arrêt brutal de l'outil.** L'annuaire arrête un outil par `taskkill /T /F` (`annuaire_lanceur.py::_tue_arbre`), et sa propre mort ferme le Job
-  Object qui tue ses outils : dans les deux cas Windows termine le processus sans lui laisser exécuter `atexit` ni `finally`. Le FTP de la carte reste
-  alors allumé. Seul Ctrl+C dans un terminal passe par la fin propre. Parade : cliquer « Déconnecter » avant d'arrêter l'outil ; après un arrêt brutal,
-  rouvrir la carte dans la page puis « Déconnecter » (ou la commande `UfsFTP 0`), ou redémarrer la carte une fois son persist à `OFF`. L'arrêt par une
-  tâche VS Code ou par la fin d'une cible n'a pas été vérifié.
+- **Arrêt de l'outil.** L'outil est lancé hors du Job Object de l'annuaire (`dans_job=False` dans `annuaire_registre.py`) : la mort de l'annuaire ou de
+  VS Code ne le tue plus, et son fil d'horloge continue d'éteindre le FTP (90 s sans onglet, 15 min sans action). Le bouton « Arrêter » de l'annuaire
+  est REFUSÉ tant qu'une session est ouverte (l'outil répond `{"en_cours": true}` sur `GET /execution`) : cliquer d'abord sur « Déconnecter ». Hors
+  session, l'arrêt (`taskkill /T /F`, `annuaire_lanceur.py::_tue_arbre`) ne laisse rien d'allumé. Un arrêt brutal par un autre moyen (gestionnaire
+  de tâches, arrêt d'une tâche VS Code) ne laisse pas exécuter `atexit` ni `finally` : le FTP de la carte reste alors allumé. Seul Ctrl+C dans un
+  terminal passe par la fin propre. Après un arrêt brutal, rouvrir la carte dans la page puis « Déconnecter » (ou la commande `UfsFTP 0`), ou
+  redémarrer la carte une fois son persist à `OFF`. Un outil laissé tourner après la fermeture de VS Code reste visible dans l'annuaire (« En cours »)
+  et s'arrête à la main. L'arrêt par une tâche VS Code ou par la fin d'une cible n'a pas été vérifié.
 - Le serveur FTP de la carte n'accepte qu'un client à la fois : l'outil sérialise ses opérations, mais un autre client FTP ouvert en même temps
   (FileZilla) bloque ou est bloqué.
-- Fermer un onglet éteint le FTP pour tous les onglets ouverts sur l'outil (la session est unique) ; à trancher.
+- La session est unique pour tout l'outil : un second onglet qui choisit une autre carte ou un autre support remplace celle du premier, dont la
+  page affiche « autre onglet » au sondage suivant.
 - Rien n'a encore été essayé sur une vraie carte (plan, étape A7) : les bancs parlent à un faux serveur FTP de carte.
 
 Bancs, dans `outils_docs/scripts_python/outils_pc/` avec le Python du penv PlatformIO : `test_ftp_cartes_liste.py`, `test_ftp_cartes_session.py`
-(lent, plus de 35 s), `test_ftp_cartes_web.py`, la sonde Chrome `test_ftp_cartes_page_chrome.py` et le faux serveur `faux_ftp_carte.py` ; pour la
-cible Custom, `build/test_cible_ftp_cartes.py`.
+(lent, plus de 35 s), `test_ftp_cartes_session_garde.py` (gardes : déplacement, dossiers protégés, exceptions), `test_ftp_cartes_onglets.py`
+(registre d'onglets, horloge simulée), `test_ftp_cartes_web.py`, la sonde Chrome `test_ftp_cartes_page_chrome.py` (qui appelle
+`test_ftp_cartes_page_chrome_onglets.py` et `test_ftp_cartes_page_chrome_corrections.py`) et le faux serveur `faux_ftp_carte.py` ; pour la
+cible Custom, `build/test_cible_ftp_cartes.py`. Pour l'annuaire, le refus d'arrêt en session est couvert par `test_annuaire.py` et
+`test_annuaire_securite.py`.
+
+Les sondes Chrome dont la page est habillée (barre « Annuaire » de `acces_web.py`) ne doivent pas lire les vraies fiches de présence ni interroger la
+vraie page Build : `outils_pc/sonde_hermetique.py::neutralise_barre()` coupe la barre commune le temps de la sonde (banc `test_sonde_hermetique.py`).
+Sept sondes l'appellent : `test_acces_repli_chrome.py`, `test_atelier_visuels_page_chrome.py`, `test_cartes_simulees_page_chrome.py`,
+`test_icones_catalogue_page_chrome.py`, `test_sondes_page_chrome.py`, `test_plan_maison_page_chrome.py` et `test_taches_planifiees_page_chrome.py`.
 
 ## Fabrique d'extensions (page web)
 

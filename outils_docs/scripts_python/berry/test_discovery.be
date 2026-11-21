@@ -90,6 +90,8 @@ class TasmotaStub
   def eth() return self.ipEth != nil ? {"up": true, "ip": self.ipEth} : {"up": false} end
   var horloge                          # section 20 : tasmota.millis() (cache de udpFonctions.esclavesBox)
   def millis() return self.horloge != nil ? self.horloge : 0 end
+  var memoire                          # section 29 : tasmota.memory() ({"psram": ...} seulement avec PSRAM)
+  def memory() return self.memoire != nil ? self.memoire : {"heap_free": 100} end
   def add_rule(a, b, c) end              # controleRangeExtender (section 14)
   def add_cmd(a, b) end
   # Timers en attente : memes regles que tasmota_class.be (set_timer EMPILE, remove_timer
@@ -1666,6 +1668,46 @@ verifie("regle Wifi sur un JSON STATE (cle Wifi, pas WIFI) : sans exception", "O
         essaie(def () discoveryFonctions.changementEtatDemarrage({"AP": 1}, "Wifi", {"Wifi": {"AP": 1, "SSId": "box"}}) end))
 tasmota.ipEth = nil
 tasmota.ipSta = nil
+
+# 29. Mode « annonce seule » (2026-11-21) : discoveryFonctions.ecoute() decide, controleDiscovery s'abonne ou non.
+# Persist serveur.discovery.ecoute ON/OFF impose ; absent ou AUTO -> ON seulement si tasmota.memory() porte 'psram'.
+def ecouteAvec(discovery, memoire)
+  serveur["discovery"] = discovery
+  tasmota.memoire = memoire
+  return discoveryFonctions.ecoute()
+end
+var AVEC_PSRAM = {"heap_free": 100, "psram": 8192, "psram_free": 8000}
+var SANS_PSRAM = {"heap_free": 100}
+verifie("ecoute : absent + PSRAM -> ecoute", true, ecouteAvec({"activation": "ON"}, AVEC_PSRAM))
+verifie("ecoute : absent + sans PSRAM -> annonce seule", false, ecouteAvec({"activation": "ON"}, SANS_PSRAM))
+verifie("ecoute : AUTO + sans PSRAM -> annonce seule", false, ecouteAvec({"ecoute": "AUTO"}, SANS_PSRAM))
+verifie("ecoute : AUTO + PSRAM -> ecoute", true, ecouteAvec({"ecoute": "AUTO"}, AVEC_PSRAM))
+verifie("ecoute : OFF impose, meme avec PSRAM", false, ecouteAvec({"ecoute": "OFF"}, AVEC_PSRAM))
+verifie("ecoute : ON impose, meme sans PSRAM", true, ecouteAvec({"ecoute": "ON"}, SANS_PSRAM))
+serveur.remove("discovery")
+tasmota.memoire = SANS_PSRAM
+verifie("ecoute : bloc discovery absent -> sans exception, annonce seule", "OK/false",
+        essaie(def () discoveryFonctions.ecoute() end) + "/" + str(discoveryFonctions.ecoute()))
+# Le pilote : 4 abonnements avec ecoute, aucun en annonce seule, et dans les deux cas les 3 regles de la fiche + la commande
+var fCd = open(SOURCES + "/controleDiscovery.be", "r")
+var controleDiscoveryBanc = compile(fCd.read())()
+fCd.close()
+def abonnementsDe(discovery, memoire)
+  serveur["discovery"] = discovery
+  tasmota.memoire = memoire
+  mqtt.abonnements = []
+  journal = []
+  var erreur = essaie(def () controleDiscoveryBanc.CONTROLE_DISCOVERY() end)
+  return [erreur, size(mqtt.abonnements)]
+end
+verifie("pilote : PSRAM -> 4 abonnements (discovery + 3 LWT)", "OK/4", abonnementsDe({"activation": "ON"}, AVEC_PSRAM)[0] + "/" + str(size(mqtt.abonnements)))
+verifie("pilote : sans PSRAM -> aucun abonnement", "OK/0", abonnementsDe({"activation": "ON"}, SANS_PSRAM)[0] + "/" + str(size(mqtt.abonnements)))
+var journalAnnonce = false
+for l: journal    if string.find(l, "Annonce seule") >= 0    journalAnnonce = true    end    end
+verifie("pilote : l'annonce seule est journalisee", true, journalAnnonce)
+verifie("pilote : ecoute OFF avec PSRAM -> aucun abonnement", "OK/0", abonnementsDe({"ecoute": "OFF"}, AVEC_PSRAM)[0] + "/" + str(size(mqtt.abonnements)))
+verifie("pilote : ecoute ON sans PSRAM -> 4 abonnements", "OK/4", abonnementsDe({"ecoute": "ON"}, SANS_PSRAM)[0] + "/" + str(size(mqtt.abonnements)))
+tasmota.memoire = nil
 
 print("")
 print(string.format("TEST_DISCOVERY: %s (%i tests, %i echec(s))", echecs == 0 ? "OK" : "ECHEC", total, echecs))
