@@ -114,6 +114,7 @@ Réponses du 2026-11-17 : l'éclairage et la pompe de piscine n'ont **pas** de f
 ## Améliorations restantes
 - [ ] [projet] Architecture B (trames ModBus dans MQTT) : abandonnée, à rouvrir seulement sur demande
 - [ ] [projet] Second broker de secours si la voie devient critique
+- [ ] [projet] Projecteur de barbecue (env `tasmota32-jardin-projecteur-barbecue`, topic `jardin/projecteur_barbecue`) : `barbecue` déclaré dans `drivers.liaisonMqtt.esclaves` et `relai26` (`MQTT_barbecue`, `Power1`) ajouté au `_persist.json` du P4 dans le dépôt le 2026-11-21 ; reste à flasher le barbecue, envoyer le persist au P4 (page Build, onglet Fichiers) et essayer un ordre ON puis OFF avec l'utilisateur
 
 ## Vérification
 Chaque case se coche avec sa preuve (banc, commit, mesure). Un banc PC ne prouve ni la solidification, ni la RAM, ni la latence derrière le NAPT : ces trois points se valident sur carte.

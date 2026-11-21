@@ -866,7 +866,7 @@ Rien à embarquer sur l'esclave : seul son topic compte. Relevé et règles du 2
 | `SetOption19` | `0` | à `1` (découverte Home Assistant), ces messages `Action` ne partent plus |
 | `ButtonRetain`, `SwitchRetain`, `PowerRetain` | `0` | un ordre ou un état retenu serait rejoué à chaque reconnexion |
 
-Côté maître : déclarer l'esclave dans `drivers.liaisonMqtt.esclaves` puis un relais `"virtuel": "MQTT_<esclave>"` (exemples du P4 : `relai24` « Projecteur Jardin », `relai25` « Pompe Piscine »). Le nombre de relais de Tasmota est le plus grand `id` actif (`configDevices.be`), un `id` au-delà des autres reste donc commandable.
+Côté maître : déclarer l'esclave dans `drivers.liaisonMqtt.esclaves` puis un relais `"virtuel": "MQTT_<esclave>"` (exemples du P4 : `relai24` « Projecteur Jardin », `relai25` « Pompe Piscine », `relai26` « Projecteur Barbecue »). Le nombre de relais de Tasmota est le plus grand `id` actif (`configDevices.be`), un `id` au-delà des autres reste donc commandable.
 
 ### Garde-fous
 
