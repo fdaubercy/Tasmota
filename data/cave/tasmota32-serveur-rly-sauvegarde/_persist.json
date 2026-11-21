@@ -2,7 +2,7 @@
 	"parametres": {
 		"diverses": {
 			"ledPower": "ON",
-			"logs": 3,
+			"logs": 2,
 			"leds": {
 				"ledLink": {
 					"pin": 39,
