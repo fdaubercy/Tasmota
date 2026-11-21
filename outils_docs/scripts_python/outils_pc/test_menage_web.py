@@ -94,6 +94,14 @@ verifie(json.loads(s.req("GET", "/etat")[1])["etat"], "repos", "etat au depart")
 verifie(s.req("GET", "/rapport")[0], 404, "pas de rapport au depart")
 verifie(s.req("GET", "/inconnu")[0], 404, "route inconnue")
 
+# port deja pris : sous Windows, HTTPServer.allow_reuse_address laissait deux instances se lier au meme port
+try:
+    mw.ServeurMenage(("127.0.0.1", s.port), mw.fabrique_gestionnaire(s.acces, s.etat)).server_close()
+    deuxieme = False
+except OSError:
+    deuxieme = True
+verifie(deuxieme, True, "un second serveur sur le meme port leve OSError")
+
 # anti-CSRF, Host, corps
 verifie(s.req("POST", "/lancer", {}, {mw.ENTETE: "0"})[0], 403, "POST sans l'en-tete X-Menage")
 verifie(s.req("POST", "/lancer", {}, {"Origin": "http://evil.example"})[0], 403, "POST d'une autre origine")

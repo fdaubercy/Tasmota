@@ -13,6 +13,7 @@ Tout autre verbe : 405. Banc : test_icones_catalogue_web.py.
 
 import argparse
 import json
+import socket
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -28,6 +29,16 @@ DEPOT = Path(__file__).resolve().parents[3]
 # 'self' pour le service worker de repli et le manifeste ajoutes par acces_web.habille ; aucune ressource externe.
 CSP = ("default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self'; "
        "connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'")
+
+
+class ServeurIcones(ThreadingHTTPServer):
+    allow_reuse_address = False      # HTTPServer l'active : sous Windows, deux instances se liaient alors au meme port
+
+    def server_bind(self):
+        # Windows : adresse exclusive (comme ftp_cartes_web.ServeurFtp et annuaire_outils.Serveur).
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 def fabrique_gestionnaire(acces, racine):
@@ -84,7 +95,7 @@ def principal():
     args = opt.parse_args()
     acces = acces_web.Acces(args.http, args.local, "Catalogue d'icones")
     try:
-        serveur = ThreadingHTTPServer((acces.hote, args.http), fabrique_gestionnaire(acces, DEPOT))
+        serveur = ServeurIcones((acces.hote, args.http), fabrique_gestionnaire(acces, DEPOT))
     except OSError as erreur:
         print(f"ERREUR : port {args.http} indisponible ({erreur}). L'outil tourne peut-etre deja.")
         return 1

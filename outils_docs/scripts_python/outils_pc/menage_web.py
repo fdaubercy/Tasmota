@@ -31,6 +31,7 @@ Banc : test_menage_web.py.
 
 import argparse
 import json
+import socket
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -52,6 +53,13 @@ ENTETE = "X-Menage"
 
 class ServeurMenage(ThreadingHTTPServer):
     request_queue_size = 64          # defaut de Python : 5. La page lance 6 a 8 requetes d'un coup au chargement : sous charge, une connexion etait refusee
+    allow_reuse_address = False      # HTTPServer l'active : sous Windows, deux instances se liaient alors au meme port
+
+    def server_bind(self):
+        # Windows : adresse exclusive (comme ftp_cartes_web.ServeurFtp et annuaire_outils.Serveur).
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 def builds_en_cours_defaut():

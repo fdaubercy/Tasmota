@@ -12,7 +12,6 @@ import socket
 import sys
 import tempfile
 import threading
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import acces_web
@@ -45,7 +44,7 @@ def principal():
         ttf.write_bytes(b"FAUXTTF")
         port = port_libre()
         acces = acces_web.Acces(port, True, "Catalogue d'icones")
-        serveur = ThreadingHTTPServer(("127.0.0.1", port), web.fabrique_gestionnaire(acces, racine))
+        serveur = web.ServeurIcones(("127.0.0.1", port), web.fabrique_gestionnaire(acces, racine))
         serveur.daemon_threads = True
         threading.Thread(target=serveur.serve_forever, daemon=True).start()
 
@@ -69,6 +68,12 @@ def principal():
             s, h, d = req("GET", "/lib/mdi.ttf")
             verifie((s, d, h.get("content-type")), (200, b"FAUXTTF", "font/ttf"), "GET /lib/mdi.ttf : la police du depot")
             verifie(req("GET", "/inconnu")[0], 404, "route inconnue : 404")
+            try:    # sous Windows, HTTPServer.allow_reuse_address laissait deux instances se lier au meme port
+                web.ServeurIcones(("127.0.0.1", port), web.fabrique_gestionnaire(acces, racine)).server_close()
+                deuxieme = False
+            except OSError:
+                deuxieme = True
+            verifie(deuxieme, True, "un second serveur sur le meme port leve OSError")
             for m in ("POST", "PUT", "DELETE", "PATCH"):
                 verifie(req(m, "/catalogue", {"Content-Type": "application/json", "Content-Length": "2"}, b"{}")[0], 405, f"{m} : refuse 405, lecture seule")
             verifie(req("GET", "/", {"Host": "evil.example:80"})[0], 403, "Host hostile : refuse")
