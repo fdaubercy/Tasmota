@@ -20,7 +20,7 @@ L'utilisateur veut pouvoir l'activer **à la demande** pour :
 - Activation / désactivation par **`ReglageGlobal Ethernet ON|OFF`** et par un **bouton dans la page
   Configuration** du P4.
 - Paramétrage dans le persist (bloc `serveur.ethernet`), appliqué au démarrage par `configGlobal`.
-- Ethernet actif : **IP fixe 192.168.0.50** (décision de l'utilisateur ; .40 à .49 sont pris dans le
+- Ethernet actif : **IP fixe 192.168.0.52** (décision de l'utilisateur, 2026-11-21 : .50 est devenue celle du projecteur de barbecue ; .40 à .49 sont pris dans le
   plan d'adressage de `outils_docs/README.md` § des IP fixes, .44 = Serveur de Grenier RDC).
 - Ethernet actif : la STA **reste connectée en 192.168.0.43** (elle est indispensable au point
   d'accès, voir §4.1). .43 reste l'adresse « officielle » du P4 (OTA, outils PC, `ipMaitre` envoyé
@@ -133,7 +133,7 @@ compris** :
     "type": 1,
     "adresse": -1,
     "IP": {
-        "IPAddress": "192.168.0.50",
+        "IPAddress": "192.168.0.52",
         "IPGateway": "192.168.0.254",
         "Subnet": "255.255.255.0",
         "DNSServer": "192.168.0.254"
