@@ -1,4 +1,4 @@
-; Stocke les commandes qui seront executees a chaque demarrage (projecteur du barbecue, NOUS B2T, 192.168.0.52).
+; Stocke les commandes qui seront executees a chaque demarrage (projecteur du barbecue, NOUS B2T, 192.168.0.50).
 ; Wi-Fi (repeteur KuWFi) et MQTT : par le persist (serveur.wifi, serveur.mqtt), pas ici.
 
 ; Evite un reset sur appui long sur un bouton
@@ -21,7 +21,7 @@ DeviceName Projecteur de barbecue
 SetOption55 ON
 
 ; Adresse IP / passerelle / masque / DNS
-Backlog IPAddress1 192.168.0.52; IPAddress2 192.168.0.254; IPAddress3 255.255.255.0; IPAddress4 192.168.0.254;
+Backlog IPAddress1 192.168.0.50; IPAddress2 192.168.0.254; IPAddress3 255.255.255.0; IPAddress4 192.168.0.254;
 
 ; LED de statut
 Backlog LedPower OFF; SetOption31 OFF; LedState 6;

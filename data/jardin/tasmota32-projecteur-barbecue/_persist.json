@@ -5,9 +5,9 @@
 			"activation": "ON",
 			"enregistrement": "OFF",
 			"calibrage": {
-				"PowerCal": 596,
-				"VoltageCal": 15187,
-				"CurrentCal": 251213
+				"PowerCal": 12530,
+				"VoltageCal": 1950,
+				"CurrentCal": 3500
 			}
 		},
 		"typeESP": "ESP32",
@@ -68,7 +68,7 @@
 		"apiHTTP": "ON",
 		"log": "info",
 		"IP": {
-			"IPAddress": "192.168.0.52",
+			"IPAddress": "192.168.0.50",
 			"IPGateway": "192.168.0.254",
 			"Subnet": "255.255.255.0",
 			"DNSServer": "192.168.0.254"
@@ -130,6 +130,7 @@
 		},
 		"discovery": {
 			"activation": "ON",
+			"ecoute": "OFF",
 			"log": "info"
 		}
 	},
@@ -459,7 +460,7 @@
 	},
 	"drivers": {
 		"leds": {
-			"activation": "ON",
+			"activation": "OFF",
 			"name": "Leds",
 			"log": "info",
 			"ledPower": "OFF",

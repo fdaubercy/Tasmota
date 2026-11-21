@@ -23,8 +23,8 @@ SetOption55 ON
 ; Adresse IP / passerelle / masque / DNS
 Backlog IPAddress1 192.168.0.41; IPAddress2 192.168.0.254; IPAddress3 255.255.255.0; IPAddress4 192.168.0.254;
 
-; LED de statut
-Backlog LedPower OFF; SetOption31 OFF; LedState 6;
+; LED de statut : LedState 1 = la LED suit l'etat de la lampe (comportement de la carte avant notre firmware, releve le 2026-11-21)
+Backlog LedPower OFF; SetOption31 OFF; LedState 1;
 
 ; Logs : la console serie (GPIO1/GPIO3) est prise par la BL0942 -> SerialLog 0
 Backlog SerialLog 0; WebLog 3;
