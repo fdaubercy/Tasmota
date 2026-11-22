@@ -52,7 +52,7 @@ logFonctions.SORTIES = {"serie": "SerialLog", "web": "WebLog", "mqtt": "MqttLog"
 # Cibles connues (une par bloc du persist qui porte une cle "log")
 logFonctions.CIBLES = ["general", "serveurWeb", "udp", "tcp", "rangeExtender", "discovery", "modbus",
                        "conn16channels", "slaveModbus", "lorawan", "volets", "es8311", "garage", "cuve", "rideau", "leds", "historique",
-                       "ecranCave", "ecranDebits", "ecranSysteme", "liaisonMqtt"]
+                       "ecranCave", "ecranDebits", "ecranSysteme", "liaisonMqtt", "emulationHue"]
 # Ce que couvre chaque cible (aide de ReglageLog)
 logFonctions.DESCRIPTIONS = {
     "general": "modules communs (globalFonctions, configGlobal, controleGeneral, gestionFileFolder...)",
@@ -69,7 +69,8 @@ logFonctions.DESCRIPTIONS = {
     "ecranCave": "ecran de la cave et ses touches (ecranCaveFonctions, ecranFonctions ; serveur : controleCommandesEcran)",
     "ecranDebits": "ecran des debits (ecranDebitsFonctions, ecranFonctions)",
     "ecranSysteme": "page Systeme des ecrans tactiles (ecranSysteme, controleEcranSysteme)",
-    "liaisonMqtt": "voie MQTT maitre/esclaves et ses garde-fous (mqttLiaisonFonctions, controleMqttLiaison)"}
+    "liaisonMqtt": "voie MQTT maitre/esclaves et ses garde-fous (mqttLiaisonFonctions, controleMqttLiaison)",
+    "emulationHue": "emulation Hue pour Alexa (hueFonctions, controleHue)"}
 # Erreurs gardees en RAM (dernieresErreurs), lues par la page Systeme des ecrans (ecranSysteme)
 logFonctions.ERREURS_GARDEES = 5
 
@@ -115,6 +116,7 @@ def logFonctions_lieu(cible)
     elif c == "ecrandebits"         bloc = (modules != nil ? modules.find("ecranDebits") : nil)
     elif c == "ecransysteme"        bloc = (modules != nil ? modules.find("ecranSysteme") : nil)
     elif c == "liaisonmqtt"         bloc = d.find("liaisonMqtt")
+    elif c == "emulationhue"        bloc = s.find("emulationHue")
     elif c == "historique"
         # Bloc de l'historique local (S3/P4). Un bloc reduit a {"grafana": ...} (carte sans historique) ne compte pas.
         var h = (diverses != nil ? diverses.find("historique") : nil)

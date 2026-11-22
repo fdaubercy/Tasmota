@@ -15,6 +15,7 @@ if demarrage.prologue()
     demarrage.compile(["vrFonctions"], "drivers.voletRoulants")
 
     demarrage.charge(["controleGeneral", "controleLedTemoin", "controleWeb"])
+    demarrage.charge(["controleHue"])                                       # emulation Hue (Alexa) : sans garde, remet Emulation a 0 a OFF (serveur.emulationHue)
     demarrage.charge(["controleUDP"], "serveur.udp")
     demarrage.charge(["controleTCP"], "serveur.tcp")
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")

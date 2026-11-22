@@ -124,6 +124,10 @@
             "activation": "ON",
             "log": "info"
         },
+        "emulationHue": {
+            "activation": "OFF",
+            "log": "info"
+        },
         "coprocesseur": {
             "activation": "ON",
             "url": "https://ota.tasmota.com/tasmota32/coprocessor",
@@ -267,6 +271,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "LEDs Cuve",
+						"alexa": {"activation": "ON", "nom": "LED de la cuve", "type": "onoff"},
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 1,
@@ -356,6 +361,7 @@
 					"relai5": {
 						"activation": "ON",
 						"nom": "Projecteur de Garage",
+						"alexa": {"activation": "ON", "nom": "Projecteur du garage", "type": "onoff"},
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 5,
@@ -753,6 +759,7 @@
 					"relai24": {
 						"activation": "ON",
 						"nom": "Projecteur Jardin",
+						"alexa": {"activation": "ON", "nom": "Projecteur du jardin", "type": "onoff"},
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 24,
@@ -799,6 +806,7 @@
 					"relai26": {
 						"activation": "ON",
 						"nom": "Projecteur Barbecue",
+						"alexa": {"activation": "ON", "nom": "Projecteur du barbecue", "type": "onoff"},
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 26,

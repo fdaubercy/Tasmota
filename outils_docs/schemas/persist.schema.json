@@ -795,6 +795,34 @@
         "voieReseau": {
           "type": "string"
         },
+        "emulationHue": {
+          "type": "object",
+          "properties": {
+            "activation": {
+              "type": "string",
+              "description": "ON ou OFF : active ou non ce bloc.",
+              "enum": [
+                "ON",
+                "OFF"
+              ]
+            },
+            "log": {
+              "type": "string",
+              "description": "Seuil de log du module : erreur, info, debug ou detail (charte data/fs/logFonctions.be).",
+              "enum": [
+                "erreur",
+                "info",
+                "debug",
+                "detail"
+              ]
+            }
+          },
+          "required": [
+            "activation",
+            "log"
+          ],
+          "additionalProperties": true
+        },
         "coprocesseur": {
           "type": "object",
           "properties": {
@@ -1262,6 +1290,31 @@
                     },
                     "alerte": {
                       "type": "string"
+                    },
+                    "alexa": {
+                      "type": "object",
+                      "properties": {
+                        "activation": {
+                          "type": "string",
+                          "description": "ON ou OFF : active ou non ce bloc.",
+                          "enum": [
+                            "ON",
+                            "OFF"
+                          ]
+                        },
+                        "nom": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "activation",
+                        "nom",
+                        "type"
+                      ],
+                      "additionalProperties": true
                     },
                     "channel": {
                       "type": "integer"

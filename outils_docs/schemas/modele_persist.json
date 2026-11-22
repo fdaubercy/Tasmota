@@ -997,7 +997,11 @@
 				"serveur.voieReseau": "wifi",
 				"drivers.ModBus.environnement.TasmotaSlaveModBus.TasmotaSlaveModBus1.lectureGroupee": "OFF",
 				"drivers.ModBus.lectureGroupee": "OFF",
-				"drivers.ModBus.periodeReleve": 30
+				"drivers.ModBus.periodeReleve": 30,
+				"serveur.emulationHue": {
+					"activation": "OFF",
+					"log": "info"
+				}
 			}
 		},
 		"ESP32P4": {
@@ -1306,6 +1310,10 @@
 						"essaisMax": 3
 					},
 					"esclaves": {}
+				},
+				"serveur.emulationHue": {
+					"activation": "OFF",
+					"log": "info"
 				}
 			}
 		}

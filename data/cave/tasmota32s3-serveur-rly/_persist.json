@@ -124,6 +124,10 @@
 		"discovery": {
 			"activation": "ON",
 			"log": "info"
+		},
+		"emulationHue": {
+			"activation": "OFF",
+			"log": "info"
 		}
 	},
 	"template": {
@@ -409,6 +413,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "Ventilation Cave",
+						"alexa": {"activation": "ON", "nom": "Ventilation de la cave", "type": "onoff"},
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 2,
@@ -559,6 +564,7 @@
 					"relai1": {
 						"activation": "ON",
 						"nom": "LED Machines",
+						"alexa": {"activation": "ON", "nom": "LED des machines", "type": "onoff"},
 						"afficheWeb": "ON",
 						"pin": -1,
 						"id": 3,

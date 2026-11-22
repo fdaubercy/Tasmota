@@ -18,6 +18,7 @@ if demarrage.prologue()
     # Sans condition : init() porte la garde.
     demarrage.charge(["controleGeneral", "controleLedTemoin", "i2c_ads1115", "i2c_mcp23017", "modBus_Conn16channels", "modBus_TasmotaSlaveModBus", "controleWeb"])
     demarrage.charge(["fsMqtt"])                                            # fichiers du FS recus par MQTT (page Build 7700), comme la carte ESP32
+    demarrage.charge(["controleHue"])                                       # emulation Hue (Alexa) : sans garde, remet Emulation a 0 a OFF (serveur.emulationHue)
     demarrage.charge(["controleUDP"], "serveur.udp")
     demarrage.charge(["controleTCP"], "serveur.tcp")
     demarrage.charge(["controleModbus"])                                    # ouvre le port serie RS485 (GPIO 17/18)

@@ -122,6 +122,10 @@
 		"discovery": {
 			"activation": "ON",
 			"log": "info"
+		},
+		"emulationHue": {
+			"activation": "OFF",
+			"log": "info"
 		}
 	},
 	"template": {
