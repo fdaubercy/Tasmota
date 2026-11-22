@@ -20,4 +20,5 @@ if demarrage.prologue()
     demarrage.leds()
     demarrage.charge(["controlePortail"], "modules.portail")                 # page d'accueil : le portail seul et son capteur de fermeture (lecture seule)
     demarrage.historique()
+    demarrage.charge(["qrcodePage"])
 end

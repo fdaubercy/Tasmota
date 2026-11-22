@@ -19,4 +19,5 @@ if demarrage.prologue()
     demarrage.charge(["controleDiscovery"], "serveur.discovery")            # fiche ImAlive au maitre : son RoutageRangeExtender (:8080) en depend
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")   # esclave (id 1) derriere SERVEUR-RLY-CAVE-GATEWAY
     demarrage.chargeFichier("controleEcranCave", "modules.ecranCave")      # ecran, veille, affichage MQTT (A6, A8)
+    demarrage.charge(["qrcodePage"])
 end

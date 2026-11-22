@@ -1,0 +1,15 @@
+{
+ "version": 1,
+ "texte": "Hostname : SERVEUR-GRENIER-RDC · Passerelle Wifi : SERVEUR-GRENIER-RDC-GATEWAY · IP : 192.168.0.46 · URL : http://192.168.0.46 · Topic MQTT : rdc/grenier",
+ "style": {
+  "points": "rounded",
+  "coins": "extra-rounded",
+  "couleur": "#000000",
+  "fond": "#ffffff"
+ },
+ "image": null,
+ "correction": "M",
+ "modules": 53,
+ "ip_inscrite": "192.168.0.46",
+ "entre_lignes": " · "
+}

@@ -19,4 +19,5 @@ if demarrage.prologue()
     demarrage.leds()
     demarrage.charge(["controleRideau"], "modules.rideau")                  # squelette : la porte est pilotee par voletRoulants
     demarrage.historique()
+    demarrage.charge(["qrcodePage"])
 end

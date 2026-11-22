@@ -1,0 +1,15 @@
+{
+ "version": 1,
+ "texte": "Hostname : SERVEUR-GRENIER-2EME · Passerelle Wifi : SERVEUR-GRENIER-2EME-GATEWAY · IP : 192.168.0.47 · URL : http://192.168.0.47 · Topic MQTT : etage2/grenier",
+ "style": {
+  "points": "rounded",
+  "coins": "extra-rounded",
+  "couleur": "#000000",
+  "fond": "#ffffff"
+ },
+ "image": null,
+ "correction": "M",
+ "modules": 53,
+ "ip_inscrite": "192.168.0.47",
+ "entre_lignes": " · "
+}

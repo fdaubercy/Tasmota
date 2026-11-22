@@ -217,7 +217,7 @@ PAGE = r"""<!doctype html>
         <label class="action"><input type="checkbox" name="action" value="buildfs"> Construire le file system</label>
         <label class="action"><input type="checkbox" name="action" value="uploadfs"> Téléverser le file system</label>
         <label class="action" title="Étiquettes QR (page 7970) : après une série réussie, fiches des cartes en mode lien poussées sur GitHub Pages, sans diff">
-          <input type="checkbox" id="publier-fiches"> Publier les fiches QR à la fin (public)</label>
+          <input type="checkbox" id="publier-fiches" checked> Publier les fiches QR à la fin (public)</label>
         <p class="discret" style="margin:6px 0 0">Ordre dans un env : compiler → téléverser le firmware (ou effacer puis
           téléverser) → construire le FS → téléverser le FS. Un échec arrête cet env ; les suivants continuent.</p>
         <p class="discret" style="margin:4px 0 0">Plusieurs cartes sur le même port COM : la série compile, puis s'arrête

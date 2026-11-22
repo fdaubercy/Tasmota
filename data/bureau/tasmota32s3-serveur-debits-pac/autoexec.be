@@ -19,5 +19,6 @@ if demarrage.prologue()
     demarrage.charge(["controleDiscovery"], "serveur.discovery")            # fiche ImAlive au maitre : son RoutageRangeExtender (:8080) en depend
     demarrage.charge(["controleRangeExtender"], "serveur.rangeExtender")   # esclave (id 1) derriere ECRAN-DEBITS-PAC-GATEWAY, point d'acces propre
     demarrage.historique()                                                  # historique des debits et page /graphiques (diverses.historique)
+    demarrage.charge(["qrcodePage"])
     demarrage.chargeFichier("controleDebits", "modules.debits")
 end

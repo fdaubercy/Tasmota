@@ -1,0 +1,15 @@
+{
+ "version": 1,
+ "texte": "Hostname : DISJONCTEUR-DIFF-BUREAU · IP : 192.168.0.49 · URL : http://192.168.0.49 · Topic MQTT : bureau/pc",
+ "style": {
+  "points": "rounded",
+  "coins": "extra-rounded",
+  "couleur": "#000000",
+  "fond": "#ffffff"
+ },
+ "image": null,
+ "correction": "M",
+ "modules": 45,
+ "ip_inscrite": "192.168.0.49",
+ "entre_lignes": " · "
+}

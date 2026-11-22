@@ -24,4 +24,5 @@ if demarrage.prologue()
     demarrage.chargeFichier("controleGrenier", "modules.grenier")           # non solidifie : depuis le LittleFS
     demarrage.leds()
     demarrage.historique()
+    demarrage.charge(["qrcodePage"])
 end

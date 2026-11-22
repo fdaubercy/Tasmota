@@ -28,4 +28,5 @@ if demarrage.prologue()
     demarrage.chargeFichier("controleCommandesEcran", "modules.ecranCave")      # touches de l'ecran 7B (A4) : pose global.commandesEsclave
     demarrage.leds()
     demarrage.historique()
+    demarrage.charge(["qrcodePage"])
 end

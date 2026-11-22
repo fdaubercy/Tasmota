@@ -63,6 +63,10 @@ def copie(dossier):
     texte = (racine / fbe.dossier_carte(CUVE) / "autoexec.be").read_text(encoding="utf-8")
     (racine / fbe.dossier_carte(CUVE) / "autoexec.be").write_text(eqe.age._autoexec(texte, False, ligne=eqe.LIGNE_AUTOEXEC),
                                                                  encoding="utf-8")
+    # La cuve porte la page dans le vrai cenv depuis le 2026-11-22 : la copie repart d'une cuve SANS page (solidification retiree).
+    _, eol, lignes = eqe.age._lit_cenv(racine)
+    lignes = eqe.age._retire(racine, lignes, CUVE, solides=eqe.SOLIDES, marque=eqe.MARQUE)
+    (racine / fbi.FICHIER_CENV).write_bytes(eol.join(lignes).encode("utf-8", errors="surrogateescape"))
     d = racine / fbe.dossier_carte(PORTE)
     d.mkdir(parents=True)
     (d / "autoexec.be").write_text(AUTOEXEC_PORTE, encoding="utf-8")

@@ -25,4 +25,5 @@ if demarrage.prologue()
     demarrage.charge(["controleDiscovery"], "serveur.discovery")
     demarrage.leds()                                                        # LED WS2812 de la carte (GPIO38) : voyant d'etat
     demarrage.historique()
+    demarrage.charge(["qrcodePage"])
 end

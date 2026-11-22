@@ -1,6 +1,6 @@
 carte : tasmota32-bureau-interrupteur-energie
 exception : aucune
-drivers (3) : CONTROLE_ENERGIE, CONTROLE_GENERAL, CONTROLE_WEB
+drivers (4) : CONTROLE_ENERGIE, CONTROLE_GENERAL, CONTROLE_WEB, QRCODE_PAGE
 regles (8) : Button1#Action, Eth, Mqtt, System, System, Time, Time#Initialized, Wifi
 commandes (2) : ReglageGlobal, ReglageLog
 crons (1) : energie_cycle

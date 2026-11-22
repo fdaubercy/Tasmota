@@ -1,6 +1,6 @@
 carte : tasmota32s3-etage2-grenier
 exception : aucune
-drivers (7) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_LED_TEMOIN, CONTROLE_RANGE_EXTENDER, CONTROLE_VR, CONTROLE_WEB, HISTORIQUE_WEB
+drivers (8) : CONTROLE_DISCOVERY, CONTROLE_GENERAL, CONTROLE_LED_TEMOIN, CONTROLE_RANGE_EXTENDER, CONTROLE_VR, CONTROLE_WEB, HISTORIQUE_WEB, QRCODE_PAGE
 regles (15) : Button1#Action, Eth, Eth, Mqtt, Mqtt, Shutter1#Direction, Switch1#Action, Switch2#Action, System, System, System, Time, Time, Wifi, Wifi
 commandes (6) : ReglageDiscovery, ReglageGlobal, ReglageLog, ReglageRangeExtender, ReglageVolets, RoutageRangeExtender
 crons (1) : majHistorique
