@@ -1237,6 +1237,9 @@
                         "maxRelances": {
                           "type": "integer"
                         },
+                        "pauseApresMax": {
+                          "type": "integer"
+                        },
                         "topicAlerte": {
                           "type": "string"
                         }
@@ -1245,6 +1248,7 @@
                         "capteur",
                         "pause",
                         "maxRelances",
+                        "pauseApresMax",
                         "topicAlerte"
                       ],
                       "additionalProperties": true

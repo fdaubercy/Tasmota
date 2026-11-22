@@ -288,11 +288,19 @@ class CONTROLE_GENERAL : Driver
 			self.publieAlerteRelance(cle, relai, "relance", message, nb, maxRelances)
 			tasmota.set_timer(reglage.find("pause", 10) * 1000, /-> self.relanceRelai(cle, relai), string.format("relance_relai%i", id))
 		else
-			var message = string.format("Niveau haut '%s' toujours actif apres %i relances : probable defaut du capteur (ou pompe inefficace). Pompe arretee.", nomCapteur, maxRelances)
+			# Apres les relances rapides : une tentative toutes les 'pauseApresMax' minutes (defaut 10 ; 0 = on s'arrete), tant que le niveau
+			# haut reste actif (relanceRelai l'abandonne des qu'il retombe). Le compteur reste a maxRelances : chaque fin de timer revient ici.
+			var pauseMin = reglage.find("pauseApresMax", 10)
+			var message = string.format("Niveau haut '%s' toujours actif apres %i relances : probable defaut du capteur (ou pompe inefficace).", nomCapteur, maxRelances)
+			message += pauseMin > 0 ? string.format(" Nouvelle tentative dans %i min.", pauseMin) : " Pompe arretee."
 			relai["alerte"] = message
-			self.relances.remove(cleCompteur)
 			logFonctions.log("GESTION_RELAIS_ERREUR: " + message, LOG_LEVEL_ERREUR)
 			self.publieAlerteRelance(cle, relai, "defaut", message, nb, maxRelances)
+			if (pauseMin > 0)
+				tasmota.set_timer(pauseMin * 60000, /-> self.relanceRelai(cle, relai), string.format("relance_relai%i", id))
+			else
+				self.relances.remove(cleCompteur)
+			end
 		end
 	end
 
@@ -329,7 +337,9 @@ class CONTROLE_GENERAL : Driver
 
 	# Remise a zero du compteur de relances et de l'alerte (cycle termine normalement)
 	def acquitteRelance(cle, relai)
+		import string
 		self.relances.remove(cle + "_" + str(relai["id"]))
+		tasmota.remove_timer(string.format("relance_relai%i", relai["id"]))      # relance longue en attente
 		if (relai.find("alerte", "") != "")
 			logFonctions.log("GESTION_RELAIS: Alerte du relai n°" + str(relai["id"]) + " acquittee (niveau haut retombe)", LOG_LEVEL_INFO)
 			relai["alerte"] = ""

@@ -13,7 +13,7 @@
       },
       {
         "name": "TOPIC_CAVE",
-        "value": "cave/serveur-rly-cave-v2",
+        "value": "cave/serveur-rly-cave",
         "type": "str"
       }
     ]
@@ -33,7 +33,7 @@
     "type": "mqtt in",
     "z": "tg_pompe_tab",
     "name": "Alerte pompe",
-    "topic": "tele/cave/serveur-rly-cave-v2/ALERTE_POMPE",
+    "topic": "tele/cave/serveur-rly-cave/ALERTE_POMPE",
     "qos": "0",
     "datatype": "json",
     "broker": "tg_pompe_broker",
@@ -227,7 +227,7 @@
     "type": "mqtt in",
     "z": "tg_pompe_tab",
     "name": "Reponse carte cave",
-    "topic": "stat/cave/serveur-rly-cave-v2/RESULT",
+    "topic": "stat/cave/serveur-rly-cave/RESULT",
     "qos": "0",
     "datatype": "json",
     "broker": "tg_pompe_broker",

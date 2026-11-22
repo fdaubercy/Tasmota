@@ -117,7 +117,9 @@ end
 var GF = nil
 var DRV = nil
 def chargeDriver()
-    charge_fichier("data/cave/tasmota32s3-serveur-rly/controlePompeVideCave.be")    # le driver de la carte
+    # le driver de la carte : module solidifiable, dont 'import' appelle init(m) au firmware (data/cave/.../controlePompeVideCave.be)
+    var M = charge_fichier("data/cave/tasmota32s3-serveur-rly/controlePompeVideCave.be")
+    if (M != nil)    M.init(M)    end
     DRV = global.controlePompeVideCave
 end
 var CG = nil
@@ -379,5 +381,106 @@ tick(10)
 verifie("pannes sans relance : rien, pas d'exception", "", alerte())
 DRV.json_append()
 verifie("json_append repond quand meme", true, string.find(tasmota.reponse, "PompeVideCave") >= 0)
+
+print("--- hysteresis_humidite")
+# Bornes [50, 75] du thermometre AM2301 : >= 75 -> ordre ON, <= 50 -> ordre OFF, entre les deux -> aucun ordre ; une temperature ne commande rien
+# (globalFonctions.be::changementEtatCapteur). commandeRelaisLies est remplacee par un enregistreur : on lit les ordres envoyes au relais lie.
+monte([], false)
+var ordres = []
+GF.commandeRelaisLies = def(m, d, v, t) ordres.push(str(v)) end
+def humidite(v) GF.changementEtatCapteur(v, "AM2301#Humidity", nil, "Thermo-Hygrometre", "thermometre1") end
+def temperature(v) GF.changementEtatCapteur(v, "AM2301#Temperature", nil, "Thermo-Hygrometre", "thermometre1") end
+verifie("limites du persist", "[50, 75]", str(modules["Thermo-Hygrometre"]["environnement"]["thermometres"]["thermometre1"]["limites"]))
+humidite(80)
+verifie("80 % (>= 75) : ON", "['ON']", str(ordres))
+humidite(60)
+verifie("60 % (entre les bornes) : aucun ordre de plus", "['ON']", str(ordres))
+humidite(74)
+verifie("74 % (juste sous la haute) : aucun ordre de plus", "['ON']", str(ordres))
+humidite(50)
+verifie("50 % (<= 50) : OFF", "['ON', 'OFF']", str(ordres))
+humidite(60)
+verifie("remontee a 60 % : aucun ordre de plus", "['ON', 'OFF']", str(ordres))
+humidite(75)
+verifie("75 % (borne haute comprise) : ON", "['ON', 'OFF', 'ON']", str(ordres))
+temperature(20)
+verifie("une temperature de 20 ne commande rien", "['ON', 'OFF', 'ON']", str(ordres))
+humidite(30)
+verifie("30 % : OFF", "['ON', 'OFF', 'ON', 'OFF']", str(ordres))
+
+print("--- bouton_poussoir_repete")
+# Un poussoir envoie toujours SINGLE : chaque appui doit commander les relais lies (avant le correctif, seul le 1er etait traite, l'etat restant SINGLE).
+# Un bouton en mode interrupteur (valeurs ON puis OFF) reste filtre quand la valeur ne change pas.
+monte([], false)
+var appuis = []
+GF.commandeRelaisLies = def(m, d, v, t) appuis.push(str(v)) end
+def poussoir(v) GF.changementEtatCapteur(v, "Button1#Action", nil, "pompeVideCave", "bouton1") end
+poussoir("SINGLE")
+verifie("1er appui SINGLE : ordre envoye", "['SINGLE']", str(appuis))
+poussoir("SINGLE")
+verifie("2e appui SINGLE : ordre envoye aussi", "['SINGLE', 'SINGLE']", str(appuis))
+poussoir("SINGLE")
+verifie("3e appui SINGLE : ordre envoye aussi", "['SINGLE', 'SINGLE', 'SINGLE']", str(appuis))
+poussoir("HOLD")
+verifie("appui long HOLD : ordre envoye", "['SINGLE', 'SINGLE', 'SINGLE', 'HOLD']", str(appuis))
+appuis = []
+GF.commandeRelaisLies = def(m, d, v, t) appuis.push(str(v)) end
+poussoir("ON")
+poussoir("ON")
+poussoir("OFF")
+verifie("mode interrupteur : ON, ON, OFF donne ON puis OFF", "['ON', 'OFF']", str(appuis))
+
+print("--- relance_longue_apres_les_relances_rapides")
+monte([], false)
+sw("ON", "ON")
+depart()
+for i: 1 .. 3
+    tasmota.timers["timer_relai1"][1]()
+    tasmota.timers["relance_relai1"][1]()
+end
+verifie("3 relances rapides faites", 3, cg.relances.find("pompeVideCave_1", 0))
+verifie("pas d'alerte avant la 4e fin de minuterie", "", alerte())
+tasmota.timers["timer_relai1"][1]()
+verifie("alerte posee a la 4e fin de minuterie", true, alerte() != "")
+verifie("alerte annonce la nouvelle tentative", true, string.find(alerte(), "Nouvelle tentative dans 10 min") >= 0)
+verifie("relance longue armee a 10 min", 600000, tasmota.timers.find("relance_relai1", [nil])[0])
+verifie("compteur garde a 3", 3, cg.relances.find("pompeVideCave_1", 0))
+tasmota.timers["relance_relai1"][1]()
+verifie("pompe relancee apres 10 min", "ON", relai()["etat"])
+tasmota.timers["timer_relai1"][1]()
+verifie("et encore une relance longue", 600000, tasmota.timers.find("relance_relai1", [nil])[0])
+sw("ON", "OFF")
+tasmota.timers["relance_relai1"][1]()
+verifie("niveau haut retombe : alerte effacee", "", alerte())
+verifie("niveau haut retombe : compteur remis a zero", 0, cg.relances.find("pompeVideCave_1", 0))
+verifie("niveau haut retombe : plus de minuterie de relance", false, tasmota.timers.contains("relance_relai1"))
+
+print("--- relance_longue_acquittee")
+monte([], false)
+sw("ON", "ON")
+depart()
+for i: 1 .. 3
+    tasmota.timers["timer_relai1"][1]()
+    tasmota.timers["relance_relai1"][1]()
+end
+tasmota.timers["timer_relai1"][1]()
+DRV.acquitte()
+verifie("AcquittePompe annule la relance en attente", false, tasmota.timers.contains("relance_relai1"))
+verifie("AcquittePompe efface l'alerte", "", alerte())
+
+print("--- pauseApresMax_zero_ancien_comportement")
+monte([], false)
+relai()["relance"]["pauseApresMax"] = 0
+sw("ON", "ON")
+depart()
+for i: 1 .. 3
+    tasmota.timers["timer_relai1"][1]()
+    tasmota.timers["relance_relai1"][1]()
+end
+tasmota.remove_timer("relance_relai1")                  # le faux tasmota ne retire pas un timer deja declenche
+tasmota.timers["timer_relai1"][1]()
+verifie("pauseApresMax 0 : pompe arretee", true, string.find(alerte(), "Pompe arretee") >= 0)
+verifie("pauseApresMax 0 : aucune relance armee", false, tasmota.timers.contains("relance_relai1"))
+verifie("pauseApresMax 0 : compteur remis a zero", 0, cg.relances.find("pompeVideCave_1", 0))
 
 print("BANC_POMPE_CAVE: " + (echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")") + " (" + str(nbControles) + " controles)")
