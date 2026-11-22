@@ -291,7 +291,8 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
 		device = modules[moduleCapteur]["environnement"]["boutons"].find(cleBouton, false)
 		if (device)
 			if diversFonctions.deviceActif(device)
-				if (device["etat"] != value)
+				# Un poussoir envoie toujours le meme evenement (SINGLE, DOUBLE, HOLD...) : chaque appui compte, sinon seul le 1er serait traite
+				if (string.find("|SINGLE|DOUBLE|TRIPLE|QUAD|PENTA|HOLD|", "|" + str(value) + "|") >= 0 || device["etat"] != value)
                     # Enregistre l'état en json
                     device["etat"] = value
                     modules[moduleCapteur]["environnement"]["boutons"][cleBouton]["value"] = value
@@ -333,20 +334,28 @@ def globalFonctions_changementEtatCapteur(value, trigger, msg, moduleCapteur, cl
                         modules[moduleCapteur]["environnement"]["thermometres"][cleBouton]["Humidity"] = real(value)
                     end
 
-                    # Compare la température & l'humidité avec les limites
+                    # Compare l'humidité avec les limites [basse, haute] (hystérésis, 2026-11-22) : >= haute -> ON,
+                    # <= basse -> OFF, entre les deux -> aucun ordre (le relais lié garde son état). Les limites sont des
+                    # bornes d'HUMIDITÉ : un relevé de température ne commande rien (avant, une température sous la
+                    # borne haute envoyait OFF au relais). Sans limites (DS18B20) : la valeur part telle quelle.
                     var limites = device.find("limites", [])
-                    if (limites.size() > 0)
-                        if int(value) >= int(limites[1])
-                            logFonctions.log(string.format("GESTION_CAPTEURS: Humidite superieure a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
+                    var ordre = true
+                    if (limites.size() > 1)
+                        if (string.find(trigger, "AM2301#Humidity") < 0)
+                            ordre = false
+                        elif int(value) >= int(limites[1])
+                            logFonctions.log(string.format("GESTION_CAPTEURS: Humidite superieure ou egale a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
                             value = "ON"
-                        else
-                            logFonctions.log(string.format("GESTION_CAPTEURS: Humidite inferieure a %i%% !", limites[1]), LOG_LEVEL_DEBUG)
+                        elif int(value) <= int(limites[0])
+                            logFonctions.log(string.format("GESTION_CAPTEURS: Humidite inferieure ou egale a %i%% !", limites[0]), LOG_LEVEL_DEBUG)
                             value = "OFF"
+                        else
+                            ordre = false
                         end
                     end
 
                     # Cherche les relais liés
-                    globalFonctions.commandeRelaisLies(moduleCapteur, device, value, true)
+                    if (ordre)    globalFonctions.commandeRelaisLies(moduleCapteur, device, value, true)    end
 				end
 			end
 		end

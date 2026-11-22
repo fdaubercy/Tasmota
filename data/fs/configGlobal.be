@@ -275,6 +275,11 @@ def configGlobal_configGlobalByJson(nbIOActivesJSON)
 		logFonctions.log(string.format("CONTROLE_GENERAL: Règle l'affichage du nom de modèle' à %s !", (data.find("affichageNomModele", "OFF") == "ON" ? "OFF" : "ON")), LOG_LEVEL_DEBUG)
 	end
 
+	# Chiffres 0/1 sous les boutons de la page d'accueil (texte d'état des relais, SetOption161 : 1 = masqué). Défaut ON = affichés.
+	if configGlobal.testeParam("SetOption161", (data.find("affichageEtatRelais", "ON") == "ON" ? "OFF" : "ON"), "")
+		logFonctions.log(string.format("CONTROLE_GENERAL: Règle l'affichage de l'état des relais sous les boutons à %s !", data.find("affichageEtatRelais", "ON")), LOG_LEVEL_DEBUG)
+	end
+
 	# Réglage de la telePeriod
 	if configGlobal.testeParam("TelePeriod", data.find("telePeriod", 300), "int")
 		var periode = data.find("telePeriod", 300)

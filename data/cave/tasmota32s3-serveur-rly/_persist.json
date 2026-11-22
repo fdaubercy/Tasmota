@@ -26,6 +26,7 @@
 		"eviteResetBTN": "ON",
 		"affichageTempESP32": "ON",
 		"affichageNomModele": "OFF",
+		"affichageEtatRelais": "OFF",
 		"localisation": {
 			"latitude": "50.410931",
 			"longitude": "3.085796"
@@ -488,7 +489,7 @@
 					}
 				},
 				"thermometres": {
-					"affichageWebSensor": "ON",
+					"affichageWebSensor": "OFF",
 					"thermometre1": {
 						"activation": "ON",
 						"nom": "Thermomètre Cave",

@@ -380,6 +380,13 @@
             "compteurs"
           ],
           "additionalProperties": true
+        },
+        "affichageEtatRelais": {
+          "type": "string",
+          "enum": [
+            "ON",
+            "OFF"
+          ]
         }
       },
       "required": [
