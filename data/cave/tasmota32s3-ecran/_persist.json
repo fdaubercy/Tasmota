@@ -113,7 +113,7 @@
 			"activation": "ON",
 			"id": 1,
 			"log": "info",
-			"ipMaitre": "192.168.0.243",
+			"ipMaitre": "192.168.0.48",
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
@@ -197,7 +197,7 @@
 			"reglage": "OFF",
 			"log": "info",
 			"sources": {
-				"cave": "cave/serveur-rly-cave-v2",
+				"cave": "cave/serveur-rly-cave",
 				"cuve": "jardin/cuve"
 			},
 			"peremption": {

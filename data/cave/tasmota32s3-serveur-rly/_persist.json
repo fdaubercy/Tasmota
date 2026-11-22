@@ -21,7 +21,7 @@
 			"general": "info",
 			"nbLogsFiles": 0
 		},
-		"telePeriod": 300,
+		"telePeriod": 60,
 		"heureReboot": "00:00",
 		"eviteResetBTN": "ON",
 		"affichageTempESP32": "ON",
@@ -55,13 +55,13 @@
 	"serveur": {
 		"activation": "ON",
 		"nom": "Serveur Relais Cave",
-		"hostname": "SERVEUR-RLY-CAVE-V2",
+		"hostname": "SERVEUR-RLY-CAVE",
 		"mDNS": "ON",
 		"apiHTTP": "ON",
 		"log": "info",
 		"voieReseau": "wifi",
 		"IP": {
-			"IPAddress": "192.168.0.243",
+			"IPAddress": "192.168.0.48",
 			"IPGateway": "192.168.0.254",
 			"Subnet": "255.255.255.0",
 			"DNSServer": "192.168.0.254"
@@ -84,10 +84,10 @@
 			"activation": "ON",
 			"hote": "192.168.0.5",
 			"port": 1883,
-			"client": "SERVEUR-RLY-CAVE-V2",
+			"client": "SERVEUR-RLY-CAVE",
 			"utilisateur": "fdaubercy",
 			"mdp": "Lune5676",
-			"topic": "cave/serveur-rly-cave-v2",
+			"topic": "cave/serveur-rly-cave",
 			"groupTopic1": "tasmotas/cave",
 			"groupTopic2": "",
 			"groupTopic3": ""
@@ -305,7 +305,7 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "OFF",
-							"delai": 0
+							"delai": 9
 						}
 					},
 					"capteur2": {
@@ -786,8 +786,8 @@
 			"activation": "ON",
 			"name": "Leds",
 			"log": "info",
-			"ledPower": "OFF",
-			"ledState": 6,
+			"ledPower": "ON",
+			"ledState": 7,
 			"clignoteSiDeconnexion": "ON",
 			"environnement": {
 				"leds": {
@@ -1148,11 +1148,6 @@
 						"activation": "ON",
 						"name": "ECRAN-CAVE (carte à venir)",
 						"id": 1
-					},
-					"TasmotaSlaveModBus2": {
-						"activation": "OFF",
-						"name": "Rideau Garage ModBus",
-						"id": 3
 					}
 				}
 			}

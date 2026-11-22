@@ -703,11 +703,14 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         //    qui PRIME : apiHTTP OFF remet SetOption128 0 malgre cette definition.
 
         // -- Options for firmware tasmota32-cave-serveur-rly ET tasmota32s3-cave-serveur-rly ------
-        // Une seule section pour les deux cartes de la cave : l'ESP32 actuel et son remplacant
-        // ESP32-S3 N16R8 ont la MEME identite (IP, topic, client MQTT). Seul le template differe.
+        // Une seule section pour les deux cartes de la cave. Depuis le 2026-11-22 (soir) elles ont la MEME identite :
+        // IP 192.168.0.48, topic cave/serveur-rly-cave, client et hostname SERVEUR-RLY-CAVE. L'ESP32
+        // (env tasmota32-cave-serveur-rly) est la carte EN SERVICE ; l'ESP32-S3 N16R8 (env tasmota32s3-cave-serveur-rly)
+        // est son remplacant de production (avant : carte d'essai en 192.168.0.243 / -V2). NE JAMAIS LES ALLUMER ENSEMBLE :
+        // meme IP, meme topic, meme client MQTT et meme SSID de point d'acces.
         #if defined(FIRMWARE_ESP32_CAVE_SERVEUR_RLY) || defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
             #undef CFG_HOLDER
-            #define CFG_HOLDER  1612    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            #define CFG_HOLDER  1614    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
@@ -746,8 +749,9 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
                 #undef ETH_ADDRESS
                 #define ETH_ADDRESS         1                   // [EthAddress]
             #else
-                // Identique au template de la carte en ligne (relu le 2026-10-31) : capteurs de niveau sans Switch
-                #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,1,1,32,1,1,1,1,1,1,1,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+                // Identique au template de la carte en ligne (relu le 2026-11-22, `Gpio 255`) : Switch1 (niveau bas) sur GPIO2,
+                // Switch2 (niveau haut) sur GPIO15
+                #define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,160,1,32,1,1,1,1,1,1,161,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
             #endif
 
             #ifdef MODULE
@@ -787,13 +791,22 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef WIFI_IP_ADDRESS
                 #undef WIFI_IP_ADDRESS
             #endif
-            #define WIFI_IP_ADDRESS         "192.168.0.243"               // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
+                #define WIFI_IP_ADDRESS     "192.168.0.48"                // [IpAddress1] S3 de production (2026-11-22) : meme IP que la carte ESP32 qu'il remplace
+            #else
+                #define WIFI_IP_ADDRESS     "192.168.0.48"                // [IpAddress1] carte ESP32 en service (identique a sa configuration actuelle)
+            #endif
 
             // -- Setup your own RANGE EXTENDER settings  -----
             // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier
             // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1
             // RgxPort tcp, 8080, 192.168.4.1, 80
-            #define USE_WIFI_RANGE_EXTENDER
+            // 2026-11-22 : ESP32 SANS PSRAM : point d'acces (AP + NAPT) = ~30 Ko de RAM interne, gels et redemarrages en boucle. La section
+            // commune de fin de fichier force WIFI_RGX_STATE 1 sans condition (on n'y touche pas : le CFG_HOLDER de toutes les cartes changerait),
+            // donc l'ESP32 n'embarque pas le pilote du tout. Le S3 (PSRAM) reste le maitre du range extender.
+            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
+                #define USE_WIFI_RANGE_EXTENDER
+            #endif
             #ifdef USE_WIFI_RANGE_EXTENDER
                 #define WIFI_RGX_SSID           "SERVEUR-RLY-CAVE-GATEWAY"
                 #define WIFI_RGX_PASSWORD       "Lune5676"
@@ -805,14 +818,23 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef MQTT_CLIENT_ID
                 #undef MQTT_CLIENT_ID
             #endif
-            // V2 (2026-09-27) : identiques a mqtt.client/topic du _persist.json de la cave. CFG_HOLDER
+            // Identiques a mqtt.client/topic du _persist.json de chaque carte. CFG_HOLDER
             // change a chaque build -> ces valeurs reviennent a chaque flash ; differentes du persist,
             // Berry les corrigeait par 'Topic', qui REDEMARRE Tasmota. A garder synchronises.
-            #define MQTT_CLIENT_ID          "SERVEUR-RLY-CAVE-V2" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+            // Sans suffixe sur les deux cartes depuis le 2026-11-22 (S3 de production ; -V2 avant, carte d'essai).
+            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
+                #define MQTT_CLIENT_ID      "SERVEUR-RLY-CAVE"    // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+            #else
+                #define MQTT_CLIENT_ID      "SERVEUR-RLY-CAVE" // [MqttClient]
+            #endif
             #ifdef MQTT_TOPIC
                 #undef MQTT_TOPIC
             #endif
-            #define MQTT_TOPIC              "cave/serveur-rly-cave-v2" // [Topic] unique MQTT device topic including (part of) device MAC address
+            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)
+                #define MQTT_TOPIC          "cave/serveur-rly-cave" // [Topic] unique MQTT device topic including (part of) device MAC address
+            #else
+                #define MQTT_TOPIC          "cave/serveur-rly-cave" // [Topic]
+            #endif
             #ifdef MQTT_GRPTOPIC
                 #undef MQTT_GRPTOPIC
             #endif
@@ -862,8 +884,8 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #ifdef USER_BACKLOG
                 #undef USER_BACKLOG
             #endif
-            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)    // identite d'essai -V2 (plan envs-grenier-rdc-sonoff-cave, A6)
-                #define USER_BACKLOG  "Backlog Module 0; Hostname SERVEUR-RLY-CAVE-V2"
+            #if defined(FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY)    // identite de production depuis le 2026-11-22 (-V2 avant)
+                #define USER_BACKLOG  "Backlog Module 0; Hostname SERVEUR-RLY-CAVE"
             #else
                 #define USER_BACKLOG  "Backlog Module 0; Hostname SERVEUR-RLY-CAVE"
             #endif

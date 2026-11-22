@@ -11,7 +11,7 @@
 			"general": "info",
 			"nbLogsFiles": 0
 		},
-		"telePeriod": 300,
+		"telePeriod": 60,
 		"heureReboot": "00:00",
 		"eviteResetBTN": "ON",
 		"affichageTempESP32": "ON",
@@ -50,7 +50,7 @@
 		"apiHTTP": "ON",
 		"log": "info",
 		"IP": {
-			"IPAddress": "192.168.0.243",
+			"IPAddress": "192.168.0.48",
 			"IPGateway": "192.168.0.254",
 			"Subnet": "255.255.255.0",
 			"DNSServer": "192.168.0.254"
@@ -73,10 +73,10 @@
 			"activation": "ON",
 			"hote": "192.168.0.5",
 			"port": 1883,
-			"client": "SERVEUR-RLY-CAVE-V2",
+			"client": "SERVEUR-RLY-CAVE",
 			"utilisateur": "fdaubercy",
 			"mdp": "Lune5676",
-			"topic": "cave/serveur-rly-cave-v2",
+			"topic": "cave/serveur-rly-cave",
 			"groupTopic1": "tasmotas/cave",
 			"groupTopic2": "",
 			"groupTopic3": ""
@@ -89,7 +89,7 @@
 			"AP": {
 				"IPAddress": "192.168.4.1",
 				"Subnet": "255.255.255.0",
-				"routeNAPT": "OFF",
+				"routeNAPT": "ON",
 				"SSID": "SERVEUR-RLY-CAVE-GATEWAY",
 				"mdp": "Lune5676"
 			}
@@ -121,7 +121,7 @@
 		"GPIO": [
 			33,
 			1,
-			1,
+			160,
 			1,
 			32,
 			1,
@@ -130,7 +130,7 @@
 			1,
 			1,
 			1,
-			1,
+			161,
 			1,
 			1,
 			34,
@@ -328,7 +328,7 @@
 				},
 				"capteurs": {
 					"capteur1": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "Capteur de niveau bas de la cave",
 						"id": 1,
 						"pin": 2,
@@ -340,12 +340,12 @@
 							"modules": ["pompeVideCave"],
 							"ids": [1],
 							"type": "OFF",
-							"delai": 0,
+							"delai": 9,
 							"delaiSiON": [
 								0
 							],
 							"delaiSiOFF": [
-								0
+								9
 							],
 							"etatSiON": [],
 							"etatSiOFF": [
@@ -354,7 +354,7 @@
 						}
 					},
 					"capteur2": {
-						"activation": "OFF",
+						"activation": "ON",
 						"nom": "Capteur de niveau haut de la cave",
 						"id": 2,
 						"pin": 15,
@@ -763,7 +763,7 @@
 						"type": 224,
 						"virtuel": "OFF",
 						"value": 0,
-						"etat": "OFF",
+						"etat": "ON",
 						"timer": 0,
 						"publishMQTT": {
 							"topic": [""]
@@ -784,7 +784,7 @@
 						"type": 224,
 						"virtuel": "OFF",
 						"value": 0,
-						"etat": "OFF",
+						"etat": "ON",
 						"timer": 0,
 						"publishMQTT": {
 							"topic": [""]
@@ -925,8 +925,8 @@
 			"activation": "ON",
 			"name": "Leds",
 			"log": "info",
-			"ledPower": "OFF",
-			"ledState": 6,
+			"ledPower": "ON",
+			"ledState": 7,
 			"clignoteSiDeconnexion": "ON",
 			"environnement": {
 				"leds": {
