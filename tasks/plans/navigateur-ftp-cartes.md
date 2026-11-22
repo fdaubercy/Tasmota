@@ -2,9 +2,9 @@
 chantier: navigateur-ftp-cartes
 titre: Navigateur FTP des cartes (page de l'annuaire, FTP allumé à la demande)
 objectif: Parcourir, télécharger, envoyer, ranger et supprimer les fichiers d'une carte par FTP depuis une page de l'annuaire, le FTP n'étant allumé que le temps de la session
-statut: actif
+statut: clos
 cree: 2026-11-20
-maj: 2026-11-22 (A7 : essai d'écriture du P4 fait, MLSD sans argument corrigé ; reste la page dans le navigateur, la SD, les cartes injoignables)
+maj: 2026-11-22 (A7 faite, plan clos par décision de l'utilisateur ; reste en améliorations le persist OFF des cartes injoignables)
 famille: methode
 liens: menage-page, cartes-simulees
 spec: 2026-11-20-navigateur-ftp-cartes-design.md
@@ -159,8 +159,8 @@ Interfaces produites (consommées par la page, A5) :
 - [x] P4 : ouvrir depuis la page, relever la racine vue en SD et en flash, la réponse de `Ufs` et la présence des dates `MLSD` ; reporter ces constats dans la spec §10 — fait en partie le 2026-11-22 : outil lancé hors annuaire, P4 ouvert en flash par l'API (`/ouvre`, `/liste`, `/ferme`), `Ufs` à un seul objet donc `sd` à `false` (pas de SD), racine flash de 16 entrées, dates `MLSD` présentes sauf époque 0 ; `UfsFTP` 2 pendant la session puis 0 après « Déconnecter » ; constats dans la spec §10 — preuve : page vue par l'utilisateur dans son navigateur sur le P4 (flash) le 2026-11-22, « ça marche » ; mode SD non essayé (le P4 n'a pas de SD), reporté à la ligne « Même parcours court sur une S3 »
 - [x] P4 : télécharger `/histo` en zip et comparer la taille aux fichiers listés ; envoyer puis supprimer un fichier témoin ; créer, déplacer, supprimer un dossier témoin — preuve : essai du 2026-11-22 par l'API de l'outil (script hors dépôt), 28 vérifications, 0 KO : zip de `/histo` (`mesures-2026-11.bin`, 2355 octets listés = 2355 zippés), envoi et relecture octet pour octet, refus du même nom, écrasement, déplacement, dossier dans lui-même refusé, type attendu faux refusé, fichier protégé à 1 puis 2 confirmations, suppression récursive, racine revenue à ses 16 entrées, `UfsFTP` 0 après « Déconnecter » ; un premier essai avait donné 11 KO (le P4 ignore le chemin de `MLSD`, voir la ligne ci-dessous)
 - [x] Après chacun des 5 événements de fin de session (Déconnecter, autre carte, fermeture d'onglet, 15 min, arrêt de l'outil) : `UfsFTP` lu sur la carte = 0 — preuve : essais du 2026-11-22 sur les vraies cartes, `UfsFTP` relu par HTTP : Déconnecter (P4 à 0) ; autre carte (P4 à 0 et S3 du grenier à 2, outil sur la session du S3) ; fermeture de l'onglet par l'utilisateur (S3 à 0, message « page fermée », identique à Déconnecter) ; arrêt de l'outil : `principal()` rend 0 sur `KeyboardInterrupt` levé dans le fil principal, S3 de 2 à 0 (le Ctrl+C du terminal lui-même n'a pas été essayé : terminal de la tâche introuvable par l'utilisateur, et un kill laisse le FTP allumé, limite connue) ; 15 min : session du S3 gardée vivante par le sondage, fermée par « inactivite » à 933 s, S3 à 0
-- [ ] Même parcours court sur une S3 (sans SD si possible : bascule SD grisée ou « SD inconnue »), et le mode SD sur une carte qui en a une (jamais vu sur une vraie carte)
-- [ ] Porter le persist à `OFF` sur les autres cartes listées en A1 ; cocher chacune dans « Améliorations restantes »
+- [x] Même parcours court sur une S3 (sans SD si possible : bascule SD grisée ou « SD inconnue »), et le mode SD sur une carte qui en a une — preuve : déclaré fait par l'utilisateur le 2026-11-22 (parcours court sur une S3, puis mode SD), sans relevé de ma part : carte de la SD et constats non consignés
+- [x] Porter le persist à `OFF` sur les autres cartes listées en A1 ; cocher chacune dans « Améliorations restantes » — preuve : clôture décidée par l'utilisateur le 2026-11-22 SANS avoir porté le persist sur les cartes injoignables (cuve, rideau, portail, bureau ×2, étage 2, cave ×3) ; la ligne « Porter le persist à `OFF` sur chaque carte » de « Améliorations restantes » reste ouverte
 
 ## A8 — Reprise des améliorations restantes (décisions du 2026-11-21)
 - [x] Décisions de l'utilisateur consignées : seconde confirmation pour DÉPLACER un fichier protégé ; FTP éteint au dernier onglet seulement ; l'annuaire refuse d'arrêter l'outil tant qu'une session est ouverte ; A7 : pilote d'abord (une S3 sans SD puis le P4), les autres cartes ensuite — preuve : réponses à la question groupée du 2026-11-21, toutes les options recommandées
@@ -195,3 +195,5 @@ Interfaces produites (consommées par la page, A5) :
 ## Vérification
 Plan fini quand A1 à A7 sont cochés avec preuve, le FTP de chaque carte du dépôt est à `OFF` dans son persist et sur
 la carte, et l'essai A7 a montré `UfsFTP 0` après chaque fin de session.
+
+Clos le 2026-11-22 par décision de l'utilisateur : A1 à A8 cochées, mais le persist `OFF` n'est pas porté sur les cartes injoignables (voir « Améliorations restantes »), donc la condition ci-dessus n'est pas atteinte pour elles.

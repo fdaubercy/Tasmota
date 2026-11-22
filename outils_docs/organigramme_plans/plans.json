@@ -611,7 +611,7 @@
    ],
    "specs": [],
    "cree": "2026-11-03",
-   "maj": "2026-11-18",
+   "maj": "2026-11-21",
    "pct": 53,
    "etapes": "18/34",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-reseau-ethernet.md",
@@ -1150,7 +1150,7 @@
    ],
    "specs": [],
    "cree": "2026-11-15",
-   "maj": "2026-11-15",
+   "maj": "2026-11-21",
    "pct": 89,
    "etapes": "41/46",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison.md",
@@ -1225,36 +1225,16 @@
    "specs": [],
    "cree": "2026-11-17",
    "maj": "2026-11-21",
-   "pct": 89,
-   "etapes": "59/66",
+   "pct": 90,
+   "etapes": "60/67",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-mqtt.md",
-   "urls_spec": []
-  },
-  {
-   "nom": "plan-maison-echelle",
-   "titre": "Plan de la maison à l'échelle, étage par étage, avec éditeur web",
-   "objectif": "Remplacer les pièces schématiques du plan de la maison par un vrai plan à l'échelle (en mètres), un étage par onglet, éditable dans une page web, avec les équipements placés dessus",
-   "statut": "actif",
-   "famille": "modbus-reseau",
-   "parent": "plan-maison",
-   "liens": [
-    "plan-maison",
-    "cartes-simulees",
-    "debits-deux-cartes"
-   ],
-   "specs": [],
-   "cree": "2026-11-18",
-   "maj": "2026-11-19",
-   "pct": 4,
-   "etapes": "1/28",
-   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison-echelle.md",
    "urls_spec": []
   },
   {
    "nom": "navigateur-ftp-cartes",
    "titre": "Navigateur FTP des cartes (page de l'annuaire, FTP allumé à la demande)",
    "objectif": "Parcourir, télécharger, envoyer, ranger et supprimer les fichiers d'une carte par FTP depuis une page de l'annuaire, le FTP n'étant allumé que le temps de la session",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "methode",
    "parent": "",
    "liens": [
@@ -1265,9 +1245,9 @@
     "2026-11-20-navigateur-ftp-cartes-design.md"
    ],
    "cree": "2026-11-20",
-   "maj": "2026-11-21 (A6 faite, commit 1e1891ba3 ; reste A7, essais sur cartes)",
-   "pct": 72,
-   "etapes": "63/87",
+   "maj": "2026-11-22 (A7 faite, plan clos par décision de l'utilisateur ; reste en améliorations le persist OFF des cartes injoignables)",
+   "pct": 91,
+   "etapes": "84/92",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/navigateur-ftp-cartes.md",
    "urls_spec": [
     "https://github.com/fdaubercy/Tasmota/blob/development/docs/superpowers/specs/2026-11-20-navigateur-ftp-cartes-design.md"
@@ -1287,6 +1267,26 @@
    "pct": 89,
    "etapes": "16/18",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/navigateur-ftp-cartes-a5-reprise.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "plan-maison-echelle",
+   "titre": "Plan de la maison à l'échelle, étage par étage, avec éditeur web",
+   "objectif": "Remplacer les pièces schématiques du plan de la maison par un vrai plan à l'échelle (en mètres), un étage par onglet, éditable dans une page web, avec les équipements placés dessus",
+   "statut": "actif",
+   "famille": "modbus-reseau",
+   "parent": "plan-maison",
+   "liens": [
+    "plan-maison",
+    "cartes-simulees",
+    "debits-deux-cartes"
+   ],
+   "specs": [],
+   "cree": "2026-11-21",
+   "maj": "2026-11-21",
+   "pct": 4,
+   "etapes": "1/28",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/plan-maison-echelle.md",
    "urls_spec": []
   },
   {
