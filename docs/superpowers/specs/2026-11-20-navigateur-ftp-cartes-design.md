@@ -233,6 +233,16 @@ que si l'un d'eux a changé (décidé le 2026-11-21).
   ci-dessus et le banc couvre les deux cas (avec et sans SD).
 - Racine vue dans chaque mode (`ufsp`, `ffsp`) et présence des dates dans `MLSD` : à relever sur une S3 et sur le P4
   au premier essai.
+- Constats du premier essai sur le P4 du garage (2026-11-22, par l'API de l'outil, sans le navigateur : la page n'a pas
+  été vue sur cette carte) :
+  - `Ufs` ne rend QU'UN objet (`Type` 3, environ 11,3 Mo, 10,3 Mo libres : la flash) : pas de SD détectée. L'outil
+    répond `sd` à `false`, ouvre en flash (`UfsFTP` 2) et la carte confirme ; « Déconnecter » ramène `UfsFTP` à 0.
+  - Racine en flash : 16 entrées (`.drvset*`, `.extensions`, `.settings`, `_persist.json`, `autoexec.be`, des `.bec`,
+    les dossiers `histo`, `json`, `logs` et `sd`, point de montage vide listé comme dossier).
+  - `MLSD` donne la date des fichiers écrits depuis l'horloge de la carte (ex. 2026-11-21 06:15:50) ; les dossiers et
+    les fichiers jamais datés (`pagesGraphiquesValidation.be`, `partition_wizard.bec`) sortent à l'époque 0 : la page
+    affiche « 1969-12-31 23:59:59 ». Reste à faire : afficher un tiret pour cette date.
+  - Non essayés : mode SD (cette carte n'en a pas), zip, envoi, suppression, déplacement, la page dans le navigateur.
 - Place libre avant un envoi : lue par `Ufs` si la réponse la donne, refus si le fichier ne tient pas.
 - Délais : allumage 10 s au plus, opérations FTP 30 s.
 
