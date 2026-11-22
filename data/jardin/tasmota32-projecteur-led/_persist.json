@@ -464,7 +464,7 @@
 			"name": "Leds",
 			"log": "info",
 			"ledPower": "OFF",
-			"ledState": 1,
+			"ledState": 6,
 			"clignoteSiDeconnexion": "ON",
 			"environnement": {
 				"leds": {

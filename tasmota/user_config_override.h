@@ -1245,7 +1245,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // -- Options for tasmota32-jardin-projecteur-led ------
         #elif defined(FIRMWARE_ESP32_JARDIN_PROJECTEUR_LED)
             #undef CFG_HOLDER
-            #define CFG_HOLDER  1611    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            #define CFG_HOLDER  1612    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #undef CODE_IMAGE_STR
@@ -2597,6 +2597,26 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             // Emulation 1 (Belkin WeMo, Alexa) et timers de la carte (Timer1 08:00 ON, Timer2 20:00 OFF, desarmes) :
             // reposes seulement apres une remise a zero ; le Wi-Fi du repeteur, lui, n'est PAS dans le .h (mot de passe).
             #define USER_BACKLOG        "Backlog Hostname POMPE-PISCINE; DeviceName Pompe de piscine; Emulation 1; Timers 1; Timer1 {\"Enable\":0,\"Time\":\"08:00\",\"Days\":\"1111111\",\"Repeat\":0,\"Output\":1,\"Action\":1}; Timer2 {\"Enable\":0,\"Time\":\"20:00\",\"Days\":\"1111111\",\"Repeat\":0,\"Output\":1,\"Action\":0}"
+
+            // Allegement pour l'OTA (decide le 2026-11-22) : le firmware pesait 708 Ko, or apres le passage par le minimal
+            // officiel (373 Ko) il ne reste que ~634 Ko sur la zone programme de 1000 Ko. Cette carte n'utilise ni Telegram
+            // (+49k), ni FTP, ni Home Assistant (hass_discovery 0, +12k), ni GPIO Viewer (+6k), ni AlpineJS (+8k8) : retires ici
+            // pour elle seule, les autres cartes gardent les reglages communs ci-dessus.
+            #ifdef USE_TELEGRAM
+                #undef USE_TELEGRAM
+            #endif
+            #ifdef USE_FTP
+                #undef USE_FTP
+            #endif
+            #ifdef USE_HOME_ASSISTANT
+                #undef USE_HOME_ASSISTANT
+            #endif
+            #ifdef USE_GPIO_VIEWER
+                #undef USE_GPIO_VIEWER
+            #endif
+            #ifdef USE_ALPINEJS
+                #undef USE_ALPINEJS
+            #endif
 
         // -- Options for tasmota-cave-lumiere-porte (Sonoff ESP8285 1 Mo, SANS Berry ni FS) ------
         // Identite relevee le 2026-11-12 sur 192.168.0.45 (/dl decode : data/cave/tasmota-lumiere-porte/config_decodee.json).
