@@ -297,10 +297,22 @@ class Session:
         del self.noms_ignores[:-NOMS_IGNORES_MAX]
 
     def _entrees(self, ftp, chemin):
-        """[{"nom", "type", "taille", "date"}] d'un dossier : MLSD, repli LIST si la carte ne le connait pas."""
+        """[{"nom", "type", "taille", "date"}] d'un dossier : MLSD, repli LIST si la carte ne le connait pas. CWD puis liste SANS argument :
+        le serveur FTP du P4 ignore le chemin de MLSD et de LIST et liste le dossier courant (constate le 2026-11-22), d'ou une liste de la
+        racine pour tout sous-dossier. Le dossier courant revient a « / » : tous les autres gestes passent des chemins absolus."""
+        ftp.cwd(chemin)
+        try:
+            return self._liste_courant(ftp)
+        finally:
+            try:
+                ftp.cwd("/")
+            except ftplib.all_errors:                  # connexion perdue : le geste a deja son erreur, la reconnexion repart de « / »
+                pass
+
+    def _liste_courant(self, ftp):
         res = []
         try:
-            for nom, f in ftp.mlsd(chemin):
+            for nom, f in ftp.mlsd():
                 if f.get("type") in ("cdir", "pdir") or nom in (".", ".."):
                     continue
                 if not _nom_sain(nom):
@@ -313,7 +325,7 @@ class Session:
             if not str(e).startswith(("500", "501", "502", "504")):
                 raise
         lignes = []
-        ftp.retrlines("LIST " + chemin, lignes.append)
+        ftp.retrlines("LIST", lignes.append)
         for ligne in lignes:
             p = ligne.split(None, 8)
             if len(p) == 9 and p[8] not in (".", "..") and not _nom_sain(p[8]):

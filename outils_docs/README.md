@@ -2009,7 +2009,7 @@ cartes réelles ne reçoivent ce réglage qu'au prochain téléversement de leur
 Bancs, dans `outils_docs/scripts_python/outils_pc/` avec le Python du penv PlatformIO : `test_ftp_cartes_liste.py`, `test_ftp_cartes_session.py`
 (lent, plus de 35 s), `test_ftp_cartes_session_garde.py` (gardes : déplacement, dossiers protégés, exceptions), `test_ftp_cartes_session_relecture.py` (extinction non
 confirmée, onglets au changement de carte, `\`, noms FAT, casse, dossier dans lui-même, type attendu, écrasement d'un fichier protégé),
-`test_ftp_cartes_onglets.py` (registre d'onglets, horloge simulée), `test_ftp_cartes_web.py`, `test_ftp_cartes_web_relecture.py` (anti-CSRF des GET,
+`test_ftp_cartes_session_p4.py` (carte dont le serveur FTP ignore le chemin de `MLSD`, constaté sur le P4 : liste, zip, suppression, envoi, déplacement d'un sous-dossier), `test_ftp_cartes_onglets.py` (registre d'onglets, horloge simulée), `test_ftp_cartes_web.py`, `test_ftp_cartes_web_relecture.py` (anti-CSRF des GET,
 `type`, `confirmations` de `/envoie`), la sonde Chrome `test_ftp_cartes_page_chrome.py` (qui appelle
 `test_ftp_cartes_page_chrome_onglets.py` et `test_ftp_cartes_page_chrome_corrections.py`) et le faux serveur `faux_ftp_carte.py` ; pour la
 cible Custom, `build/test_cible_ftp_cartes.py`. Pour l'annuaire, le refus d'arrêt en session est couvert par `test_annuaire.py` et

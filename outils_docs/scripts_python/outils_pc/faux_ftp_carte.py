@@ -183,7 +183,7 @@ class _Handler(socketserver.StreamRequestHandler):
         return True
 
     def liste(self, cmd, arg):
-        _, reel = self.chemin(arg)
+        _, reel = self.chemin("" if self.srv.liste_sans_argument else arg)   # le P4 reel ignore l'argument : il liste le dossier courant
         if cmd == "MLSD" and self.srv.sans_mlsd:
             self.reponse("500 MLSD inconnu")
             return
@@ -218,6 +218,7 @@ class FauxFtpCarte:
         self._tmp = tempfile.TemporaryDirectory()
         self.racine = Path(self._tmp.name)
         self.identifiants, self.port_donnees, self.sans_mlsd = identifiants, port_donnees, sans_mlsd
+        self.liste_sans_argument = False        # True : MLSD et LIST listent le dossier courant, argument ignore (constate sur le P4, 2026-11-22)
         self.noms_pieges = list(noms_pieges)    # noms hostiles ajoutes a chaque liste (../x, a\b...)
         self.commandes, self.clients, self.compte, self.coupe_a = [], [], 0, None
         self.occupe = threading.Semaphore(1)

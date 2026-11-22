@@ -242,7 +242,18 @@ que si l'un d'eux a changé (décidé le 2026-11-21).
   - `MLSD` donne la date des fichiers écrits depuis l'horloge de la carte (ex. 2026-11-21 06:15:50) ; les dossiers et
     les fichiers jamais datés (`pagesGraphiquesValidation.be`, `partition_wizard.bec`) sortent à l'époque 0 : la page
     affiche « 1969-12-31 23:59:59 ». Reste à faire : afficher un tiret pour cette date.
-  - Non essayés : mode SD (cette carte n'en a pas), zip, envoi, suppression, déplacement, la page dans le navigateur.
+  - Essai d'écriture du 2026-11-22 (dossier témoin `/ftp_test_a7`, par l'API de l'outil) : le serveur FTP du P4 IGNORE l'argument de
+    chemin de `MLSD` et de `NLST` et liste le dossier courant (`MLSD /ftp_test_a7` rendait la racine ; `LIST` avec ou sans argument
+    ne rend rien). Seul `CWD <dossier>` puis `MLSD` sans argument donne le bon dossier. Conséquences avant correctif : un
+    sous-dossier se listait comme la racine, un zip bouclait (`RecursionError`), `type_attendu` et le contrôle « existe déjà »
+    jugeaient sur la racine. Corrigé dans `ftp_cartes_session.py::_entrees` (`CWD`, liste sans argument, retour à `/`), banc
+    `test_ftp_cartes_session_p4.py` (faux serveur `liste_sans_argument`). Rejoué sur le P4 : 28 vérifications, 0 KO (envoi et relecture
+    octet pour octet, refus du même nom, écrasement, déplacement, zip, dossier dans lui-même, type attendu, protégés à 1 et 2
+    confirmations, suppression récursive, zip de `/histo` aux tailles listées), racine revenue à ses 16 entrées, `UfsFTP` 0.
+    Les erreurs de connexion de données (`425`, délai) vues pendant le premier essai ne se sont pas reproduites en 15 listages de suite.
+    Sur la flash (LittleFS, sensible à la casse), l'envoi de `TEMOIN.TXT` à côté de `temoin.txt` est refusé par la comparaison FAT
+    (trop prudent, n'écrase jamais).
+  - Non essayés : mode SD (cette carte n'en a pas), la page dans le navigateur.
 - Place libre avant un envoi : lue par `Ufs` si la réponse la donne, refus si le fichier ne tient pas.
 - Délais : allumage 10 s au plus, opérations FTP 30 s.
 
