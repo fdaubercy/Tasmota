@@ -2,12 +2,15 @@
 
 Tour de corrections : fini apres un 409 (le sondage force refait les vues), boucles multi-elements arretees a la mort de la session (Deconnecter),
 geste mort pendant la SECONDE boite, garde de reponse /etat perimee (reponse retardee). Aides : test_ftp_cartes_page_chrome_onglets.py.
+Relectures du 2026-11-22 (`relectures`) : seconde confirmation pour ecraser un fichier protege par un envoi, casse, dossier deplace dans
+lui-meme, type envoye avec /supprime et /deplace.
 """
+import json
 import time
 
 from test_build_page_chrome import attend
-from test_ftp_cartes_page_chrome_onglets import (attend_sonde, boite_seconde, calme, champ, choisit, clique, coche, confirmations, oublie, pastille, pose_fichiers,
-                                                 posts, relit, texte, verifie)
+from test_ftp_cartes_page_chrome_onglets import (GROS, a_ligne, attend_sonde, boite_seconde, calme, champ, choisit, clique, coche, confirmations, oublie, pastille,
+                                                 pose_fichiers, posts, relit, texte, verifie)
 
 
 def corrections(cdp, b, tol):
@@ -115,3 +118,70 @@ def corrections(cdp, b, tol):
     pastille(cdp, "actif", 8)
     attend_sonde(cdp, "document.getElementById('pastille').textContent.indexOf('SD') >= 0", 25)
     verifie(tol.restantes(), [], "aucune erreur de page dans le tour de corrections, hors les 409 voulus")
+
+
+def relectures(cdp, b, tol):
+    """Tache 12 : ecraser un fichier protege par un envoi (C9), casse (C6), dossier deplace dans lui-meme (C7), type du geste (C8)."""
+    racine = b.srv.racine
+
+    def stor():
+        return sum(1 for c, _ in b.srv.commandes if c == "STOR")
+
+    def boite_ecraser():
+        return bool(attend(cdp, "!document.getElementById('boite').hidden && document.getElementById('boite-texte').textContent.indexOf('existe déjà') >= 0", 10))
+
+    b.fichier("/autoexec.be", b"cfg")
+    b.fichier("/dlm/a.txt")
+    b.fichier("/t8.txt")
+    relit(cdp, "t8.txt")
+    # C9 : envoyer sur autoexec.be : boite « ecraser ? », le serveur refuse la 1re confirmation, seconde boite ; Annuler : rien n'est ecrit
+    oublie(cdp)
+    n0 = stor()
+    pose_fichiers(cdp, [("autoexec.be", GROS)])
+    verifie(boite_ecraser(), True, "envoi sur un fichier protege : la boite « ecraser ? » s'ouvre")
+    with tol:
+        clique(cdp, "boite-ok")
+        verifie(boite_seconde(cdp), True, "envoi sur un fichier protege : le refus du serveur ouvre la seconde boite")
+    verifie(tol.n >= 1, True, "envoi sur un fichier protege : le serveur a bien rendu un 409")
+    t = texte(cdp, "boite-texte")
+    verifie(("écraser" in t, "envoi" in t, "protégé" in t, "supprim" in t), (True, True, True, False), "seconde boite : elle parle d'un ECRASEMENT par un envoi (%r)" % t)
+    clique(cdp, "boite-non")
+    verifie(bool(attend(cdp, "document.getElementById('msg').textContent.indexOf('Aucun fichier') >= 0", 10)), True, "seconde confirmation refusee : « Aucun fichier envoye »")
+    verifie(((racine / "autoexec.be").read_bytes(), stor() - n0, len(posts(cdp, "/envoie"))), (b"cfg", 0, 1), "seconde confirmation refusee : rien d'ecrit, un seul POST")
+    # C6 + C9 : AUTOEXEC.BE (autre casse) : la boite « ecraser ? » s'ouvre AVANT tout envoi, puis seconde boite, puis remplacement par un seul STOR
+    oublie(cdp)
+    pose_fichiers(cdp, [("AUTOEXEC.BE", GROS)])
+    verifie((boite_ecraser(), len(posts(cdp, "/envoie"))), (True, 0), "casse differente : la boite « ecraser ? » s'ouvre avant tout envoi")
+    with tol:
+        clique(cdp, "boite-ok")
+        verifie(boite_seconde(cdp), True, "casse differente : seconde boite")
+    clique(cdp, "boite-ok")
+    verifie(bool(attend(cdp, "document.getElementById('msg').textContent.indexOf('Envoyé : 1') >= 0", 10)), True, "deux confirmations : « Envoye : 1 fichier »")
+    urls = [p["u"] for p in posts(cdp, "/envoie")]
+    verifie((len(urls), "confirmations" in urls[0], urls[-1].endswith("&ecraser=1&confirmations=2")), (2, False, True), "envoi puis renvoi avec confirmations=2 (%r)" % urls)
+    verifie(((racine / "autoexec.be").stat().st_size, stor() - n0), (GROS, 1), "fichier protege ecrase par un seul STOR")
+    # C7 : deplacer un dossier dans lui-meme : message, aucun POST
+    relit(cdp, "dlm")
+    oublie(cdp)
+    coche(cdp, "dlm")
+    clique(cdp, "b-dep")
+    champ(cdp, "/DLM")
+    clique(cdp, "boite-ok")
+    verifie(bool(attend(cdp, "document.getElementById('msg').textContent.indexOf('lui-même') >= 0", 10)), True, "dossier deplace dans lui-meme : message clair")
+    verifie((posts(cdp, "/deplace"), (racine / "dlm" / "a.txt").exists()), ([], True), "dossier deplace dans lui-meme : aucun POST, rien n'a bouge")
+    # C8 : le type vu dans la liste part avec /deplace et /supprime
+    relit(cdp, "dlm")
+    oublie(cdp)
+    coche(cdp, "dlm")
+    clique(cdp, "b-dep")
+    champ(cdp, "/json")
+    clique(cdp, "boite-ok")
+    verifie(bool(attend(cdp, "!" + a_ligne("dlm"), 10)), True, "dossier deplace : retire de la liste")
+    coche(cdp, "t8.txt")
+    clique(cdp, "b-supp")
+    clique(cdp, "boite-ok")
+    verifie(bool(attend(cdp, "!" + a_ligne("t8.txt"), 10)), True, "fichier supprime : retire de la liste")
+    types = [json.loads(p["b"]).get("type") for r in ("/deplace", "/supprime") for p in posts(cdp, r)]
+    verifie((types, (racine / "json" / "dlm" / "a.txt").exists(), (racine / "t8.txt").exists()), (["dossier", "fichier"], True, False),
+            "le type vu (dossier, fichier) part avec /deplace et /supprime")
+    verifie(tol.restantes(), [], "aucune erreur de page dans les relectures, hors les 409 voulus")

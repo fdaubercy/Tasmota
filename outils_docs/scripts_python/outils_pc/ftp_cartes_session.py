@@ -15,7 +15,6 @@ test_ftp_cartes_session_garde.py (garde-fous : deplacement, dossiers proteges, `
 """
 import ftplib
 import io
-import re
 import socket
 import threading
 import time
@@ -24,6 +23,7 @@ from pathlib import Path
 
 import build_ota_http
 import ftp_cartes_liste
+from ftp_cartes_chemins import ADRESSE, OBJET_UFS, _date_mlsd, _lit_ufs, _nom_sain, cle_fat, dans_lui_meme, protege, valide_chemin   # noqa: F401 (reexportes : les bancs appellent fs.valide_chemin)
 from ftp_cartes_onglets import Onglets, valide as ident_valide
 
 DEPOT = Path(__file__).resolve().parents[3]
@@ -32,54 +32,15 @@ DELAI_FTP = 30               # s : une operation FTP
 INACTIVITE = 900             # s : sans action, le FTP est eteint
 NOMS_IGNORES_MAX = 100       # noms refuses gardes pour la page (les derniers)
 PARCOURS_ENTREES = 500       # _contient_protege : entrees visitees au plus, puis fail-safe (True)
+ESSAIS_EXTINCTION = 5        # UfsFTP 0 non confirme : essais automatiques au plus (ferme puis tic), puis « Deconnecter » seul
 PARCOURS_NIVEAUX = 6         # _contient_protege : dossiers listes au plus sur 6 niveaux (le dossier lui-meme = niveau 1), puis fail-safe
-ADRESSE = re.compile(r"[A-Za-z0-9.-]+")
-OBJET_UFS = re.compile(r'\{\s*"Type"\s*:\s*(\d+)\s*,\s*"Size"\s*:\s*(\d+)\s*,\s*"Free"\s*:\s*(\d+)\s*\}')
+TYPES = (None, "", "fichier", "dossier")      # type attendu par la page pour supprimer et deplacer (None ou "" : pas de controle)
+TYPE_CHANGE = "le type de l'element a change (ou il a disparu) : rouvrez le dossier"
 ERREURS_RESEAU = (OSError, EOFError, ftplib.error_temp, ftplib.error_proto)
 
 
 class RefusFtp(Exception):
     """Refus ou echec metier, message lisible (code HTTP 409 cote web)."""
-
-
-def valide_chemin(chemin):
-    """Chemin de la carte : absolu, sans `..`, sans caractere de controle, 255 caracteres au plus. Rend le chemin normalise."""
-    if not isinstance(chemin, str) or not chemin.startswith("/"):
-        raise ValueError("chemin absolu attendu")
-    if len(chemin) > 255:
-        raise ValueError("chemin trop long (255 caracteres au plus)")
-    if any(ord(c) < 32 or ord(c) == 127 for c in chemin):
-        raise ValueError("caractere de controle interdit")
-    if chemin == "/":
-        return chemin
-    morceaux = chemin[1:-1 if chemin.endswith("/") else None].split("/")
-    if any(m in ("", ".", "..") for m in morceaux):
-        raise ValueError("segment vide, « . » ou « .. » interdit")
-    return "/" + "/".join(morceaux)
-
-
-def protege(chemin):
-    """True si la suppression ou le deplacement exige une seconde confirmation : autoexec, persist, .bec, .drvset*, dossiers /sd et /json."""
-    p = chemin.rstrip("/").casefold() or "/"          # la SD est en FAT : AUTOEXEC.BE est autoexec.be
-    nom = p.rsplit("/", 1)[-1]
-    return p in ("/sd", "/json") or nom in ("autoexec.be", "autoexec.bat", "_persist.json") \
-        or nom.endswith(".bec") or nom.startswith(".drvset")
-
-
-def _nom_sain(nom):
-    """Nom rendu par la carte : un segment simple (ni `/`, ni `\`, ni controle, ni . ou ..), sinon il est ignore."""
-    return bool(nom) and nom not in (".", "..") and len(nom) <= 255 and "/" not in nom and "\\" not in nom         and not any(ord(c) < 32 or ord(c) == 127 for c in nom)
-
-
-def _lit_ufs(texte):
-    """[(type, taille_ko, libre_ko)] d'une reponse `Ufs` (pas du JSON valide a deux supports : lecture par regex)."""
-    return [tuple(int(x) for x in m) for m in OBJET_UFS.findall(texte or "")]
-
-
-def _date_mlsd(valeur):
-    """20261103142501 -> 2026-11-03 14:25:01 ; autre forme rendue telle quelle."""
-    m = re.fullmatch(r"(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(?:\.\d+)?", valeur or "")
-    return "%s-%s-%s %s:%s:%s" % m.groups() if m else (valeur or "")
 
 
 class Session:
@@ -93,7 +54,8 @@ class Session:
         self._carte, self._mdp, self._utilisateur, self._objets = None, "", "", []
         self.noms_ignores = []               # noms de la carte refuses par _nom_sain (zip-slip, suppression hors dossier) : les 100 derniers
         self.onglets = Onglets(horloge)      # pages ouvertes sur cette session (meme horloge : bancs a horloge simulee)
-        self._allume = False                 # UfsFTP 1|2 envoye, UfsFTP 0 pas encore
+        self._allume = False                 # UfsFTP 1|2 envoye, UfsFTP 0 pas encore confirme
+        self._extinction, self._essais = None, 0     # adresse dont UfsFTP 0 n'est pas confirme, essais faits (ferme, tic)
         self._env, self._support, self._etat, self._message, self._sd = "", "", "eteint", "", None
         self._derniere = 0.0
         self.derniere_raison = ""
@@ -148,8 +110,11 @@ class Session:
                 raise RuntimeError("ouverture impossible : %s" % type(e).__name__) from None
 
     def _ouvre(self, carte, adresse, support):
-        if self._carte and self._carte != adresse:
-            self.ferme("changement de carte")
+        ancienne = self._carte or self._extinction
+        if ancienne and ancienne != adresse:
+            self.ferme("changement de carte", garde_onglets=True)   # les autres onglets restent connus (C4)
+            if self._extinction:                     # jamais deux cartes allumees : l'ancienne d'abord
+                raise RefusFtp("la carte precedente n'a pas confirme l'extinction de son FTP : reessayez, ou « Deconnecter »")
         elif self._ftp:
             self._quitte_ftp()
         self._env, self._support, self._etat, self._message = carte.get("env", ""), support, "allumage", ""
@@ -163,7 +128,7 @@ class Session:
             self._refuse("identifiants FTP introuvables dans user_config_override.h")
         self._objets, self._mdp = objets, mdp
         # _allume avant l'envoi : si UfsFTP atteint la carte mais que la reponse se perd, ferme() enverra UfsFTP 0
-        self._carte, self._allume = adresse, True
+        self._carte, self._allume, self._extinction, self._essais = adresse, True, None, 0   # meme carte rouverte : l'attente d'extinction est effacee
         try:
             self._envoie_ufsftp(adresse, 1 if support == "sd" else 2)
             self._connecte(utilisateur)
@@ -176,7 +141,7 @@ class Session:
 
     def ouvre_ou_reprend(self, carte, support, onglet=None):
         """Deuxieme onglet ou POST simultane : meme carte et meme support deja actifs -> l'etat, sans UfsFTP ni reconnexion (sous verrou).
-        `onglet` : identifiant de la page, enregistre APRES l'ouverture (un changement de carte reinitialise le registre)."""
+        `onglet` : identifiant de la page, enregistre APRES l'ouverture (un changement de carte garde le registre : les autres onglets restent connus)."""
         with self._verrou:
             if self._etat == "actif" and self._carte == str(carte.get("adresse", "")) and self._support == support:
                 self._derniere = self._horloge()
@@ -190,7 +155,8 @@ class Session:
         """Refus dans ouvre : si le FTP de la carte est allume (changement de support), il est eteint d'abord."""
         if self._allume:
             self.ferme("refus : " + message)
-        self._etat, self._message = "eteint", message
+        if not self._extinction:                     # extinction non confirmee : l'etat « erreur » et son message restent
+            self._etat, self._message = "eteint", message
         raise RefusFtp(message)
 
     def _attend_port(self, adresse):
@@ -239,20 +205,31 @@ class Session:
         if ftp:
             self._ferme_ftp(ftp)
 
-    def ferme(self, raison):
-        """Ferme la session et envoie `UfsFTP 0` dans tous les cas ou le FTP a ete allume."""
+    def ferme(self, raison, garde_onglets=False):
+        """Ferme la session et envoie `UfsFTP 0` dans tous les cas ou le FTP a ete allume. Plus aucun geste ensuite (`_carte` vide).
+        `UfsFTP 0` non confirme : l'adresse reste dans `_extinction` et `_allume` reste vrai (en_session() aussi, l'annuaire refuse l'arret) ;
+        tic() le renvoie (ESSAIS_EXTINCTION essais au plus), « Deconnecter » aussi. `garde_onglets` : changement de carte (le registre reste)."""
         with self._verrou:
-            self.onglets.reinitialise()
+            if not garde_onglets:
+                self.onglets.reinitialise()
             self._quitte_ftp()
+            adresse, self._carte, self.derniere_raison = self._carte or self._extinction, None, raison
+            attente = self._extinction
             if self._allume:
                 try:
-                    self._envoie_ufsftp(self._carte, 0)
-                    self._message = "Session fermee (%s)" % raison
+                    self._envoie_ufsftp(adresse, 0)
                 except OSError as e:
-                    self._message = "UfsFTP 0 non confirme : %s" % self._propre(e)
+                    self._extinction, self._essais = adresse, self._essais + 1
+                    self._etat = "erreur"
+                    self._message = ("Extinction du FTP de la carte non confirmee apres %d essais : son FTP est peut-etre encore allume ; "
+                                     "« Deconnecter » pour reessayer" % self._essais if self._essais >= ESSAIS_EXTINCTION else
+                                     "Extinction du FTP de la carte non confirmee (essai %d sur %d, nouvel essai automatique) : %s"
+                                     % (self._essais, ESSAIS_EXTINCTION, self._propre(e)))
+                    return self.etat()
+                self._message = "Session fermee (%s)" % raison
                 self._allume = False
-            self._carte, self._mdp, self.derniere_raison = None, "", raison
-            if self._etat != "erreur":
+            self._mdp, self._extinction, self._essais = "", None, 0
+            if self._etat != "erreur" or attente:
                 self._etat = "eteint"
             return self.etat()
 
@@ -270,6 +247,10 @@ class Session:
     def tic(self):
         """Eteint le FTP apres `inactivite` secondes sans action, ou quand tous les onglets vus ont disparu (appele periodiquement par le serveur)."""
         with self._verrou:
+            if self._extinction:                     # UfsFTP 0 non confirme : renvoye a chaque tic, jusqu'a la borne
+                if self._essais < ESSAIS_EXTINCTION:
+                    self.ferme(self.derniere_raison)
+                return
             if not self._carte:
                 return
             if self._horloge() - self._derniere > self._inactivite:
@@ -347,14 +328,19 @@ class Session:
         return self._op(lambda ftp: self._entrees(ftp, chemin))
 
     def _type(self, ftp, chemin):
-        """"dossier", "fichier" ou None (absent), d'apres la liste du dossier parent."""
+        """"dossier", "fichier" ou None (absent), d'apres la liste du dossier parent. Le nom exact d'abord (la flash, LittleFS, distingue
+        la casse), sinon le meme nom pour FatFs (cle_fat : la SD ne distingue ni la casse ni les points et espaces finaux)."""
         if chemin == "/":
             return "dossier"
         parent, _, nom = chemin.rpartition("/")
-        for e in self._entrees(ftp, parent or "/"):
-            if e["nom"] == nom:
-                return e["type"]
-        return None
+        entrees = self._entrees(ftp, parent or "/")
+        exact = [e["type"] for e in entrees if e["nom"] == nom]
+        return (exact or [e["type"] for e in entrees if cle_fat(e["nom"]) == cle_fat(nom)] or [None])[0]
+
+    @staticmethod
+    def _type_valide(type_attendu):
+        if type_attendu not in TYPES:
+            raise ValueError("type : « fichier » ou « dossier » attendu")
 
     def lit(self, chemin, sortie, attendu=None):
         chemin = valide_chemin(chemin)
@@ -396,7 +382,8 @@ class Session:
         except Exception:
             return ""
 
-    def envoie(self, dossier, nom, flux, ecraser, attendu=None):
+    def envoie(self, dossier, nom, flux, ecraser, attendu=None, *, confirmations=1):
+        """Envoie un fichier. Nom deja pris (comparaison FAT) : refus sans `ecraser` ; ecraser un fichier protege demande 2 confirmations."""
         dossier = valide_chemin(dossier)
         if not nom or "/" in nom or valide_chemin("/" + nom) != "/" + nom or nom in (".", ".."):
             raise ValueError("nom de fichier invalide")
@@ -406,8 +393,12 @@ class Session:
         flux.seek(0)
 
         def envoi(ftp):
-            if not ecraser and any(e["nom"] == nom for e in self._entrees(ftp, dossier)):
-                raise RefusFtp("« %s » existe deja dans %s" % (nom, dossier))
+            if not ecraser or protege(cible):
+                existe = any(cle_fat(e["nom"]) == cle_fat(nom) for e in self._entrees(ftp, dossier))
+                if existe and not ecraser:
+                    raise RefusFtp("« %s » existe deja dans %s" % (nom, dossier))
+                if existe and confirmations < 2:
+                    raise RefusFtp("ecrasement non confirme (fichier protege : seconde confirmation)")
             libre = self._libre()
             if libre is not None and taille > libre:
                 raise RefusFtp("pas assez de place sur la carte : %d Ko libres pour %d Ko" % (libre // 1024, -(-taille // 1024)))
@@ -415,8 +406,8 @@ class Session:
 
         self._op(envoi, attendu)
 
-    def _supprime(self, ftp, chemin):
-        if self._type(ftp, chemin) == "dossier":
+    def _supprime(self, ftp, chemin, genre=None):
+        if (genre or self._type(ftp, chemin)) == "dossier":
             for e in self._entrees(ftp, chemin):
                 self._supprime(ftp, chemin.rstrip("/") + "/" + e["nom"])
             ftp.rmd(chemin)
@@ -440,9 +431,11 @@ class Session:
                     file.append((sous, niveau + 1))
         return False
 
-    def supprime(self, chemin, confirmations, attendu=None):
-        """Supprime un fichier ou un dossier (recursif). 1 confirmation, 2 pour un fichier protege ou un dossier qui en contient un."""
+    def supprime(self, chemin, confirmations, attendu=None, *, type_attendu=None):
+        """Supprime un fichier ou un dossier (recursif). 1 confirmation, 2 pour un fichier protege ou un dossier qui en contient un.
+        `type_attendu` : ce que la page a vu ("fichier" ou "dossier") ; s'il a change, refus avant toute commande de modification."""
         chemin = valide_chemin(chemin)
+        self._type_valide(type_attendu)
         if chemin == "/":
             raise RefusFtp("la racine ne se supprime pas")
         if confirmations < (2 if protege(chemin) else 1):
@@ -450,9 +443,12 @@ class Session:
 
         def supprime(ftp):
             # RefusFtp leve ici traverse _op sans fermer la session ; aucune commande de modification n'est partie
-            if confirmations < 2 and self._type(ftp, chemin) == "dossier" and self._contient_protege(ftp, chemin):
+            genre = self._type(ftp, chemin)
+            if type_attendu and genre != type_attendu:
+                raise RefusFtp(TYPE_CHANGE)
+            if confirmations < 2 and genre == "dossier" and self._contient_protege(ftp, chemin):
                 raise RefusFtp("suppression non confirmee (dossier contenant un fichier protege : seconde confirmation)")
-            self._supprime(ftp, chemin)
+            self._supprime(ftp, chemin, genre)
 
         self._op(supprime, attendu)
 
@@ -460,18 +456,25 @@ class Session:
         chemin = valide_chemin(chemin)
         self._op(lambda ftp: ftp.mkd(chemin), attendu)
 
-    def deplace(self, source, cible, attendu=None, *, confirmations=1):
+    def deplace(self, source, cible, attendu=None, *, confirmations=1, type_attendu=None):
         """Deplace ou renomme. Aucune confirmation pour un deplacement ordinaire ; 2 si la source ou la cible est protegee, ou si la source est
-        un dossier qui contient un fichier protege. Jamais d'ecrasement : une cible existante est refusee."""
+        un dossier qui contient un fichier protege. Jamais d'ecrasement : une cible existante (comparaison FAT) est refusee. Ni la source dans
+        elle-meme (un renommage qui ne change que la casse aussi), ni un type de source different de `type_attendu`."""
         source, cible = valide_chemin(source), valide_chemin(cible)
+        self._type_valide(type_attendu)
+        if dans_lui_meme(source, cible):
+            raise RefusFtp("« %s » ne se deplace pas dans lui-meme" % source)
         refus = "deplacement non confirme (fichier protege : seconde confirmation)"
         if confirmations < 2 and (protege(source) or protege(cible)):
             raise RefusFtp(refus)
 
         def deplace(ftp):
+            genre = self._type(ftp, source)
+            if type_attendu and genre != type_attendu:
+                raise RefusFtp(TYPE_CHANGE)
             if self._type(ftp, cible):
                 raise RefusFtp("la cible existe deja")
-            if confirmations < 2 and self._type(ftp, source) == "dossier" and self._contient_protege(ftp, source):
+            if confirmations < 2 and genre == "dossier" and self._contient_protege(ftp, source):
                 raise RefusFtp(refus)
             ftp.rename(source, cible)
 

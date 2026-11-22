@@ -9,7 +9,8 @@ de carte, fermeture de la DERNIERE page (sendBeacon sur /ferme ; registre d'ongl
 (90 s sans sondage), 15 min sans action (fil d'horloge ci-dessous), arret de l'outil (atexit).
 Les identifiants FTP restent cote serveur : jamais dans une reponse. Refus : texte brut (text/plain), jamais du JSON.
 
-Routes (client de ce PC : Host local, parade au DNS rebinding ; les POST exigent l'en-tete X-Ftp-Cartes: 1 et la meme origine) :
+Routes (client de ce PC : Host local, parade au DNS rebinding ; les POST exigent l'en-tete X-Ftp-Cartes: 1 et la meme origine ; les GET a
+effet, /etat?onglet=, /liste et /telecharge, refusent une autre origine : Sec-Fetch-Site autre que same-origin ou none, ou Origin etranger) :
     GET  /                       la page
     GET  /cartes                 ftp_cartes_liste.liste : {cartes, exclues}
     GET  /etat[?onglet=<id>]     {env, support, etat, message, sd} ; avec `onglet` : la page se signale (sondage de la page)
@@ -21,13 +22,15 @@ Routes (client de ce PC : Host local, parade au DNS rebinding ; les POST exigent
                                  (16 a 32 hexadecimaux) : n'eteint le FTP que si c'etait le dernier onglet ; sans identifiant (« Deconnecter »),
                                  corps absent, vide ou illisible : eteint toujours. Repond l'etat.
     POST /zip {chemins[, env, support]}   zip des fichiers et dossiers demandes
-    POST /envoie?dossier=&nom=&ecraser=0|1   corps brut, 16 Mo au plus (413 avant toute ecriture) ; ce PC seulement
-    POST /supprime {chemin, confirmations}   ce PC seulement ; un fichier protege ou un dossier qui en contient un : 2 confirmations
+    POST /envoie?dossier=&nom=&ecraser=0|1[&confirmations=1|2]   corps brut, 16 Mo au plus (413 avant toute ecriture) ; ce PC seulement ;
+                                 ecraser un fichier protege : confirmations=2 (409 « seconde confirmation » sinon, sans rien ecrire)
+    POST /supprime {chemin, confirmations[, type]}   ce PC seulement ; un fichier protege ou un dossier qui en contient un : 2 confirmations ;
+                                 `type` ("fichier" ou "dossier", vu par la page) different de la carte : 409, rien n'est supprime
     Gestes de la page (/envoie, /supprime, /dossier, /deplace, /zip, /telecharge) : {env, support} facultatifs (parametres de requete pour
     /envoie et /telecharge) ; s'ils different de la session (autre onglet qui a change de carte ou de support) : 409, rien n'est ecrit.
     POST /dossier {chemin}                   ce PC seulement
-    POST /deplace {source, cible[, confirmations]}   ce PC seulement ; confirmations entier (400 sinon), 1 par defaut ; 2 pour un fichier
-                                 protege (source ou cible) ou un dossier qui en contient un ; cible deja existante : 409
+    POST /deplace {source, cible[, confirmations, type]}   ce PC seulement ; confirmations entier (400 sinon), 1 par defaut ; 2 pour un fichier
+                                 protege (source ou cible) ou un dossier qui en contient un ; cible deja existante ou dossier dans lui-meme : 409
 Refus : 400 (saisie, chemin), 403 (acces), 404 (carte ou route inconnue), 409 (refus de la session ou de la carte), 413, 500 (inattendu).
 Tout autre verbe : 405. Banc : test_ftp_cartes_web.py.
 """
@@ -58,6 +61,8 @@ MAX_ENVOI = 16 * 1024 * 1024             # corps brut de /envoie
 ENTETE = "X-Ftp-Cartes"
 PERIODE_TIC = 10                         # s : appel de session.tic()
 ECRITURES = ("/ouvre", "/envoie", "/supprime", "/dossier", "/deplace")     # allumage et ecritures : ce PC seulement
+GET_A_EFFET = ("/liste", "/telecharge")  # RETR, inactivite repoussee ; /etat aussi quand il porte `onglet` (registre d'onglets)
+SITES_ADMIS = ("same-origin", "none")    # Sec-Fetch-Site ; « same-site » = un autre outil sur 127.0.0.1 (le port ne compte pas) : refuse
 # 'self' pour le service worker de repli et le manifeste ajoutes par acces_web.habille ; aucune ressource externe.
 CSP = ("default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
        "connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'")
@@ -151,9 +156,19 @@ def fabrique_gestionnaire(acces, racine, session):
             return url.path, {k: v[-1] for k, v in parse_qs(url.query).items()}
 
         # ---- GET -------------------------------------------------------------------------------------------------
+        def _meme_origine(self):
+            """Anti-CSRF des GET a effet : refuse une requete d'une autre origine (une image ou un lien d'une page tierce). Sans
+            Sec-Fetch-Site ni Origin (navigation directe, urllib des bancs, ancien navigateur) : admise."""
+            return self.headers.get("Sec-Fetch-Site", "none") in SITES_ADMIS and acces.origine_autorisee(self)
+
         def do_GET(self):
-            if self._admis():
-                self._erreurs(self._get)
+            if not self._admis():
+                return
+            chemin, q = self._requete()
+            if (chemin in GET_A_EFFET or (chemin == "/etat" and "onglet" in q)) and not self._meme_origine():
+                self._refuse()
+                return
+            self._erreurs(self._get)
 
         def _get(self):
             chemin, q = self._requete()
@@ -216,6 +231,12 @@ def fabrique_gestionnaire(acces, racine, session):
             return n
 
         @staticmethod
+        def _entier(texte):
+            if not texte.isascii() or not texte.isdigit():
+                raise ValueError("confirmations : entier attendu")
+            return int(texte)
+
+        @staticmethod
         def _onglet(brut):
             """Identifiant d'onglet du corps de /ferme ; corps vide, illisible ou sans identifiant valide : None (on ferme comme avant)."""
             try:
@@ -227,7 +248,8 @@ def fabrique_gestionnaire(acces, racine, session):
             if chemin == "/envoie":
                 brut = self._lit_corps(MAX_ENVOI)
                 if brut is not None:
-                    session.envoie(q.get("dossier", ""), q.get("nom", ""), io.BytesIO(brut), q.get("ecraser") == "1", self._attendu(q))
+                    session.envoie(q.get("dossier", ""), q.get("nom", ""), io.BytesIO(brut), q.get("ecraser") == "1", self._attendu(q),
+                                   confirmations=self._entier(q.get("confirmations", "1")))
                     self._json({"message": "envoye"})
                 return
             brut = self._lit_corps(MAX_CORPS)
@@ -247,13 +269,13 @@ def fabrique_gestionnaire(acces, racine, session):
                     session.zip(chemins, tmp, self._attendu(d))
                     self._fichier(tmp, "carte.zip", "application/zip")
             elif chemin == "/supprime":
-                session.supprime(d.get("chemin"), self._confirmations(d, 0), self._attendu(d))
+                session.supprime(d.get("chemin"), self._confirmations(d, 0), self._attendu(d), type_attendu=d.get("type"))
                 self._json({"message": "supprime"})
             elif chemin == "/dossier":
                 session.cree_dossier(d.get("chemin"), self._attendu(d))
                 self._json({"message": "dossier cree"})
             elif chemin == "/deplace":
-                session.deplace(d.get("source"), d.get("cible"), self._attendu(d), confirmations=self._confirmations(d, 1))
+                session.deplace(d.get("source"), d.get("cible"), self._attendu(d), confirmations=self._confirmations(d, 1), type_attendu=d.get("type"))
                 self._json({"message": "deplace"})
             else:
                 self._envoie(404, b"introuvable")

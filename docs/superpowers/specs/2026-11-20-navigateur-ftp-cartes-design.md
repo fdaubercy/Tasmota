@@ -183,12 +183,36 @@ que si l'un d'eux a changé (décidé le 2026-11-21).
     déplacer un dossier qui en contient un, à n'importe quelle profondeur (parcours borné, limite atteinte = deux
     confirmations) : le serveur répond 409 (« seconde confirmation ») et la page redemande ; `POST /deplace` et
     `POST /supprime` portent `confirmations` (entier, 400 sinon) ;
-  - un déplacement vers une cible existante est refusé (409), jamais écrasé.
+  - un déplacement vers une cible existante est refusé (409), jamais écrasé ;
+  - décidé le 2026-11-22 : ÉCRASER un fichier protégé par un envoi demande aussi la seconde confirmation. `POST /envoie` porte
+    `confirmations` en paramètre de requête (entier, 1 par défaut, 400 sinon) ; avec `ecraser=1` sur un fichier protégé existant, le
+    serveur répond 409 « seconde confirmation » avant toute écriture sur la carte, la page ouvre la seconde boîte (texte d'écrasement) et
+    renvoie avec `confirmations=2`. Écraser un fichier ordinaire reste à une confirmation, créer un fichier absent (même de nom protégé)
+    n'en demande pas davantage (`ftp_cartes_session.py::Session.envoie`) ;
+  - noms comparés comme FatFs (`ftp_cartes_chemins.py::cle_fat` : sans casse, sans points ni espaces finaux de chaque segment) pour
+    `protege`, l'existence d'un nom à l'envoi et la cible d'un déplacement (`autoexec.be.` et `AUTOEXEC.BE ` sont protégés comme
+    `autoexec.be`). Les noms courts 8.3 (`AUTOEX~1.BE`) ne sont pas traités. La flash (LittleFS) distingue la casse : la comparaison y est
+    plus prudente que nécessaire (un refus de trop, jamais un écrasement) ;
+  - un dossier ne se déplace ni dans lui-même ni sous lui-même (`ftp_cartes_chemins.py::dans_lui_meme`, 409 avant toute commande FTP ;
+    un renommage qui ne change que la casse est refusé de même) ;
+  - type attendu (décidé le 2026-11-22) : `POST /supprime` et `POST /deplace` portent `type` (`fichier` ou `dossier`, lu par la page dans la
+    liste affichée) ; le serveur le compare au type sur la carte SOUS le verrou, avant toute commande de modification, et répond 409 « le type
+    de l'élément a changé » s'il diffère (ou si l'élément a disparu). `type` absent ou vide : pas de contrôle ; autre valeur : 400.
 - Les gestes de la page (dont `/zip` et `/telecharge`) portent la paire `env`/`support` ; si elle diffère de la session
   (un autre onglet a changé de carte ou de support) : 409 « la session a changé », rien n'est écrit.
 - Le serveur n'envoie jamais le message brut d'une exception inattendue (il pourrait citer un mot de passe) : le type
   seul.
-- Chemins reçus de la page validés côté serveur (pas de `..`, pas de caractère de contrôle, longueur bornée).
+- Chemins reçus de la page validés côté serveur (pas de `..`, pas de caractère de contrôle, pas de `\`, longueur bornée :
+  `ftp_cartes_chemins.py::valide_chemin`). `\` est refusé (400) car FatFs peut le lire comme un séparateur et sortir du dossier visé.
+- Anti-CSRF des GET qui ont un effet (décidé le 2026-11-22) : `GET /etat?onglet=` (enregistre un onglet), `/liste` (repousse l'inactivité)
+  et `/telecharge` refusent (403) une requête dont `Sec-Fetch-Site` n'est ni `same-origin` ni `none` (`same-site` compris : un autre outil
+  sur 127.0.0.1 n'a pas la même origine, le port ne compte pas pour le « site »), ou dont l'`Origin` n'est pas celle de l'outil
+  (`ftp_cartes_web.py::fabrique_gestionnaire`). Sans ces en-têtes (navigation directe, `urllib`, ancien navigateur) : admise. Les POST
+  (`/zip` compris) avaient déjà l'en-tête `X-Ftp-Cartes` et le contrôle d'origine.
+- Extinction non confirmée (décidé le 2026-11-22) : si `UfsFTP 0` échoue, la session garde l'adresse de la carte et l'état « allumé »
+  (`en_session()` vrai, l'annuaire refuse l'arrêt), n'accepte plus aucun geste, et `tic()` renvoie `UfsFTP 0` (5 essais au plus,
+  `ESSAIS_EXTINCTION`), puis « Déconnecter » seul. Ouvrir une autre carte est refusé tant que l'ancienne n'a pas confirmé ; rouvrir la même
+  efface l'attente. Le message d'état ne cite aucun identifiant.
 - Téléchargements : flux direct vers le navigateur ; zip construit en mémoire ou en fichier temporaire hors dépôt.
   Rien n'est écrit dans le dépôt.
 

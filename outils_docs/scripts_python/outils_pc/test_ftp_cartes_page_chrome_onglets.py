@@ -10,6 +10,7 @@ import json
 import time
 import urllib.request
 
+import ftp_cartes_liste
 import test_ftp_cartes_web as banc_web
 from test_build_page_chrome import Cdp, attend
 
@@ -143,11 +144,19 @@ def seconde_page(m):
 
 
 def scenario_onglets(m, tol):
+    # Ces cas ferment ou changent la session sous la page a dessein : une relecture de liste de la page en vol peut atterrir apres, et le serveur la
+    # refuse en 409 (« aucune session » ou changee). C'est un 409 voulu, qu'aucun bloc `with tol` ne peut dater : ceux de /liste sont toleres ICI
+    # seulement ; la suite (test_ftp_cartes_page_chrome_corrections.py) retrouve la regle stricte.
+    tol.liste_tolere(True)
+    try:
+        _scenario_onglets(m, tol)
+    finally:
+        tol.liste_tolere(False)
+
+
+def _scenario_onglets(m, tol):
     cdp, b = m.cdp, m.banc
     racine = b.srv.racine
-    # Ces suites ferment ou changent la session sous la page a dessein : une relecture de liste de la page en vol peut atterrir apres, et le serveur la
-    # refuse en 409 (« aucune session » ou changee). C'est un 409 voulu, qu'aucun bloc `with tol` ne peut dater ; seuls ceux de /liste sont toleres ici.
-    tol.liste_ok = True
     b.srv.noms_pieges.clear()                                  # les noms pieges de la sonde principale s'ajoutent a TOUTE liste, dossiers compris
     cdp.appel("Emulation.setDeviceMetricsOverride", width=1280, height=1000, deviceScaleFactor=1, mobile=False)
     calme(cdp, False)                                          # le sondage de la page 1 avait ete coupe pour la fermeture reelle d'un onglet
@@ -156,12 +165,12 @@ def scenario_onglets(m, tol):
     # P1 : identifiant d'onglet
     mon = ident(cdp)
     verifie(len(mon) == 32 and all(c in "0123456789abcdef" for c in mon), True, "onglet : identifiant de 32 caracteres hexadecimaux minuscules")
-    b.session.onglets.reinitialise()
+    t0 = vus(b).get(mon, -1)                                  # sans vider le registre : l'heure de derniere vue de CET onglet doit avancer
     cdp.js("sonde(true)")
     attend_vu = time.monotonic() + 5
-    while time.monotonic() < attend_vu and mon not in vus(b):
+    while time.monotonic() < attend_vu and vus(b).get(mon, -1) <= t0:
         time.sleep(0.2)
-    verifie(mon != "" and mon in vus(b), True, "onglet : GET /etat porte l'identifiant")
+    verifie(mon != "" and vus(b).get(mon, -1) > t0, True, "onglet : GET /etat porte l'identifiant")
     # un geste long (zip) suspend le sondage : l'onglet continue de se signaler (sinon le serveur le croit parti apres 90 s)
     t0 = vus(b).get(mon, 0)
     cdp.js("S.occupe=1; 0")                                   # le sondage ne passe plus que par le battement ; on attend qu'il arrive (condition observable)
@@ -171,9 +180,10 @@ def scenario_onglets(m, tol):
     cdp.js("S.occupe=0; 0")
     verifie(vus(b).get(mon, 0) > t0, True, "onglet : le sondage suspendu par un geste long continue de signaler l'onglet")
     calme(cdp)
-    b.session.onglets.reinitialise()
+    time.sleep(0.6)                                           # un sondage parti avant `calme` a le temps d'arriver
+    t0 = vus(b).get(mon, -1)
     choisit(cdp)
-    verifie(mon != "" and mon in vus(b), True, "onglet : POST /ouvre porte l'identifiant")
+    verifie(mon != "" and vus(b).get(mon, -1) > t0, True, "onglet : POST /ouvre porte l'identifiant (sans sondage)")
     calme(cdp, False)
 
     # P1 : deux pages. Fermer l'une laisse le FTP allume, fermer la derniere l'eteint.
@@ -187,6 +197,12 @@ def scenario_onglets(m, tol):
             time.sleep(0.2)
     verifie(mon2 != "" and mon2 != mon and {mon, mon2} <= set(vus(b)), True, "deux pages : deux identifiants distincts connus du serveur")
     calme(cdp)                                                # page 1 ne se re-signale pas entre-temps
+    if cdp2:
+        calme(cdp2)                                           # page 2 non plus : seul le registre du serveur la garde
+    # C4 : la page 1 change de carte (meme requete que son POST /ouvre, vers une seconde carte du faux serveur) : la page 2 reste connue
+    carte = dict(ftp_cartes_liste.liste(b.racine)["cartes"][0], adresse="localhost", env="autre")
+    b.session.ouvre_ou_reprend(carte, "sd", mon)
+    verifie((b.session.etat()["env"], mon2 in vus(b)), ("autre", True), "changement de carte par la page 1 : la page 2 reste dans le registre")
     n0 = len(b.ufsftp())
     cdp.js("window.dispatchEvent(new PageTransitionEvent('pagehide'))")
     limite = time.monotonic() + 5
@@ -194,7 +210,7 @@ def scenario_onglets(m, tol):
         time.sleep(0.2)
     verifie(mon in vus(b), False, "deux pages : le beacon de la page 1 retire son identifiant")
     time.sleep(1)
-    verifie((b.session.etat()["etat"], b.ufsftp()[n0:]), ("actif", []), "deux pages : fermer l'une laisse le FTP allume (pas de UfsFTP 0)")
+    verifie((b.session.etat()["etat"], b.ufsftp()[n0:]), ("actif", []), "deux pages, apres un changement de carte de la page 1 : la fermer laisse le FTP allume pour la page 2 (pas de UfsFTP 0)")
     if cdp2:
         cdp2.js("window.dispatchEvent(new PageTransitionEvent('pagehide'))")
     attend_ufs(b, lambda u: len(u) > n0 and u[-1] == 0, 8)

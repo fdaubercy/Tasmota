@@ -28,7 +28,7 @@ import ftp_cartes_page as page_mod                                              
 import test_ftp_cartes_web as banc_web                                              # noqa: E402
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre      # noqa: E402
 from test_ftp_cartes_page_chrome_onglets import attend_sonde, attend_ufs, calme, clique, coche, espionne, ident, noms, oublie, pose_fichiers, posts, scenario_onglets, vus   # noqa: E402
-from test_ftp_cartes_page_chrome_corrections import corrections   # noqa: E402
+from test_ftp_cartes_page_chrome_corrections import corrections, relectures   # noqa: E402
 
 ECHECS = []
 HOSTILE = "<img src=x onerror=window.__pwn=1>.txt"
@@ -95,7 +95,7 @@ class Tolere:
         time.sleep(0.3)
         self.debut = len(self.cdp.erreurs())
 
-    def __exit__(self, *_):
+    def _stable(self):
         time.sleep(0.5)
         stable, derniere = 0, -1                           # les lignes du journal Chrome arrivent en differe : on attend qu'elles ne bougent plus (3 s au plus)
         limite = time.monotonic() + 3
@@ -104,6 +104,16 @@ class Tolere:
             stable = stable + 1 if n == derniere else 0
             derniere = n
             time.sleep(0.25)
+
+    def liste_tolere(self, oui):
+        """Tolere (oui) ou non les 409 de /liste. Au retour a False, ceux deja arrives restent toleres, les suivants non."""
+        if not oui:
+            self._stable()
+            self.ok.update(i for i, e in enumerate(self.cdp.erreurs()) if "409" in e and "/liste" in e)
+        self.liste_ok = oui
+
+    def __exit__(self, *_):
+        self._stable()
         self.n = 0
         for i, e in enumerate(self.cdp.erreurs()):
             if i >= self.debut and "409" in e:
@@ -367,6 +377,7 @@ def scenario(m):
     # A8 : identifiant d'onglet, deux pages, seconde confirmation du deplacement, paire env/support, mineurs de la page
     scenario_onglets(m, tol)
     corrections(cdp, b, tol)
+    relectures(cdp, b, tol)
 
 
 def main():

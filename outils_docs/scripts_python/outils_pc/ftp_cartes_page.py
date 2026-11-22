@@ -103,6 +103,10 @@ function el(tag, classe, texte) { var e = document.createElement(tag); if (class
 function pose(n, t) { if (n.textContent !== t) n.textContent = t; }          // une zone role=status n'est reecrite que si son texte change
 function nomDe(chemin) { return chemin.replace(/\/+$/, "").split("/").pop() || "/"; }
 function joint(d, n) { return (d === "/" ? "" : d) + "/" + n; }
+// La SD est en FAT : ni la casse ni les points et espaces finaux ne distinguent deux noms (le serveur tranche, ftp_cartes_chemins.cle_fat).
+function cleFat(n) { return n.toLowerCase().replace(/[. ]+$/, ""); }
+function cleChemin(c) { return c.split("/").map(cleFat).join("/"); }
+function dansLuiMeme(s, c) { s = cleChemin(s); c = cleChemin(c); return c === s || c.indexOf(s + "/") === 0; }
 function dossierParent(chemin) { var i = chemin.lastIndexOf("/"); return i <= 0 ? "/" : chemin.slice(0, i); }
 function taille(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + " Mo" : n >= 1024 ? (n / 1024).toFixed(1) + " Ko" : n + " o"; }
 function json(r) { try { return JSON.parse(r.texte); } catch (e) { return null; } }
@@ -310,6 +314,7 @@ function demande(texte, champ, ok) {
   });
 }
 function telecharge(url, nom) { var a = el("a"); a.href = url; a.download = nom; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+function typeDe(chemin, cible) { var e = cible.entrees.find(function (x) { return joint(cible.dossier, x.nom) === chemin; }); return e ? e.type : ""; }   // le serveur refuse si la carte a change
 function estDossier(chemin, cible) { cible = cible || fige(); return cible.entrees.some(function (e) { return e.type === "dossier" && joint(cible.dossier, e.nom) === chemin; }); }
 function decrit(liste, cible) {                                             // ce qui part : dossiers avec leur contenu, au plus 5 noms
   var noms = liste.slice(0, 5).map(function (c) { return estDossier(c, cible) ? "le dossier « " + nomDe(c) + " » et tout son contenu" : "« " + nomDe(c) + " »"; });
@@ -337,13 +342,19 @@ function envoie(fichiers) {
       var url = "/envoie?dossier=" + encodeURIComponent(cible.dossier) + "&nom=" + encodeURIComponent(f.name) + "&env=" + encodeURIComponent(cible.env) + "&support=" + cible.support + "&ecraser=";
       var question = "« " + f.name + " » existe déjà dans " + cible.dossier + " : l'écraser ?";
       // Deja dans la liste affichee : on demande AVANT d'envoyer le corps (un fichier de 16 Mo ne part qu'une fois). Absent de la liste (perimee) : repli sur le 409 de la carte.
-      var ecraser = cible.entrees.some(function (e) { return e.type === "fichier" && e.nom === f.name; });
+      var ecraser = cible.entrees.some(function (e) { return e.type === "fichier" && cleFat(e.nom) === cleFat(f.name); });
       if (ecraser && !await demande(question, null, "Écraser")) { if (mort(cible)) return; continue; }
       progres(cible, "Envoi de « " + f.name + " » (" + (i + 1) + "/" + n + ")…");
       var r = await api("POST", url + (ecraser ? "1" : "0"), f);
       if (!ecraser && r.status === 409 && /existe deja/.test(r.texte)) {
         if (!await demande(question, null, "Écraser")) { if (mort(cible)) return; continue; }
         r = await api("POST", url + "1", f);
+      }
+      // Fichier protege : le serveur refuse l'ecrasement sans seconde confirmation, avant toute ecriture sur la carte (le corps ne part vers la carte qu'une fois).
+      if (r.status === 409 && /seconde confirmation/.test(r.texte)) {
+        if (!await demande("« " + f.name + " » est protégé : fichier de configuration de la carte (démarrage ou réglages). Seconde confirmation : l'écraser vraiment par cet envoi ?",
+          null, "Écraser quand même") || mort(cible)) { if (mort(cible)) return; continue; }
+        r = await api("POST", url + "1&confirmations=2", f);
       }
       if (r.ok) faits++; else erreur = r.texte;
       if (perimee(r)) break;                                          // session changee : on n'insiste pas fichier apres fichier
@@ -368,7 +379,7 @@ function supprime() {
     for (var i = 0; i < liste.length; i++) {
       if (mort(cible)) return;
       progres(cible, "Suppression (" + (i + 1) + "/" + liste.length + ")…");
-      var g = await geste("/supprime", {chemin: liste[i]}, cible, "supprimer", "");
+      var g = await geste("/supprime", {chemin: liste[i], type: typeDe(liste[i], cible)}, cible, "supprimer", "");
       if (g.annule) { if (mort(cible)) return; annule = "Suppression annulée : " + nomDe(liste[i]); }
       else if (!g.r.ok) erreur = g.r.texte;
       if (perimee(g.r)) break;                                        // session changee : plus rien n'est envoye
@@ -383,13 +394,15 @@ function deplace(renomme) {
     if (!saisie) return;
     if (renomme ? /[\/\\]/.test(saisie) : saisie.charAt(0) !== "/") { msg(renomme ? "Un nom ne contient ni / ni \\." : "Le dossier cible commence par /.", true); return; }
     var cibles = liste.map(function (c) { return renomme ? joint(dossierParent(c), saisie) : joint(saisie, nomDe(c)); });
-    var pris = cibles.filter(function (t) { return dossierParent(t) === cible.dossier && cible.entrees.some(function (e) { return e.nom === nomDe(t); }); });
+    var boucle = liste.filter(function (c, i) { return dansLuiMeme(c, cibles[i]); });
+    if (boucle.length) { msg("« " + nomDe(boucle[0]) + " » : la cible est l'élément lui-même ou un de ses sous-dossiers, rien n'est déplacé.", true); return; }
+    var pris = cibles.filter(function (t) { return dossierParent(t) === cible.dossier && cible.entrees.some(function (e) { return cleFat(e.nom) === cleFat(nomDe(t)); }); });
     if (pris.length) { msg("« " + nomDe(pris[0]) + " » existe déjà dans " + cible.dossier + " : rien n'est déplacé (pas d'écrasement).", true); return; }
     var erreur = "", annule = "";
     for (var i = 0; i < liste.length; i++) {
       if (mort(cible)) return;
       progres(cible, (renomme ? "Renommage" : "Déplacement") + " (" + (i + 1) + "/" + liste.length + ")…");
-      var g = await geste("/deplace", {source: liste[i], cible: cibles[i]}, cible, renomme ? "renommer" : "déplacer", renomme ? " en « " + saisie + " »" : " vers " + saisie);
+      var g = await geste("/deplace", {source: liste[i], cible: cibles[i], type: typeDe(liste[i], cible)}, cible, renomme ? "renommer" : "déplacer", renomme ? " en « " + saisie + " »" : " vers " + saisie);
       if (g.annule) { if (mort(cible)) return; annule = (renomme ? "Renommage" : "Déplacement") + " annulé : " + nomDe(liste[i]); break; }
       if (!g.r.ok) { erreur = g.r.texte; break; }                     // y compris session changee ou cible existante : on s'arrete au premier refus
     }
