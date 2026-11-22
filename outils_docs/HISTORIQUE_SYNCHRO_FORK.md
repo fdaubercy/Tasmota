@@ -469,3 +469,48 @@ gardes ; entree ecrite a la main, pas par le script.
 - ● `a06a2a5b8` Matter Air Quality PM1, PM2.5 and PM10 reported in ppm instead of µg/m³, and TVOC in ppm instead of ppb (#25294)
 - ● `08465ca5b` Matter MRP sending unacknowledged messages 7 times instead of 5 (#25295)
 -   `1e03a6d9a` Re-fix PWMFrequency 2 on v16.0.0.5 (#25155)
+
+## 2026-11-22 11:52 — 38 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge local (conflits résolus))
+
+**8 commit(s) ● a lire de pres.**
+
+-   `28da3e6ff` Webserver: do not poll the web server after Webserver 0 (#25298)
+-   `64c2ad795` Fix device groups OoB GHSA-f37c-fwmx-99gj
+-   `ac84e5787` Ethernet: share SPI bus 1 with drivers already using it (#25299)
+-   `ff824d574` Update change logs
+-   `c27170887` Configure Wi-Fi page hang when the Wi-Fi scan cannot start (#25267)
+-   `94ea3235b` Update change logs
+-   `479e99612` TLS support for SHA384 and Letsencrypt Root X2 CA (#25302)
+-   `e9e28d662` TLS fix SHA384 hardware accelerated (#25306)
+-   `683cef88b` Update change logs
+-   `102368173` Update and correct Swedish translations (#25303)
+-   `de13fb38d` BME68x: re-init sensor after it lost its config (#25305)
+-   `a6a055111` OpenTherm: no silent cooldown after a lost connection (default 0) (#25296)
+-   `9cc3f485e` Update change logs
+-   `d5c0ea4fd` support EZSP V13 (#25225)
+-   `b278d3560` Update change logs
+-   `146b6d9af` Increase driver and sensor support to159
+-   `bccc69922` Bump version v16.0.0.6
+-   `45247a90c` TLS add SHA384 and AES256 ciphers (#25307)
+-   `6febab2df` MQTT: log the AES-256 TLS cipher suites by name (#25310)
+- ● `c515ecc35` Berry `crypto.SHA384` hash class (#25311)
+- ● `91466e6c6` Matter fix headers (cosmetic only) (#25312)
+- ● `a5bd073c6` Matter remove dead code (#25313)
+- ● `8dab3236a` Berry mqttclient: accept ECDSA certificates, log the TLS error (#25314)
+-   `b45dd6126` Allow larger AsyncHttpClientLight response bodies (#25291)
+-   `349091131` Update change logs
+- ● `2b50416f9` Matter fix ShutterTilt exception when SetOption80 is off (#25315)
+-   `3b6d91631` Fix Removed migration steps from v9.1.0 to v9.5.0.9 as regression from v16.0.0.3 (#25286)
+-   `ad76377ea` Fix async HTTP response body handling (#25316)
+-   `0de22c38b` Fix filelog correct filesystem use and checks
+-   `03ba60477` Add power on sdcard retry detection (#25208)
+-   `2e4c2a6e3` Fix duplicate SDMMC detection
+-   `ce4fee50f` Update platform for S31 to release Tasmota core 4.0.0 / IDF 6.1.1 (#25318)
+- ● `c9124892b` Matter `MtrUpdate` accepts values with units for Temperature, Humidity, Pressure, Illuminance and HVAC (#25322)
+-   `1085b906f` fallback: download safeboot from development (#25323)
+-   `22d886c82` Enable tasmota32s31 in build workflow
+- ● `4d293ddaf` Add ESP32-S31 to build devel CI
+- ● `dca9c17fd` add ESP32-S31 in family list
+-   `81ff76526` Add s31 targets and update pioarduino installation
