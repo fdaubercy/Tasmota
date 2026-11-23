@@ -37,6 +37,8 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 | Voie MQTT maître/esclaves | `outils_docs/README.md` § Voie MQTT ; `PROTOCOLE_MODBUS.md` §11 | garde-fous G3 à G5 ; esclave sans fiche ModBus = aucun repli |
 | Découverte des cartes | `outils_docs/README.md` § La découverte des cartes | ESP32 sans PSRAM : `serveur.discovery` OFF |
 | Graphiques, énergie, jauges, débits, écran 7B, MPU6050, volets, coprocesseur C6, Hue | `outils_docs/README.md`, section du même nom | mode d'emploi de chaque fonction des cartes |
+| Commandes Tasmota personnalisées (`ReglageGlobal`, `ReglageLog`, `ReglageUDP`, `ReglageModbus`...) | `outils_docs/reference_berry/COMMANDES.md` | liste vérifiée contre les `add_cmd` de `data/` ; sous-commandes et exemples |
+| Modifications du firmware amont (C++ en dur) | `outils_docs/reference_berry/MODIFICATIONS_FIRMWARE.md` | piège de synchro du fork : pied de page de `xdrv_01_9_webserver.ino`, comment le retrouver |
 | Volets roulants du firmware | `outils_docs/TASMOTA_VOLETS_ROULANTS.md` | doc Shutters traduite et écarts vérifiés |
 | Fichiers `.drvset*` | `outils_docs/FICHIERS_DRVSET.md` | contenu, sauvegarde, effacement |
 | Extensions `.tapp` | `outils_docs/EXTENSIONS_TAPP.md` | format, cycle de vie, pièges §7 ; jamais essayé sur carte |
