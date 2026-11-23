@@ -1,3 +1,5 @@
+ARCHIVÉ le 2026-11-23 : remplacé par tasks/reprise-modbus-garage.md
+
 # Reprise — Chantier ModBus du grenier (carte 16 relais + esclaves Tasmota)
 
 > État au **2026-09-29** (encadré ci-dessous) ; le reste du document date du 2026-07-24.

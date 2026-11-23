@@ -1,3 +1,5 @@
+ARCHIVÉ le 2026-11-23 : remplacé par outils_docs/SOLIDIFICATION_BERRY.md
+
 # Reprise — Solidification Berry
 
 > État au **2026-09-29** (encadré ci-dessous) ; le reste du document date du 2026-07-16.

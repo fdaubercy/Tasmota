@@ -1,8 +1,12 @@
 # La solidification Berry — comment ça marche, et les pièges
 
-> Statut au 2026-07-15 : les mécanismes décrits ici sont **lus dans le code de ce dépôt**, chemin et
-> ligne à l'appui. Ce qui reste **à vérifier expérimentalement** est signalé par ⏳ (phase 1 en cours,
-> cf. `docs/superpowers/specs/2026-07-15-solidification-berry-design.md`).
+> **À quoi sert ce document** : le mécanisme de la solidification Berry de ce fork (ce que c'est, où ça se
+> passe, quand l'utiliser) et ses 13 pièges. **État réel au 2026-11-23** : la phase 1 est close depuis le
+> verdict du 2026-07-15 (`docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md`, correction en
+> tête) ; l'import depuis la flash est prouvé à l'exécution (cave S3, 2026-09-29, `introspect.solidified`
+> vrai sur 9 modules) ; la solidification est généralisée : chaque fichier de `data/fs` est, pour chaque
+> env personnalisé, soit dans `custom_berry_solidify`, soit dans `custom_files_exclude`. Les fichiers
+> propres à une carte, eux, ne le sont qu'en partie (§7). Les ⏳ du texte sont des restes de la phase 1.
 >
 > Les §5 à §7 (vérifier, paramètres, ce qui n'est pas solidifié) et les pièges 10-11 ont été établis
 > par **observation d'un build réel** le 2026-07-15 (env `tasmota32s3-etage2-grenier`), pas par lecture.
@@ -124,6 +128,7 @@ reflash**. On perd exactement ce que le framework `data/fs` apporte : éditer un
 |---|---|
 | Module en cours d'écriture ou de débogage | **Ne pas solidifier.** Laisser dans `data/fs/`. |
 | Module stable, volumineux, qui pèse sur la RAM | **Candidat.** Ex. `modbusFonctions.be` (79 Ko). |
+| Fichier propre à une carte (dossier `data/<lieu>/<carte>/`) | **Règle décidée le 2026-11-23 : se solidifie si la carte manque de RAM ET si le fichier est presque finalisé ou peu modifié.** Une carte à l'aise en RAM, ou un fichier encore en chantier, reste sur le LittleFS. |
 | Module dont l'activation varie d'un appareil à l'autre | Attention : un module solidifié est dans le firmware **sans condition**. Sans impact ici (un firmware par appareil), mais la granularité `_persist.json` ne s'y applique plus. |
 
 ## 4. Les pièges
@@ -349,6 +354,16 @@ solidifié sur les 5 S3 qui l'embarquent (liste `berry_commun.leds`, 2026-10-30)
 Corollaire : dans l'autoexec, toujours `do import controleXxx as _ctrl end` (ou `import ... as _ctrl` dans
 un bloc), jamais `import controleXxx` au niveau fichier : l'import de niveau fichier écrirait le **module**
 dans la globale `controleXxx`, par-dessus l'**instance** qu'`init()` vient d'y publier.
+
+Refactor d'un driver écrit à l'ancienne (classe + `tasmota.add_driver()` au niveau fichier, chargé par
+`loadBerryFile`), repris de l'ancienne reprise du chantier (archivée le 2026-11-23) : `loadBerryFile` passe par
+`load()`, qui **ignore la table native**, donc le driver ne profite pas de la flash tel quel ; et le code de
+niveau fichier (instanciation, `add_driver`) fait échouer le solidifieur PC (`tasmota` y vaut nil). Patron :
+directive `#@ solidify:controleXxx`, `var controleXxx = module("controleXxx")`, la classe publiée dans le
+module (`controleXxx.CONTROLE_XXX = CONTROLE_XXX`), et l'instanciation déplacée dans une fonction
+`controleXxx.init` qui publie l'instance dans la globale `controleXxx` puis appelle `tasmota.add_driver`.
+Autoexec : `import controleXxx as _ctrl` puis `_ctrl.init()` à la place de `loadBerryFile`. Exemple de fichier de
+carte déjà refactoré et solidifié : `controleRideau.be` (`controleRideau_init(m)`, appelée par `import`).
 
 ## 5. Vérifier qu'une solidification a vraiment eu lieu
 
@@ -583,9 +598,16 @@ voir beaucoup de `Berry solidification:` ne dit rien de notre code. La preuve re
 **Ce qui n'est pas solidifié :**
 
 - **`autoexec.be`**, jamais : il reste indispensable (§6 bis) ;
-- **les modules absents de la liste de l'env**, notamment les scripts propres à une carte
-  (`garageFonctions`, `cuveFonctions`…, candidats de l'audit P3.4) : ils sont chargés depuis le
-  LittleFS par `autoexec.be` ;
+- **les modules absents de la liste de l'env**, notamment les fichiers propres à une carte : ils sont
+  chargés depuis le LittleFS par `autoexec.be`. État relevé le 2026-11-23 dans `CARTE_MODULES_BERRY.md`
+  (lignes « Carte », sans **S**) : `controleGarage` et `garageFonctions` (P4 et S3 du garage),
+  `controleCuve` et `cuveFonctions`, `controleDebits` et `debitsFonctions`, `controleEcranDebits` et
+  `ecranDebitsFonctions`, `controleEcranCave`, `controleCommandesEcran`, `equilibragePage`, les `ecran*`
+  générés. `controleGrenier.be` est un fichier vide (grenier en sommeil). Déjà solidifiés : `controleHumidite`
+  et `controlePompeVideCave` (cave, 2 envs), `controlePortail` (2 envs du portail), `controleRideau`. Chaque
+  candidat se juge avec la règle du §3 (carte à court de RAM ET fichier presque finalisé) ; aucun n'est
+  décidé. Pour un fichier de ce genre, il faut un refactor en module import-able (patron des drivers,
+  piège 13) : `loadBerryFile` ignore la table native ;
 - **tout `data/fs/`** pour un env sans `custom_berry_solidify`.
 
 **Côté LittleFS**, le `.be` d'un module solidifié n'est retiré de l'image que si l'env pose

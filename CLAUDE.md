@@ -17,20 +17,14 @@ remplace la memoire.
    decoulent. Le hook `SessionStart` en injecte la synthese (`tasks/lessons-actives.md`) et les entrees plus recentes ;
    **avant de toucher a un sujet, y chercher par mot-cle** (grep), sans le lire en entier (plus de 230 Ko). Chaque entree
    est une erreur passee a ne pas refaire.
-2. **`tasks/reprise-chantier-modbus-grenier.md`** — le chantier en cours. ⚠️ **Son nom dit
-   « grenier », mais les cibles sont les 3 modules GARAGE** (maitre P4, cuve, rideau)
-   depuis le 2026-07-24 ; le grenier est en sommeil. Repartir sur le grenier est une
-   erreur deja commise, consignee dans `lessons.md`. **Lire son encadre de tete « SI TU
-   REPRENDS A FROID »** : il porte la prochaine action et la liste de ce qui reste.
-   Le travail se fait sur **`development`** : la branche `chantier-modbus-grenier`, fusionnee,
-   a ete supprimee le 2026-10-04.
-3. **`tasks/reprise-solidification-berry.md`** — l'autre chantier (solidification Berry),
-   sa prochaine action et ses questions ouvertes.
-4. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet + 13 pieges, a lire
-   des que le sujet Berry/solidification arrive.
-5. **`outils_docs/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
+2. **`tasks/reprise-modbus-garage.md`** — ce qui reste du chantier ModBus : cibles = les 3 modules GARAGE (maitre
+   P4, cuve, rideau) et le portail de jardin ; le grenier est en sommeil. Lire son encadre « SI TU REPRENDS A FROID ».
+   Travail sur **`development`**. L'ancienne reprise (« grenier ») est dans `tasks/archive/`.
+3. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet, les pieges, l'etat reel et la regle des fichiers
+   de carte (§3 et §7), a lire des que le sujet Berry/solidification arrive.
+4. **`outils_docs/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
    des registres de la carte 16 relais (§8) et architecture de synchronisation (§9).
-6. **`tasks/plans/`** — plans de travail suivis (`statut: actif`, format `tasks/plans/_FORMAT.md`) :
+5. **`tasks/plans/`** — plans de travail suivis (`statut: actif`, format `tasks/plans/_FORMAT.md`) :
    le mod `suivi-plan` en injecte le resume en debut de conversation ; sans le mod, lire le plan actif.
 
 Si le demarrage affiche une ligne `fork : N commit(s) de retard sur upstream/development`,
@@ -573,11 +567,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   (Bash, main, recopie par le mod a ExitPlanMode) ; `--verifier` = code 1 si en retard.
   Nouveau plan : lui donner une cle `objectif:`. Banc `node .claude/hooks/test_index_plans.mjs`.
 - `tasks/lessons.md` — journal des erreurs et regles.
-- `tasks/reprise-solidification-berry.md` — etat du chantier solidification, prochaine action.
-- `tasks/reprise-chantier-modbus-grenier.md` — etat du chantier ModBus (carte 16 relais +
-  esclaves), decisions tranchees, plan en phases. ⚠️ Nom trompeur : **cibles = les 3 modules
-  garage**, le grenier est en sommeil. Travail sur `development` (branche de chantier supprimee
-  le 2026-10-04).
+- `tasks/reprise-modbus-garage.md` — reste du chantier ModBus garage (rideau, BUS_SERIE_MUET, cuve) ; anciennes reprises
+  (ModBus « grenier », solidification) dans `tasks/archive/`.
 - Firmware du coprocesseur Wi-Fi ESP32-C6 des P4 (2026-10-26) : `data/fs/controleCoprocesseur.be` (solidifie sur le P4,
   exclu des autres envs comme `controleES8311.be`), bloc persist `serveur.coprocesseur`. Au demarrage seulement : `Hosted`
   lu en local (C6 a jour -> aucun acces reseau) ; en retard -> ligne d'alerte sur l'accueil + UNE requete `Range` de
@@ -694,7 +685,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   vers le maitre partent par son AP), corrections C1-C7, plan des essais. Resume dans
   `PROTOCOLE_MODBUS.md` §9 (avec les resultats des essais). C1 a C6 appliques et valides sur les cartes le
   2026-10-17, dans les deux modes ; multicast du maitre par la box seulement si un esclave y est decouvert.
-  `tasks/correctif-udp-interface-2026-10-17.diff` est historique : la reference est `data/fs/udpFonctions.be`.
+  La reference est `data/fs/udpFonctions.be` (le diff d'origine, supprime le 2026-11-23, reste dans l'historique git).
 - Voie MQTT maitre/esclaves (2026-11-16, plan `tasks/plans/voie-mqtt.md`, analyse `outils_docs/ANALYSE_VOIE_MQTT_2026-11-16.md`) : le P4 du garage commande des esclaves Tasmota natifs (projecteur LED, pompe, cuve) par `cmnd/<topic>/...` avec garde-fous (G3 compare-avant-agir, G4 quarantaine, G5 coupe-circuit, accuses et renvois, alerte broker). `data/fs/mqttLiaisonFonctions.be` (SOLIDIFIE, pur, sans MQTT) et `controleMqttLiaison.be` (bloc `drivers.liaisonMqtt`, commande `ReglageMqttLiaison`), elements virtuels `MQTT_<nom>` dans `controleGeneral.be::set_power_handler`. Banc `berry/banc_mqtt_liaison.py` (mutants). Essais sur carte (2026-11-20 et 21) : ordres (A6, `recu` rend true), coupure du broker et alerte (A7), pompe de piscine ESP8266 sans Berry et bouton du maitre recale sur l'etat reel de l'esclave (A9, `controleMqttLiaison.be::recale`), lignes « perime » ; reste l'essai du portail de jardin (A10, jamais sans l'utilisateur) et la montee intermittente de la memoire Berry du P4 (cause inconnue, non reproduite le 2026-11-20, sonde relancee le 2026-11-21). Esclaves MQTT sans fiche ModBus (projecteur, pompe) : aucun repli (`PROTOCOLE_MODBUS.md` § 11). Mode d'emploi : `outils_docs/README.md` § « Voie MQTT maitre/esclaves ».
 - Emulation Hue pour Alexa (2026-11-22) : `data/fs/hueFonctions.be::appareils` (liste blanche des sorties a cle `alexa`, Shutters refuses, ids natifs) et `controleHue.be` (pont `global.hue_bridge`, une chaine pour tout id ; `controleHue.be::regle` : FriendlyName masques puis `Emulation 2`, compares avant envoi) ; persist `serveur.emulationHue` (OFF au depot), cible de log `emulationHue`, liste `berry_commun.emulation_hue` (P4 du garage, cave S3, deux greniers). Banc `berry/banc_hue.py` (mutants). Pas essaye sur carte. Mode d'emploi : `outils_docs/README.md` § « Émulation Hue pour Alexa ».
 - `outils_docs/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets

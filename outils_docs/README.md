@@ -21,8 +21,7 @@
 ### Règles et chantiers
 - [CLAUDE.md](../CLAUDE.md) — règles du dépôt, synchro du fork, montage d'un nouveau poste, vigilances de build, charte des logs.
 - [tasks/lessons.md](../tasks/lessons.md) — journal des erreurs commises et règles qui en découlent (à relire avant de coder).
-- [tasks/reprise-chantier-modbus-grenier.md](../tasks/reprise-chantier-modbus-grenier.md) — chantier ModBus (⚠️ cibles = les 3 modules du **garage**, malgré le nom).
-- [tasks/reprise-solidification-berry.md](../tasks/reprise-solidification-berry.md) — chantier de solidification Berry.
+- [tasks/reprise-modbus-garage.md](../tasks/reprise-modbus-garage.md) — reste du chantier ModBus du garage (anciennes reprises dans `tasks/archive/`).
 - **Organigramme des plans, en ligne : <https://fdaubercy.github.io/Tasmota/organigramme.html>** — les 48 plans de `tasks/plans/` par famille, avec dates, avancement et liens ; mise à jour : [section dédiée](#organigramme-des-plans-page-web-et-powerpoint).
 
 ### Berry

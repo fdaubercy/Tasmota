@@ -1026,7 +1026,8 @@ inchange (lu par le testeur), interface choisie dans une ligne `detail` a part. 
 `banc_test_modbus` 238/238 ; `solidifie_et_compile_berry.py udpFonctions.be` : rc 0. **C3, C4, C5
 APPLIQUEES le meme jour** (`8a9a18333`) : les deux modes, Range Extender ET Wi-Fi classique, sont de
 vrais modes d'usage (decision de l'utilisateur). C3 complete par `197af338b` (ci-dessous). Le diff
-d'origine `tasks/correctif-udp-interface-2026-10-17.diff` est historique : la reference est le code.
+d'origine (`tasks/correctif-udp-interface-2026-10-17.diff`, supprime le 2026-11-23, retrouvable dans l'historique git)
+n'est plus la reference : c'est le code.
 - C1 : esclave, socket d'emission liee a l'IP de sa STA (`tasmota.wifi()["ip"]`), unicast et
   multicast ; 2e essai sur toutes les interfaces si la liaison est refusee.
 - C2 : port source aleatoire (0) pour toutes les emissions.

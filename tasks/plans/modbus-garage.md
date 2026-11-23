@@ -5,7 +5,7 @@ objectif: Fiabiliser le ModBus filaire du garage (P4, cuve, rideau) puis passer 
 statut: clos
 crée: 2026-10-18
 maj: 2026-10-22
-reprise: tasks/reprise-chantier-modbus-grenier.md
+reprise: tasks/reprise-modbus-garage.md
 famille: modbus-reseau
 liens: graphiques-web, plan-par-conversation, ruban-cuve
 ---
