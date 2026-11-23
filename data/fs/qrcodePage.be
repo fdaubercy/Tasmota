@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   qrcodePage.be                       6,7 Ko    3,3 Ko     2,3 Ko
+   total                               6,7 Ko    3,3 Ko     2,3 Ko  + 78 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- *********************************************************************************************
  * qrcodePage.be - Page /qrcode : le QR code de la carte, tel que regle dans l'outil « Etiquettes QR code » (2026-11-12)
  *

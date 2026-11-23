@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   i2c_ads1115.be                     13,4 Ko    6,6 Ko     4,9 Ko
+   total                              13,4 Ko    6,6 Ko     4,9 Ko  + 107 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES Sur le module I2C ADS1115 à 4 entrées analogiques
     - Configurateur lancé une seule fois au démarrage : compte les entrées analogiques virtuelles
       'I2C_ADS1115', vérifie que le module répond sur le bus I2C, puis active le driver Tasmota 13

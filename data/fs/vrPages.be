@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleVoletRoulants.be (genere par mesure_binomes.py, ne pas editer)
 #- *********************************************************************************************
  * vrPages.be - Visuel de la facade et page de reglage des durees des volets (2026-11-11)
  *

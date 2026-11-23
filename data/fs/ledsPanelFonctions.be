@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleWeb.be (genere par mesure_binomes.py, ne pas editer)
 # Définition du module
 #@ solidify:ledsPanelFonctions
 var ledsPanelFonctions = module("ledsPanelFonctions")

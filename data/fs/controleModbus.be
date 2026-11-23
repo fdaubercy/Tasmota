@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleModbus.be                  22,9 Ko    5,1 Ko     3,2 Ko
+   modbusFonctions.be                199,7 Ko   82,7 Ko    56,0 Ko
+   total                             222,5 Ko   87,8 Ko    59,2 Ko  + 850 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #-
     Ce module est conçu pour permettre la communication maitre-esclave
         entre 2 modules ESP32 équipés de Tasmota

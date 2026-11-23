@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleVisuel.be (genere par mesure_binomes.py, ne pas editer)
 #- *********************************************************************************************
  * visuelFonctions.be - Visuel d'accueil de la carte : fond, points chauds, etat unifie (2026-11-14)
  *

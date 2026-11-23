@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleLoRaWan.be                  5,8 Ko    1,0 Ko     0,8 Ko
+   loRaWanFonctions.be                 5,2 Ko    2,9 Ko     1,9 Ko
+   total                              11,0 Ko    3,9 Ko     2,7 Ko  + 80 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- Commandes LoRa
     - LoRaConfig : afficher la configuration actuelle.
     - LoRaConfig 1 : définir la configuration LoRa par défaut.

@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleTCP.be                      5,6 Ko    1,5 Ko     1,3 Ko
+   tcpFonctions.be                    10,0 Ko    4,6 Ko     3,2 Ko
+   total                              15,7 Ko    6,1 Ko     4,4 Ko  + 128 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES :
     - N'utilise que les connexions TCP Asynchrones
     - Chaque esclave (id > 0) sert de serveur TCP.

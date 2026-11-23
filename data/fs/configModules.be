@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   configModules.be                   10,7 Ko    3,8 Ko     2,7 Ko
+   total                              10,7 Ko    3,8 Ko     2,7 Ko  + 71 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Definition du module
 # Rend ce module solidifiable (voir outils_docs/SOLIDIFICATION_BERRY.md).
 # Nom sans slash : il finit colle dans un identifiant C par ## (un '/' y est illegal).

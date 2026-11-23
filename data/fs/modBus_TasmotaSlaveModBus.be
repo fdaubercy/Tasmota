@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   modBus_TasmotaSlaveModBus.be       96,7 Ko   36,9 Ko    27,4 Ko
+   total                              96,7 Ko   36,9 Ko    27,4 Ko  + 342 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES Sur l'ajout de fonctionnalité pour les maitres des modules ModBus TasmotaSlave
     - outils_docs/Aide/MODBUS.md et outils_docs/PROTOCOLE_MODBUS.md expliquent la gestion des communications
     - Utilise le Driver ModBus natif de Tasmota

@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleVoletRoulants.be (genere par mesure_binomes.py, ne pas editer)
 #- *********************************************************************************************
  * vrReglage.be - Mode reglage des durees tempsMontee / tempsDescente d'un volet (2026-11-11)
  *

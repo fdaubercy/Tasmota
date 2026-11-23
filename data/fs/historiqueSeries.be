@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de historiqueFonctions.be (genere par mesure_binomes.py, ne pas editer)
 #- *********************************************************************************************
  * historiqueSeries.be - Choix des series de l'historique d'une carte S3/P4 (2026-10-18)
  *

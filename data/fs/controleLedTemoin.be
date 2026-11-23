@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleLedTemoin.be                6,4 Ko    3,0 Ko     2,4 Ko
+   total                               6,4 Ko    3,0 Ko     2,4 Ko  + 44 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # clignote_led.be - Fait clignoter une led_temoin sur un GPIO Tasmota
 # La configuration est lue depuis _persist.json > drivers > voletRoulants > VRs > VR1 > led_temoin.
 

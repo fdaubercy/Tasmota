@@ -1,3 +1,13 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   historiqueFonctions.be             29,4 Ko   16,2 Ko    12,6 Ko
+   historiqueSeries.be                 9,9 Ko    4,6 Ko     3,9 Ko
+   graphiquesFonctions.be             23,7 Ko   11,6 Ko     8,7 Ko
+   total                              63,0 Ko   32,5 Ko    25,2 Ko  + 447 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- *********************************************************************************************
  * historiqueFonctions.be - Historique des mesures d'un module, conserve SUR le module (2026-10-13)
  *

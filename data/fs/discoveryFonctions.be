@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleDiscovery.be (genere par mesure_binomes.py, ne pas editer)
 #@ solidify:discoveryFonctions
 var discoveryFonctions = module("discoveryFonctions")
 

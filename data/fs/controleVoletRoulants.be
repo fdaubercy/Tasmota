@@ -1,3 +1,14 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleVoletRoulants.be           10,6 Ko    3,8 Ko     3,0 Ko
+   vrFonctions.be                     50,6 Ko   27,5 Ko    19,2 Ko
+   vrReglage.be                       19,5 Ko   10,0 Ko     6,9 Ko
+   vrPages.be                         18,8 Ko   10,6 Ko     8,1 Ko
+   total                              99,5 Ko   52,0 Ko    37,2 Ko  + 660 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES Sur le controle des volets roulants
     - En mode de fonctionnement 3 (VR de garage), le volet roulant est commandé par un seul relais.
       Le relai1 (impulsion) active un moteur qui déroule ou enroule le volet roulant.

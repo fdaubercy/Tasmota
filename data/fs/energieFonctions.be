@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleEnergie.be (genere par mesure_binomes.py, ne pas editer)
 #- *********************************************************************************************
  * energieFonctions.be - Historique de consommation et page /energie (2026-11-02)
  * Conception : docs/superpowers/specs/2026-10-31-page-energie-differentiel-design.md

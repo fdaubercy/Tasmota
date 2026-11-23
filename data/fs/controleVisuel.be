@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleVisuel.be                   2,2 Ko    1,0 Ko     0,7 Ko
+   visuelFonctions.be                 15,8 Ko   10,1 Ko     7,6 Ko
+   total                              18,0 Ko   11,0 Ko     8,4 Ko  + 190 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Driver du visuel d'accueil (plan tasks/plans/atelier-visuels.md, A3) : la logique est dans visuelFonctions.be.
 # Charge par l'autoexec des seules cartes qui ont un visuel. Le driver n'est pose que si /json/visuel.json existe et est
 # valide : sans description, ni bloc sur l'accueil ni route (modele qrcodePage). Le bloc se pose sous les boutons des relais,

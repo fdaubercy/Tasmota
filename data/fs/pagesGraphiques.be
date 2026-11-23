@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   pagesGraphiques.be                 17,0 Ko    9,4 Ko     6,5 Ko
+   pagesGraphiquesValidation.be       19,8 Ko   12,9 Ko    10,4 Ko
+   total                              36,8 Ko   22,3 Ko    16,8 Ko  + 353 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- *********************************************************************************************
  * pagesGraphiques.be - Moteur commun des pages de graphiques d'une carte (atelier des graphiques, 2026-11-03)
  *

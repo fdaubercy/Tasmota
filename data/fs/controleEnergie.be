@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleEnergie.be                  4,4 Ko    3,1 Ko     2,4 Ko
+   energieFonctions.be                27,0 Ko   16,1 Ko    12,2 Ko
+   total                              31,4 Ko   19,2 Ko    14,6 Ko  + 296 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Driver de la page /energie et du releve de consommation (2026-11-02) : la logique est dans energieFonctions.be.
 # Toutes les 5 min : point de la courbe de puissance, et note du compteur si l'heure locale a change (une heure
 # manquee est rattrapee au passage suivant), copie de la courbe en flash a chaque note. Calibrage verifie une minute apres le demarrage.

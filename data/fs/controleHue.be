@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleHue.be                      9,7 Ko    5,0 Ko     3,9 Ko
+   hueFonctions.be                     8,1 Ko    4,5 Ko     3,6 Ko
+   total                              17,8 Ko    9,6 Ko     7,5 Ko  + 162 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Driver de l'emulation Hue (Alexa) : publie le pont Berry global.hue_bridge, que le firmware appelle AVANT son code natif
 # (xdrv_52_3_berry_hue.ino : be_hue_discovery, be_hue_status, be_hue_command, be_hue_groups ; xdrv_20_hue.ino::HueLights).
 # Charge SANS garde d'activation par l'autoexec : a OFF, il remet Emulation a 0 et publie un pont vide qui refuse tout.

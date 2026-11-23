@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   logFonctions.be                    27,9 Ko   15,9 Ko    10,9 Ko
+   total                              27,9 Ko   15,9 Ko    10,9 Ko  + 217 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # =============================================================================================
 # logFonctions : fonction de log commune, seuil par module, profils de sorties, ReglageLog.
 #
@@ -86,6 +94,60 @@ def logFonctions_etat()
 end
 logFonctions.etat = logFonctions_etat
 
+# Cible DECLAREE par un binome, en tete de l'init de son driver (plan binomes-berry A4, 2026-11-23) : un nouveau binome n'a
+# plus a modifier CIBLES, DESCRIPTIONS ni lieu(), qui restent le repli des cibles historiques. Rangee dans la globale cachee
+# _etatLogFonctions (pas de nouvelle globale). chemin : bloc du persist qui porte la cle "log", "drivers.x", "modules.x.y"...
+#   logFonctions.declare("pompe", "modules.pompeVideCave", "pompe vide-cave (controlePompeVideCave)")
+def logFonctions_declare(cible, chemin, description)
+    import string
+    var e = logFonctions.etat()
+    var d = e.find("declarees")
+    if (d == nil)    d = {}    e["declarees"] = d    end
+    d[string.tolower(str(cible))] = [str(cible), str(chemin), description]
+end
+logFonctions.declare = logFonctions_declare
+
+# Toutes les cibles : CIBLES, puis les declarees qui n'y sont pas
+def logFonctions_cibles()
+    var d = logFonctions.etat().find("declarees")
+    if (d == nil || d.size() == 0)    return logFonctions.CIBLES    end
+    var l = logFonctions.CIBLES.copy()
+    for k: d.keys()
+        if (logFonctions.trouveCle(logFonctions.CIBLES, k) == nil)    l.push(d[k][0])    end
+    end
+    return l
+end
+logFonctions.cibles = logFonctions_cibles
+
+# Description d'une cible pour l'aide de ReglageLog : DESCRIPTIONS, sinon celle de la declaration, sinon son nom
+def logFonctions_description(cible)
+    import string
+    var t = logFonctions.DESCRIPTIONS.find(cible)
+    if (t != nil)    return t    end
+    var d = logFonctions.etat().find("declarees")
+    var x = (d != nil ? d.find(string.tolower(str(cible))) : nil)
+    return (x != nil && x[2] != nil ? str(x[2]) : cible)
+end
+logFonctions.description = logFonctions_description
+
+# Bloc d'une cible declaree (c en minuscules), ou nil : chemin resolu depuis la globale de 1er niveau du persist
+def logFonctions_blocDeclare(c)
+    import string
+    var d = logFonctions.etat().find("declarees")              # sans map par defaut : appele par lieu(), donc a chaque log
+    var x = (d != nil ? d.find(c) : nil)
+    if (x == nil)    return nil    end
+    var parties = string.split(x[1], ".")
+    var r = parties[0]
+    var bloc = (r == "drivers" ? drivers : (r == "serveur" ? serveur : (r == "modules" ? modules : (r == "diverses" ? diverses : nil))))
+    var i = 1
+    while (i < size(parties) && isinstance(bloc, map))
+        bloc = bloc.find(parties[i])
+        i += 1
+    end
+    return bloc
+end
+logFonctions.blocDeclare = logFonctions_blocDeclare
+
 # Ou vit le reglage d'une cible dans le persist : [map, cle], ou nil si ce bloc est absent
 def logFonctions_lieu(cible)
     import string
@@ -122,6 +184,7 @@ def logFonctions_lieu(cible)
         var h = (diverses != nil ? diverses.find("historique") : nil)
         if (isinstance(h, map) && h.contains("activation"))    bloc = h    end
     end
+    if (bloc == nil)    bloc = logFonctions.blocDeclare(c)    end      # cible declaree par son binome
 
     if (type(bloc) != "instance" || bloc.size() == 0)    return nil    end
     return [bloc, cle]
@@ -149,7 +212,7 @@ def logFonctions_seuil(cible)
                 end
             end
             if (mot != nil)    seuil = logFonctions.NIVEAUX_MODULE.find(string.tolower(str(mot)), 2)    end
-        elif (logFonctions.trouveCle(logFonctions.CIBLES, string.tolower(str(cible))) == nil)
+        elif (logFonctions.trouveCle(logFonctions.cibles(), string.tolower(str(cible))) == nil)
             # Faute de frappe ou cible jamais declaree (audit L5/P6.4) : signalee UNE fois par demarrage,
             # meme si ReglageLog vide le cache des seuils. Une cible connue dont le bloc est absent ne dit rien.
             var inconnues = logFonctions.etat().find("inconnues")
@@ -157,7 +220,7 @@ def logFonctions_seuil(cible)
             if (!inconnues.contains(cible))
                 inconnues[cible] = true
                 logFonctions.log(string.format("LOG_ERREUR: cible de log inconnue '%s' : seuil 'info' par defaut (cibles : %s) !",
-                                 str(cible), logFonctions.enTexte(logFonctions.CIBLES)), LOG_LEVEL_ERREUR)
+                                 str(cible), logFonctions.enTexte(logFonctions.cibles())), LOG_LEVEL_ERREUR)
             end
         end
         # Bloc absent : defaut 'info' NON mis en cache (audit L4/P6.3) - le bloc peut apparaitre plus tard
@@ -318,7 +381,7 @@ def logFonctions_etatReglages()
         end
         sorties[sortie] = texte
     end
-    for cible: logFonctions.CIBLES
+    for cible: logFonctions.cibles()
         if (logFonctions.lieu(cible) != nil)    modules[cible] = logFonctions.MOTS[logFonctions.seuil(cible)]    end
     end
     for nom: logs.find("profils", {}).keys()    profils.push(nom)    end
@@ -360,7 +423,7 @@ def logFonctions_regle(quoi, mot)
     # 3. Seuil de TOUS les modules configures sur cette carte (ReglageLog tous detail)
     if (quoi == "tous")
         if (!logFonctions.NIVEAUX_MODULE.contains(mot))    return "Erreur : niveau inconnu '" + mot + "' (erreur, info, debug, detail)"    end
-        for c: logFonctions.CIBLES
+        for c: logFonctions.cibles()
             var l = logFonctions.lieu(c)
             if (l != nil)
                 l[0][l[1]] = mot
@@ -372,9 +435,9 @@ def logFonctions_regle(quoi, mot)
     end
 
     # 4. Seuil d'un module
-    var cible = logFonctions.trouveCle(logFonctions.CIBLES, quoi)
+    var cible = logFonctions.trouveCle(logFonctions.cibles(), quoi)
     if (cible == nil)
-        return "Erreur : '" + quoi + "' n'est ni 'profil', ni 'tous', ni une sortie (" + logFonctions.enTexte(logFonctions.SORTIES.keys()) + "), ni un module (" + logFonctions.enTexte(logFonctions.CIBLES) + ")"
+        return "Erreur : '" + quoi + "' n'est ni 'profil', ni 'tous', ni une sortie (" + logFonctions.enTexte(logFonctions.SORTIES.keys()) + "), ni un module (" + logFonctions.enTexte(logFonctions.cibles()) + ")"
     end
     if (!logFonctions.NIVEAUX_MODULE.contains(mot))    return "Erreur : niveau inconnu '" + mot + "' (erreur, info, debug, detail)"    end
     var lieu = logFonctions.lieu(cible)
@@ -403,8 +466,8 @@ def logFonctions_aideReglageLog(sujet)
         for sortie: logFonctions.SORTIES.keys()
             liste.push([sortie, sortie + " <" + niveauxSortie + ">", "seuil de la sortie " + sortie + " dans le profil actif"])
         end
-        for cible: logFonctions.CIBLES
-            liste.push([cible, cible + " <" + niveauxModule + ">", "seuil du module : " + logFonctions.DESCRIPTIONS.find(cible, cible)])
+        for cible: logFonctions.cibles()
+            liste.push([cible, cible + " <" + niveauxModule + ">", "seuil du module : " + logFonctions.description(cible)])
         end
         return liste
     end
@@ -443,9 +506,9 @@ def logFonctions_aideReglageLog(sujet)
                 "        l'applique aussitot et enregistre le persist de la carte.",
                 "Exemple : ReglageLog " + s + " info"]
     end
-    var cible = logFonctions.trouveCle(logFonctions.CIBLES, s)
+    var cible = logFonctions.trouveCle(logFonctions.cibles(), s)
     if (cible != nil)
-        return ["Module : " + logFonctions.DESCRIPTIONS.find(cible, cible) + ".",
+        return ["Module : " + logFonctions.description(cible) + ".",
                 "Parametre : " + niveauxModule + " (les erreurs passent toujours).",
                 "Reglage actuel : " + (logFonctions.lieu(cible) != nil ? logFonctions.MOTS[logFonctions.seuil(cible)] : "module absent de cette carte") + ".",
                 "Effet : ecrit le seuil dans le persist de la carte. Un message n'apparait que si la",

@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   i2c_mcp23017.be                     6,1 Ko    2,6 Ko     1,9 Ko
+   total                               6,1 Ko    2,6 Ko     1,9 Ko  + 65 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES Sur le module I2C MCP23017 à 16 sorties numériques
 -#
 # Rendu solidifiable (2026-09-27), sur le modele de controleGeneral : la classe est portee

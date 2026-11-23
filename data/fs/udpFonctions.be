@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleUDP.be (genere par mesure_binomes.py, ne pas editer)
 #-
     - C'est un module partagé (singleton via module()) qui contient toute la logique métier UDP.
     - Variables globales du module :

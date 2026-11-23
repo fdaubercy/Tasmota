@@ -151,6 +151,8 @@ ajouterait un fichier a `volets_pages` du cenv) et sa sonde `outils_pc/test_vole
 et `discoveryFonctions.be` (**877**) depassent **500 lignes**, et c'est **voulu** (decide le 2026-11-14 : exceptions declarees plutot qu'un
 decoupage). Modules SOLIDIFIES charges ensemble par les autoexec : les scinder ajouterait des entrees de `custom_berry_solidify` et de l'autoexec
 de chaque env. Les copies de `lib/libesp32/berry_custom/src/embedded/` sont GENEREES et ignorees par git : ne pas les compter.
+Meme decision le 2026-11-23 pour `data/fs/logFonctions.be` (**553 lignes** : 490 avant `logFonctions.declare`, plus le renvoi de taille du binome).
+Les comptes ci-dessus bougent de quelques lignes avec les blocs « TAILLE DU BINOME » (2026-11-23) : mis a jour a A11 du plan binomes-berry.
 
 `data/bureau/tasmota32s3-ecran-debits-pac/ecranLvgl.be` depasse **500 lignes**, et c'est **voulu** (decide le 2026-11-13 :
 exception plutot qu'un generateur tasse ; 496 lignes avant la page « Systeme » de l'A19, 618 le 2026-11-14). Fichier GENERE par l'atelier des

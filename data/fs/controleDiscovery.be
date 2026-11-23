@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleDiscovery.be                7,4 Ko    2,9 Ko     2,0 Ko
+   discoveryFonctions.be              46,5 Ko   21,0 Ko    15,1 Ko
+   total                              53,9 Ko   23,9 Ko    17,0 Ko  + 336 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #-
     LE JSON '/json/discovery.json' CONTIENT DES PARAMETRES UTILISES DANS LES SCRIPTS SUIVANTS:
         - modbusFonctions.be -> modifications réalisées

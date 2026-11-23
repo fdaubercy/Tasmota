@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de pagesGraphiques.be (genere par mesure_binomes.py, ne pas editer)
 #- *********************************************************************************************
  * pagesGraphiquesValidation.be - Validation de la description des pages de graphiques (atelier des graphiques, 2026-11-03)
  *

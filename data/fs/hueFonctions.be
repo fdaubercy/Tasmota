@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleHue.be (genere par mesure_binomes.py, ne pas editer)
 # Emulation Hue (Alexa) : module PUR du pont Hue emule (le driver controleHue publie global.hue_bridge et regle le firmware).
 # Transport NATIF (Emulation 2 : SSDP, /description.xml, /api sur le port 80, xdrv_20_hue.ino) ; ce module choisit les
 # appareils exposes (liste blanche) et ecrit les reponses JSON de l'API Hue. Aucun appel tasmota : se teste sans carte

@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleES8311.be                  17,3 Ko   11,0 Ko    15,6 Ko
+   total                              17,3 Ko   11,0 Ko    15,6 Ko  + 64 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Driver ES8311 Audio Codec
 # Fonctionne avec ESP32P4-DEV-KIT
 # PA-POWER pin : GPIO 53

@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de historiqueFonctions.be (genere par mesure_binomes.py, ne pas editer)
 #- *********************************************************************************************
  * graphiquesFonctions.be - Page web des graphiques de l'historique de la carte (2026-10-18)
  *

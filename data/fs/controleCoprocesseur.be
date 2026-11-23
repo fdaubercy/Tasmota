@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleCoprocesseur.be            20,2 Ko   10,7 Ko     7,7 Ko
+   total                              20,2 Ko   10,7 Ko     7,7 Ko  + 187 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- *********************************************************************************************
  * controleCoprocesseur.be - Alerte « firmware du coprocesseur Wi-Fi pas a jour » des cartes P4 (2026-10-26)
  *

@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   ecranFonctions.be                  14,5 Ko    7,1 Ko     5,4 Ko
+   total                              14,5 Ko    7,1 Ko     5,4 Ko  + 112 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Fonctions GENERIQUES d'un ecran tactile LVGL (HASPmota ou LVGL pur), sans rien de propre aux debits : choix et chargement
 # de l'interface presente sur le FS, veille par inactivite (gradation puis extinction, reveil au toucher sans actionner le
 # bouton touche), luminosite par l'expandeur d'E/S I2C 0x24 du Waveshare ESP32-S3-Touch-LCD-7B (sens du PWM reglable), reglages

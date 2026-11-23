@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleRangeExtender.be            7,1 Ko    1,9 Ko     1,3 Ko
+   rangeExtenderFonctions.be          17,8 Ko    8,9 Ko     5,7 Ko
+   total                              24,9 Ko   10,8 Ko     7,0 Ko  + 183 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES :
     - l'ID RangeExtender doit être identique à l'ID udp car ils utilisent tous les 2 le fichier '/json/paramDiscovery.json'
     - Le Maitre Rangeextender active RgxNAPT:

@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleLeds.be (genere par mesure_binomes.py, ne pas editer)
 #-
     - Module partage (singleton via module()) : les LED pilotees par la carte (2026-10-11, ruban 2026-10-13).
 

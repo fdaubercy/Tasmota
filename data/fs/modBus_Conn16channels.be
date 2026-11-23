@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   modBus_Conn16channels.be           32,5 Ko   11,2 Ko     7,4 Ko
+   total                              32,5 Ko   11,2 Ko     7,4 Ko  + 153 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES Sur le module ModBus 16 sorties numériques
     - 16 sorties numériques (coils) de 1 à 16
     - outils_docs/Aide/MODBUS.md et outils_docs/PROTOCOLE_MODBUS.md (§8 : registres de cette carte) expliquent la gestion des communications

@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleTCP.be (genere par mesure_binomes.py, ne pas editer)
 #@ solidify:tcpFonctions
 var tcpFonctions = module("tcpFonctions")
 

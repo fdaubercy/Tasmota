@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   demarrage.be                        9,4 Ko    4,6 Ko     3,2 Ko
+   total                               9,4 Ko    4,6 Ko     3,2 Ko  + 73 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Deroule commun du DEMARRAGE des cartes (audit Berry P4.2, 2026-10-25), appele par l'autoexec.be de chaque
 # carte, qui ne garde que la LISTE ORDONNEE de ses modules :
 #     import demarrage

@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleMqttLiaison.be             20,6 Ko   11,1 Ko     8,5 Ko
+   mqttLiaisonFonctions.be            15,7 Ko    8,2 Ko     6,0 Ko
+   total                              36,3 Ko   19,3 Ko    14,5 Ko  + 288 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Driver de la voie MQTT maitre/esclaves (plan tasks/plans/voie-mqtt.md, A4). SEUL LE MAITRE le charge : un esclave
 # Tasmota natif (projecteur, pompe, cuve) n'embarque rien pour cette voie. Il s'abonne aux retours (stat/<topic>/+ et
 # tele/<topic>/LWT) des esclaves DECLARES dans drivers.liaisonMqtt.esclaves du persist (pas de joker sur tout le broker :

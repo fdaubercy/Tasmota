@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleEcranSysteme.be (genere par mesure_binomes.py, ne pas editer)
 # Page « Systeme » des ecrans tactiles (plan tasks/plans/atelier-ecrans.md, A19) : memoire, flash, charge, redemarrages, reseau,
 # ModBus, ecran, firmware et dernieres erreurs Berry de la carte, ecrits sur les objets de la page `modules.ecranSysteme.page`
 # du persist par l'interface d'ecran demarree (ecranFonctions.interface : ecranHaspmota, ecranCaveHaspmota ou ecranLvgl genere).

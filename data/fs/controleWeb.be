@@ -1,3 +1,13 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleWeb.be                     24,8 Ko    9,7 Ko     6,4 Ko
+   webFonctions.be                     3,6 Ko    1,9 Ko     1,1 Ko
+   ledsPanelFonctions.be              19,8 Ko   10,9 Ko     4,0 Ko
+   total                              48,3 Ko   22,5 Ko    11,5 Ko  + 357 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- 
     - Gestion des pages internet globales sans tenir compte des modules activés en json
     - Données GET & POST utilisées :

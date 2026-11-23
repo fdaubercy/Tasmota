@@ -1,3 +1,4 @@
+# TAILLE DU BINOME : voir le bloc en tete de controleModbus.be (genere par mesure_binomes.py, ne pas editer)
 # Pour l'aide au protocole ModBus : outils_docs/Aide/MODBUS.md (mode d'emploi) et outils_docs/PROTOCOLE_MODBUS.md (conception)
 
 # Rend ce module solidifiable (ajouté le 2026-07-15).

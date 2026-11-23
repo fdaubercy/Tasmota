@@ -1,3 +1,11 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   fsMqtt.be                          13,4 Ko    7,6 Ko     6,2 Ko
+   total                              13,4 Ko    7,6 Ko     6,2 Ko  + 134 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Reception de fichiers du FS par MQTT (« MQTT pousse », A16 de la page Build 7700 ; protocole : choix 25 a 27 de
 # docs/superpowers/specs/2026-10-24-page-build-televersement-design.md). SOLIDIFIE dans le socle (berry_commun.socle,
 # toutes les cartes, decision du 2026-10-29) : il survit au formatage du FS. Charge par demarrage.charge(["fsMqtt"])

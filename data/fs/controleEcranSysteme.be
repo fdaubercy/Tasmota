@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleEcranSysteme.be             2,3 Ko    1,1 Ko non solid.
+   ecranSysteme.be                    26,4 Ko   17,2 Ko non solid.
+   total                              28,6 Ko   18,3 Ko     0,0 Ko  + 0 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 # Driver de la page « Systeme » des ecrans tactiles (plan tasks/plans/atelier-ecrans.md, A19) : la logique est dans
 # ecranSysteme.be (memoire, flash, reseau, dernieres erreurs, boutons GC et Redemarrer). Charge depuis le LittleFS APRES le
 # driver de l'ecran de la carte (controleEcranDebits, controleEcranCave...), qui demarre l'interface (ecranFonctions.interface).

@@ -1,3 +1,12 @@
+#- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
+   fichier                                .be      .bec  solidifie
+   controleLeds.be                     4,6 Ko    2,1 Ko     1,6 Ko
+   ledsFonctions.be                   32,7 Ko   19,3 Ko    14,2 Ko
+   total                              37,3 Ko   21,4 Ko    15,9 Ko  + 307 chaines
+   .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
+   (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
+   table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
+FIN TAILLE DU BINOME -#
 #- NOTES :
     - controleLeds.be — Le pilote (driver) des LED de la carte (2026-10-11, ruban 2026-10-13)
         * Enregistre le driver aupres de Tasmota, uniquement si drivers.leds est actif ET si la LED RGB
