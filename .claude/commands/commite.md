@@ -1,5 +1,5 @@
 ---
-description: Commite le travail en cours selon les regles du depot Tasmota (et pousse seulement avec l'argument « pousse »)
+description: Commite le travail en cours selon les regles du depot Tasmota (et pousse avec l'argument « pousse » ou quand c'est utile, apres preparateur-push)
 argument-hint: "[pousse] [precision sur le perimetre ou le message]"
 ---
 
@@ -56,10 +56,11 @@ par fichier entier, et le dire dans le compte rendu.
   ou par une here-string `@'...'@` dans l'outil PowerShell — jamais l'une dans l'autre.
 - Pas de `/graphify --update` : ce depot y deroge.
 
-## 4. Push — seulement si `pousse` figure dans les arguments
+## 4. Push — avec l'argument `pousse`, ou quand Claude le juge utile
 
-- Sinon, ne pas pousser et le rappeler en une ligne (le push n'est jamais auto-autorise ici).
-- Avec `pousse` : lancer d'abord l'agent `preparateur-push` (plage complete, secrets, branche, retard d'origin). Verdict « STOP » =
+- Push autorise sur ce depot (decision du 2026-10-29, confirmee le 2026-11-23) : avec `pousse`, ou sans argument si le
+  pousser est utile (le dire en une ligne). Sans push, le rappeler en une ligne.
+- Avant tout push : lancer d'abord l'agent `preparateur-push` (plage complete, secrets, branche, retard d'origin). Verdict « STOP » =
   ne pas pousser, dire pourquoi. Verdict « on peut pousser » : pousser avec la commande qu'il donne (`git push origin <sha>:development`,
   sha relu). Jamais `--force` (refuse par les regles `deny`). Hors `/commite`, meme regle : `preparateur-push` avant tout push demande.
 

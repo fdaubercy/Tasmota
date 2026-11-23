@@ -14,8 +14,9 @@ qui survit est ecrit dans ces fichiers. Les lire N'EST PAS optionnel — c'est c
 remplace la memoire.
 
 1. **`tasks/lessons.md`** — le journal des erreurs deja commises et des regles qui en
-   decoulent. **A lire en entier avant de toucher au code.** Chaque entree est une erreur
-   passee a ne pas refaire (5 pieges de verification y sont consignes, tous payes comptant).
+   decoulent. Le hook `SessionStart` en injecte la synthese (`tasks/lessons-actives.md`) et les entrees plus recentes ;
+   **avant de toucher a un sujet, y chercher par mot-cle** (grep), sans le lire en entier (plus de 230 Ko). Chaque entree
+   est une erreur passee a ne pas refaire.
 2. **`tasks/reprise-chantier-modbus-grenier.md`** — le chantier en cours. ⚠️ **Son nom dit
    « grenier », mais les cibles sont les 3 modules GARAGE** (maitre P4, cuve, rideau)
    depuis le 2026-07-24 ; le grenier est en sommeil. Repartir sur le grenier est une
@@ -40,9 +41,11 @@ la synchro de sa propre initiative**, et surtout pas dans une branche de chantie
 `tasks/lessons.md` au format `[YYYY-MM-DD] | ce qui s'est mal passe | regle a suivre`.
 Append uniquement, ne jamais supprimer une entree.
 
-## Pre-commit : PAS de graphify
+## Graphify : exemption COMPLETE
 
-**`/graphify --update` ne doit PAS etre lance avant un commit sur ce depot.**
+**`/graphify --update` ne doit PAS etre lance avant un commit sur ce depot, et aucune carte des connaissances
+(`graphify-out/`) n'y est creee** : les deux regles globales (pre-commit, « cree la carte si elle n'existe pas ») ne
+s'appliquent pas ici. L'aiguillage des documents est `outils_docs/INDEX.md`.
 
 La regle globale l'impose sur mes projets ; ce depot y deroge explicitement (decide le
 2026-07-15). Raison : il n'y a **pas de `graphify-out/`** ici, donc rien a mettre a jour ;
@@ -50,8 +53,6 @@ et en construire une carte sur un depot de la taille de Tasmota (~15 000 fichier
 serait un chantier sans rapport avec le travail mene.
 
 Ordre de commit sur ce depot : `git add` puis `git commit`. Rien d'autre.
-
-Si une carte de connaissances est creee un jour ici, revoir cette regle.
 
 ## Synchro du fork : un hook qui DETECTE, une synchro qui reste manuelle
 
@@ -316,7 +317,8 @@ Prise en compte a chaud, sans redemarrer VS Code.
   ce sont des etiquettes lues par les outils, pas de la prose.
 - Messages **sans accents** (precedent d'encodage casse).
 - **Pas** de trailer `Co-Authored-By`.
-- **Ne jamais pousser** sans demande explicite : le push n'est pas auto-autorise sur ce depot.
+- **Push** : autorise quand Claude le juge utile (decision du 2026-10-29, confirmee le 2026-11-23), TOUJOURS apres l'agent
+  `preparateur-push` (verdict STOP = pas de push), jamais `--force`.
 - Ne **jamais** commiter le travail en cours de l'utilisateur sans demande explicite.
 - **Avant tout commit ou push** (decide le 2026-11-14) : lancer l'agent `controleur-secrets` (depot public), lire son rapport,
   puis seulement commiter, dans un appel suivant. Si le commit touche un `.be` de `data/`, lancer aussi `verificateur-solidification`
@@ -440,7 +442,7 @@ les `BRY: GC` : c'est l'outil de mesure de la RAM.
 ## Journal des lecons
 
 `tasks/lessons.md` — voir la section « AU DEMARRAGE DE CHAQUE SESSION » en tete de ce
-fichier. A lire en entier avant de toucher au code, a completer apres chaque correction.
+fichier. A interroger par mot-cle avant de toucher a un sujet, a completer apres chaque correction.
 
 ## Demandes recurrentes : les outils qui les automatisent (2026-10-18)
 
