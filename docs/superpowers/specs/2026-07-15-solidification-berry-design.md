@@ -2,6 +2,7 @@
 
 Date : 2026-07-15
 Statut : validé, non implémenté
+Statut au 2026-11-23 : implémenté, mécanisme et verdict dans `outils_docs/SOLIDIFICATION_BERRY.md` et `docs/superpowers/specs/2026-07-15-solidification-berry-verdict.md` ; code `outils_docs/scripts_python/berry/solidifie_et_compile_berry.py` ; plan `docs/superpowers/plans/2026-07-15-solidification-berry-phase1.md`.
 
 ## Problème
 

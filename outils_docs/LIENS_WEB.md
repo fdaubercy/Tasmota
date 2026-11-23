@@ -38,16 +38,18 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 
 ## 2. Liens externes cites dans le depot
 
-### Ce fork (fdaubercy) (3)
+### Ce fork (fdaubercy) (4)
 
 - <https://fdaubercy.github.io/Tasmota/organigramme.html>  
-  cite dans `CLAUDE.md` (+2)
+  cite dans `CLAUDE.md` (+3)
+- <https://fdaubercy.github.io/Tasmota/tasmota32s3-garage-capteurs-cuve-modbus.html>  
+  cite dans `data/garage/tasmota32s3-capteurs-cuve-modbus/qrcode.json`
 - <https://github.com/fdaubercy/Tasmota.git>  
   cite dans `outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py`
 - <https://github.com/fdaubercy/Tasmota/blob/development/>  
   cite dans `outils_docs/scripts_python/maintenance/organigramme_plans.py`
 
-### Tasmota amont : depot, documentation, OTA (29)
+### Tasmota amont : depot, documentation, OTA (32)
 
 - <http://ota.tasmota.com/tasmota/release>  
   cite dans `outils_docs/README.md`
@@ -71,8 +73,14 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/MODELES_ESP.md`
 - <https://github.com/arendst/Tasmota/discussions/24448>  
   cite dans `outils_docs/ECRAN_TACTILE_ESP32P4.md`
+- <https://github.com/arendst/Tasmota/discussions/25297>  
+  cite dans `tasks/plans/tasmesh-evolution-amont.md`
 - <https://github.com/arendst/Tasmota/pull/23206>  
   cite dans `outils_docs/CHANGELOG.md`
+- <https://github.com/arendst/Tasmota/pull/25289>  
+  cite dans `tasks/plans/tasmesh-evolution-amont.md`
+- <https://github.com/arendst/Tasmota/pull/25290>  
+  cite dans `tasks/plans/tasmesh-evolution-amont.md`
 - <https://github.com/arendst/Tasmota/releases/latest>  
   cite dans `outils_docs/README.md`
 - <https://ota.tasmota.com/extensions/>  
@@ -108,14 +116,14 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://templates.blakadder.com/waveshare_ESP32-S3-POE-ETH-8DI-8RO.html>  
   cite dans `outils_docs/MODELES_ESP.md` (+1)
 
-### Depots et projets GitHub tiers (29)
+### Depots et projets GitHub tiers (31)
 
 - <https://cli.github.com/>  
   cite dans `outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py`
 - <https://gist.github.com/brattonc/5e5ce9beee483220e2f6>  
   cite dans `outils_docs/jauges/README.md` (+1)
 - <https://github.com/>  
-  cite dans `outils_docs/scripts_python/outils_pc/taches_planifiees_page.py`
+  cite dans `.claude/hooks/fils_github.py` (+1)
 - <https://github.com/aklofas/kicad-happy>  
   cite dans `.claude/skills/pcb-tasmota/references/outils_externes.md`
 - <https://github.com/Arnold-n/P1P2MQTT>  
@@ -144,6 +152,10 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/apercus_graphiques/uPlot.iife.min.js`
 - <https://github.com/Mikhus/canvas-gauges>  
   cite dans `outils_docs/jauges/README.md` (+1)
+- <https://github.com/o/r/issues>  
+  cite dans `.claude/hooks/fils_github.py`
+- <https://github.com/o/r/issues/12>  
+  cite dans `.claude/commands/fils-github.md`
 - <https://github.com/raomin/ESPAltherma>  
   cite dans `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`
 - <https://github.com/tasmota/arduino-esp32/releases/download/v3.3.12/framework-arduinoespressif32.tar.xz>  
@@ -204,12 +216,14 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://www.espressif.com/en/products/socs/esp32-s31>  
   cite dans `outils_docs/MODELES_ESP.md`
 
-### Fabricants, boutiques, fiches materiel (30)
+### Fabricants, boutiques, fiches materiel (32)
 
 - <http://crccalc.com/>  
   cite dans `outils_docs/Electronique/Connecteur ModBus/On-line CRC calculation/On-line CRC calculation 1/URL.txt`
 - <https://crccalc.com/?crc=030201FF&method=CRC-16&datatype=hex&outtype=hex>  
   cite dans `outils_docs/Aide/MODBUS.md`
+- <https://devices.esphome.io/devices/KinCony-KC868-A2v3>  
+  cite dans `outils_docs/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md`
 - <https://devices.esphome.io/devices/KinCony-KC868-A8v3>  
   cite dans `outils_docs/cartes_relais_cave/README.md`
 - <https://devices.esphome.io/devices/waveshare-esp32-s3-eth-8di-8do/>  
@@ -259,7 +273,9 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://www.waveshare.com/esp32-s3-eth-8di-8ro-c.htm>  
   cite dans `outils_docs/cartes_relais_cave/README.md`
 - <https://www.waveshare.com/esp32-s3-eth-8di-8ro.htm>  
-  cite dans `outils_docs/cartes_relais_cave/README.md`
+  cite dans `outils_docs/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md` (+1)
+- <https://www.waveshare.com/product/iot-communication/wired-comm-converter/rs232-rs485-can-dali2/esp32-s3-relay-6ch.htm>  
+  cite dans `outils_docs/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md`
 - <https://www.waveshare.com/wiki/ESP32-S3-ETH-8DI-8RO>  
   cite dans `outils_docs/cartes_relais_cave/README.md`
 - <https://www.waveshare.com/wiki/ESP32-S3-ETH-8DI-8RO-C>  
@@ -307,7 +323,7 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://tabler.io/icons>  
   cite dans `outils_docs/ICONES_IMAGES_SOURCES.md` (+1)
 
-### IA et fournisseurs de modeles (8)
+### IA et fournisseurs de modeles (7)
 
 - <https://aistudio.google.com/docs/rate-limits>  
   cite dans `outils_docs/visuels_accueil/FOURNISSEURS_IA.md`
@@ -323,8 +339,6 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/visuels_accueil/FOURNISSEURS_IA.md`
 - <https://openrouter.ai/docs/guides/privacy/data-collection>  
   cite dans `outils_docs/visuels_accueil/FOURNISSEURS_IA.md`
-- <https://www.google.com/>  
-  cite dans `data/cave/tasmota32-serveur-rly-sauvegarde/controleGlobal.be`
 
 ### Wikipedia et references (1)
 
@@ -336,7 +350,7 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://claude.ai/artifact/6oyWDPZEAhjo5btUxs6BL7>  
   cite dans `tasks/plans/debitmetres-chauffage.md` (+1)
 
-### Autres sites (54)
+### Autres sites (57)
 
 - <http://docs.platformio.org/en/stable/projectconf.html>  
   cite dans `platformio_override.ini`
@@ -382,6 +396,8 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/Electronique/ADS1115/CABLAGE_RUBAN_LED.md`
 - <https://learn.watterott.com/kb/ws281x/WS2812B-v5.pdf>  
   cite dans `outils_docs/Electronique/ADS1115/CABLAGE_RUBAN_LED.md`
+- <https://manuals.plus/scs-sentinel/opengate-1-motorization-of-2-leaf-gate-manual.pdf>  
+  cite dans `outils_docs/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md`
 - <https://manualshive.com/en/manual/daikin/altherma-3-r-f/501204?page=185>  
   cite dans `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`
 - <https://merkblatt.suissetec.ch/fr-CH/HEIZ203/file/HEIZ203.pdf>  
@@ -422,8 +438,12 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/scripts_python/outils_pc/atelier_ecrans_page_polices.py` (+1)
 - <https://www.itap.it/cat_files/pdf/471FL_2594_IST_fr.pdf>  
   cite dans `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md`
+- <https://www.kincony.com/esp32-s3-2-channel-relay-module.html>  
+  cite dans `outils_docs/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md`
 - <https://www.kincony.com/esp32-s3-8-channel-relay-module.html>  
   cite dans `outils_docs/cartes_relais_cave/README.md`
+- <https://www.kincony.com/forum/showthread.php?tid=7958>  
+  cite dans `outils_docs/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md`
 - <https://www.lammertbies.nl/comm/info/crc-calculation.html>  
   cite dans `outils_docs/Electronique/Connecteur ModBus/On-line CRC calculation/On-line CRC calculation 2/On-line CRC calculation and free library.txt`
 - <https://www.ledyilighting.com/wp-content/uploads/2025/02/WS2815B-datasheet.pdf>  
@@ -455,6 +475,7 @@ Fiches constructeur, manuels, outils Windows : a retrouver sous `outils_docs/`.
 
 - Bi-Directional-Logic-Level_HookupGuide.pdf
 - ESP32_4Relais_4Ana_Modbus.pdf
+- NOUS_B2T_flash_serie.pdf
 - berry_short_manual.pdf
 
 ### `outils_docs/Electronique/Connecteur ModBus/`

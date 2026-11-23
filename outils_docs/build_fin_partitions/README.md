@@ -1,6 +1,8 @@
 # Fin de build : affichage de l'occupation des partitions (maquettes)
 
-Étude du 2026-11-15 pour l'onglet « Build et téléversement ». **Rien n'est réalisé** : choisir une variante avant la mise en place.
+Étude du 2026-11-15 pour l'onglet « Build et téléversement ».
+
+**Réalisé : variante D (pastille dans la ligne + détail au clic), le 2026-11-15 (commit `05a1a8e50`), code : `outils_docs/scripts_python/outils_pc/build_page_fin_memoire.py`** (sonde `test_build_page_fin_memoire_chrome.py`). Les trois autres variantes n'ont pas été retenues.
 
 - `maquettes_fin_build.html` : les 4 variantes, interactives pour le thème (bouton Thème, sombre/clair), un seul fichier sans dépendance. Chaque variante montre une série de 3 envs et des alertes (orange dès 90 %, rouge dès 95 %).
 - `variante-A.png` à `variante-D.png` : une capture par variante (Chrome headless, thème sombre).

@@ -2,6 +2,7 @@
 
 Date : 2026-10-17
 Statut : relu (contrôle constructeur fait), en attente de validation, non implémenté
+Statut au 2026-11-23 : implémenté, page http://127.0.0.1:7600 ; code `outils_docs/scripts_python/outils_pc/annuaire_outils.py` ; plan `docs/superpowers/plans/2026-10-17-annuaire-outils.md` ; description à jour dans `CLAUDE.md` (carte des documents) et `outils_docs/README.md`.
 
 ## Intention
 

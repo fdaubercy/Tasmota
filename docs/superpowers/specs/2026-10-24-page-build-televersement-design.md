@@ -2,6 +2,7 @@
 
 Date : 2026-10-24
 Statut : relu (contrôle constructeur fait), en attente de validation, non implémenté
+Statut au 2026-11-23 : implémenté, page http://127.0.0.1:7700 ; code `outils_docs/scripts_python/outils_pc/build_web.py` ; plan `tasks/plans/page-build-televersement.md` (98 %) ; description à jour dans `CLAUDE.md` (carte des documents) et `outils_docs/README.md`.
 
 ## Intention
 

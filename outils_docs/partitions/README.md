@@ -1,7 +1,9 @@
 # Mémoire et partitions : maquettes et contraintes
 
-Étude du 2026-11-01 pour un onglet de la page « Build et téléversement ». **Rien n'est encore réalisé** : le travail
+Étude du 2026-11-01 pour un onglet de la page « Build et téléversement ». Le travail
 est décrit dans `tasks/plans/temps-compilation.md`, actions A7 à A10.
+
+**Réalisé : modèle B, le 2026-11-01 (commits `677c9e28d` et `7740e5f71`), code : `outils_docs/scripts_python/outils_pc/build_page_memoire.py`** (sonde `test_build_page_memoire_chrome.py`).
 
 - `maquettes_partitions.html` : les 4 modèles, interactifs, avec les vraies tables du P4, de la cuve et de la cave
   (taille du FS estimée). Les boutons de diff, d'écriture et d'analyse ne font rien.

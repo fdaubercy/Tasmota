@@ -1,7 +1,9 @@
 # Onglet « Sauvegardes » de la page build : maquettes
 
 Demande du 2026-11-02 : sauvegarder la configuration d'une carte de la liste des envs, la restaurer, modifier un fichier
-de sauvegarde par paramètre. **Choix du modèle : en attente de l'utilisateur.** Rien n'est réalisé.
+de sauvegarde par paramètre.
+
+**Réalisé : modèle B, le 2026-11-03 (commit `6e15fc934`), code : `outils_docs/scripts_python/outils_pc/build_page_sauvegarde.py`** (sonde `test_build_page_sauvegarde_chrome.py`). Les modèles A et C n'ont pas été retenus.
 
 - `modele-A.png` : trois colonnes (cartes, sauvegardes, paramètres). Tout est visible d'un coup.
 - `modele-B.png` : carte choisie en haut, historique à gauche, paramètres repliés par thème à droite.
