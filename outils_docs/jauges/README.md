@@ -22,7 +22,7 @@ affichage de mesure** (niveau, température, tension, taux...). Huit modèles, c
 
 **En service (premier essai, 2026-10-31)** : les deux, sur la page `/cuve` de la cuve et du P4 — A pour le
 volume en litres, H pour le taux en %. Compatibilité de l'extension avec ECharts 6.1.0 vérifiée (rendu et mise à
-jour). Mode d'emploi : `outils_docs/README.md` § « Les jauges du niveau de la cuve » ; code :
+jour). Mode d'emploi : `outils_docs/reference_berry/CUVE_PAGE.md` § « Les jauges du niveau de la cuve » ; code :
 `data/fs/cuvePageFonctions.be`, `data/sd/js/cuve.js`.
 
 ## Tous les modèles

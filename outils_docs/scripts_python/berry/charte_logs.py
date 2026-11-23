@@ -3,7 +3,7 @@ r"""Controle de la charte des logs Berry (audit Berry P7.6) : AVERTISSEMENTS, ja
 Appele par verifie_berry.py (donc par le hook d'edition de Claude et la tache VS Code) ; utilisable seul :
   python charte_logs.py f1.be f2.be       avertissements de ces fichiers (code de sortie toujours 0)
 
-La charte vit en tete de data/fs/logFonctions.be (copies : CLAUDE.md, outils_docs/README.md).
+La charte vit en tete de data/fs/logFonctions.be (copies : CLAUDE.md, outils_docs/reference_berry/LOGS.md).
 Format : data/fs/x.be:42: avertissement: [regle] message   (le problemMatcher "berry" de .vscode/tasks.json
 ne lit que les lignes "erreur:" : ces avertissements ne vont pas dans l'onglet Problemes).
 

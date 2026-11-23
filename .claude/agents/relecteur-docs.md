@@ -1,6 +1,6 @@
 ---
 name: relecteur-docs
-description: "Vérifie que la documentation durable du dépôt (CLAUDE.md, outils_docs/README.md, PROTOCOLE_MODBUS.md, SOLIDIFICATION_BERRY.md, CARTE_MODULES_BERRY.md, .claude/skills, agents, commands) colle au code : renvois fichier::fonction, chemins cités, entrées de la carte des documents, exceptions des 500 lignes, bancs cités. À lancer après un chantier ou avant un commit de docs. Ne modifie aucun fichier : il liste les corrections."
+description: "Vérifie que la documentation durable du dépôt (CLAUDE.md, outils_docs/INDEX.md, guides_outils/, PROTOCOLE_MODBUS.md, SOLIDIFICATION_BERRY.md, CARTE_MODULES_BERRY.md, .claude/skills, agents, commands) colle au code : renvois fichier::fonction, chemins cités, entrées de la carte des documents, exceptions des 500 lignes, bancs cités. À lancer après un chantier ou avant un commit de docs. Ne modifie aucun fichier : il liste les corrections."
 tools: Read, Grep, Glob, Bash
 model: haiku
 effort: low
@@ -25,7 +25,7 @@ Règles du dépôt à faire respecter (section « Carte des documents » de `CLA
 Contrôles :
 1. **Renvois** : `python -I outils_docs/scripts_python/maintenance/verifie_references_docs.py` (code 1 = renvoi faux) ;
    rapporte chaque ligne en défaut et, par Grep, où la fonction a été déplacée ou renommée.
-2. **Chemins cités** : pour les chemins de fichiers et de dossiers cités dans `CLAUDE.md`, `outils_docs/README.md`
+2. **Chemins cités** : pour les chemins de fichiers et de dossiers cités dans `CLAUDE.md`, `outils_docs/INDEX.md`, `outils_docs/guides_outils/*.md`
    et `outils_docs/verification/SOUS_AGENTS.md` (entre accents graves), vérifie par Glob qu'ils existent ; signale les fichiers
    disparus ou renommés (`git log --diff-filter=DR --name-status -n 30` aide).
 3. **Exceptions des 500 lignes** : pour chaque fichier cité comme exception dans `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` avec un nombre de

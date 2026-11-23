@@ -24,7 +24,7 @@ Backlog IPAddress1 192.168.0.40; IPAddress2 192.168.0.254; IPAddress3 255.255.25
 ; MQTT : serveur, client et topics (utilisateur et mot de passe : valeurs compilees)
 Backlog MqttHost 192.168.0.5; MqttPort 1883; MqttClient POMPE-PISCINE; Topic jardin/pompe_piscine; GroupTopic tasmotas/jardin;
 
-; Esclave du P4 par MQTT (outils_docs/README.md, « Regler un esclave sans Berry ») : le bouton garde la main sur son relais
+; Esclave du P4 par MQTT (outils_docs/reference_berry/VOIE_MQTT.md, « Regler un esclave sans Berry ») : le bouton garde la main sur son relais
 ; et rien n'est retenu (un ordre retenu serait rejoue a chaque reconnexion).
 Backlog SetOption19 0; SetOption73 0; SetOption114 0; ButtonTopic 0; SwitchTopic 0; ButtonRetain 0; SwitchRetain 0; PowerRetain 0;
 

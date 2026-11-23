@@ -111,7 +111,7 @@ Detail et mesures : `outils_docs/environnement/VIGILANCES_BUILD.md`. A chaque se
 
 A appliquer a **tout** log ecrit dans un `.be` de ce depot. Le mecanisme vit dans
 `data/fs/logFonctions.be` (qui porte la meme charte en tete) ; la reference utilisateur
-est dans `outils_docs/README.md`.
+est dans `outils_docs/reference_berry/LOGS.md`.
 
 ### Les 4 niveaux : quand utiliser lequel
 
@@ -195,10 +195,10 @@ Issus de l'audit des conversations du 2026-10-17. Les utiliser plutot que refair
 ## Carte des documents de ce depot
 
 Aiguillage : `outils_docs/INDEX.md`, importe en tete de ce fichier. **Une fonctionnalite, un outil ou un document
-nouveau = UNE ligne dans INDEX.md**, jamais un paragraphe ici. Detail des outils et fonctions (en attendant les guides
-de A20) : `outils_docs/CARTE_DOCUMENTS.md`.
+nouveau = UNE ligne dans INDEX.md**, jamais un paragraphe ici. Un guide par outil :
+`outils_docs/guides_outils/<NOM_CIBLE>.md` ; detail technique (modules, bancs) : `outils_docs/CARTE_DOCUMENTS.md`.
 
-Dans les documents durables (ce fichier, `INDEX.md`, `outils_docs/README.md`, `SOLIDIFICATION_BERRY.md`,
+Dans les documents durables (ce fichier, `INDEX.md`, `outils_docs/guides_outils/`, `outils_docs/reference_berry/`,
 `PROTOCOLE_MODBUS.md`, `CARTE_MODULES_BERRY.md`, `.claude/skills`, `agents`, `commands`), renvoyer au code par
 `fichier::fonction`, jamais par numero de ligne. Controle : `python outils_docs/scripts_python/maintenance/verifie_references_docs.py`
 (code 1 = renvoi faux). Les documents dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros.

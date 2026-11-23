@@ -53,7 +53,7 @@ Contrôles :
    `AUDIT_*`, `DIAGNOSTIC_*` ; fiches de référence ; maquettes de choix tranchés), dossiers de maquettes ou d'images
    éparpillés, fichiers de `data/<lieu>/<carte>/` qui n'ont rien à y faire (`data/<lieu>/<carte>/` part en flash), exports
    et notes de `tasks/`. Une proposition de déplacement donne le dossier cible existant ou à créer, et dans `casserait` la
-   liste des renvois à mettre à jour (cherche le nom du fichier avec Grep dans `CLAUDE.md`, `outils_docs/README.md`,
+   liste des renvois à mettre à jour (cherche le nom du fichier avec Grep dans `CLAUDE.md`, `outils_docs/INDEX.md`, `outils_docs/guides_outils/`,
    les plans, les `.ini`). Limites : des scripts Python qui s'importent entre eux restent dans le MÊME dossier (ne propose
    jamais de les séparer) ; ne déplace pas un module Berry de `data/fs/` (solidifié, listé dans le cenv) ni un fichier
    cité par un chemin dans une configuration sans le dire en risque « moyen » ou « élevé ». Vise des regroupements utiles :

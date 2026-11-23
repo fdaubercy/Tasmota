@@ -25,7 +25,8 @@ GITHUB = "https://github.com/fdaubercy/Tasmota/blob/development/"
 URL_PAGES = "https://fdaubercy.github.io/Tasmota/organigramme.html"
 FAMILLES = {  # cle de l'en-tete -> libelle ; l'ordre est celui des diapos
     "build": "Build et outils PC", "methode": "Méthode et audits", "modbus-reseau": "ModBus, réseau, matériel",
-    "cave": "Cave et nouveaux envs", "debits-energie": "Débits et énergie", "graphiques-ecrans": "Graphiques, écrans, visuels"}
+    "cave": "Cave et nouveaux envs", "debits-energie": "Débits et énergie", "graphiques-ecrans": "Graphiques, écrans, visuels",
+    "voie-mqtt": "Voie MQTT maître/esclaves"}
 
 
 # Commits qui ne changent que l'en-tete de tous les plans (ajout de famille/parent/liens/spec) : pas une modification.
@@ -89,8 +90,8 @@ def donnees():
 
 PAGE = r"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Organigramme des plans</title><style>
-:root{--bg:#f6f7f9;--fg:#1b2430;--mut:#5d6877;--card:#fff;--line:#b9c2cf;--f0:#1f6fb2;--f1:#7a5cb8;--f2:#c0561e;--f3:#2a8a5a;--f4:#b08400;--f5:#c0397a}
-@media (prefers-color-scheme:dark){:root{--bg:#12161c;--fg:#e6eaf0;--mut:#9aa5b4;--card:#1b222b;--line:#415064;--f0:#5aa6e8;--f1:#a68ae0;--f2:#ee8a52;--f3:#4fc08a;--f4:#e0b73a;--f5:#e66fa8}}
+:root{--bg:#f6f7f9;--fg:#1b2430;--mut:#5d6877;--card:#fff;--line:#b9c2cf;--f0:#1f6fb2;--f1:#7a5cb8;--f2:#c0561e;--f3:#2a8a5a;--f4:#b08400;--f5:#c0397a;--f6:#0f7f8c}
+@media (prefers-color-scheme:dark){:root{--bg:#12161c;--fg:#e6eaf0;--mut:#9aa5b4;--card:#1b222b;--line:#415064;--f0:#5aa6e8;--f1:#a68ae0;--f2:#ee8a52;--f3:#4fc08a;--f4:#e0b73a;--f5:#e66fa8;--f6:#4cc3cf}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif;padding:16px}
 h1{font-size:20px;margin:0 0 4px}p.s{color:var(--mut);margin:0 0 12px}
 .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.bar button{font:inherit;padding:4px 10px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;cursor:pointer}.bar button[aria-pressed=true]{background:var(--fg);color:var(--bg)}

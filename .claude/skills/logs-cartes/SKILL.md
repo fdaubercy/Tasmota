@@ -6,7 +6,7 @@ description: Use when the user asks to read, follow or check the logs of the Tas
 # Lire les logs des cartes (sans voler de port série)
 
 Points d'acces verifies le 2026-10-18 dans `outils_docs/scripts_python/outils_pc/`. Reference
-utilisateur : `outils_docs/README.md` (l. 76-125) ; charte des niveaux : CLAUDE.md, « Logs Berry ».
+utilisateur : `outils_docs/reference_berry/LOGS.md` ; charte des niveaux : CLAUDE.md, « Logs Berry ».
 
 ## 1. D'abord : quels outils tournent ?
 

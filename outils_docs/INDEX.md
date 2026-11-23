@@ -4,7 +4,7 @@ Importé par `CLAUDE.md` (`@outils_docs/INDEX.md`), donc lu à chaque session. U
 corrige ici dans le même commit (plan `tasks/plans/binomes-berry.md`, A19 et A20 : rangement en cours).
 
 Comment s'en servir : chercher la ligne de la situation, lire le fichier indiqué AVANT d'agir, et seulement lui.
-Ne jamais lire en entier `tasks/lessons.md` (plus de 120 Ko) ni `outils_docs/README.md` (280 Ko) : grep, ou la section citée.
+Ne jamais lire en entier `tasks/lessons.md` (plus de 120 Ko) : grep. Les guides et fiches sont courts : lire celui de la situation.
 
 Règle d'entretien : une fonctionnalité, un outil ou un document nouveau = UNE ligne ici (chemin, ce qu'il apporte,
 banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `relecteur-docs` et
@@ -30,13 +30,13 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 | Pages web des cartes | `.doc_for_ai/TASMOTA_WEBUI_CODING_GUIDE.md` (amont) | conventions de la WebUI |
 | Écrans uDisplay, tactile | `.doc_for_ai/UDISPLAY_UTOUCH_GUIDE.md` (amont), skill `lvgl-haspmota` | `display.ini`, LVGL, HASPmota |
 | Quel module sur quelle carte | `outils_docs/reference_berry/CARTE_MODULES_BERRY.md` (généré, ne pas éditer) | solidifié, importé, gardes |
-| Logs Berry | `CLAUDE.md` § Logs Berry ; détail `data/fs/logFonctions.be` (en-tête) | 4 niveaux, `logFonctions.log`, jamais `log()` direct |
+| Logs Berry | `CLAUDE.md` § Logs Berry ; réglages `outils_docs/reference_berry/LOGS.md` ; en-tête de `data/fs/logFonctions.be` | 4 niveaux, `logFonctions.log`, jamais `log()` direct |
 | Solidification | `outils_docs/reference_berry/SOLIDIFICATION_BERRY.md` | mécanisme, vérification §5, pièges §4 |
 | ModBus : conception, registres, synchro | `outils_docs/reference_berry/PROTOCOLE_MODBUS.md` (§8 registres carte 16 relais, §9 synchro, §11 MQTT) | 3 transports, six pièges de la carte relais |
 | ModBus : commandes et trames | `outils_docs/reference_berry/MODBUS_MODE_EMPLOI.md` | mode d'emploi, « Fermeture » contre « Open » |
-| Voie MQTT maître/esclaves | `outils_docs/README.md` § Voie MQTT ; `PROTOCOLE_MODBUS.md` §11 | garde-fous G3 à G5 ; esclave sans fiche ModBus = aucun repli |
-| Découverte des cartes | `outils_docs/README.md` § La découverte des cartes | ESP32 sans PSRAM : `serveur.discovery` OFF |
-| Graphiques, énergie, jauges, débits, écran 7B, MPU6050, volets, coprocesseur C6, Hue | `outils_docs/README.md`, section du même nom | mode d'emploi de chaque fonction des cartes |
+| Voie MQTT maître/esclaves | `outils_docs/reference_berry/VOIE_MQTT.md` ; `PROTOCOLE_MODBUS.md` §11 | garde-fous G3 à G5 ; esclave sans fiche ModBus = aucun repli |
+| Découverte des cartes | `outils_docs/reference_berry/DISCOVERY.md` | ESP32 sans PSRAM : `serveur.discovery` OFF |
+| Graphiques, énergie, jauges, débits, écran de la cave, MPU6050, volets, coprocesseur C6, Hue | `outils_docs/reference_berry/GRAPHIQUES.md`, `ENERGIE.md`, `CUVE_PAGE.md`, `DEBITS_PAC.md`, `ECRAN_CAVE.md`, `INCLINAISON_MPU6050.md`, `VOLETS_FACADE.md`, `COPROCESSEUR_C6.md`, `EMULATION_HUE.md` | mode d'emploi de chaque fonction des cartes |
 | Commandes Tasmota personnalisées (`ReglageGlobal`, `ReglageLog`, `ReglageUDP`, `ReglageModbus`...) | `outils_docs/reference_berry/COMMANDES.md` | liste vérifiée contre les `add_cmd` de `data/` ; sous-commandes et exemples |
 | Modifications du firmware amont (C++ en dur) | `outils_docs/reference_berry/MODIFICATIONS_FIRMWARE.md` | piège de synchro du fork : pied de page de `xdrv_01_9_webserver.ino`, comment le retrouver |
 | Volets roulants du firmware | `outils_docs/reference_berry/TASMOTA_VOLETS_ROULANTS.md` | doc Shutters traduite et écarts vérifiés |
@@ -47,23 +47,23 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 
 ## 3. Outils de l'annuaire (http://127.0.0.1:7600), par groupe
 
-Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité. Détail de chaque outil et fonction, en attendant les guides de
-`outils_docs/guides_outils/` : `outils_docs/CARTE_DOCUMENTS.md` (tiré de CLAUDE.md, à fondre à l'action A20 de `binomes-berry`).
+Un guide par outil dans `outils_docs/guides_outils/<NOM_CIBLE>.md` (doc de l'utilisateur ; Claude le lit quand il modifie l'outil,
+avec le plan cité). Détail technique de chaque outil (modules, bancs) : `outils_docs/CARTE_DOCUMENTS.md`, tiré de CLAUDE.md.
 
 | Groupe | Outil (port) | Doc actuelle |
 |---|---|---|
-| Déploiement | Build et téléversement (7700) | `outils_docs/README.md` § Build et téléversement (535 lignes : lire l'onglet utile) |
-| Déploiement | Tâches planifiées, compilations de nuit (7920) | README § Compilations de nuit |
-| Configuration des cartes | Fichiers Berry par env (7800) | README § Fichiers Berry par env |
-| Configuration des cartes | Assistant persist (7900), onglet autoexec.bat | README § Assistant persist |
-| Configuration des cartes | Navigateur FTP des cartes (7450) | README § Navigateur FTP ; fichiers protégés, deux confirmations |
-| Ateliers | Graphiques (7950), Écrans (7960), Visuels (7985), Étiquettes QR (7970), Fabrique `.tapp` (7980) | README, section du même nom ; consignes des façades `outils_docs/visuels_accueil/CONSIGNES_VISUELS.md` |
-| Bus et cartes | Sniffeur ModBus (7300), Sniffeur MQTT (7100), Syslog (7200), Testeur UDP (7400), Pont série (7000) | onglet Aide de chaque page ; skill `logs-cartes` ; jamais 224.3.0.1:4000 depuis un banc |
-| Bus et cartes | Sniffeur I2C (7350), Cartes simulées (7940) | README, section du même nom |
-| Maintenance | Synchro du fork (7500) | README § Synchro du fork ; `outils_docs/environnement/SYNCHRO_FORK.md` |
-| Dépôt et références | Organigramme des plans (7990), Ménage (7995), Sondes en cours (7910), Catalogue d'icônes (7930), Liens web | README, section du même nom |
-| Annuaire lui-même | accès, jeton commun, barre | `CLAUDE.md` (Carte, `acces_web.py`) ; spec `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md` |
-| Plan de la maison | page générée | README § Plan de la maison ; plan `tasks/plans/plan-maison-echelle.md` |
+| Déploiement | Build et téléversement (7700) | `outils_docs/guides_outils/build_web.md`, puis l'onglet utile : `build_web_compilation`, `_ota`, `_fichiers`, `_memoire_defaut`, `_sauvegardes`, `_reparations` |
+| Déploiement | Tâches planifiées, compilations de nuit (7920) | `outils_docs/guides_outils/taches_planifiees.md` |
+| Configuration des cartes | Fichiers Berry par env (7800) | `outils_docs/guides_outils/fichiers_berry.md` |
+| Configuration des cartes | Assistant persist (7900), onglet autoexec.bat | `outils_docs/guides_outils/assistant_persist.md` |
+| Configuration des cartes | Navigateur FTP des cartes (7450) | `outils_docs/guides_outils/ftp_cartes.md` ; fichiers protégés, deux confirmations |
+| Ateliers | Graphiques (7950), Écrans (7960), Visuels (7985), Étiquettes QR (7970), Fabrique `.tapp` (7980) | `outils_docs/guides_outils/atelier_graphiques.md`, `atelier_ecrans.md`, `atelier_visuels.md`, `etiquettes_qr.md`, `fabrique_tapp.md` ; consignes des façades `outils_docs/visuels_accueil/CONSIGNES_VISUELS.md` |
+| Bus et cartes | Sniffeur ModBus (7300), Sniffeur MQTT (7100), Syslog (7200), Testeur UDP (7400), Pont série (7000) | `outils_docs/guides_outils/sniffeur_modbus.md`, `sniffeur_mqtt.md`, `syslog_tasmota.md`, `testeur_udp.md`, `pont_serie.md` ; onglet Aide de chaque page ; skill `logs-cartes` ; jamais 224.3.0.1:4000 depuis un banc |
+| Bus et cartes | Sniffeur I2C (7350), Cartes simulées (7940) | `outils_docs/guides_outils/sniffeur_i2c.md`, `cartes_simulees.md` |
+| Maintenance | Synchro du fork (7500) | `outils_docs/guides_outils/synchro_fork.md` ; `outils_docs/environnement/SYNCHRO_FORK.md` |
+| Dépôt et références | Organigramme des plans (7990), Ménage (7995), Sondes en cours (7910), Catalogue d'icônes (7930), Liens web | `outils_docs/guides_outils/organigramme_plans.md`, `menage.md`, `sondes.md`, `icones_catalogue.md`, `liens_web.md` |
+| Annuaire lui-même | accès, jeton commun, barre | `outils_docs/guides_outils/annuaire.md` ; `CARTE_DOCUMENTS.md` (`acces_web.py`) ; spec `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md` |
+| Plan de la maison | page générée | `outils_docs/guides_outils/plan_maison.md` ; plan `tasks/plans/plan-maison-echelle.md` |
 
 ## 4. Vérifier : fichiers, commits, bancs, sondes, sous-agents
 

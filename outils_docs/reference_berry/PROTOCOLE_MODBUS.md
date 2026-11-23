@@ -1280,7 +1280,7 @@ Le P4 du garage commande aussi des esclaves par MQTT (`cmnd/<topic>/Power1`), av
 embarquer sur l'esclave et aucune trame ModBus pour ces ordres. Projecteur LED (`jardin/projecteur_led`), pompe de piscine
 (`jardin/pompe_piscine`, Sonoff S2X ESP8266, sans Berry) et cuve (`jardin/cuve`, derrière le NAPT du P4, qui garde par ailleurs
 son ModBus et son Berry). Plan `tasks/plans/voie-mqtt.md`, analyse
-`outils_docs/historique/ANALYSE_VOIE_MQTT_2026-11-16.md`, mode d'emploi `outils_docs/README.md` § « Voie MQTT maître/esclaves ».
+`outils_docs/historique/ANALYSE_VOIE_MQTT_2026-11-16.md`, mode d'emploi `outils_docs/reference_berry/VOIE_MQTT.md` § « Voie MQTT maître/esclaves ».
 
 - **Cadre.** Chaque ordre passe par la garde `mqttLiaisonFonctions.be` (compare-avant-agir, limiteur par élément, quarantaine,
   coupe-circuit global, accusé et renvois) avant d'être publié par `controleMqttLiaison.be::ordonne`. L'état réel revient par

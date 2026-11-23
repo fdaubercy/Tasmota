@@ -41,7 +41,7 @@ Puis lancer en PLUS, avant de commiter (lecture seule, leur rapport se lit avant
 - `verificateur-solidification` si un `.be` de `data/` est dans le lot ; `relecteur-berry` pour les `.be`, `relecteur-outils-python` pour
   les `.py` d'outils, `relecteur-pages-web` pour les pages, au jugement.
 Plusieurs sessions travaillent dans les memes fichiers : ne commiter que SES passages. Pour un fichier partage (`CLAUDE.md`,
-`outils_docs/README.md`, plans), indexer par hunks (`git diff -U0` filtre puis `git apply --cached --unidiff-zero --recount`), pas
+`outils_docs/INDEX.md`, guides, plans), indexer par hunks (`git diff -U0` filtre puis `git apply --cached --unidiff-zero --recount`), pas
 par fichier entier, et le dire dans le compte rendu.
 
 ## 3. Commit

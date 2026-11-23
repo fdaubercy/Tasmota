@@ -60,7 +60,7 @@ Sur le maître ModBus (`data/fs/modBus_TasmotaSlaveModBus.be`, enregistrée sous
 - `ReglageAna voie A0 tension 0-10V` : A0 et A1 en tension 0-5V, 0-10V ou 0-24V ; `ReglageAna voie A2 courant 4-20mA` : A2 et A3 en courant 0-20mA ou 4-20mA (boucle coupée détectée sous 3,6 mA).
 - `ReglageAna seuilMin A0 50` : sous 50 mV à l'entrée de l'ADS1115, la lecture est une erreur (sonde débranchée) ; 0 = désactivé.
 - `ReglageAna alimentation 3.3` : tension d'alimentation (VDD) de l'ADS1115, 3.3 ou 5 ; change les résistances conseillées. Câblage : `outils_docs/Electronique/ADS1115/CABLAGE_ADS1115.md`.
-- Le simulateur `ReglageCuve simulation` est décrit dans `outils_docs/README.md`.
+- Le simulateur `ReglageCuve simulation` est décrit dans `outils_docs/guides_outils/atelier_graphiques.md`.
 
 ## ReglageModbus (`data/fs/controleModbus.be`, `data/fs/modbusFonctions.be::reglageModbus`)
 
@@ -84,8 +84,8 @@ Sur le maître ModBus (`data/fs/modBus_TasmotaSlaveModBus.be`, enregistrée sous
 ## Volets
 
 - `ReglageVolets Inclinaison <id>` : angle mesuré par le MPU6050 du volet.
-- `ReglageVolets Apprentissage <id> ouvert|ferme` : apprend les butées du volet (voir `outils_docs/README.md` § « Inclinaison d'un volet ou d'une trappe »).
+- `ReglageVolets Apprentissage <id> ouvert|ferme` : apprend les butées du volet (voir `outils_docs/reference_berry/INCLINAISON_MPU6050.md` § « Inclinaison d'un volet ou d'une trappe »).
 
 ## Commandes sans sous-commande documentée ici
 
-`ReglageGarage`, `ReglageDiscovery`, `ReglageRangeExtender`, `ReglageConn16Channel`, `ReglageTCP` et `ReglageLoRaWan` n'ont que `help` ; leurs logs se règlent avec `ReglageLog`. Quatre autres commandes existent dans le code sans avoir figuré dans l'ancienne liste : `ReglageHumidite` (`data/cave/<carte>/controleHumidite.be`), `ReglageMqttLiaison` (`data/fs/controleMqttLiaison.be`, voir `outils_docs/README.md` § « Voie MQTT maître/esclaves »), `ReglageDebits` et `ReglageEcranDebits` (dossiers des cartes de débits dans `data/bureau/`) : utiliser leur `help`.
+`ReglageGarage`, `ReglageDiscovery`, `ReglageRangeExtender`, `ReglageConn16Channel`, `ReglageTCP` et `ReglageLoRaWan` n'ont que `help` ; leurs logs se règlent avec `ReglageLog`. Quatre autres commandes existent dans le code sans avoir figuré dans l'ancienne liste : `ReglageHumidite` (`data/cave/<carte>/controleHumidite.be`), `ReglageMqttLiaison` (`data/fs/controleMqttLiaison.be`, voir `outils_docs/reference_berry/VOIE_MQTT.md` § « Voie MQTT maître/esclaves »), `ReglageDebits` et `ReglageEcranDebits` (dossiers des cartes de débits dans `data/bureau/`) : utiliser leur `help`.

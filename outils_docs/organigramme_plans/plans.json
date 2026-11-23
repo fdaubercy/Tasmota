@@ -5,7 +5,8 @@
   "modbus-reseau": "ModBus, réseau, matériel",
   "cave": "Cave et nouveaux envs",
   "debits-energie": "Débits et énergie",
-  "graphiques-ecrans": "Graphiques, écrans, visuels"
+  "graphiques-ecrans": "Graphiques, écrans, visuels",
+  "voie-mqtt": "Voie MQTT maître/esclaves"
  },
  "plans": [
   {
@@ -576,7 +577,7 @@
    ],
    "specs": [],
    "cree": "2026-11-03",
-   "maj": "2026-11-21",
+   "maj": "2026-11-23",
    "pct": 53,
    "etapes": "18/34",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-reseau-ethernet.md",
@@ -799,7 +800,7 @@
     "2026-11-11-visuel-volets-reglage-durees-design.md"
    ],
    "cree": "2026-11-11",
-   "maj": "2026-11-13",
+   "maj": "2026-11-23",
    "pct": 45,
    "etapes": "44/98",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/envs-grenier-rdc-sonoff-cave.md",
@@ -1285,8 +1286,8 @@
    "specs": [],
    "cree": "2026-11-23",
    "maj": "2026-11-23",
-   "pct": 53,
-   "etapes": "40/75",
+   "pct": 72,
+   "etapes": "54/75",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/binomes-berry.md",
    "urls_spec": []
   }

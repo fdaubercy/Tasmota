@@ -9,7 +9,7 @@ FIN TAILLE DU BINOME -#
 # =============================================================================================
 # logFonctions : fonction de log commune, seuil par module, profils de sorties, ReglageLog.
 #
-# CHARTE DES LOGS BERRY (decidee le 2026-10-04). Copies : CLAUDE.md et outils_docs/README.md,
+# CHARTE DES LOGS BERRY (decidee le 2026-10-04). Copies : CLAUDE.md et outils_docs/reference_berry/LOGS.md,
 # a garder alignees avec celle-ci.
 #
 #   Mot      Constante                  Quand l'utiliser

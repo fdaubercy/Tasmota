@@ -36,7 +36,8 @@ DURABLES = ["CLAUDE.md", "outils_docs/README.md", "outils_docs/reference_berry/S
             "outils_docs/environnement/NOUVEAU_POSTE.md", "outils_docs/environnement/VIGILANCES_BUILD.md",
             "outils_docs/environnement/SYNCHRO_FORK.md", "outils_docs/reference_berry/COMMANDES.md",
             "outils_docs/reference_berry/MODIFICATIONS_FIRMWARE.md"]
-DURABLES_MOTIFS = [".claude/skills/**/*.md", ".claude/agents/*.md", ".claude/commands/*.md"]
+DURABLES_MOTIFS = [".claude/skills/**/*.md", ".claude/agents/*.md", ".claude/commands/*.md",
+                   "outils_docs/guides_outils/*.md", "outils_docs/reference_berry/*.md"]
 EXT = r"(?:be|py|ino|h|c|cpp|ini|json|csv|md|js|html|css|sh|ps1|mjs|txt)"
 RE_LIGNE = re.compile(r"([\w./\\-]+\." + EXT + r"):(\d+(?:-\d+)?)\b")
 RE_LIGNE_COURTE = re.compile(r"`:(\d+(?:-\d+)?)`")

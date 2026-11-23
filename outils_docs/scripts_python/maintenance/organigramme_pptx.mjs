@@ -10,7 +10,7 @@ const base = join(process.env.LOCALAPPDATA || process.env.HOME, "outils_tasmota"
 const PptxGenJS = createRequire(base)("pptxgenjs")
 const [, , entree, sortie] = process.argv
 const D = JSON.parse(readFileSync(entree, "utf-8"))
-const COUL = ["1F6FB2", "7A5CB8", "C0561E", "2A8A5A", "B08400", "C0397A"]
+const COUL = ["1F6FB2", "7A5CB8", "C0561E", "2A8A5A", "B08400", "C0397A", "0F7F8C"]
 const cles = Object.keys(D.familles)
 const fr = s => s.slice(8) + "/" + s.slice(5, 7)
 const FOND = { actif: "FFFFFF", clos: "D5DAE1", "en-pause": "FDF1E8" }

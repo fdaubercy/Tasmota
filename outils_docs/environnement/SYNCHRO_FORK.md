@@ -58,5 +58,5 @@ et son commit. Le push force du rebase exige de saisir le nom de la branche, ver
 Depuis le 2026-10-27, apres un « Diagnostic seul » reussi, la page affiche un **assistant pas a pas**
 (etapes calculees sur le depot local) : voie A = le script de merge, voie B = merge local guide
 fichier par fichier si conflit prevu ou commits non pousses. Jamais de rebase, stash, reset ni push
-force ; le rebase est replie dans « Avance ». Mode d'emploi : `outils_docs/README.md` § « Synchro du fork
+force ; le rebase est replie dans « Avance ». Mode d'emploi : `outils_docs/guides_outils/synchro_fork.md` § « Synchro du fork
 (page web) ».

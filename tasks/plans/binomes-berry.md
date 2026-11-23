@@ -78,9 +78,9 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [ ] `nouveau-module.md` (skill Berry) aligné sur la paire de référence
 
 ## A8 — Leçons réellement injectées au démarrage
-- [ ] Script réversible lancé par l'utilisateur (config `~/.claude`) : réserve de `~/.claude/helpers/injecte_lecons.cjs` 3000 -> 1000 o, message « synthèse périmée » au-delà de 20 nouvelles leçons ; limite de la skill `lecons-synthese` 7000 -> 4500 o
-- [ ] `/lecons-synthese` relancé : une règle par thème avec compteur de récidives, `lessons-actives.md` < 4 500 o
-- [ ] `node ~/.claude/helpers/test_injecte_lecons.cjs` vert ; sortie du hook < 8 000 o, sans « tronquée »
+- [x] Script réversible lancé par l'utilisateur (config `~/.claude`) : réserve de `~/.claude/helpers/injecte_lecons.cjs` 3000 -> 1000 o, message « synthèse périmée » au-delà de 20 nouvelles leçons ; limite de la skill `lecons-synthese` 7000 -> 4500 o — preuve : lancé par l'utilisateur le 2026-11-23 ; sauvegarde ~/.claude/_sauvegarde_a8_lecons présente, PEREMPTION dans injecte_lecons.cjs
+- [x] `/lecons-synthese` relancé : une règle par thème avec compteur de récidives, `lessons-actives.md` < 4 500 o — preuve : tasks/lessons-actives.md 4 281 o, 12 règles, source_lignes=270 (fichier laissé à l'utilisateur, non commité)
+- [x] `node ~/.claude/helpers/test_injecte_lecons.cjs` vert ; sortie du hook < 8 000 o, sans « tronquée » — preuve : 27 réussis, 0 en échec ; sortie du hook 4 352 o, 0 « tronquée » ni « périmée »
 
 ## A9 — Contradictions de CLAUDE.md levées
 - [x] Push : autorisation du 29/10 écrite dans CLAUDE.md et `/commite`, toujours derrière `preparateur-push` — preuve : commit 81621b5ca
@@ -147,10 +147,10 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 
 ## A20 — Découpage de `outils_docs/README.md`, un fichier par outil
 - [x] Relecture intégrale des 3 063 lignes : carte des sections, destination de chacune, défauts relevés — preuve : `tasks/rangement-md-relecture-readme.md` (3 sous-agents, 29 affirmations périmées, Build en 7 guides, 6 outils sans section), 2026-11-23
-- [ ] Fiches des fonctions des cartes vers `reference_berry/`
-- [ ] Un guide par outil dans `guides_outils/`, nommé d'après son `NOM_CIBLE` (Build en plusieurs fichiers) ; guides manquants écrits
-- [ ] README réduit à un renvoi vers INDEX.md ; renvois de CLAUDE.md, INDEX.md, `.claude/` et de l'en-tête de `logFonctions.be` (accord du 2026-11-23) mis à jour
-- [ ] Contrôle « chaque `NOM_CIBLE` a son guide » ; `grep "README.md §"` vide sur `.claude`, CLAUDE.md, INDEX.md
+- [x] Fiches des fonctions des cartes vers `reference_berry/` — preuve : 12 fiches (LOGS ... EMULATION_HUE), découpage sans perte (a20_decoupe.py), affirmations périmées corrigées (commit du rangement A20)
+- [x] Un guide par outil dans `guides_outils/`, nommé d'après son `NOM_CIBLE` (Build en plusieurs fichiers) ; guides manquants écrits — preuve : 31 guides, Build en 7 fichiers, 6 guides neufs ; relecteur-docs : ports et options conformes au code (commit du rangement A20)
+- [x] README réduit à un renvoi vers INDEX.md ; renvois de CLAUDE.md, INDEX.md, `.claude/` et de l'en-tête de `logFonctions.be` (accord du 2026-11-23) mis à jour — preuve : outils_docs/README.md 12 lignes ; renvois repointés (a20_renvois.py + 12 fichiers à la main, en-tête de logFonctions.be compris) (commit du rangement A20)
+- [x] Contrôle « chaque `NOM_CIBLE` a son guide » ; `grep "README.md §"` vide sur `.claude`, CLAUDE.md, INDEX.md — preuve : 22 NOM_CIBLE, 22 guides et 22 lignes dans INDEX.md ; aucun « README § » restant ; verifie_references_docs.py 91 documents 0 défaut (commit du rangement A20)
 
 ## Améliorations restantes
 - [ ] [projet] Fichiers de base par puce (ESP8266, ESP32 sans PSRAM, ESP32 avec PSRAM, S3, P4) d'après les coûts mesurés
