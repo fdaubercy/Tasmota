@@ -2,6 +2,9 @@
 # protege de chaque module) est dans le module solidifie data/fs/demarrage.be (audit P4.2, 2026-10-25) : ce
 # fichier ne garde que la LISTE ORDONNEE des modules de la carte. Ne pas le compiler en .bec (voir demarrage.be).
 import demarrage
+# Veille modem du Wi-Fi (30 % -> 0 % de pertes, mesure du 30/10) : perdue par un erase_upload, donc reposee ici. Elle
+# n'agit qu'au prochain Sleep (support_command.ino::CmndSleep), d'ou le Sleep 50 ; rien n'est envoye si elle est deja posee.
+if tasmota.get_option(127) != 1    tasmota.cmd("Backlog SetOption127 1; Sleep 50", true)    end
 if demarrage.prologue()
     # Modules solidifies appeles par leur nom GLOBAL (GETNGBL) : leur globale n'existe que par import
     demarrage.importe(["configGlobal", "globalFonctions", "webFonctions", "modbusFonctions", "historiqueFonctions", "historiqueSeries", "graphiquesFonctions"])

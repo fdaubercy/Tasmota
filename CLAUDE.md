@@ -26,6 +26,9 @@ remplace la memoire.
    des registres de la carte 16 relais (§8) et architecture de synchronisation (§9).
 5. **`tasks/plans/`** — plans de travail suivis (`statut: actif`, format `tasks/plans/_FORMAT.md`) :
    le mod `suivi-plan` en injecte le resume en debut de conversation ; sans le mod, lire le plan actif.
+6. **`outils_docs/INDEX.md`** — l'aiguillage : quelle situation -> quel fichier lire, et rien d'autre. Importe ici :
+
+@outils_docs/INDEX.md
 
 Si le demarrage affiche une ligne `fork : N commit(s) de retard sur upstream/development`,
 c'est le hook de detection : voir la section « Synchro du fork » plus bas. **Ne pas lancer
