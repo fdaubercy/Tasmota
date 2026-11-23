@@ -13,12 +13,19 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-64 plans : 29 actif, 1 en-pause, 34 clos.
+65 plans : 30 actif, 1 en-pause, 34 clos.
 
 ### Attendent un geste hors de Claude (plans actifs)
 
 Étiquette déduite d'un mot de l'étape : `à vous` = confirmation ou choix, `sur carte` = essai ou envoi sur le matériel.
 
+- [à vous] [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — A6 — Paramètres en lecture seule dans `/json` : Forme de la clé explicite et lecture à la demande décidées
+- [sur carte] [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — A6 — Paramètres en lecture seule dans `/json` : Premier candidat sur une carte sans PSRAM en service (projecteur LED), gain mesuré par `tasmota.gc()`
+- [à vous] [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — A7 — Doublons et règles écrites : `controlePompeVideCave` : copie du S3 retenue, sort de l'env ESP32 de la cave décidé
+- [à vous] [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — A12 — Reprises allégées : `tasks/reprise-modbus-garage.md` (30 lignes : cibles garage, décisions, reste) tiré de `reprise-chantier-modbus-grenier.md`
+- [à vous] [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — A15 — Corrections des documents vivants : `SetOption127 1` du P4 écrit dans son autoexec ou son persist (accord : `data/`)
+- [à vous] [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — A18 — Plans clos avec bilan : `ethernet-p4` clos « remplacé par » (à confirmer) ; plans cave et `navigateur-ftp-cartes-a5-reprise` liés par `parent:` ou fusionnés
+- [à vous] [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — A20 — Découpage de `outils_docs/README.md`, un fichier par outil : README réduit à un renvoi vers INDEX.md ; renvois de CLAUDE.md, INDEX.md, `.claude/` et de l'en-tête de `logFonctions.be` (accord séparé) mis à jour
 - [à vous] [Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)](plans/voie-mqtt.md) — A10 — Portail de jardin et clôture : Portail, accord de l'utilisateur AVANT toute écriture du `_persist.json` du P4 : `portail` dans `drivers.liaisonMqtt.esclaves` (topic `jardin/portail`), puis `relai20` et `relai22` en `virtuel: "MQTT_portail"`, `mqtt.commande` `Power1` et `Power2`, `repli: "ModBus_TasmotaSlaveModBus3"` ; firmware recompilé par la page Build ; rien n'est modifié sans son « oui »
 - [à vous] [Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)](plans/voie-mqtt.md) — A10 — Portail de jardin et clôture : Portail, essai en présence de l'utilisateur devant le portail, un mouvement à la fois, son feu vert avant chacun, moyen de couper le moteur à portée de main (télécommande ou alimentation de la carte, à confirmer avec lui), 3 mouvements au plus par séance : 1 vantail (`Power1`), 2 vantaux (`Power2`), deux ordres rapprochés (un seul mouvement doit partir, G4), puis coupure du broker 30 s (alerte, aucun ordre, repli ModBus). Relever à chaque fois l'accusé, la durée et l'état du capteur de fermeture
 - [sur carte] [Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)](plans/voie-mqtt.md) — A10 — Portail de jardin et clôture : Volet 3 « Portail 2 vantaux » (`relai22`, par ModBus) : depuis la correction `devices_present` (commit `f26abd2e8`), vérifier sur le P4 que `bouton4` ou `ShutterOpen3` met `relai22` à ON puis OFF et que l'esclave 4 reçoit la trame ; même présence de l'utilisateur, même séance que le portail
@@ -116,6 +123,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |
 |---|---|---|---|---|---|---|
+| [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) | Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et ses paramètres | actif | █░░░░░░░░░ 13 % (10/73) | 63 étapes, 2 améliorations | 2026-11-23 | 2026-11-23 |
 | [Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)](plans/voie-mqtt.md) | Commander des esclaves, lire leurs capteurs et être averti de leurs changements d'état par MQTT, à côté de ModBus série et UDP, avec garde-fous anti-boucle et repli | actif | ██████████ 95 % (60/64) | 4 étapes, 3 améliorations | 2026-11-16 | 2026-11-21 |
 | [Plan de la maison à l'échelle, étage par étage, avec éditeur web](plans/plan-maison-echelle.md) | Remplacer les pièces schématiques du plan de la maison par un vrai plan à l'échelle (en mètres), un étage par onglet, éditable dans une page web, avec les équipements placés dessus | actif | ░░░░░░░░░░ 3 % (1/25) | 24 étapes, 3 améliorations | 2026-11-18 | 2026-11-19 |
 | [Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi](plans/voie-reseau-ethernet.md) | Qu'une carte en voie Ethernet garde tous ses services et ses esclaves, et ne devienne jamais injoignable si le câble tombe | actif | █████░░░░░ 47 % (18/33) | 15 étapes, 1 amélioration | 2026-11-02 | 2026-11-18 |
@@ -182,6 +190,74 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [Suivi des plans de travail (extension VS Code + mod)](plans/suivi-plan.md) | Suivre l'avancement des plans en % dans une vue VS Code à droite, partagée entre conversations et postes | clos | ██████████ 100 % (23/23) | 5 améliorations | 2026-10-18 | 2026-10-18 |
 
 ### Points restants des plans non terminés
+
+#### [Binômes Berry autonomes, manifeste unique et persist allégé](plans/binomes-berry.md) — 13 %
+
+- A1 — Mesures de départ : Comparer un `.bec` mesuré sur PC à celui d'une carte (ex. `cuveFonctions.bec`)
+- A2 — Bloc de taille généré (essai sur la paire volets) : Passe sur les 35 groupes de `data/fs`, puis `--verifier` rc 0 et solidification des fichiers modifiés
+- A3 — Manifeste unique : Champs ajoutés aux `blocs` de `modele_persist.json` : fichiers, pages, defines, lib_ignore, cible, coût, bloc par défaut
+- A3 — Manifeste unique : Blocs manquants ajoutés (liaisonMqtt, emulationHue, qrcode, visuel, energie, page_cuve, pages_graphiques, ecran, ecranSysteme, fsMqtt, LoRaWan, ES8311, coprocesseur)
+- A3 — Manifeste unique : Listes `[berry_commun]` et exclusions générées depuis le manifeste, `--verifier` (code 1 si en retard)
+- A3 — Manifeste unique : Lecteurs branchés : assistant persist, fichiers Berry par env, carte des modules
+- A4 — Cibles de log déclarées par le binôme : Premiers binômes qui déclarent leur cible (pompe, humidité, portail, débits : aucune cible aujourd'hui)
+- A4 — Cibles de log déclarées par le binôme : Témoin cassé de `banc_ecran_systeme.py` (« cible ecranSysteme absente » : texte cherché périmé depuis `f1dca859d`, avant ce chantier) remis à jour
+- A5 — Blocs morts du persist : Proposition chiffrée par env, validée par l'utilisateur
+- A5 — Blocs morts du persist : Retrait dans le dépôt et déploiement (supprimer persist et autoexec, redémarrer, renvoyer)
+- [à vous] A6 — Paramètres en lecture seule dans `/json` : Forme de la clé explicite et lecture à la demande décidées
+- [sur carte] A6 — Paramètres en lecture seule dans `/json` : Premier candidat sur une carte sans PSRAM en service (projecteur LED), gain mesuré par `tasmota.gc()`
+- [à vous] A7 — Doublons et règles écrites : `controlePompeVideCave` : copie du S3 retenue, sort de l'env ESP32 de la cave décidé
+- A7 — Doublons et règles écrites : Règle de solidification des fichiers de carte écrite dans `SOLIDIFICATION_BERRY.md` §3
+- A7 — Doublons et règles écrites : `nouveau-module.md` (skill Berry) aligné sur la paire de référence
+- A8 — Leçons réellement injectées au démarrage : Script réversible lancé par l'utilisateur (config `~/.claude`) : réserve de `~/.claude/helpers/injecte_lecons.cjs` 3000 -> 1000 o, message « synthèse périmée » au-delà de 20 nouvelles leçons ; limite de la skill `lecons-synthese` 7000 -> 4500 o
+- A8 — Leçons réellement injectées au démarrage : `/lecons-synthese` relancé : une règle par thème avec compteur de récidives, `lessons-actives.md` < 4 500 o
+- A8 — Leçons réellement injectées au démarrage : `node ~/.claude/helpers/test_injecte_lecons.cjs` vert ; sortie du hook < 8 000 o, sans « tronquée »
+- A9 — Contradictions de CLAUDE.md levées : Push : autorisation du 29/10 écrite dans CLAUDE.md et `/commite`, toujours derrière `preparateur-push`
+- A9 — Contradictions de CLAUDE.md levées : `tasks/lessons.md` lu par mot-clé, plus « en entier »
+- A9 — Contradictions de CLAUDE.md levées : Exemption graphify complète (ni pré-commit, ni création de carte)
+- A9 — Contradictions de CLAUDE.md levées : `c:\Users\fdaub\CLAUDE.md` (doublon du global) réduit à un renvoi
+- A10 — Fichier maître `outils_docs/INDEX.md` : Créé d'après le brouillon : situation -> fichier -> ce qu'il apporte (réussites, pièges), `.doc_for_ai/` compris
+- A10 — Fichier maître `outils_docs/INDEX.md` : Ajouté à `DURABLES` de `maintenance/verifie_references_docs.py` ; script code 0, `test_verifie_references_docs.py` vert
+- A10 — Fichier maître `outils_docs/INDEX.md` : Importé dans CLAUDE.md par `@outils_docs/INDEX.md`
+- A11 — CLAUDE.md allégé à ~14 Ko : `outils_docs/verification/EXCEPTIONS_500_LIGNES.md`, `outils_docs/environnement/NOUVEAU_POSTE.md`, `outils_docs/environnement/VIGILANCES_BUILD.md` tirés de CLAUDE.md
+- A11 — CLAUDE.md allégé à ~14 Ko : « Carte des documents » remplacée par un tableau de 12 sujets et la règle « une fonctionnalité nouvelle = une ligne dans INDEX.md »
+- A11 — CLAUDE.md allégé à ~14 Ko : Même commit : règle 4 de `relecteur-docs` remplacée par « chaque `NOM_CIBLE` a son guide et sa ligne dans INDEX.md » ; `/fin-de-session` adapté
+- A11 — CLAUDE.md allégé à ~14 Ko : `wc -c CLAUDE.md` < 16 000 ; `verifie_references_docs.py` code 0 ; `relecteur-docs` sans bloquant
+- [à vous] A12 — Reprises allégées : `tasks/reprise-modbus-garage.md` (30 lignes : cibles garage, décisions, reste) tiré de `reprise-chantier-modbus-grenier.md`
+- A12 — Reprises allégées : Les deux reprises archivées dans `tasks/archive/` ; « reste à solidifier » reporté dans `SOLIDIFICATION_BERRY.md` s'il est encore vrai
+- A12 — Reprises allégées : Démarrage de CLAUDE.md et mémoire `project_chantier_modbus_grenier` repointés ; grep des anciens noms vide dans `.claude`, CLAUDE.md et la mémoire
+- A13 — `tasks/README.md` court : `.claude/hooks/index_plans.mjs` : une ligne par plan actif, par famille, sans la seconde copie des gestes ; `test_index_plans.mjs` adapté et vert
+- A13 — `tasks/README.md` court : `index_plans.mjs --verifier` code 0 ; taille < 12 Ko
+- A14 — Six suppressions (accord en bloc du 2026-11-23) : Mémoires `project_onglets_fenetre2` et `project_sauvegarde_scripts`, et leurs lignes de MEMORY.md
+- A14 — Six suppressions (accord en bloc du 2026-11-23) : `tasks/correctif-udp-interface-2026-10-17.diff`
+- A14 — Six suppressions (accord en bloc du 2026-11-23) : `docs/superpowers/plans/_sauvegarde-avant-solidify/`
+- A14 — Six suppressions (accord en bloc du 2026-11-23) : `.claude/skills/pcb-tasmota/scripts/.claude-flow/`
+- A14 — Six suppressions (accord en bloc du 2026-11-23) : Reliquat de fin de `outils_docs/README.md` (amont obsolète, adresses du réseau local et redirections de la box), APRÈS avoir sauvé les commandes personnalisées (vers `reference_berry/`) et la modification C++ du pied de page, et soumis le TODO à l'utilisateur (relecture du 2026-11-23)
+- A15 — Corrections des documents vivants : READMEs de maquettes `partitions/`, `build_fin_partitions/`, `sauvegarde_config/` : « réalisé, modèle X, le … »
+- A15 — Corrections des documents vivants : Specs `solidification-berry-design`, `annuaire-outils-design`, `page-build-televersement-design` : statut d'une ligne
+- A15 — Corrections des documents vivants : `SOLIDIFICATION_BERRY.md` : encadré de tête réécrit (verdict du 2026-07-15)
+- A15 — Corrections des documents vivants : `SOUS_AGENTS.md` : tableau réparé, colonnes famille et usage, colonne « modifie » exacte
+- A15 — Corrections des documents vivants : En-tête de `HISTORIQUE_SYNCHRO_FORK.md` corrigé dans `synchronise_fork_tasmota.py`, banc de la synchro vert
+- A15 — Corrections des documents vivants : `LIENS_WEB.md` régénéré, `genere_liens_web.py --verifier` code 0
+- [à vous] A15 — Corrections des documents vivants : `SetOption127 1` du P4 écrit dans son autoexec ou son persist (accord : `data/`)
+- A16 — Garde mécanique des secrets à la lecture : Lecteur masqué des fichiers à secrets (`_persist.json`, `user_config_override.h`, `tasmota_defines_for_berry.*`, sauvegardes de cartes), motifs repris de `garde_commit.cjs`
+- A16 — Garde mécanique des secrets à la lecture : Hook `PreToolUse` (Read, Grep, Bash, PowerShell) qui refuse leur lecture brute ; banc : refusé, masqué, faux positif
+- A16 — Garde mécanique des secrets à la lecture : Une ligne dans chaque agent qui a Bash
+- A17 — Mémoire native rangée : MEMORY.md en 4 rubriques (préférences, chantiers ouverts, faits matériels et pièges, références), lignes < 150 caractères, < 6 Ko
+- A17 — Mémoire native rangée : Mémoires périmées réduites à l'état actuel : `project_historique_capteurs`, `project_chantier_modbus_grenier`, `project_statut_cartes`, `project_portail_jardin`
+- A17 — Mémoire native rangée : Doublons avec CLAUDE.md ramenés à un renvoi ; tous les liens de MEMORY.md valides
+- A18 — Plans clos avec bilan : Section `## Bilan` (marché, raté, règle retenue, cases reportées) ajoutée à `_FORMAT.md` et contrôlée par `index_plans.mjs --verifier`
+- A18 — Plans clos avec bilan : `sauvegarde-config-cartes`, `energie-differentiel`, `page-build-televersement`, `jauges-cuve` clos avec bilan
+- [à vous] A18 — Plans clos avec bilan : `ethernet-p4` clos « remplacé par » (à confirmer) ; plans cave et `navigateur-ftp-cartes-a5-reprise` liés par `parent:` ou fusionnés
+- A18 — Plans clos avec bilan : Enseignements de `temps-compilation`, `lib-ignore-*`, `graphiques-web`, `*-mpu6050`, `build-reparations` remontés dans les références
+- A19 — Rangement des .md libres d'`outils_docs/` : `git mv` vers `historique/` (ANALYSE_*, AUDIT_*, DIAGNOSTIC_UDP, CHANGELOG), `materiel/` (MODELES_ESP, ECRAN_TACTILE_ESP32P4, PORTAIL_JARDIN, ICONES_BOUTONS_RELAIS, PLC_OPENPLC), `reference_berry/` (PROTOCOLE_MODBUS, `Aide/MODBUS.md` -> MODBUS_MODE_EMPLOI.md, SOLIDIFICATION_BERRY, CARTE_MODULES_BERRY, FICHIERS_DRVSET, EXTENSIONS_TAPP, TASMOTA_VOLETS_ROULANTS), `verification/` (SOUS_AGENTS)
+- A19 — Rangement des .md libres d'`outils_docs/` : Renvois mis à jour : CLAUDE.md, INDEX.md, agents, skills `bancs` et `pcb-tasmota`, constante de `carte_modules_berry.py`, `DURABLES` ; grep des anciens noms vide hors plans et specs
+- A19 — Rangement des .md libres d'`outils_docs/` : `carte_modules_berry.py` relancé sans diff ; `verifie_references_docs.py` code 0
+- A20 — Découpage de `outils_docs/README.md`, un fichier par outil : Fiches des fonctions des cartes vers `reference_berry/`
+- A20 — Découpage de `outils_docs/README.md`, un fichier par outil : Un guide par outil dans `guides_outils/`, nommé d'après son `NOM_CIBLE` (Build en plusieurs fichiers) ; guides manquants écrits
+- [à vous] A20 — Découpage de `outils_docs/README.md`, un fichier par outil : README réduit à un renvoi vers INDEX.md ; renvois de CLAUDE.md, INDEX.md, `.claude/` et de l'en-tête de `logFonctions.be` (accord séparé) mis à jour
+- A20 — Découpage de `outils_docs/README.md`, un fichier par outil : Contrôle « chaque `NOM_CIBLE` a son guide » ; `grep "README.md §"` vide sur `.claude`, CLAUDE.md, INDEX.md
+- Amélioration [projet] : Fichiers de base par puce (ESP8266, ESP32 sans PSRAM, ESP32 avec PSRAM, S3, P4) d'après les coûts mesurés
+- Amélioration [projet] : Registre des voies de relais (`set_power_handler`), après les cibles de log
 
 #### [Voie de communication MQTT maître/esclaves (architecture A, MQTT natif Tasmota)](plans/voie-mqtt.md) — 95 %
 
