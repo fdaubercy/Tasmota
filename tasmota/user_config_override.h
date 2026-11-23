@@ -2366,6 +2366,187 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
             #endif
             #define USER_BACKLOG      "Backlog Hostname PORTAIL-JARDIN"
 
+        // -- Options for tasmota32-garage-portail-jardin-modbus ------
+        #elif defined(FIRMWARE_ESP32_GARAGE_PORTAIL_JARDIN_MODBUS)
+            #undef CFG_HOLDER
+            #define CFG_HOLDER  1612    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            // -- CODE_IMAGE_STR is the name shown between brackets on the 
+            //    Information page or in INFO MQTT messages
+            #undef CODE_IMAGE_STR
+                #define CODE_IMAGE_STR "Portail de jardin"
+            // -- Pages web sans controle du Referer (SetOption128 1), ajoute le 2026-10-04 : voir la note en tete de section
+            #ifndef DISABLE_REFERER_CHK
+                #define DISABLE_REFERER_CHK                     // [SetOption128] Disable HTTP API (referer check)
+            #endif
+        
+            // -- Propriétés des enregistrements des logs dans des fichiers -------------------------------------
+            // drivers : tasmota/tasmota_xdrv_driver/xdrv_50_filesystem.ino
+            // #define FILE_LOG_SIZE       100
+            // #define FILE_LOG_COUNT      10                        // Enable with command `FileLog 1..4` or `FileLog 11..14`
+            // #define FILE_LOG_NAME       "/logs/fileLog %02d.txt"
+        
+            // -- Project -------------------------------------
+            #undef PROJECT
+                #define PROJECT           "PORTAIL-JARDIN"         	 // PROJECT is used as the default topic delimiter
+
+            #ifdef USER_TEMPLATE
+                #undef USER_TEMPLATE
+            #endif
+            #define USER_TEMPLATE 		"{\"NAME\":\"Portail de jardin\",\"GPIO\":[1,1,1,0,257,1,1,1,1,1,1,1,1,1,3232,3200,1,1,1,256,1,160,1,0,0,0,0,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+
+            // -- Pile de la boucle : valeur par defaut (ESP32 SANS PSRAM, comme les projecteurs du jardin) ; le S3 la fixe a 24 Ko.
+            //    Palier ModBus : remettre `#undef SET_ESP32_STACK_SIZE` + `#define SET_ESP32_STACK_SIZE (24 * 1024)` si une pile deborde.
+
+            #ifdef MODULE
+                #undef MODULE
+            #endif
+            #define MODULE USER_MODULE                       // Set template enabled by default
+        
+            // -- Wi-Fi ---------------------------------------
+            #undef WIFI_IP_ADDRESS
+                #define WIFI_IP_ADDRESS        "0.0.0.0"         // [IpAddress1] Set to 0.0.0.0 for using DHCP or enter a static IP address
+            #undef WIFI_GATEWAY
+                #define WIFI_GATEWAY           "192.168.4.1"      // [IpAddress2] If not using DHCP set Gateway IP address
+            #undef WIFI_DNS
+                #define WIFI_DNS               "192.168.0.254"      // [IpAddress4] If not using DHCP set DNS1 IP address (might be equal to WIFI_GATEWAY)
+        
+            #undef STA_SSID1
+                #define STA_SSID1              "SERVEUR-GARAGE-GATEWAY"                // [Ssid1] Wi-Fi SSID
+            #undef STA_PASS1
+                #define STA_PASS1              "Lune5676"                // [Password1] Wi-Fi password
+            #undef STA_SSID2
+                #define STA_SSID2              "iPhone de Frederic"                // [Ssid2] Optional alternate AP Wi-Fi SSID
+            #undef STA_PASS2
+                #define STA_PASS2              "Lune5676"                // [Password2] Optional alternate AP Wi-Fi password
+        
+            #undef WIFI_CONFIG_TOOL
+                #define WIFI_CONFIG_TOOL       WIFI_WAIT        // [WifiConfig] Default tool if Wi-Fi fails to connect (default option: 4 - WIFI_RETRY)
+                                                                // (WIFI_RESTART, WIFI_MANAGER, WIFI_RETRY, WIFI_WAIT, WIFI_SERIAL, WIFI_MANAGER_RESET_ONLY)
+                                                                // The configuration can be changed after first setup using WifiConfig 0, 2, 4, 5, 6 and 7.
+        
+            // -- Setup your own RANGE EXTENDER settings  -----
+            // Les autres paramètres du RangeExtender sont gérés par la partie 'Post-process compile options' en fin de fichier
+            // Backlog RgxSSID rangeextender ; RgxPassword securepassword ; RgxAddress 192.168.123.1 ; RgxSubnet 255.255.255.0; RgxState 1 ; RgxNAPT 1
+            // RgxPort tcp, 8080, 192.168.4.1, 80
+            #define USE_WIFI_RANGE_EXTENDER
+            #ifdef USE_WIFI_RANGE_EXTENDER
+                #define WIFI_RGX_SSID           "PORTAIL-JARDIN-GATEWAY"
+                #define WIFI_RGX_PASSWORD       "Lune5676"
+            #endif
+        
+            // You might even pass some parameters from the command line ----------------------------
+            // Ie:  export PLATFORMIO_BUILD_FLAGS='-DUSE_CONFIG_OVERRIDE -DMY_IP="192.168.1.99" -DMY_GW="192.168.1.1" -DMY_DNS="192.168.1.1"'
+        
+            // -- Setup your own MQTT settings  ---------------
+            #undef MQTT_CLIENT_ID
+                #define MQTT_CLIENT_ID "PORTAIL-JARDIN" // [MqttClient] Also fall back topic using last 6 characters of MAC address or use "DVES_%12X" for complete MAC address
+            #undef MQTT_TOPIC
+                #define MQTT_TOPIC "jardin/portail" // [Topic] unique MQTT device topic including (part of) device MAC address
+            #undef MQTT_GRPTOPIC
+                #define MQTT_GRPTOPIC "tasmotas/garage" // [GroupTopic] MQTT Group topic
+            #undef FRIENDLY_NAME
+                #define FRIENDLY_NAME "Portail de Jardin" // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
+            #undef EMULATION
+                #define EMULATION EMUL_NONE // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
+        
+            // -- ESP-NOW -------------------------------------
+            // Plus d'info dans le dossier : "Tasmota\info\xdrv_57_tasmesh.md"
+            //#define USE_TASMESH                              // Enable Tasmota Mesh using ESP-NOW (+11k code)
+        
+            // -- Optional modules ----------------------------
+            #define USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)
+        
+            // -- LCD I2C -----------------------
+            //#define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)
+            //#define USE_DISPLAY         // Add I2C/TM1637/MAX7219 Display Support (+2k code)
+            //#define USE_DISPLAY_SSD1306 // [DisplayModel 2] [I2cDriver4] Enable SSD1306 Oled 128x64 display (I2C addresses 0x3C and 0x3D) (+16k code)
+            //#define USE_DISPLAY_SH1106  // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)
+            //#define USE_GRAPH           // Enable line charts with displays
+            //#define NUM_GRAPHS 4        // Max 16
+        
+            // -- I2C sensors ---------------------------------
+            #define USE_I2C             // I2C using library wire (+10k code, 0k2 mem, 124 iram)
+            #ifdef USE_I2C
+                #define I2CDRIVERS_0_31        0xFFFFFFFF        // Enable I2CDriver0  to I2CDriver31
+                #define I2CDRIVERS_32_63       0xFFFFFFFF        // Enable I2CDriver32 to I2CDriver63
+                #define I2CDRIVERS_64_95       0xFFFFFFFF        // Enable I2CDriver64 to I2CDriver95
+                #define I2CDRIVERS_96_127      0xFFFFFFFF        // Enable I2CDriver96 to I2CDriver127
+                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159
+        
+                // #define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)
+        
+                // Cf. url: https://tasmota.github.io/docs/MCP230xx/
+                // Vérifier activation du driver : I2cDriver22 1
+                // Tester l'adresse du module MCP23XXX (adresse comprise entre 0x20 & 0x26) : I2CScan
+                // Les paramètres des I/O est realisé dans le fichier mcp23xx.dat
+                // Paramètres Mode 2 MCP23017
+                //#define USE_MCP23XXX_DRV
+                    //#define USE_MCP230xx_ADDR 0x20                  // Enable MCP23008/MCP23017 I2C Address to use (Must be within range 0x20 through 0x26 - set according to your wired setup)
+                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)
+        
+                // #define USE_RTC_CHIPS                                 // Enable RTC chip support and NTP server
+            #endif
+        
+            // -- Internal Analog input -----------------------
+            //#undef USE_ADC_VCC // Display Vcc in Power status. Disable for use as Analog input on selected devices	
+        
+            // -- Optional light modules ----------------------
+            #define USE_LIGHT                                // Add support for light control
+            #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //
+            //  #define USE_WS2812_DMA                         // ESP8266 only, DMA supports only GPIO03 (= Serial RXD) (+1k mem). When USE_WS2812_DMA is enabled expect Exceptions on Pow
+                #define USE_WS2812_RMT  0                      // ESP32 only, hardware RMT support (default). Specify the RMT channel 0..7. This should be preferred to software bit bang.
+            //  #define USE_WS2812_I2S  0                      // ESP32 only, hardware I2S support. Specify the I2S channel 0..2. This is exclusive from RMT. By default, prefer RMT support
+            //  #define USE_WS2812_INVERTED                    // Use inverted data signal
+                #define USE_WS2812_HARDWARE  NEO_HW_WS2812     // Hardware type (NEO_HW_WS2812, NEO_HW_WS2812X, NEO_HW_WS2813, NEO_HW_SK6812, NEO_HW_LC8812, NEO_HW_APA106, NEO_HW_P9813)
+                #undef USE_WS2812_CTYPE
+                #define USE_WS2812_CTYPE     NEO_GRB           // Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)
+        
+            // -- One wire sensors ----------------------------
+            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
+            #define USE_DS18x20                              // Add support for DS18x20 sensors with id sort, single scan and read retry (+2k6 code)
+            //#define W1_PARASITE_POWER                      // Optimize for parasite powered sensors
+            //#define DS18x20_USE_ID_AS_NAME                 // Use last 3 bytes for naming of sensors
+            // #define DS18x20_USE_ID_ALIAS                      // Add support aliasing for DS18x20 sensors. See comments in xsns_05 files (+0k5 code)
+        
+            // -- One wire sensors ----------------------------
+            #undef USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
+        
+            // -- Serial sensors ------------------------------
+            #define USE_MODBUS
+            // #define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)
+                                                            // GPIO4=Slave TX / GPIO5=Slave RX
+        
+            // -- Retraits pour tenir dans la partition app de 2880 Ko (2026-11-22) -------------
+            // Le premier build a donne 3 018 034 o pour 2 949 120 o permis : cette carte ESP32 n'a ni LoRa, ni volets
+            // (le Shutter du portail tourne sur le P4), et sans PSRAM le FTP fait planter la carte (comme la cave et le
+            // projecteur ESP32). Les modules d'animation Berry pesaient a eux seuls ~190 Ko (voir la cave).
+            #undef USE_LORAWAN_BRIDGE
+            #undef USE_LORA_SX126X
+            #undef USE_SHUTTER
+            #undef USE_FTP
+            #undef USE_BERRY_ANIMATION_DSL
+            #undef USE_BERRY_ANIMATION
+            
+            // -- Utilisation des WebSockets ------------------------------
+            #define USE_WSSERVER
+        
+            // -- Rules or Script  ----------------------------
+            // Select none or only one of the below defines USE_RULES or USE_SCRIPT
+            #define USE_RULES                                                       // Add support for rules (+8k code)
+            #ifdef USE_RULES
+                #define SUPPORT_MQTT_EVENT                                          // Support trigger event with MQTT subscriptions (+1k8 code)
+                #define USE_EXPRESSION                                              // Add support for expression evaluation in rules (+1k7 code)
+                    #define SUPPORT_IF_STATEMENT                                    // Add support for IF statement in rules (+2k7)
+                //#define USER_RULE1 "<Any rule1 data>"                             // Add rule1 data saved at initial firmware load or when command reset is executed
+                //#define USER_RULE2 "<Any rule2 data>"                             // Add rule2 data saved at initial firmware load or when command reset is executed
+                //#define USER_RULE3 "<Any rule3 data>"                             // Add rule3 data saved at initial firmware load or when command reset is executed
+                #define USE_VIEW_RULE_MEMS_AND_VARS                                 // Enable viewing of rule memories and variables in the web UI (+0k7 code)
+            #endif
+            #ifdef USER_BACKLOG
+                #undef USER_BACKLOG
+            #endif
+            #define USER_BACKLOG      "Backlog Hostname PORTAIL-JARDIN"
+
         // -- Options for tasmota32p4-wifi6 ------
         #elif defined(FIRMWARE_ESP32P4_GARAGE_SERVEUR_MODBUS)
             #undef CFG_HOLDER

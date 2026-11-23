@@ -610,6 +610,12 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   texte vertical. Generateurs `outils_pc/genere_brochage_excel.py` (cartes `CARTES` : S3 DevKitC-1, DevKitC V4, P4) et
   `genere_brochage_horizontal.py` (ESP32 Relay x8, Waveshare 8DI-8RO), par Excel (pywin32, Python systeme) ; ne
   reecrivent jamais un classeur existant. Banc `outils_pc/test_genere_brochage.py`.
+  **Disposition imposee (2026-11-22)** : la photo de la carte est vue de dessus (tournee et rognee au besoin : `rotation`, `crop`, `agrandit`
+  de l'entree de `genere_brochage_horizontal.py::CARTES`), chaque vis a sa case en face d'elle (haut ou bas de l'image, texte vertical, nom de la
+  vis, GPIO et usage du persist). Borniers en haut et en bas : texte vertical (`genere_brochage_horizontal.py`) ; borniers sur les cotes : image tournee
+  pour que les intitules soient HORIZONTAUX (`genere_brochage_lateral.py`, cles `gauche` et `droite`). Seuls les GPIO ABSENTS de l'image vont dans le tableau a part « GPIO hors bornier ». Jamais de tableau
+  general a cote de la photo ; ce qui n'est pas verifie (ordre des vis, numerotation) est dit dans la case et dans `notes`. Exemple : carte
+  `esp32-relay-x4-modbus` (portail de jardin).
 - Classement des cartes par lieu (2026-11-11, plan `tasks/plans/classement-par-lieu.md`, maquettes `outils_docs/filtre_lieu/`) :
   `outils_pc/lieux.py` = SEULE table des lieux (2e segment du nom d'env ; `EXCEPTIONS` vide depuis le 2026-11-12), `puce()`, et le JS
   `remplitParLieu` (listes `<optgroup>` des pages 7700 a 7980) ; banc `test_lieux.py`. Les routes `/envs`, `/parc`, `/cartes`

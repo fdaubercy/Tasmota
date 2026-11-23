@@ -32,6 +32,35 @@ CARTES = {
         "systeme": {0: "BOOT (bouton de la carte)", 23: "LED d'état de la carte",
                     1: "TX (en-tête de programmation)", 3: "RX (en-tête de programmation)"},
     },
+    # Variante LATERALE (genere_brochage_lateral.py) : photo de devices.esphome.io tournee de 46 degres vers la gauche, borniers des relais
+    # a gauche, bornier a 8 vis a droite, intitules HORIZONTAUX. Les ordonnees des vis sont celles de l'image finale (rognee, agrandie 3 fois).
+    # Numerotation des relais (de haut en bas) et fonction des vis : NON verifiees.
+    "esp32-relay-x4-modbus": {
+        "titre": "Carte « ESP32 Relay x4 Modbus v1.3 » (ESP32-WROOM-32E, SP3485E, USB-C)",
+        "largeur": 930, "hauteur": 960, "echelle": 0.8, "rotation": -46, "crop": (120, 100, 430, 420), "agrandit": 3, "pas": 35,
+        "gpio_template": [0, 1, 2, 3, 4, 5, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+                          26, 27, 6, 7, 8, 11, 32, 33, 34, 35, 36, 37, 38, 39],
+        "places": {25, 26, 27, 33, 18, 19, 32},
+        "gauche": [([(190, ""), (221, "")], "Borne 2 vis", None, "Borne 2 vis : fonction non vérifiée")]
+                  + [([(y, "") for y in ys], f"Relais {k}", g, None)
+                     for k, g, ys in [(1, 23, (253, 290, 328)), (2, 5, (406, 442, 475)),
+                                      (3, 4, (555, 588, 620)), (4, 13, (700, 735, 770))]]
+                  + [([(812, ""), (847, "")], "Borne 2 vis", None, "Borne 2 vis : fonction non vérifiée (alimentation ?)")],
+        "droite": [([(295 + 35.3 * (i - 1), f"vis {i}") for i in range(1, 9)], "Bornier 8 vis", None,
+                    "Entrées 1 à 4 (GPIO 25 / 26 / 27 / 33, optocoupleurs ; l'entrée 1 porte le capteur de fermeture du portail), "
+                    "RS485 (GPIO 18 RX / 19 TX / 32 DE) et commun : ordre des 8 vis non vérifié, à relever sur la carte")],
+        "systeme": {0: "BOOT (bouton IO0 ; niveau bas au démarrage = mode flash)", 1: "TX de la console USB-C (COM3)",
+                    3: "RX de la console USB-C", 15: "LED d'état de la carte (strapping)", 2: "libre, strapping : à éviter",
+                    12: "plot « G12 » de l'en-tête 4 plots (lu à faible résolution), strapping : à éviter",
+                    14: "plot « G14 » de l'en-tête 4 plots", 21: "plot « G21 » de l'en-tête 4 plots (SDA I2C par défaut)",
+                    22: "plot « G22 » de l'en-tête 4 plots (SCL I2C par défaut)",
+                    16: "plot libre de l'en-tête vertical du bord gauche (UART2 RX)", 17: "plot libre du même en-tête (UART2 TX)",
+                    34: "entrée seule, non documenté sur la carte", 35: "entrée seule, non documenté sur la carte",
+                    36: "entrée seule, non documenté sur la carte", 39: "entrée seule, non documenté sur la carte"},
+        "notes": ["Photo de devices.esphome.io tournée de 46° vers la gauche (vue en perspective) : l'alignement des cases sur les vis est approché.",
+                  "Numérotation des relais 1 à 4 SUPPOSÉE de haut en bas, fonction des vis et ordre des 4 plots non vérifiés : à contrôler (Power1 à Power4, sérigraphie).",
+                  "Brochage des GPIO : fiche ESPHome « ESP32_Relay_X4_Modbus_v1.3 » (signaux inversés). GPIO 6 à 11 : flash interne, interdits ; 37 et 38 non exposés."],
+    },
     "waveshare-s3-eth-8di-8ro": {
         "titre": "Waveshare ESP32-S3-ETH-8DI-8RO (relais par TCA9554 I2C 0x20)",
         "largeur": 690, "hauteur": 582, "echelle": 1.3, "crop": (130, 0, 820, 582), "pas": 22.5,
@@ -65,10 +94,32 @@ def relais_tca(persist):
     return res
 
 
+def prepare_image(image, carte, sortie):
+    """Rotation (degres, positif = sens horaire), rognage, agrandissement : rend (chemin, temporaire ?). Le temporaire est a supprimer apres usage."""
+    if not (carte["crop"] or carte.get("rotation")):
+        return image, False
+    from PIL import Image
+    tmp = os.path.join(os.path.dirname(os.path.abspath(sortie)), "_tmp_image.png")
+    im = Image.open(image).convert("RGBA")
+    fond = Image.new("RGBA", im.size, (255, 255, 255, 255))
+    fond.alpha_composite(im)
+    im = fond.convert("RGB")
+    if carte.get("rotation"):
+        im = im.rotate(-carte["rotation"], resample=Image.BICUBIC, expand=True, fillcolor=(255, 255, 255))
+    if carte["crop"]:
+        im = im.crop(carte["crop"])
+    if carte.get("agrandit"):
+        im = im.resize((im.width * carte["agrandit"], im.height * carte["agrandit"]), Image.LANCZOS)
+    im.save(tmp)
+    return tmp, True
+
+
 def genere(dossier_env, sortie, cle, image):
     if os.path.exists(sortie):
         sys.exit(f"REFUS : {sortie} existe deja (il a pu etre complete a la main).")
     carte = CARTES[cle]
+    if "gauche" in carte:
+        sys.exit("Carte a borniers lateraux : utiliser genere_brochage_lateral.py")
     env = os.path.basename(os.path.normpath(dossier_env))
     persist = json.load(open(os.path.join(dossier_env, "_persist.json"), encoding="utf-8"))
     usages = usages_persist(persist, noms_composants(DEPOT), carte)
@@ -77,6 +128,8 @@ def genere(dossier_env, sortie, cle, image):
 
     def texte_groupe(titre, gpio, fixe, court=False):
         if fixe and gpio is None:
+            if "non vérifi" in fixe:
+                return fixe, "sys"
             return fixe, "alim" if "Alim" in fixe or "5 V" in fixe else ("gnd" if "Masse" in fixe else "entree")
         if isinstance(gpio, str):                       # relais du TCA9554
             k = int(gpio[3:]) - 1
@@ -92,11 +145,8 @@ def genere(dossier_env, sortie, cle, image):
             return f"{titre} (GPIO{gpio}) : " + " / ".join(t for t, _ in usages[gpio]), usages[gpio][0][1]
         return (fixe or f"{titre} (GPIO{gpio}) : libre"), ("modbus" if fixe else "libre")
 
-    if carte["crop"]:
-        from PIL import Image
-        tmp = os.path.join(os.path.dirname(os.path.abspath(sortie)), "_tmp_image.png")
-        Image.open(image).crop(carte["crop"]).save(tmp)
-        image = tmp
+    image, retouchee = prepare_image(image, carte, sortie)
+    utilises.update(carte.get("places", ()))
     k = carte["echelle"]
     larg_px, haut_px = carte["largeur"] * k, carte["hauteur"] * k
     ncol = math.ceil(larg_px / PX)
@@ -218,6 +268,9 @@ def genere(dossier_env, sortie, cle, image):
         ws.Cells(fin, C0).Value = ("Usages générés le " + __import__("datetime").date.today().isoformat()
                                    + " : à tenir à jour à la main au fil des montages (le fichier n'est pas régénéré).")
         ws.Cells(fin, C0).Font.Size = 8
+        for j, n in enumerate(carte.get("notes", []), 1):
+            ws.Cells(fin + j, C0).Value = n
+            ws.Cells(fin + j, C0).Font.Size = 8
         try:
             ps = ws.PageSetup
             ps.Orientation = 2
@@ -231,7 +284,7 @@ def genere(dossier_env, sortie, cle, image):
         wb.Close(False)
     finally:
         xl.Quit()
-        if carte["crop"] and os.path.exists(image):
+        if retouchee and os.path.exists(image):
             os.remove(image)
     print("ecrit :", sortie)
 
