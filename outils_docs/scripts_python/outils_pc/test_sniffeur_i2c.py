@@ -395,7 +395,7 @@ def test_mqtt():
     contient(texte, "aucune reponse sur stat/garage/cuve/RESULT", "MQTT muet : texte")
     for mauvais in ("", "garage/#", "garage/+/x", "a b"):
         verifie(sc.envoie_mqtt(mauvais, commande, transport=lambda *a: "x")[0], False, f"topic {mauvais!r} refuse")
-    verifie(sc.topic_propose(di.RACINE, "data/cave/tasmota32s3-serveur-rly"), "cave/serveur-rly-cave-v2", "topic du persist")
+    verifie(sc.topic_propose(di.RACINE, "data/cave/tasmota32s3-serveur-rly"), "cave/serveur-rly-cave", "topic du persist")
     verifie(sc.topic_propose(di.RACINE, "data/rien/absent"), "", "topic : carte sans persist")
 
 
@@ -452,7 +452,7 @@ def test_http():
                 "maitre port ferme : 409")
         statut, corps = post("/carte", {"carte": "data/cave/tasmota32s3-serveur-rly"})
         verifie("TCA9554" in json.loads(corps)["puces"], True, "/carte : puces de la carte")
-        verifie(json.loads(corps)["topic"], "cave/serveur-rly-cave-v2", "/carte : topic propose")
+        verifie(json.loads(corps)["topic"], "cave/serveur-rly-cave", "/carte : topic propose")
         verifie(post("/carte", {"carte": "../secret"})[0], 400, "/carte hors depot refusee")
         sn.traite_lignes([X(0x20, "W", "0109")])
         contient(get("/export?format=txt")[1], "0x20 W [01 09]", "export txt")

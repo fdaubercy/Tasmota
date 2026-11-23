@@ -147,7 +147,7 @@ def sonde_page(m):
             True, "carte observee (cave S3) : 0x20 decode TCA9554")
     clic(cdp, "ongletEnvoi")
     verifie(cdp.js("!document.getElementById('vueEnvoi').classList.contains('cache')"), True, "onglet Envoi")
-    verifie(attend(cdp, "document.getElementById('cTopic').value === 'cave/serveur-rly-cave-v2'", 10), True,
+    verifie(attend(cdp, "document.getElementById('cTopic').value === 'cave/serveur-rly-cave'", 10), True,
             "topic MQTT de la carte propose")
     cdp.js("var s=document.getElementById('cTransport'); s.value='mqtt'; s.dispatchEvent(new Event('change')); 1")
     verifie(cdp.js("[document.getElementById('cIp').disabled, document.getElementById('cTopic').disabled]"), [True, False],

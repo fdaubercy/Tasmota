@@ -57,7 +57,7 @@ def test_maitres_du_parc():
     verifie(sorted(p4), ["ap", "dossier", "env", "hostname", "id", "ip"], "maitre : cles")
     verifie(p4["ap"], "SERVEUR-GARAGE-GATEWAY", "maitre P4 : AP reel (rangeExtender.AP.SSID)")
     cave = next((m for m in ms if m["dossier"] == "data/cave/tasmota32s3-serveur-rly"), None)
-    verifie((cave or {}).get("hostname"), "SERVEUR-RLY-CAVE-V2", "maitre de la cave : hostname")
+    verifie((cave or {}).get("hostname"), "SERVEUR-RLY-CAVE", "maitre de la cave : hostname (identite de production, 2026-11-22)")
     verifie((cave or {}).get("ap"), "SERVEUR-RLY-CAVE-GATEWAY", "maitre de la cave : AP reel, pas <HOSTNAME>-GATEWAY (2026-11-13)")
     verifie("SERVEUR-RLY-CAVE-GATEWAY" in parc.reseaux(RACINE), True, "reseaux : l'AP reel de la cave est propose")
     verifie((p4["env"], p4["hostname"], p4["ip"], p4["id"]),

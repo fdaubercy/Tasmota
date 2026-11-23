@@ -35,7 +35,7 @@ DOSSIER = "data/garage/tasmota32s3-piscine"
 CASSE = 'id="creer"'
 CASSE_PAR = 'id="creer-casse"'
 MAITRE_P4 = "tasmota32p4-garage-serveur-modbus"
-IP_CAVE_S3 = "192.168.0.243"                  # IPAddress du persist de data/cave/tasmota32s3-serveur-rly
+IP_CAVE_S3 = "192.168.0.48"                   # IPAddress du persist de data/cave/tasmota32s3-serveur-rly
 
 
 def attend(cdp, expression, delai):

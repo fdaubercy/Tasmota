@@ -55,13 +55,10 @@ verifie(all(i["lieu"] in codes for i in ids), True, "identites : lieux dans la t
 verifie([i["hote"] for i in ids if i["env"] == "tasmota-jardin-pompe-piscine"], [""], "piscine sans hote")
 verifie(lieux.pour_page_identites(RACINE)["lieux"][0], ["etage2", "2e étage"], "pour_page_identites : premier lieu")
 verifie(lieux.pour_page_identites(RACINE)["cartes"], tous_ids, "pour_page_identites : cartes")
-# cave : l'ancien code publie sous cave/serveur-rly-cave (dossier *-sauvegarde, ancien format), le persist actif dit -v2
+# cave (2026-11-22) : dossier *-sauvegarde retire ; l'ESP32 en service et le S3 qui la remplace portent la meme identite
 cave = [i for i in tous_ids if i["topic"] == "cave/serveur-rly-cave"]
-verifie(len(cave), 1, "sauvegarde de la cave : une identite de topic cave/serveur-rly-cave")
-verifie((cave[0]["lieu"], cave[0]["hote"], cave[0]["ip"], cave[0].get("sauvegarde")) if cave else None,
-        ("cave", "SERVEUR-RLY-CAVE", "", True), "sauvegarde de la cave : lieu, hote, sans IP, marquee")
-verifie(any(i["topic"] == "cave/serveur-rly-cave-v2" and not i.get("sauvegarde") for i in tous_ids), True, "topic voulu -v2 des cartes actives conserve")
-verifie(cave[0]["env"] in cartes if cave else None, True, "sauvegarde de la cave : env de la carte active")
+verifie(sorted(i["env"] for i in cave), ["tasmota32-cave-serveur-rly", "tasmota32s3-cave-serveur-rly"], "cave : les deux cartes actives sur cave/serveur-rly-cave")
+verifie({(i["lieu"], i["hote"], i["ip"], bool(i.get("sauvegarde"))) for i in cave}, {("cave", "SERVEUR-RLY-CAVE", "192.168.0.48", False)}, "cave : lieu, hote, IP, aucune sauvegarde")
 import annuaire_registre
 nb = {c: n for c, _, n in annuaire_registre.en_json(RACINE)["lieux"]}
 verifie(nb["cave"], sum(1 for i in ids if i["lieu"] == "cave"), "annuaire : cartes de la cave non doublees par la sauvegarde")
