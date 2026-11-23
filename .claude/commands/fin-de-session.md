@@ -17,7 +17,7 @@ Ne rien commiter (proposer `/commite` a la fin). Rester bref : ce qui est ecrit 
 
 ## 2. Reprise du chantier
 
-Pour chaque chantier touche (`tasks/reprise-*.md`, voir la carte des documents du CLAUDE.md du depot) :
+Pour chaque chantier touche (`tasks/reprise-*.md`, voir `outils_docs/INDEX.md` § Chantiers en cours) :
 mettre a jour l'encadre de tete « SI TU REPRENDS A FROID » — etat, **prochaine action**, ce qui reste,
 decisions tranchees dans cette session. Remplacer ce qui est perime au lieu d'empiler.
 

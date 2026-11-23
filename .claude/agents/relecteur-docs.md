@@ -17,10 +17,10 @@ Tu vérifies la cohérence documentation / code du fork Tasmota de ce dépôt. R
 AUCUN fichier : tu lances les contrôles, tu rends la liste des corrections. N'ajoute pas de documentation de ta
 propre initiative.
 
-Règles du dépôt à faire respecter (section « Carte des documents » de `CLAUDE.md`) :
+Règles du dépôt à faire respecter (section « Carte des documents » de `CLAUDE.md`, aiguillage `outils_docs/INDEX.md`) :
 - dans les documents durables, le code se cite par `fichier::fonction`, jamais par numéro de ligne ;
 - les documents datés (audits, diagnostics, specs, `ANALYSE_*`, `tasks/export-session-*`) gardent leurs numéros : ne les corrige pas ;
-- `CLAUDE.md` est auto-suffisant et ses chiffres de lignes d'exceptions doivent être exacts.
+- `CLAUDE.md` reste court (< 16 000 octets) ; les chiffres de lignes de `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` doivent être exacts.
 
 Contrôles :
 1. **Renvois** : `python -I outils_docs/scripts_python/maintenance/verifie_references_docs.py` (code 1 = renvoi faux) ;
@@ -28,14 +28,15 @@ Contrôles :
 2. **Chemins cités** : pour les chemins de fichiers et de dossiers cités dans `CLAUDE.md`, `outils_docs/README.md`
    et `outils_docs/SOUS_AGENTS.md` (entre accents graves), vérifie par Glob qu'ils existent ; signale les fichiers
    disparus ou renommés (`git log --diff-filter=DR --name-status -n 30` aide).
-3. **Exceptions des 500 lignes** : pour chaque fichier cité comme exception dans `CLAUDE.md` avec un nombre de
+3. **Exceptions des 500 lignes** : pour chaque fichier cité comme exception dans `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` avec un nombre de
    lignes, compte les lignes réelles (`wc -l`) ; signale l'écart (la dérive d'un chiffre est normale, un écart
    de plus de ~10 lignes ou un fichier devenu inexistant mérite une correction). Cherche aussi les fichiers
    `.py`, `.be`, `.js` du dépôt (hors amont : `outils_docs/`, `data/`, `.claude/`) dépassant 500 lignes et absents
    de la liste d'exceptions.
-4. **Carte des documents** : les outils et pages récents (Glob `outils_docs/scripts_python/outils_pc/*_web.py`,
-   `build/cible_*.py`, `.claude/agents/*.md`, `.claude/commands/*.md`, `.claude/skills/*/`) ont leur entrée dans
-   `CLAUDE.md` ; une entrée décrit un fichier qui n'existe plus ; un banc cité n'existe pas.
+4. **INDEX.md** : chaque outil (`NOM_CIBLE` des `outils_docs/scripts_python/build/cible_*.py`) et chaque agent, commande
+   ou skill de `.claude/` a sa ligne dans `outils_docs/INDEX.md` (et, une fois l'action A20 du plan `binomes-berry` faite,
+   son guide dans `outils_docs/guides_outils/`) ; une ligne décrit un fichier qui n'existe plus ; un banc cité n'existe pas.
+   Le détail encore dans `outils_docs/CARTE_DOCUMENTS.md` n'est pas à compléter : il sera fondu dans les guides.
 5. **Agents et skills** : chaque `.claude/agents/*.md` figure dans `outils_docs/SOUS_AGENTS.md` (avec le bon modèle)
    et inversement ; le frontmatter (`name`, `description`, `tools`, `model`) est complet.
 6. **Plans** : renvois vers `tasks/plans/*.md` et specs `docs/superpowers/specs/*` qui existent ; `tasks/README.md` à jour

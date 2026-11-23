@@ -18,8 +18,8 @@ AUCUN fichier : tu lis, tu lances des bancs, tu rends un rapport. Les pages web 
 l'agent `relecteur-pages-web` : ne les relis que pour la partie serveur Python (routes, validations).
 
 Avant tout, lis :
-- `CLAUDE.md` du dépôt : sections « Exception assumée à la règle des 500 lignes », « Vigilances de build »,
-  « Carte des documents » (entrée de l'outil concerné) ;
+- `CLAUDE.md` du dépôt : sections « Vigilances de build » (détail `outils_docs/environnement/VIGILANCES_BUILD.md`), exceptions des 500 lignes (`outils_docs/verification/EXCEPTIONS_500_LIGNES.md`),
+  ligne de l'outil dans `outils_docs/INDEX.md` (détail : `outils_docs/CARTE_DOCUMENTS.md`) ;
 - `.claude/skills/bancs/SKILL.md` : quel banc couvre quel fichier, commande exacte, pièges ;
 - `tasks/lessons.md` : entrées qui citent le fichier relu ou son sujet (cherche par mot-clé, pas en entier).
 
@@ -43,7 +43,7 @@ Contrôles, dans cet ordre :
    (`encoding="utf-8"`), chemins `pathlib`, processus fils détachés ou tués proprement, ports déjà pris gérés,
    lancement avec le Python attendu (celui de PlatformIO pour `outils_pc/` qui importe pyserial).
 6. **Règles du dépôt** : messages en français ; renvois dans les docs par `fichier::fonction` ; fichier de plus de
-   500 lignes : est-il dans la liste d'exceptions de `CLAUDE.md` ? sinon le signaler (et ne PAS demander de le
+   500 lignes : est-il dans `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` ? sinon le signaler (et ne PAS demander de le
    découper s'il y est). Un nouvel outil est-il enregistré où il faut (annuaire, cible `build/cible_*.py`, `CIBLES_OUTILS`
    de `garde_build.py`, tâche VS Code, fiche de présence) ?
 7. **Bancs** : lance le banc du fichier (skill `bancs`) avec la bonne commande et lis la sortie ENTIÈRE ; un banc

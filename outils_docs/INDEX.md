@@ -20,7 +20,7 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 | Reprendre un chantier à froid | le plan rattaché (bloc suiviPlan injecté), puis `tasks/reprise-*.md` s'il existe | prochaine action, ce qui reste ; une reprise sans plan actif est périmée |
 | Décisions et préférences de l'utilisateur | `MEMORY.md` (injecté) | choix tranchés, faits matériels non dérivables du code |
 | Pièges de solidification Berry | `outils_docs/SOLIDIFICATION_BERRY.md` §4 | 13 pièges payés ; le vert d'un banc ne prouve pas la solidification |
-| Pièges du build | `CLAUDE.md` § Vigilances de build | jamais deux `pio run`, aucune cible PlatformIO pendant un build, `PYTHONIOENCODING=utf-8` |
+| Pièges du build | `CLAUDE.md` § Vigilances de build ; détail `outils_docs/environnement/VIGILANCES_BUILD.md` | jamais deux `pio run`, aucune cible PlatformIO pendant un build, `PYTHONIOENCODING=utf-8` |
 
 ## 2. Référence Berry, drivers et protocoles (avant de toucher un module de `data/`)
 
@@ -47,7 +47,8 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 
 ## 3. Outils de l'annuaire (http://127.0.0.1:7600), par groupe
 
-Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité.
+Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité. Détail de chaque outil et fonction, en attendant les guides de
+`outils_docs/guides_outils/` : `outils_docs/CARTE_DOCUMENTS.md` (tiré de CLAUDE.md, à fondre à l'action A20 de `binomes-berry`).
 
 | Groupe | Outil (port) | Doc actuelle |
 |---|---|---|
@@ -59,7 +60,7 @@ Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité
 | Ateliers | Graphiques (7950), Écrans (7960), Visuels (7985), Étiquettes QR (7970), Fabrique `.tapp` (7980) | README, section du même nom ; consignes des façades `outils_docs/visuels_accueil/CONSIGNES_VISUELS.md` |
 | Bus et cartes | Sniffeur ModBus (7300), Sniffeur MQTT (7100), Syslog (7200), Testeur UDP (7400), Pont série (7000) | onglet Aide de chaque page ; skill `logs-cartes` ; jamais 224.3.0.1:4000 depuis un banc |
 | Bus et cartes | Sniffeur I2C (7350), Cartes simulées (7940) | README, section du même nom |
-| Maintenance | Synchro du fork (7500) | README § Synchro du fork ; `CLAUDE.md` § Synchro du fork |
+| Maintenance | Synchro du fork (7500) | README § Synchro du fork ; `outils_docs/environnement/SYNCHRO_FORK.md` |
 | Dépôt et références | Organigramme des plans (7990), Ménage (7995), Sondes en cours (7910), Catalogue d'icônes (7930), Liens web | README, section du même nom |
 | Annuaire lui-même | accès, jeton commun, barre | `CLAUDE.md` (Carte, `acces_web.py`) ; spec `docs/superpowers/specs/2026-10-17-annuaire-outils-design.md` |
 | Plan de la maison | page générée | README § Plan de la maison ; plan `tasks/plans/plan-maison-echelle.md` |
@@ -79,14 +80,14 @@ Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité
 | Liste et rôle des agents | `outils_docs/SOUS_AGENTS.md` | lequel lancer, avec quel modèle |
 | Renvois des documents | `maintenance/verifie_references_docs.py`, agent `relecteur-docs` | `fichier:ligne` décalé, chemin disparu |
 | Cases cochées d'un plan | agent `verificateur-plans` | preuve absente |
-| Fichier de plus de 500 lignes | `CLAUDE.md` § Exception assumée | découpage refusé par l'utilisateur |
+| Fichier de plus de 500 lignes | `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` | découpage refusé par l'utilisateur |
 
 ## 5. Environnement de travail
 
 | Situation | Lire |
 |---|---|
-| Nouveau poste, VS Code, PermissionError sur `tasmota.ino.cpp` | `CLAUDE.md` § MONTER UN NOUVEAU POSTE et § Le PermissionError |
-| Retard du fork sur l'amont | `CLAUDE.md` § Synchro du fork ; agent `diagnostic-synchro-fork` ; journal `outils_docs/HISTORIQUE_SYNCHRO_FORK.md` (généré) |
+| Nouveau poste, VS Code, PermissionError sur `tasmota.ino.cpp` | `outils_docs/environnement/NOUVEAU_POSTE.md` |
+| Retard du fork sur l'amont | `outils_docs/environnement/SYNCHRO_FORK.md` ; agent `diagnostic-synchro-fork` ; journal `outils_docs/HISTORIQUE_SYNCHRO_FORK.md` (généré) |
 | Plans : format, index, organigramme | `tasks/plans/_FORMAT.md` ; `tasks/README.md` (généré par `.claude/hooks/index_plans.mjs`) |
 | Mods et extension VS Code | `.claude/mods/*/plugin.json` ; `outils_docs/vscode/suivi-plan/LISEZMOI.md` |
 

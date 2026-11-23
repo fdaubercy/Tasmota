@@ -41,7 +41,7 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 ### Ce fork (fdaubercy) (4)
 
 - <https://fdaubercy.github.io/Tasmota/organigramme.html>  
-  cite dans `CLAUDE.md` (+3)
+  cite dans `outils_docs/CARTE_DOCUMENTS.md` (+3)
 - <https://fdaubercy.github.io/Tasmota/tasmota32s3-garage-capteurs-cuve-modbus.html>  
   cite dans `data/garage/tasmota32s3-capteurs-cuve-modbus/qrcode.json`
 - <https://github.com/fdaubercy/Tasmota.git>  
@@ -49,7 +49,7 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://github.com/fdaubercy/Tasmota/blob/development/>  
   cite dans `outils_docs/scripts_python/maintenance/organigramme_plans.py`
 
-### Tasmota amont : depot, documentation, OTA (32)
+### Tasmota amont : depot, documentation, OTA (28)
 
 - <http://ota.tasmota.com/tasmota/release>  
   cite dans `outils_docs/README.md`
@@ -67,8 +67,6 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py` (+2)
 - <https://github.com/arendst/Tasmota/discussions/16226#discussioncomment-15318199>  
   cite dans `outils_docs/CHANGELOG.md`
-- <https://github.com/arendst/Tasmota/discussions/22851>  
-  cite dans `outils_docs/README.md`
 - <https://github.com/arendst/Tasmota/discussions/24205>  
   cite dans `outils_docs/MODELES_ESP.md`
 - <https://github.com/arendst/Tasmota/discussions/24448>  
@@ -97,12 +95,6 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/CHANGELOG.md`
 - <https://tasmota.github.io/docs/Blinds-and-Shutters/>  
   cite dans `outils_docs/TASMOTA_VOLETS_ROULANTS.md`
-- <https://tasmota.github.io/docs/Bluetooth_ESP32/>  
-  cite dans `outils_docs/README.md`
-- <https://tasmota.github.io/docs/Bluetooth_MI32/>  
-  cite dans `outils_docs/README.md`
-- <https://tasmota.github.io/docs/Bluetooth_MI32/#tasmota-and-ble-sensors>  
-  cite dans `outils_docs/README.md`
 - <https://tasmota.github.io/docs/Commands/>  
   cite dans `outils_docs/TASMOTA_VOLETS_ROULANTS.md`
 - <https://tasmota.github.io/docs/ESP32/>  
@@ -116,7 +108,7 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://templates.blakadder.com/waveshare_ESP32-S3-POE-ETH-8DI-8RO.html>  
   cite dans `outils_docs/MODELES_ESP.md` (+1)
 
-### Depots et projets GitHub tiers (31)
+### Depots et projets GitHub tiers (30)
 
 - <https://cli.github.com/>  
   cite dans `outils_docs/scripts_python/maintenance/synchronise_fork_tasmota.py`
@@ -143,7 +135,7 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
 - <https://github.com/freerouting/freerouting/releases/download/v2.5.0/freerouting-2.5.0.jar>  
   cite dans `.claude/skills/pcb-tasmota/scripts/routeur_freerouting.py`
 - <https://github.com/ikatyang/emoji-cheat-sheet/blob/github-actions-auto-update/README.md#table-of-contents>  
-  cite dans `outils_docs/CHANGELOG.md` (+1)
+  cite dans `outils_docs/CHANGELOG.md`
 - <https://github.com/Jason2866/platform-espressif32.git#Arduino/IDF55>  
   cite dans `platformio_override.ini`
 - <https://github.com/Jason2866/platform-espressif32.git#Arduino/IDF55_gcc152>  
@@ -172,8 +164,6 @@ Annuaire : http://127.0.0.1:7600 (tuile de chaque outil, lance et arrete). Adres
   cite dans `outils_docs/jauges/README.md` (+1)
 - <https://github.com/waveshareteam/ESP32-P4-WIFI6-Touch-LCD-7B>  
   cite dans `outils_docs/ECRAN_TACTILE_ESP32P4.md`
-- <https://github.com/wjohn007/TasmoView>  
-  cite dans `outils_docs/README.md`
 - <https://raw.githubusercontent.com/tasmota/docs/master/docs/Commands.md>  
   cite dans `outils_docs/schemas/commandes_tasmota.json` (+1)
 - <https://thelastoutpostworkshop.github.io/microcontroller_devkit/esp32partitionbuilder/>  

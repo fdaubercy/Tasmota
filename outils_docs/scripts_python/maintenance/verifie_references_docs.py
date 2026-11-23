@@ -32,7 +32,10 @@ from pathlib import Path
 
 DURABLES = ["CLAUDE.md", "outils_docs/README.md", "outils_docs/SOLIDIFICATION_BERRY.md",
             "outils_docs/PROTOCOLE_MODBUS.md", "outils_docs/CARTE_MODULES_BERRY.md", "outils_docs/EXTENSIONS_TAPP.md",
-            "outils_docs/INDEX.md"]
+            "outils_docs/INDEX.md", "outils_docs/CARTE_DOCUMENTS.md", "outils_docs/verification/EXCEPTIONS_500_LIGNES.md",
+            "outils_docs/environnement/NOUVEAU_POSTE.md", "outils_docs/environnement/VIGILANCES_BUILD.md",
+            "outils_docs/environnement/SYNCHRO_FORK.md", "outils_docs/reference_berry/COMMANDES.md",
+            "outils_docs/reference_berry/MODIFICATIONS_FIRMWARE.md"]
 DURABLES_MOTIFS = [".claude/skills/**/*.md", ".claude/agents/*.md", ".claude/commands/*.md"]
 EXT = r"(?:be|py|ino|h|c|cpp|ini|json|csv|md|js|html|css|sh|ps1|mjs|txt)"
 RE_LIGNE = re.compile(r"([\w./\\-]+\." + EXT + r"):(\d+(?:-\d+)?)\b")

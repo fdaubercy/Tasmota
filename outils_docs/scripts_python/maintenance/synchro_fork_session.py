@@ -5,7 +5,7 @@ devient une suite d'evenements numerotes (rejoues a un onglet qui se reconnecte)
 (synchro_fork_question.MARQUE) attendent une reponse de la page. Une seule execution a la fois.
 
 Pas d'arret force : tuer un merge ou un rebase en plein vol laisse un MERGE_HEAD ou un rebase a moitie
-fait (CLAUDE.md, « Pourquoi le hook ne lance PAS la synchro »). Pour arreter, on repond aux questions ;
+fait (outils_docs/environnement/SYNCHRO_FORK.md, « Pourquoi le hook ne lance PAS la synchro »). Pour arreter, on repond aux questions ;
 a la fermeture du serveur, l'entree standard se ferme et chaque question prend sa reponse prudente.
 """
 

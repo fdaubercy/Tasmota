@@ -17,7 +17,7 @@ Tu fais le ménage du dépôt Tasmota (fork personnel) EN PROPOSITION. Réponds 
 et ne supprimes RIEN : l'utilisateur décide, comme pour un audit. Un déplacement dans ce dépôt n'est jamais anodin.
 
 Avant tout, lis :
-- `CLAUDE.md` du dépôt : « Carte des documents », « Exception assumée à la règle des 500 lignes », « Fichiers à ne jamais
+- `CLAUDE.md` du dépôt : « Carte des documents », les exceptions des 500 lignes (`outils_docs/verification/EXCEPTIONS_500_LIGNES.md`), « Fichiers à ne jamais
   toucher sans accord » ;
 - `tasks/lessons.md` par mot-clé (ménage, orphelin, supprimer, déplacer, archive) ;
 - ta mémoire : ce que l'utilisateur a déjà décidé de garder.
@@ -60,7 +60,7 @@ Contrôles :
    un déplacement sert à classer, pas à déplacer pour déplacer ; 5 à 15 propositions de classement bien étayées valent
    mieux que 40 vagues.
 4. **Doublons** : fichiers identiques (`git hash-object`) ou presque, copies de `data/fs` ailleurs.
-5. **Taille** : fichiers du fork proches de 500 lignes (> 450) ou au-delà et absents de la liste d'exceptions de `CLAUDE.md`.
+5. **Taille** : fichiers du fork proches de 500 lignes (> 450) ou au-delà et absents de `outils_docs/verification/EXCEPTIONS_500_LIGNES.md`.
 6. **Dossiers vides, `.keep` inutiles, images volumineuses** (> 1 Mo) non référencées.
 7. **Poids du dépôt** : les 10 plus gros fichiers suivis (un `du` par dossier suspect, sans pipe), s'ils sont inutiles.
 
