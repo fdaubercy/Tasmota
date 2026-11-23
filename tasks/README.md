@@ -13,23 +13,22 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 <!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->
 
-65 plans : 26 actif, 1 en-pause, 38 clos.
+63 plans : 25 actif, 0 en-pause, 38 clos.
 
 ### build
 
 | Plan | Objectif | Avancement | Attend | Mis à jour |
 |---|---|---|---|---|
-| [binomes-berry](plans/binomes-berry.md) | Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et se… | 13 % (10/73) | 7 à vous, 1 sur carte | 2026-11-23 |
+| [binomes-berry](plans/binomes-berry.md) | Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et se… | 51 % (40/73) | 4 à vous, 1 sur carte | 2026-11-23 |
 | [cartes-simulees](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou d… | 75 % (18/24) | 2 sur carte | 2026-11-14 |
 
 ### cave
 
 | Plan | Objectif | Avancement | Attend | Mis à jour |
 |---|---|---|---|---|
+| [relais-cave-s3](plans/relais-cave-s3.md) | Remplacer la carte ESP32 de la cave en ligne par une S3 8 relais (Waveshare 8DI-8RO) : envs alignés, audit de… | 56 % (34/58) | 2 sur carte, 3 à vous | 2026-11-23 |
 | [ecran-cave-vues-commandes](plans/ecran-cave-vues-commandes.md) | Commander les appareils de la cave et voir son état sur l'écran 7B esclave, sans rien changer au comportement… | 87 % (34/41) | 1 sur carte, 1 à vous | 2026-11-13 |
 | [envs-grenier-rdc-sonoff-cave](plans/envs-grenier-rdc-sonoff-cave.md) | Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les vol… | 43 % (44/95) | 8 sur carte, 7 à vous | 2026-11-12 |
-| [relais-cave-s3](plans/relais-cave-s3.md) | Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32… | 80 % (17/19) | — | 2026-10-31 |
-| [audit-relais-cave-s3](plans/audit-relais-cave-s3.md) | Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositio… | 0 % (0/22), en pause | 2 sur carte, 3 à vous | 2026-10-31 |
 
 ### debits-energie
 
@@ -70,16 +69,14 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 | [plan-maison](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui… | 94 % (36/38) | 1 à vous, 1 sur carte | 2026-11-15 |
 | [ruban-cuve](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | 77 % (23/31) | 3 sur carte | 2026-11-02 |
 | [sniffeur-i2c](plans/sniffeur-i2c.md) | Voir en direct le trafic I2C de n'importe quelle carte du parc, décodé jusqu'au registre, et lire ou écrire u… | 72 % (33/43) | 3 sur carte, 1 à vous | 2026-10-31 |
-| [ethernet-p4](plans/ethernet-p4.md) | Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut | 0 % (0/37) | 6 à vous, 1 sur carte | 2026-10-26 |
 
 ### Plans clos
 
 - build (18) : [page-build-televersement](plans/page-build-televersement.md), [sauvegarde-config-cartes](plans/sauvegarde-config-cartes.md), [compilations-nuit](plans/compilations-nuit.md), [build-fin-partitions](plans/build-fin-partitions.md), [build-reparations](plans/build-reparations.md), [classement-par-lieu](plans/classement-par-lieu.md), [lieu-partage-syslog-mqtt](plans/lieu-partage-syslog-mqtt.md), [autoexec-bat](plans/autoexec-bat.md), [autoexec-mqtt-tapp](plans/autoexec-mqtt-tapp.md), [lib-ignore-envs](plans/lib-ignore-envs.md), [temps-compilation](plans/temps-compilation.md), [default-envs-page](plans/default-envs-page.md), [lib-ignore-cuve](plans/lib-ignore-cuve.md), [assistant-persist-modification](plans/assistant-persist-modification.md), [assistant-persist](plans/assistant-persist.md), [assistant-synchro-fork](plans/assistant-synchro-fork.md), [fichiers-berry-env](plans/fichiers-berry-env.md), [fichiers-berry-suppression](plans/fichiers-berry-suppression.md)
-- cave (1) : [cave-s3-waveshare](plans/cave-s3-waveshare.md)
 - debits-energie (3) : [energie-differentiel](plans/energie-differentiel.md), [jauges-cuve](plans/jauges-cuve.md), [energie-atelier](plans/energie-atelier.md)
 - graphiques-ecrans (3) : [atelier-graphiques](plans/atelier-graphiques.md), [atelier-destinations](plans/atelier-destinations.md), [graphiques-web](plans/graphiques-web.md)
 - methode (8) : [navigateur-ftp-cartes](plans/navigateur-ftp-cartes.md), [navigateur-ftp-cartes-a5-reprise](plans/navigateur-ftp-cartes-a5-reprise.md), [menage-appliquer](plans/menage-appliquer.md), [menage-page](plans/menage-page.md), [sondes-en-cours](plans/sondes-en-cours.md), [audit-berry](plans/audit-berry.md), [plan-par-conversation](plans/plan-par-conversation.md), [suivi-plan](plans/suivi-plan.md)
-- modbus-reseau (4) : [blocage-trappe-mpu6050](plans/blocage-trappe-mpu6050.md), [inclinaison-trappe-mpu6050](plans/inclinaison-trappe-mpu6050.md), [alerte-firmware-c6](plans/alerte-firmware-c6.md), [modbus-garage](plans/modbus-garage.md)
+- modbus-reseau (5) : [ethernet-p4](plans/ethernet-p4.md), [blocage-trappe-mpu6050](plans/blocage-trappe-mpu6050.md), [inclinaison-trappe-mpu6050](plans/inclinaison-trappe-mpu6050.md), [alerte-firmware-c6](plans/alerte-firmware-c6.md), [modbus-garage](plans/modbus-garage.md)
 - voie-mqtt (1) : [voie-mqtt-bloc1](plans/voie-mqtt-bloc1.md)
 
 <!-- fin-index-plans -->

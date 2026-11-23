@@ -2,13 +2,16 @@
 chantier: ethernet-p4
 titre: Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)
 objectif: Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut
-statut: actif
+statut: clos
 cree: 2026-10-26
-maj: 2026-10-26
+maj: 2026-11-23
 famille: modbus-reseau
+liens: voie-reseau-ethernet, rgx-ethernet-uplink
 spec: 2026-10-26-ethernet-p4-design.md
 ---
 # Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)
+
+Remplacé par `voie-reseau-ethernet` et `rgx-ethernet-uplink` (décidé le 2026-11-23).
 
 ## Contexte
 Spec validée par l'utilisateur le 2026-10-26 : `docs/superpowers/specs/2026-10-26-ethernet-p4-design.md`
@@ -116,3 +119,37 @@ séparé), pas de push sans demande, rien envoyé à une carte sans l'accord de 
 Chantier fini quand : les bancs Berry sont verts avec leurs témoins, les instantanés des 5 cartes sans PHY
 sont inchangés, le P4 tourne option OFF et option ON sans redémarrage en boucle, la cuve et le rideau
 restent joignables dans les deux états, et le résultat de la mesure du routage est consigné.
+
+## Bilan
+Plan clos le 2026-11-23 sans avoir été exécuté : aucune des 37 cases d'étapes n'est cochée (0/37), plus 1 amélioration restante.
+
+**Ce qui a marché.** La spec `docs/superpowers/specs/2026-10-26-ethernet-p4-design.md` et ce plan ont été écrits et validés le 2026-10-26
+(commit `cb7a636b2`, « spec et plan de l Ethernet en option sur le maitre ModBus P4 »). Les décisions de la spec (Wi-Fi défaut, Ethernet en
+option, mesure du routage avant tout correctif) ont servi de point de départ aux deux plans suivants. Aucun code n'a été écrit d'après ce plan :
+`git grep` ne trouve ni `carteAvecEthernet` ni `reglageEthernet` dans `data/fs`.
+
+**Ce qui a raté.** Le plan est resté à 0 % : le besoin a changé de forme avant la première étape. Le choix « bloc `serveur.ethernet` par carte,
+IP Ethernet distincte (.50), P4 seul » a été remplacé le 2026-11-02 par un réglage de voie (`serveur.voieReseau`, `ReglageGlobal VoieReseau`,
+`configGlobal.be::configGlobal_voieReseau`), valable pour toute carte à Ethernet, avec la même IP sur les deux voies. Le plan n'a pas été mis à jour
+à ce moment-là et est resté `actif` avec des cases devenues sans objet.
+
+**Règle retenue.** Quand un plan est remplacé par un autre chantier, le clore (ou le marquer `en-pause`) le jour même avec son renvoi, sinon
+l'index le compte comme du travail en attente. À reporter dans `tasks/lessons.md` si l'utilisateur le juge utile.
+
+**Cases ouvertes.** Aucune n'est cochée pour fermer le plan. Destination de chacune, après lecture de `voie-reseau-ethernet` et `rgx-ethernet-uplink` :
+
+| Action de ce plan | Cases ouvertes | Devenir |
+|---|---|---|
+| A1 essai du PHY du P4 sur table | 4 | Reportées vers `voie-reseau-ethernet` (essais sur carte : A1 FTP sur Ethernet, A5 repli, qui relèvent aussi `Status 5` Ethernet) |
+| A2 bloc `serveur.ethernet` dans les persists | 4 | Abandonnées : remplacé par `serveur.voieReseau` (`configGlobal.be::configGlobal_voieReseau`) ; l'IP Ethernet distincte facultative est dans `voie-reseau-ethernet` A4 |
+| A3 critère `carteAvecEthernet` et application au démarrage | 6 | Abandonnées : couvert par la voie réseau, bancs `banc_boot.py` cas 6 à 8 (voir `voie-reseau-ethernet` A5) |
+| A4 `ReglageGlobal Ethernet [ON\|OFF]` | 4 | Abandonnées : remplacé par `ReglageGlobal VoieReseau wifi\|ethernet` |
+| A5 bouton Ethernet de la page Configuration | 3 | Sans plan destinataire (aucun des deux plans n'a de bouton web ; à rouvrir si l'utilisateur le veut) |
+| A6 `/discovery` annonce l'IP STA du maître | 4 | Abandonnées dans leur forme (les deux IP .43 et .50 n'existent plus) ; la fiche publiée en Ethernet est traitée par `voie-reseau-ethernet` A2 |
+| A7 build et téléversement du P4, option OFF | 3 | Reportées vers `voie-reseau-ethernet` A3 (compilation de la cave S3 et du P4 par la page Build) |
+| A8 option à ON | 3 | Reportées vers `voie-reseau-ethernet` A3 et A5 (essais sur carte, point d'accès et repli) |
+| A9 mesure du routage, câble débranché | 3 | Reportées vers `rgx-ethernet-uplink` A3 (essai carte 4 : câble débranché ; essai 5 : route de sortie du NAPT, priorité STA 100 / ETH 50) |
+| A10 documentation et remontage du P4 | 3 | Reportées vers `voie-reseau-ethernet` A4 (mode d'emploi dans `outils_docs/README.md`) ; la mention de la spec dans `CLAUDE.md` n'est plus à faire |
+| Amélioration restante : correctif C, priorité de route Ethernet / Range Extender sans STA | 1 | Reportée vers `rgx-ethernet-uplink` (amélioration « Épingler le NAPT sur l'Ethernet avec `esp_netif_set_default_netif` ») |
+
+Total : 37 cases d'étapes + 1 amélioration = 38 cases ouvertes, aucune cochée.

@@ -1,3 +1,5 @@
+ARCHIVÉ le 2026-11-23 : fusionné dans tasks/plans/relais-cave-s3.md
+
 ---
 chantier: cave-s3-waveshare
 titre: Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO

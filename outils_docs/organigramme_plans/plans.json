@@ -41,7 +41,7 @@
    ],
    "specs": [],
    "cree": "2026-10-18",
-   "maj": "2026-10-29",
+   "maj": "2026-11-23",
    "pct": 95,
    "etapes": "21/22",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/modbus-garage.md",
@@ -143,7 +143,7 @@
    "nom": "page-build-televersement",
    "titre": "Page web « Build et téléversement » (port 7700, tuile de l'annuaire)",
    "objectif": "Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "build",
    "parent": "",
    "liens": [],
@@ -151,7 +151,7 @@
     "2026-10-24-page-build-televersement-design.md"
    ],
    "cree": "2026-10-24",
-   "maj": "2026-11-09",
+   "maj": "2026-11-23",
    "pct": 98,
    "etapes": "96/98",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/page-build-televersement.md",
@@ -223,15 +223,18 @@
    "nom": "ethernet-p4",
    "titre": "Ethernet en option sur le maître ModBus P4 (SERVEUR-GARAGE)",
    "objectif": "Ajouter l'Ethernet en option sur le maître ModBus P4, le Wi-Fi restant le défaut",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "modbus-reseau",
    "parent": "",
-   "liens": [],
+   "liens": [
+    "voie-reseau-ethernet",
+    "rgx-ethernet-uplink"
+   ],
    "specs": [
     "2026-10-26-ethernet-p4-design.md"
    ],
    "cree": "2026-10-26",
-   "maj": "2026-10-29",
+   "maj": "2026-11-23",
    "pct": 0,
    "etapes": "0/38",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/ethernet-p4.md",
@@ -340,48 +343,10 @@
    ]
   },
   {
-   "nom": "audit-relais-cave-s3",
-   "titre": "Suites de l'audit de l'env S3 du serveur relais de la cave",
-   "objectif": "Rendre l'env tasmota32s3-cave-serveur-rly prêt à remplacer la carte de la cave en ligne, selon les propositions de l'audit",
-   "statut": "en-pause",
-   "famille": "cave",
-   "parent": "",
-   "liens": [
-    "relais-cave-s3"
-   ],
-   "specs": [],
-   "cree": "2026-10-31",
-   "maj": "2026-10-31",
-   "pct": 0,
-   "etapes": "0/24",
-   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/audit-relais-cave-s3.md",
-   "urls_spec": []
-  },
-  {
-   "nom": "cave-s3-waveshare",
-   "titre": "Env S3 relais cave adapté à la carte Waveshare ESP32-S3-ETH-8DI-8RO",
-   "objectif": "Faire tourner les entrées-sorties actuelles du persist de la cave S3 sur la carte Waveshare 8DI-8RO, relais par le TCA9554",
-   "statut": "clos",
-   "famille": "cave",
-   "parent": "",
-   "liens": [
-    "envs-grenier-rdc-sonoff-cave",
-    "relais-cave-s3",
-    "voie-reseau-ethernet"
-   ],
-   "specs": [],
-   "cree": "2026-10-31",
-   "maj": "2026-11-03",
-   "pct": 79,
-   "etapes": "19/24",
-   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/cave-s3-waveshare.md",
-   "urls_spec": []
-  },
-  {
    "nom": "jauges-cuve",
    "titre": "Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve",
    "objectif": "Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "debits-energie",
    "parent": "",
    "liens": [
@@ -392,7 +357,7 @@
    ],
    "specs": [],
    "cree": "2026-10-31",
-   "maj": "2026-11-09",
+   "maj": "2026-11-23",
    "pct": 95,
    "etapes": "37/39",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/jauges-cuve.md",
@@ -436,20 +401,20 @@
   },
   {
    "nom": "relais-cave-s3",
-   "titre": "Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte S3 8 relais de remplacement",
-   "objectif": "Aligner les envs de la cave sur les broches de la carte en ligne, auditer l'env S3 et choisir une carte ESP32-S3 à 8 relais pour la remplacer",
+   "titre": "Cave — envs ESP32/S3 alignés sur la carte en ligne, audit de l'env S3, carte Waveshare 8DI-8RO de remplacement",
+   "objectif": "Remplacer la carte ESP32 de la cave en ligne par une S3 8 relais (Waveshare 8DI-8RO) : envs alignés, audit de l'env S3 suivi, entrées-sorties du persist portées sur la Waveshare",
    "statut": "actif",
    "famille": "cave",
-   "parent": "audit-relais-cave-s3",
+   "parent": "",
    "liens": [
-    "audit-relais-cave-s3",
-    "cave-s3-waveshare"
+    "envs-grenier-rdc-sonoff-cave",
+    "voie-reseau-ethernet"
    ],
    "specs": [],
    "cree": "2026-10-31",
-   "maj": "2026-10-31",
-   "pct": 77,
-   "etapes": "17/22",
+   "maj": "2026-11-23",
+   "pct": 51,
+   "etapes": "36/70",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/relais-cave-s3.md",
    "urls_spec": []
   },
@@ -493,7 +458,7 @@
    "nom": "energie-differentiel",
    "titre": "Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)",
    "objectif": "Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h)",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "debits-energie",
    "parent": "jauges-cuve",
    "liens": [
@@ -507,7 +472,7 @@
     "2026-11-03-onglet-autoexec-bat-design.md"
    ],
    "cree": "2026-11-01",
-   "maj": "2026-11-09",
+   "maj": "2026-11-23",
    "pct": 99,
    "etapes": "75/76",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/energie-differentiel.md",
@@ -583,7 +548,7 @@
    "nom": "sauvegarde-config-cartes",
    "titre": "Onglet « Sauvegarde configuration » de la page build (modèle B)",
    "objectif": "Sauvegarder, comparer, modifier paramètre par paramètre et restaurer la configuration (/dl : Settings + .drvset*) de chaque carte depuis la page build",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "build",
    "parent": "",
    "liens": [
@@ -592,7 +557,7 @@
    ],
    "specs": [],
    "cree": "2026-11-03",
-   "maj": "2026-11-03",
+   "maj": "2026-11-23",
    "pct": 100,
    "etapes": "33/33",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/sauvegarde-config-cartes.md",
@@ -606,7 +571,7 @@
    "famille": "modbus-reseau",
    "parent": "",
    "liens": [
-    "cave-s3-waveshare",
+    "relais-cave-s3",
     "rgx-ethernet-uplink"
    ],
    "specs": [],
@@ -821,9 +786,9 @@
    "objectif": "Paramétrer deux environnements, la carte Waveshare 8DI-8RO du grenier du rez-de-chaussée qui commande les volets et le Sonoff ESP8285 de la porte de la cave, préparer le retour en production de la cave S3, lui ajouter l'écran 7B et en faire le maître range extender du Sonoff ; ajouter la pompe de la piscine (192.168.0.40) le projecteur du jardin (192.168.0.41) et celui du barbecue : sauvegarde, env, mise en service",
    "statut": "actif",
    "famille": "cave",
-   "parent": "cave-s3-waveshare",
+   "parent": "relais-cave-s3",
    "liens": [
-    "cave-s3-waveshare",
+    "relais-cave-s3",
     "classement-par-lieu",
     "debits-deux-cartes",
     "ecran-cave-vues-commandes",
@@ -1224,7 +1189,7 @@
    ],
    "specs": [],
    "cree": "2026-11-17",
-   "maj": "2026-11-21",
+   "maj": "2026-11-22",
    "pct": 90,
    "etapes": "60/67",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-mqtt.md",
@@ -1303,6 +1268,26 @@
    "pct": 91,
    "etapes": "21/23",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/voie-mqtt-bloc1.md",
+   "urls_spec": []
+  },
+  {
+   "nom": "binomes-berry",
+   "titre": "Binômes Berry autonomes, manifeste unique et persist allégé",
+   "objectif": "Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et ses paramètres",
+   "statut": "actif",
+   "famille": "build",
+   "parent": "",
+   "liens": [
+    "assistant-persist",
+    "fichiers-berry-env",
+    "lib-ignore-envs"
+   ],
+   "specs": [],
+   "cree": "2026-11-23",
+   "maj": "2026-11-23",
+   "pct": 53,
+   "etapes": "40/75",
+   "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/binomes-berry.md",
    "urls_spec": []
   }
  ]

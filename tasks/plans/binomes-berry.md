@@ -65,7 +65,7 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 
 ## A5 — Blocs morts du persist
 - [x] Inventaire des lecteurs des 5 ESP32 sans PSRAM — preuve : rapport du sous-agent du 2026-11-23 (scripts `scratchpad/inventaire/`) ; projecteur LED 3 517 o de texte retirables (leds, SD, ecran, KNX, LoRaWan ; squelettes `{"name","activation":"OFF","environnement":{}}` pour I2C et ModBus, `{"activation":"OFF"}` pour serveur.tcp ; `name` exigé par `controleWeb.be`, `activation` par `configModules.be`). CORRECTIF : `diversFonctions::hiberneDriversInactifs` (appelée par `demarrage` à chaque démarrage) range déjà l'`environnement` des drivers OFF dans `/json/driversInactifs.json` et réécrit le persist : en régime établi le gain en RAM n'est que d'environ 350 o par projecteur ; le vrai gain restant est au niveau 3 (`modules.projecteur.environnement`, 3 122 o dont `analogiques` 1 039 o tous OFF), non couvert par l'hibernation
-- [ ] Proposition chiffrée par env, validée par l'utilisateur
+- [ ] Proposition chiffrée par env, validée par l'utilisateur (décidé le 2026-11-23 : `drivers.leds` à ON sans lecteur passé à OFF sur le bureau et la cave ESP32, pas retiré ; PORTAIL ESP32 jugé sur son autoexec CIBLE, pas sur le palier 1 : le P4 le commande par ModBus (relais virtuels 20 et 22 vers l'esclave 4), donc `drivers.ModBus`, `drivers.leds`, `serveur.udp` et `modules.portail` gardés, `modbusFonctions` reste solidifié)
 - [ ] Retrait dans le dépôt et déploiement (supprimer persist et autoexec, redémarrer, renvoyer)
 
 ## A6 — Paramètres en lecture seule dans `/json`
@@ -83,15 +83,15 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [ ] `node ~/.claude/helpers/test_injecte_lecons.cjs` vert ; sortie du hook < 8 000 o, sans « tronquée »
 
 ## A9 — Contradictions de CLAUDE.md levées
-- [ ] Push : autorisation du 29/10 écrite dans CLAUDE.md et `/commite`, toujours derrière `preparateur-push`
-- [ ] `tasks/lessons.md` lu par mot-clé, plus « en entier »
-- [ ] Exemption graphify complète (ni pré-commit, ni création de carte)
-- [ ] `c:\Users\fdaub\CLAUDE.md` (doublon du global) réduit à un renvoi
+- [x] Push : autorisation du 29/10 écrite dans CLAUDE.md et `/commite`, toujours derrière `preparateur-push` — preuve : commit 81621b5ca
+- [x] `tasks/lessons.md` lu par mot-clé, plus « en entier » — preuve : commit 81621b5ca
+- [x] Exemption graphify complète (ni pré-commit, ni création de carte) — preuve : commit 81621b5ca
+- [x] `c:\Users\fdaub\CLAUDE.md` (doublon du global) réduit à un renvoi — preuve : fichier hors dépôt réécrit le 2026-11-23 : renvoi au global, règles de base
 
 ## A10 — Fichier maître `outils_docs/INDEX.md`
-- [ ] Créé d'après le brouillon : situation -> fichier -> ce qu'il apporte (réussites, pièges), `.doc_for_ai/` compris
-- [ ] Ajouté à `DURABLES` de `maintenance/verifie_references_docs.py` ; script code 0, `test_verifie_references_docs.py` vert
-- [ ] Importé dans CLAUDE.md par `@outils_docs/INDEX.md`
+- [x] Créé d'après le brouillon : situation -> fichier -> ce qu'il apporte (réussites, pièges), `.doc_for_ai/` compris — preuve : commit 26d23d4c6 (outils_docs/INDEX.md, 120 lignes)
+- [x] Ajouté à `DURABLES` de `maintenance/verifie_references_docs.py` ; script code 0, `test_verifie_references_docs.py` vert — preuve : commit 26d23d4c6, verifie_references_docs.py rc 0, test_verifie_references_docs.py VERT
+- [x] Importé dans CLAUDE.md par `@outils_docs/INDEX.md` — preuve : commit 26d23d4c6 (CLAUDE.md, démarrage point 6)
 
 ## A11 — CLAUDE.md allégé à ~14 Ko
 - [ ] `outils_docs/verification/EXCEPTIONS_500_LIGNES.md`, `outils_docs/environnement/NOUVEAU_POSTE.md`, `outils_docs/environnement/VIGILANCES_BUILD.md` tirés de CLAUDE.md
@@ -100,29 +100,29 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [ ] `wc -c CLAUDE.md` < 16 000 ; `verifie_references_docs.py` code 0 ; `relecteur-docs` sans bloquant
 
 ## A12 — Reprises allégées
-- [ ] `tasks/reprise-modbus-garage.md` (30 lignes : cibles garage, décisions, reste) tiré de `reprise-chantier-modbus-grenier.md`
-- [ ] Les deux reprises archivées dans `tasks/archive/` ; « reste à solidifier » reporté dans `SOLIDIFICATION_BERRY.md` s'il est encore vrai
-- [ ] Démarrage de CLAUDE.md et mémoire `project_chantier_modbus_grenier` repointés ; grep des anciens noms vide dans `.claude`, CLAUDE.md et la mémoire
+- [x] `tasks/reprise-modbus-garage.md` (30 lignes : cibles garage, décisions, reste) tiré de `reprise-chantier-modbus-grenier.md` — preuve : commit f87cf7cbe
+- [x] Les deux reprises archivées dans `tasks/archive/` ; « reste à solidifier » reporté dans `SOLIDIFICATION_BERRY.md` s'il est encore vrai — preuve : commit f87cf7cbe (tasks/archive/, SOLIDIFICATION_BERRY.md §3, §7, piège 13)
+- [x] Démarrage de CLAUDE.md et mémoire `project_chantier_modbus_grenier` repointés ; grep des anciens noms vide dans `.claude`, CLAUDE.md et la mémoire — preuve : commit f87cf7cbe, mémoire réécrite le 2026-11-23
 
 ## A13 — `tasks/README.md` court
-- [ ] `.claude/hooks/index_plans.mjs` : une ligne par plan actif, par famille, sans la seconde copie des gestes ; `test_index_plans.mjs` adapté et vert
-- [ ] `index_plans.mjs --verifier` code 0 ; taille < 12 Ko
+- [x] `.claude/hooks/index_plans.mjs` : une ligne par plan actif, par famille, sans la seconde copie des gestes ; `test_index_plans.mjs` adapté et vert — preuve : commit a38c6df0f, test_index_plans.mjs rc 0
+- [x] `index_plans.mjs --verifier` code 0 ; taille < 12 Ko — preuve : « index_plans : vert » rc 0, tasks/README.md 10 085 o (commit a38c6df0f)
 
 ## A14 — Six suppressions (accord en bloc du 2026-11-23)
-- [ ] Mémoires `project_onglets_fenetre2` et `project_sauvegarde_scripts`, et leurs lignes de MEMORY.md
-- [ ] `tasks/correctif-udp-interface-2026-10-17.diff`
-- [ ] `docs/superpowers/plans/_sauvegarde-avant-solidify/`
-- [ ] `.claude/skills/pcb-tasmota/scripts/.claude-flow/`
-- [ ] Reliquat de fin de `outils_docs/README.md` (amont obsolète, adresses du réseau local et redirections de la box), APRÈS avoir sauvé les commandes personnalisées (vers `reference_berry/`) et la modification C++ du pied de page, et soumis le TODO à l'utilisateur (relecture du 2026-11-23)
+- [x] Mémoires `project_onglets_fenetre2` et `project_sauvegarde_scripts`, et leurs lignes de MEMORY.md — preuve : fichiers absents, MEMORY.md sans leurs lignes (2026-11-23)
+- [x] `tasks/correctif-udp-interface-2026-10-17.diff` — preuve : commit f87cf7cbe (git rm)
+- [x] `docs/superpowers/plans/_sauvegarde-avant-solidify/` — preuve : dossier absent (ignoré par git), 2026-11-23
+- [x] `.claude/skills/pcb-tasmota/scripts/.claude-flow/` — preuve : dossier absent (ignoré par git), 2026-11-23
+- [x] Reliquat de fin de `outils_docs/README.md` (amont obsolète, adresses du réseau local et redirections de la box), APRÈS avoir sauvé les commandes personnalisées (vers `reference_berry/`) et la modification C++ du pied de page ; TODO (Bluetooth/MI32, TasmotaClient, TasmoView) : suppression décidée le 2026-11-23 — preuve : commit be179e6b8 (README 3062 -> 2890 lignes, reference_berry/COMMANDES.md et MODIFICATIONS_FIRMWARE.md)
 
 ## A15 — Corrections des documents vivants
-- [ ] READMEs de maquettes `partitions/`, `build_fin_partitions/`, `sauvegarde_config/` : « réalisé, modèle X, le … »
-- [ ] Specs `solidification-berry-design`, `annuaire-outils-design`, `page-build-televersement-design` : statut d'une ligne
-- [ ] `SOLIDIFICATION_BERRY.md` : encadré de tête réécrit (verdict du 2026-07-15)
-- [ ] `SOUS_AGENTS.md` : tableau réparé, colonnes famille et usage, colonne « modifie » exacte
-- [ ] En-tête de `HISTORIQUE_SYNCHRO_FORK.md` corrigé dans `synchronise_fork_tasmota.py`, banc de la synchro vert
-- [ ] `LIENS_WEB.md` régénéré, `genere_liens_web.py --verifier` code 0
-- [ ] `SetOption127 1` du P4 écrit dans son autoexec ou son persist (accord : `data/`)
+- [x] READMEs de maquettes `partitions/`, `build_fin_partitions/`, `sauvegarde_config/` : « réalisé, modèle X, le … » — preuve : commit 068d87078
+- [x] Specs `solidification-berry-design`, `annuaire-outils-design`, `page-build-televersement-design` : statut d'une ligne — preuve : commit 068d87078
+- [x] `SOLIDIFICATION_BERRY.md` : encadré de tête réécrit (verdict du 2026-07-15) — preuve : commit f87cf7cbe
+- [x] `SOUS_AGENTS.md` : tableau réparé, colonnes famille et usage, colonne « modifie » exacte — preuve : commit 068d87078
+- [x] En-tête de `HISTORIQUE_SYNCHRO_FORK.md` corrigé dans `synchronise_fork_tasmota.py`, banc de la synchro vert — preuve : commit 068d87078 (script déjà juste), test_synchro_fork_assistant rc 0
+- [x] `LIENS_WEB.md` régénéré, `genere_liens_web.py --verifier` code 0 — preuve : commit 068d87078, --verifier rc 0
+- [x] `SetOption127 1` du P4 écrit dans son autoexec ou son persist (accord : `data/`) — preuve : commit 26d23d4c6 (autoexec.be du P4, ligne essayée sous berry.exe : 0 -> commande envoyée, 1 -> rien)
 
 ## A16 — Garde mécanique des secrets à la lecture
 - [ ] Lecteur masqué des fichiers à secrets (`_persist.json`, `user_config_override.h`, `tasmota_defines_for_berry.*`, sauvegardes de cartes), motifs repris de `garde_commit.cjs`
@@ -130,14 +130,14 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [ ] Une ligne dans chaque agent qui a Bash
 
 ## A17 — Mémoire native rangée
-- [ ] MEMORY.md en 4 rubriques (préférences, chantiers ouverts, faits matériels et pièges, références), lignes < 150 caractères, < 6 Ko
-- [ ] Mémoires périmées réduites à l'état actuel : `project_historique_capteurs`, `project_chantier_modbus_grenier`, `project_statut_cartes`, `project_portail_jardin`
-- [ ] Doublons avec CLAUDE.md ramenés à un renvoi ; tous les liens de MEMORY.md valides
+- [x] MEMORY.md en 4 rubriques (préférences, chantiers ouverts, faits matériels et pièges, références), lignes < 150 caractères, < 6 Ko — preuve : MEMORY.md 5 906 o, 0 ligne > 150 caractères (2026-11-23)
+- [x] Mémoires périmées réduites à l'état actuel : `project_historique_capteurs`, `project_chantier_modbus_grenier`, `project_statut_cartes`, `project_portail_jardin` — preuve : 4 fichiers réécrits le 2026-11-23
+- [x] Doublons avec CLAUDE.md ramenés à un renvoi ; tous les liens de MEMORY.md valides — preuve : 0 lien mort ni orphelin au contrôle du 2026-11-23
 
 ## A18 — Plans clos avec bilan
-- [ ] Section `## Bilan` (marché, raté, règle retenue, cases reportées) ajoutée à `_FORMAT.md` et contrôlée par `index_plans.mjs --verifier`
-- [ ] `sauvegarde-config-cartes`, `energie-differentiel`, `page-build-televersement`, `jauges-cuve` clos avec bilan
-- [ ] `ethernet-p4` clos « remplacé par » (à confirmer) ; plans cave et `navigateur-ftp-cartes-a5-reprise` liés par `parent:` ou fusionnés
+- [x] Section `## Bilan` (marché, raté, règle retenue, cases reportées) ajoutée à `_FORMAT.md` et contrôlée par `index_plans.mjs --verifier` — preuve : commit a38c6df0f
+- [x] `sauvegarde-config-cartes`, `energie-differentiel`, `page-build-televersement`, `jauges-cuve` clos avec bilan — preuve : commit a38c6df0f
+- [x] `ethernet-p4` clos « remplacé par » `voie-reseau-ethernet` et `rgx-ethernet-uplink` ; `relais-cave-s3`, `audit-relais-cave-s3`, `cave-s3-waveshare` fusionnés (décidé le 2026-11-23) ; `navigateur-ftp-cartes-a5-reprise` lié par `parent:` — preuve : ethernet-p4.md statut clos + ## Bilan ; relais-cave-s3.md 70 cases = 22 + 24 + 24 ; deux plans dans tasks/archive/ ; index --verifier rc 0 (commit des plans du 2026-11-23)
 - [ ] Enseignements de `temps-compilation`, `lib-ignore-*`, `graphiques-web`, `*-mpu6050`, `build-reparations` remontés dans les références
 
 ## A19 — Rangement des .md libres d'`outils_docs/`
@@ -149,7 +149,7 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [x] Relecture intégrale des 3 063 lignes : carte des sections, destination de chacune, défauts relevés — preuve : `tasks/rangement-md-relecture-readme.md` (3 sous-agents, 29 affirmations périmées, Build en 7 guides, 6 outils sans section), 2026-11-23
 - [ ] Fiches des fonctions des cartes vers `reference_berry/`
 - [ ] Un guide par outil dans `guides_outils/`, nommé d'après son `NOM_CIBLE` (Build en plusieurs fichiers) ; guides manquants écrits
-- [ ] README réduit à un renvoi vers INDEX.md ; renvois de CLAUDE.md, INDEX.md, `.claude/` et de l'en-tête de `logFonctions.be` (accord séparé) mis à jour
+- [ ] README réduit à un renvoi vers INDEX.md ; renvois de CLAUDE.md, INDEX.md, `.claude/` et de l'en-tête de `logFonctions.be` (accord du 2026-11-23) mis à jour
 - [ ] Contrôle « chaque `NOM_CIBLE` a son guide » ; `grep "README.md §"` vide sur `.claude`, CLAUDE.md, INDEX.md
 
 ## Améliorations restantes

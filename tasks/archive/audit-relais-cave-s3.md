@@ -1,3 +1,5 @@
+ARCHIVÉ le 2026-11-23 : fusionné dans tasks/plans/relais-cave-s3.md
+
 ---
 chantier: audit-relais-cave-s3
 titre: Suites de l'audit de l'env S3 du serveur relais de la cave

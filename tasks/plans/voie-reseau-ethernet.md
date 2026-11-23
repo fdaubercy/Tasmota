@@ -6,12 +6,12 @@ statut: actif
 cree: 2026-11-02
 maj: 2026-11-18
 famille: modbus-reseau
-liens: cave-s3-waveshare, rgx-ethernet-uplink
+liens: relais-cave-s3, rgx-ethernet-uplink
 ---
 # Voie Ethernet complète — FTP, UDP, esclaves par le point d'accès, repli sur le Wi-Fi
 
 ## Contexte
-Suite de `ReglageGlobal VoieReseau` (plan `cave-s3-waveshare`, non commité au 2026-11-02). Demande de l'utilisateur du
+Suite de `ReglageGlobal VoieReseau` (plan `relais-cave-s3`, non commité au 2026-11-02). Demande de l'utilisateur du
 2026-11-02 : FTP sur les deux voies, trous de l'UDP et du Range Extender, esclaves en Wi-Fi quand le maître est en
 Ethernet, repli automatique.
 
@@ -80,7 +80,7 @@ Limite relevée par `relecteur-berry` (2026-11-08) : pendant le repli, le Range 
 - [ ] Essais sur carte : câble débranché puis rebranché (l'événement `ETH#Connected` vient-il en IP fixe ?), état des relais au retour (`PowerOnState`), point d'accès actif (redémarrage en plus par `xdrv_58`)
 
 ## Améliorations restantes
-- [ ] [projet] `tasks/plans/cave-s3-waveshare.md` : l'essai de `VoieReseau` à réception de la carte reprend les essais de ce plan
+- [ ] [projet] `tasks/plans/relais-cave-s3.md` : l'essai de `VoieReseau` à réception de la carte reprend les essais de ce plan
 
 ## Vérification
 Berry : bancs ci-dessus, `verifie_berry.py`, `relecteur-berry`. Firmware : compilation par la page Build seulement. NAPT, câble et mDNS : seule la carte le prouve.

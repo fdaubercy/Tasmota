@@ -6,8 +6,8 @@ statut: actif
 cree: 2026-11-11
 maj: 2026-11-12 (A17 : env du NOUS créé et adapté, mesure vérifiée, compilation lancée)
 famille: cave
-parent: cave-s3-waveshare
-liens: cave-s3-waveshare, classement-par-lieu, debits-deux-cartes, ecran-cave-vues-commandes, lieu-partage-syslog-mqtt, visuel-reglage-volets
+parent: relais-cave-s3
+liens: relais-cave-s3, classement-par-lieu, debits-deux-cartes, ecran-cave-vues-commandes, lieu-partage-syslog-mqtt, visuel-reglage-volets
 spec: 2026-11-11-visuel-volets-reglage-durees-design.md
 ---
 # Deux envs : serveur du grenier du RDC et Sonoff de la porte de la cave ; cave S3
@@ -21,7 +21,7 @@ Demande du 2026-11-11, posée pendant le plan `lieu-partage-syslog-mqtt`.
 
 Carte : Waveshare ESP32-S3-ETH-8DI-8RO (WROOM-1U-N16R8, 8 Mo de PSRAM, 7-36 V), la même que la cave S3. Tout ce qu'il
 faut savoir de la carte est déjà écrit pour la cave : commentaire de `[env:tasmota32s3-cave-serveur-rly]` dans
-`platformio_tasmota_cenv.ini`, plan clos `tasks/plans/cave-s3-waveshare.md`, `outils_docs/cartes_relais_cave/README.md`,
+`platformio_tasmota_cenv.ini`, plan `tasks/plans/relais-cave-s3.md`, `outils_docs/cartes_relais_cave/README.md`,
 image `outils_docs/Schémas de branchement - Attribution des PINS des modules/cave/Waveshare-ESP32-S3-ETH-8DI-8RO.jpg`.
 En bref : relais CH1-CH8 par le TCA9554 (I2C 0x20, SDA 42, SCL 41, `tca9554.dat`, `USE_TCA9554`), entrées isolées
 DI1-DI8 (DI1 GPIO4, DI2 GPIO5, DI3 GPIO6, DI4 GPIO7…), RS485 17/18, W5500 (INT 12, MOSI 13, MISO 14, SCLK 15, CS 16),
@@ -141,7 +141,7 @@ Wifi Cave » puis MAISON). Le Sonoff Dual R3 (.46) doit donc être éteint AVANT
 
 ## A6 — Cave S3 : identité d'essai
 - [x] Vérifier que l'env `tasmota32s3-cave-serveur-rly` porte bien .243 et `cave/serveur-rly-cave-v2` — preuve : 2026-11-12, `.h` `WIFI_IP_ADDRESS "192.168.0.243"`, `MQTT_TOPIC "cave/serveur-rly-cave-v2"`, `MQTT_CLIENT_ID "SERVEUR-RLY-CAVE-V2"` ; `data/cave/tasmota32s3-serveur-rly/_persist.json` : `serveur.IP.IPAddress` .243, `serveur.mqtt.topic`/`client` identiques, hôte `SERVEUR-RLY-CAVE`. Le persist de `data/cave/tasmota32-serveur-rly` (env ESP32, même section du `.h`) porte la même identité d'essai ; la carte en service tourne le code du dossier `-sauvegarde` (.48), qui n'est pas touché. Hostname : `USER_BACKLOG` du `.h` passé à `SERVEUR-RLY-CAVE-V2` pour `FIRMWARE_ESP32S3_CAVE_SERVEUR_RLY` seul (accord du 2026-11-12), égal à `serveur.hostname` du persist ; l'env ESP32 garde `SERVEUR-RLY-CAVE`.
-- [ ] Reprendre les améliorations restantes du plan `cave-s3-waveshare` (compilation, port COM, câblage DI3/DI4,
+- [ ] Reprendre les améliorations restantes du plan `relais-cave-s3` (compilation, port COM, câblage DI3/DI4,
   essai Ethernet, en-tête 21/48) à la réception de la carte. Attention : en maître range extender (A10), la cave a besoin
   de son Wi-Fi pour le point d'accès ; l'essai Ethernet ne doit pas le couper (même remarque que pour le grenier du RDC).
 
