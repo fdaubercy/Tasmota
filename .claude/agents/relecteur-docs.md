@@ -26,7 +26,7 @@ Contrôles :
 1. **Renvois** : `python -I outils_docs/scripts_python/maintenance/verifie_references_docs.py` (code 1 = renvoi faux) ;
    rapporte chaque ligne en défaut et, par Grep, où la fonction a été déplacée ou renommée.
 2. **Chemins cités** : pour les chemins de fichiers et de dossiers cités dans `CLAUDE.md`, `outils_docs/README.md`
-   et `outils_docs/SOUS_AGENTS.md` (entre accents graves), vérifie par Glob qu'ils existent ; signale les fichiers
+   et `outils_docs/verification/SOUS_AGENTS.md` (entre accents graves), vérifie par Glob qu'ils existent ; signale les fichiers
    disparus ou renommés (`git log --diff-filter=DR --name-status -n 30` aide).
 3. **Exceptions des 500 lignes** : pour chaque fichier cité comme exception dans `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` avec un nombre de
    lignes, compte les lignes réelles (`wc -l`) ; signale l'écart (la dérive d'un chiffre est normale, un écart
@@ -37,7 +37,7 @@ Contrôles :
    ou skill de `.claude/` a sa ligne dans `outils_docs/INDEX.md` (et, une fois l'action A20 du plan `binomes-berry` faite,
    son guide dans `outils_docs/guides_outils/`) ; une ligne décrit un fichier qui n'existe plus ; un banc cité n'existe pas.
    Le détail encore dans `outils_docs/CARTE_DOCUMENTS.md` n'est pas à compléter : il sera fondu dans les guides.
-5. **Agents et skills** : chaque `.claude/agents/*.md` figure dans `outils_docs/SOUS_AGENTS.md` (avec le bon modèle)
+5. **Agents et skills** : chaque `.claude/agents/*.md` figure dans `outils_docs/verification/SOUS_AGENTS.md` (avec le bon modèle)
    et inversement ; le frontmatter (`name`, `description`, `tools`, `model`) est complet.
 6. **Plans** : renvois vers `tasks/plans/*.md` et specs `docs/superpowers/specs/*` qui existent ; `tasks/README.md` à jour
    (`node .claude/hooks/index_plans.mjs --verifier`, code 1 = en retard).

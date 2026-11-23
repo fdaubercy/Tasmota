@@ -6,7 +6,7 @@
 > Fichiers : `data/fs/modbusFonctions.be` (logique), `data/fs/controleModbus.be` (driver),
 > `data/fs/modBus_TasmotaSlaveModBus.be` (Tasmota esclave), `data/fs/modBus_Conn16channels.be`
 > (relais 16 canaux). Mode d'emploi (commandes d'exemple, trames detaillees par code de
-> fonction) : [Aide/MODBUS.md](Aide/MODBUS.md) — ce document-ci est la reference de CONCEPTION.
+> fonction) : [Aide/MODBUS.md](MODBUS_MODE_EMPLOI.md) — ce document-ci est la reference de CONCEPTION.
 
 ---
 
@@ -310,7 +310,7 @@ en 0,3-0,4 s ; a raccourcir une fois les corrections ci-dessus validees sur le b
 Source : `outils_docs/Electronique/Connecteur ModBus/16 Channel Multifunction RS485
 Module commamd.docx` et `... Manual.docx`. **Verifie dans la doc constructeur, pas deduit.**
 
-Commandes d'exemple pretes a l'emploi (trames et `ModBusSend`) : [Aide/MODBUS.md](Aide/MODBUS.md),
+Commandes d'exemple pretes a l'emploi (trames et `ModBusSend`) : [Aide/MODBUS.md](MODBUS_MODE_EMPLOI.md),
 section « Exemples de commandes pour les Modules ModBus 16 channels ». ⚠️ Vocabulaire different, a
 confirmer sur la carte : l'ordre `01` y est appele « Fermeture » (et `07` « Fermeture de tous »),
 la ou le constructeur dit « Open » (« Open all ») — memes trames, sens physique a verifier.
@@ -1054,7 +1054,7 @@ TESTUDP-1` -> P4 `LIRE_UDP: ... recues de '192.168.4.2'` ; E1 : P4 `ReglageModbu
 socket non liee depuis la cuve vers le P4 -> toujours non recu. Essai 2 (Wi-Fi classique) :
 unicast dans les deux sens et E1 vers l'IP box de la cuve ; multicast cuve -> P4 recu seulement si
 la box relaie le multicast (a consigner tel quel) ; multicast P4 -> cuve : rien (attendu).
-Detail ligne par ligne : `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` §7.
+Detail ligne par ligne : `outils_docs/historique/DIAGNOSTIC_UDP_2026-10-17.md` §7.
 
 *Resultats (2026-10-17, testeur UDP, P4 COM4 + cuve COM12).* Essai 1 (Range Extender) : 6/6 RECU
 (unicast et multicast dans les deux sens, E1 aller-retour, ImAlive) et 11/11 cuve -> P4 unicast ;
@@ -1280,7 +1280,7 @@ Le P4 du garage commande aussi des esclaves par MQTT (`cmnd/<topic>/Power1`), av
 embarquer sur l'esclave et aucune trame ModBus pour ces ordres. Projecteur LED (`jardin/projecteur_led`), pompe de piscine
 (`jardin/pompe_piscine`, Sonoff S2X ESP8266, sans Berry) et cuve (`jardin/cuve`, derrière le NAPT du P4, qui garde par ailleurs
 son ModBus et son Berry). Plan `tasks/plans/voie-mqtt.md`, analyse
-`outils_docs/ANALYSE_VOIE_MQTT_2026-11-16.md`, mode d'emploi `outils_docs/README.md` § « Voie MQTT maître/esclaves ».
+`outils_docs/historique/ANALYSE_VOIE_MQTT_2026-11-16.md`, mode d'emploi `outils_docs/README.md` § « Voie MQTT maître/esclaves ».
 
 - **Cadre.** Chaque ordre passe par la garde `mqttLiaisonFonctions.be` (compare-avant-agir, limiteur par élément, quarantaine,
   coupe-circuit global, accusé et renvois) avant d'être publié par `controleMqttLiaison.be::ordonne`. L'état réel revient par

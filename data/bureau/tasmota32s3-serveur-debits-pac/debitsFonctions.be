@@ -1,5 +1,5 @@
 # Fonctions du module metier debits : 6 debitmetres a impulsions de la nourrice de chauffage
-# (plan tasks/plans/debitmetres-chauffage.md, analyse outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md).
+# (plan tasks/plans/debitmetres-chauffage.md, analyse outils_docs/historique/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md).
 # Voies 1-2 : pilote FlowRateMeter (GPIO 4, 5), lues dans son JSON (cle "Débit" en firmware francais).
 # Voies 3-6 : Counter1-4 (GPIO 6, 7, 15, 16), debit = impulsions / duree de la fenetre / K.
 # Attention : le Rate du FlowRateMeter (voies 1-2) suit la derniere periode (moyenne exponentielle du pilote), les

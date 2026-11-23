@@ -42,4 +42,4 @@ Périmés et retirés de l'ancienne reprise : « flasher et observer » (fait), 
 
 ## Renvois
 
-`outils_docs/PROTOCOLE_MODBUS.md` §8 (carte 16 relais), §9 (synchronisation, commandes sans fil), §11 (voie MQTT) ; `outils_docs/AUDIT_MODBUS_2026-09-29.md` §6 (grille) ; `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` ; sniffeur et testeur : `outils_docs/README.md`. Archive : `tasks/archive/reprise-chantier-modbus-grenier.md` (encadrés « ÉTAT AU » d'origine, détail des essais).
+`outils_docs/reference_berry/PROTOCOLE_MODBUS.md` §8 (carte 16 relais), §9 (synchronisation, commandes sans fil), §11 (voie MQTT) ; `outils_docs/historique/AUDIT_MODBUS_2026-09-29.md` §6 (grille) ; `outils_docs/historique/DIAGNOSTIC_UDP_2026-10-17.md` ; sniffeur et testeur : `outils_docs/README.md`. Archive : `tasks/archive/reprise-chantier-modbus-grenier.md` (encadrés « ÉTAT AU » d'origine, détail des essais).

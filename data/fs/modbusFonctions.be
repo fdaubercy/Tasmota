@@ -1,5 +1,5 @@
 # TAILLE DU BINOME : voir le bloc en tete de controleModbus.be (genere par mesure_binomes.py, ne pas editer)
-# Pour l'aide au protocole ModBus : outils_docs/Aide/MODBUS.md (mode d'emploi) et outils_docs/PROTOCOLE_MODBUS.md (conception)
+# Pour l'aide au protocole ModBus : outils_docs/reference_berry/MODBUS_MODE_EMPLOI.md (mode d'emploi) et outils_docs/reference_berry/PROTOCOLE_MODBUS.md (conception)
 
 # Rend ce module solidifiable (ajouté le 2026-07-15).
 # Pour Berry, ce n'est qu'un commentaire : aucun effet sur l'appareil, le fichier
@@ -77,7 +77,7 @@ modbusFonctions.timeout_ReponseModBus_ms = 4000
 # --- File d'attente FIFO du maitre ModBus (un seul message en vol a la fois) ---
 # Remplace l'ancien couple (booleen attenteReponse + renvoi par timer nomme par
 # StartAddress, qui ecrasait/perdait des messages sur collision de nom).
-# Voir outils_docs/PROTOCOLE_MODBUS.md sections 5-6.
+# Voir outils_docs/reference_berry/PROTOCOLE_MODBUS.md sections 5-6.
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.queue = []            # messages en attente : [{paramMSG, typeMsg, tentatives}, ...]
 # (etat deplace dans modbusFonctions.etat()) modbusFonctions.enVol = nil           # message envoye en attente de reponse (nil = canal RS485 libre)
 modbusFonctions.MAX_TENTATIVES = 3    # renvois max avant abandon (jamais de blocage ni de perte muette)
@@ -343,7 +343,7 @@ def modbusFonctions_aideReglageModbus(sujet)
                 "si esclave, et fiche MQTT retenue si le broker est connecte). Le maitre envoie ensuite",
                 "ses commandes a cet esclave par cette voie ; l'esclave repond toujours par la voie",
                 "d'arrivee de la requete. Le cable RS485 reste branche : revenir a Serial suffit.",
-                "Voir outils_docs/PROTOCOLE_MODBUS.md §9, « Commandes sans fil ».",
+                "Voir outils_docs/reference_berry/PROTOCOLE_MODBUS.md §9, « Commandes sans fil ».",
                 "Exemple : ReglageModbus VoieCommandes UDP"]
     elif (sujet == "IMALIVE")
         return ["INTERNE : envoyee par les esclaves ModBus au maitre (UDP/MQTT) au demarrage,",
@@ -1609,7 +1609,7 @@ def modbusFonctions_envoiMsgModbusSerial(paramMSG, typeMsg)
     var reponse = {}
 
     # Maitre (id = 0) : jamais appele pour lui (audit P5.10, 2026-10-25) : envoiMsgModbus enfile TOUS ses
-    # messages (enfileMsg -> pompeQueue, voir outils_docs/PROTOCOLE_MODBUS.md) et ne descend ici que pour une
+    # messages (enfileMsg -> pompeQueue, voir outils_docs/reference_berry/PROTOCOLE_MODBUS.md) et ne descend ici que pour une
     # Reponse, que le maitre n'emet pas.
     if (drivers["ModBus"].find("id", 99) == 0)
         modbusFonctions.log("ENVOI_MSG_MODBUS_SERIAL_ERREUR: maitre : Reponse non emise (le maitre n'en envoie pas) !", LOG_LEVEL_ERREUR)
@@ -3095,7 +3095,7 @@ modbusFonctions.prepareTrame = modbusFonctions_prepareTrame
 # NOTE (2026-07-16) : relanceEnvoiMsgModbus et reinitialiseFlagModBus ont ete
 # SUPPRIMEES (remplacees par la file d'attente : pompeQueue/termineEnVol/surTimeout).
 # Leur contournement ESP32-P4 (add_cron au lieu de set_timer) est repris par
-# modbusFonctions.armeTimer(). Voir outils_docs/PROTOCOLE_MODBUS.md.
+# modbusFonctions.armeTimer(). Voir outils_docs/reference_berry/PROTOCOLE_MODBUS.md.
 
 def modbusFonctions_crc16modbus(buf)
     var crc = 0x0000FFFF

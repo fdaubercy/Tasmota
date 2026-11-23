@@ -103,7 +103,7 @@ nouvelle carte P4, lire `Status 2` ou la sortie d'esptool pour choisir la base.
 | Passerelle Zigbee | S3 + H2, ou ESP32/ESP8266 + EFR32 (Silicon Labs) | UART | esp-zigbee-sdk ; dans Tasmota : Zigbee2Tasmota avec un EFR32 ou un CC2652 | Sonoff ZBBridge (ESP8266 + EFR32, env `tasmota-zbbridge`), ZBBridge Pro (ESP32 + EFR32, `tasmota32-zbbrdgpro`) |
 | Microcontrôleur quelconque + module Wi-Fi | STM32, AVR… + C3/C2/ESP32 | UART (commandes AT) | **esp-at** | Ancien couple Arduino + ESP-01 |
 | Hôte Linux + carte Wi-Fi | Processeur Linux + E22 (Wi-Fi 6E) ou C5/C6 | PCIe / SDIO / SPI | pilote Linux, esp-hosted (version Linux) | Raspberry Pi + C6 ; futurs PC et tablettes avec E22 |
-| Plusieurs nœuds Tasmota sur un même produit | ESP32 + ESP32, S3 + ESP32 | RS485 ModBus, UART, I2C, UDP | Tasmota + Berry | Architecture maître/esclaves ModBus de ce dépôt (`outils_docs/PROTOCOLE_MODBUS.md`) |
+| Plusieurs nœuds Tasmota sur un même produit | ESP32 + ESP32, S3 + ESP32 | RS485 ModBus, UART, I2C, UDP | Tasmota + Berry | Architecture maître/esclaves ModBus de ce dépôt (`outils_docs/reference_berry/PROTOCOLE_MODBUS.md`) |
 
 Règles de choix qui en découlent :
 

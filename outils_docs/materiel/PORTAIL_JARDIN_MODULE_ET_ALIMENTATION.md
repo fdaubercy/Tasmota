@@ -2,7 +2,7 @@
 
 Notes de recherche sur le matériel de l'esclave 4 (`tasmota32s3-garage-portail-jardin-modbus`, topic `jardin/portail`) et son raccordement à la motorisation **SCS Sentinel OpenGate 1**. Rien n'est essayé sur carte. Rien n'est modifié dans le persist ni dans le firmware.
 
-Contexte du dépôt : `tasks/plans/voie-mqtt.md` A10, `tasks/plans/facade-garage-portail-commande.md`, `outils_docs/TASMOTA_VOLETS_ROULANTS.md`, `data/garage/tasmota32s3-portail-jardin-modbus/`.
+Contexte du dépôt : `tasks/plans/voie-mqtt.md` A10, `tasks/plans/facade-garage-portail-commande.md`, `outils_docs/reference_berry/TASMOTA_VOLETS_ROULANTS.md`, `data/garage/tasmota32s3-portail-jardin-modbus/`.
 
 ## 1. Le besoin
 

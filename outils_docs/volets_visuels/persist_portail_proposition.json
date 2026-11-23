@@ -1,3 +1,3 @@
 {
-  "_statut": "OBSOLETE : applique puis remplace par l'architecture du 2026-11-14 (deux Shutters mode 3 sur le P4, VR2 et VR3, relais virtuels 20 a 23 de l'esclave 4 ; esclave 4 sans Shutter). Voir les persists data/garage/tasmota32p4-serveur-modbus et tasmota32s3-portail-jardin-modbus, et outils_docs/TASMOTA_VOLETS_ROULANTS.md. Fichier a supprimer quand l'utilisateur le decide."
+  "_statut": "OBSOLETE : applique puis remplace par l'architecture du 2026-11-14 (deux Shutters mode 3 sur le P4, VR2 et VR3, relais virtuels 20 a 23 de l'esclave 4 ; esclave 4 sans Shutter). Voir les persists data/garage/tasmota32p4-serveur-modbus et tasmota32s3-portail-jardin-modbus, et outils_docs/reference_berry/TASMOTA_VOLETS_ROULANTS.md. Fichier a supprimer quand l'utilisateur le decide."
 }

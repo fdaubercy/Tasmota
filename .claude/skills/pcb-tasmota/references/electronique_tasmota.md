@@ -13,7 +13,7 @@
 - Code Berry, commandes `ReglageXxx`, `autoexec.be`, solidification :
   **REQUIRED SUB-SKILL : tasmota-berry**. Docs du dépôt :
   `outils_docs/Electronique/ADS1115/CABLAGE_ADS1115.md`, `CABLAGE_RUBAN_LED.md`,
-  `outils_docs/PROTOCOLE_MODBUS.md` (§8 carte 16 relais).
+  `outils_docs/reference_berry/PROTOCOLE_MODBUS.md` (§8 carte 16 relais).
 
 ## 2. ESP32-S3 DevKitC-1 (WeAct, LED RGB sur GPIO48)
 

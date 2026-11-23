@@ -33,7 +33,7 @@ FIN TAILLE DU BINOME -#
  * l'ECharts 6.1.0 des cartes le 2026-10-31 (tasks/plans/jauges-cuve.md, A1).
  *
  * SOLIDIFIE dans le firmware de la cuve et du P4 (custom_berry_solidify) : aucun etat dans le module (sa table
- * est en lecture seule une fois solidifie, piege 12 de outils_docs/SOLIDIFICATION_BERRY.md).
+ * est en lecture seule une fois solidifie, piege 12 de outils_docs/reference_berry/SOLIDIFICATION_BERRY.md).
 ********************************************************************************************* -#
 
 #@ solidify:cuvePageFonctions

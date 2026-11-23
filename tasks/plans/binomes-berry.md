@@ -94,10 +94,10 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [x] Importé dans CLAUDE.md par `@outils_docs/INDEX.md` — preuve : commit 26d23d4c6 (CLAUDE.md, démarrage point 6)
 
 ## A11 — CLAUDE.md allégé à ~14 Ko
-- [ ] `outils_docs/verification/EXCEPTIONS_500_LIGNES.md`, `outils_docs/environnement/NOUVEAU_POSTE.md`, `outils_docs/environnement/VIGILANCES_BUILD.md` tirés de CLAUDE.md
-- [ ] « Carte des documents » remplacée par un tableau de 12 sujets et la règle « une fonctionnalité nouvelle = une ligne dans INDEX.md »
-- [ ] Même commit : règle 4 de `relecteur-docs` remplacée par « chaque `NOM_CIBLE` a son guide et sa ligne dans INDEX.md » ; `/fin-de-session` adapté
-- [ ] `wc -c CLAUDE.md` < 16 000 ; `verifie_references_docs.py` code 0 ; `relecteur-docs` sans bloquant
+- [x] `outils_docs/verification/EXCEPTIONS_500_LIGNES.md`, `outils_docs/environnement/NOUVEAU_POSTE.md`, `outils_docs/environnement/VIGILANCES_BUILD.md` tirés de CLAUDE.md — preuve : commit 5bf4e3bbc (blocs identiques octet pour octet à HEAD, + environnement/SYNCHRO_FORK.md)
+- [x] « Carte des documents » remplacée par un tableau de 12 sujets et la règle « une fonctionnalité nouvelle = une ligne dans INDEX.md » — preuve : commit 5bf4e3bbc : règle « une ligne dans INDEX.md » ; l'import de INDEX.md tient lieu de tableau (pas de seconde table) ; détail dans outils_docs/CARTE_DOCUMENTS.md
+- [x] Même commit : règle 4 de `relecteur-docs` remplacée par « chaque `NOM_CIBLE` a son guide et sa ligne dans INDEX.md » ; `/fin-de-session` adapté — preuve : commit 5bf4e3bbc (relecteur-docs.md règle 4, fin-de-session.md)
+- [x] `wc -c CLAUDE.md` < 16 000 ; `verifie_references_docs.py` code 0 ; `relecteur-docs` sans bloquant — preuve : CLAUDE.md 15 013 o ; verifie_references_docs.py 39 documents 0 défaut ; relecteur-docs sans bloquant, 3 corrections appliquées
 
 ## A12 — Reprises allégées
 - [x] `tasks/reprise-modbus-garage.md` (30 lignes : cibles garage, décisions, reste) tiré de `reprise-chantier-modbus-grenier.md` — preuve : commit f87cf7cbe
@@ -141,9 +141,9 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [ ] Enseignements de `temps-compilation`, `lib-ignore-*`, `graphiques-web`, `*-mpu6050`, `build-reparations` remontés dans les références
 
 ## A19 — Rangement des .md libres d'`outils_docs/`
-- [ ] `git mv` vers `historique/` (ANALYSE_*, AUDIT_*, DIAGNOSTIC_UDP, CHANGELOG), `materiel/` (MODELES_ESP, ECRAN_TACTILE_ESP32P4, PORTAIL_JARDIN, ICONES_BOUTONS_RELAIS, PLC_OPENPLC), `reference_berry/` (PROTOCOLE_MODBUS, `Aide/MODBUS.md` -> MODBUS_MODE_EMPLOI.md, SOLIDIFICATION_BERRY, CARTE_MODULES_BERRY, FICHIERS_DRVSET, EXTENSIONS_TAPP, TASMOTA_VOLETS_ROULANTS), `verification/` (SOUS_AGENTS)
-- [ ] Renvois mis à jour : CLAUDE.md, INDEX.md, agents, skills `bancs` et `pcb-tasmota`, constante de `carte_modules_berry.py`, `DURABLES` ; grep des anciens noms vide hors plans et specs
-- [ ] `carte_modules_berry.py` relancé sans diff ; `verifie_references_docs.py` code 0
+- [x] `git mv` vers `historique/` (ANALYSE_*, AUDIT_*, DIAGNOSTIC_UDP, CHANGELOG), `materiel/` (MODELES_ESP, ECRAN_TACTILE_ESP32P4, PORTAIL_JARDIN, ICONES_BOUTONS_RELAIS, PLC_OPENPLC), `reference_berry/` (PROTOCOLE_MODBUS, `Aide/MODBUS.md` -> MODBUS_MODE_EMPLOI.md, SOLIDIFICATION_BERRY, CARTE_MODULES_BERRY, FICHIERS_DRVSET, EXTENSIONS_TAPP, TASMOTA_VOLETS_ROULANTS), `verification/` (SOUS_AGENTS) — preuve : 22 git mv (rangement A19), Aide/MODBUS.md -> reference_berry/MODBUS_MODE_EMPLOI.md
+- [x] Renvois mis à jour : CLAUDE.md, INDEX.md, agents, skills `bancs` et `pcb-tasmota`, constante de `carte_modules_berry.py`, `DURABLES` ; grep des anciens noms vide hors plans et specs — preuve : a19_range.py : renvois réécrits (dont 13 .be de data/, accord du 2026-11-23, blocs de taille refaits) ; git grep des anciens chemins vide hors traces, tasks/lessons.md (ajout seul) et un commentaire du cenv (autre session)
+- [x] `carte_modules_berry.py` relancé sans diff ; `verifie_references_docs.py` code 0 — preuve : chemin de sortie corrigé, régénéré sans diff ; verifie_references_docs.py rc 0 ; test_tapp_web, banc_tapp_fsmqtt, test_verifie_references_docs VERT
 
 ## A20 — Découpage de `outils_docs/README.md`, un fichier par outil
 - [x] Relecture intégrale des 3 063 lignes : carte des sections, destination de chacune, défauts relevés — preuve : `tasks/rangement-md-relecture-readme.md` (3 sous-agents, 29 affirmations périmées, Build en 7 guides, 6 outils sans section), 2026-11-23

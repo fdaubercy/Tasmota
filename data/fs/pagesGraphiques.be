@@ -25,7 +25,7 @@ FIN TAILLE DU BINOME -#
  * TOUJOURS avec ce module ; separe pour que chaque fichier reste sous 500 lignes.
  * Au demarrage, seul l'index (id, titre, acces de chaque page) reste en RAM, dans la globale cachee
  * '.pagesGraphiques' : la table du module est en lecture seule une fois solidifie (piege 12 de
- * outils_docs/SOLIDIFICATION_BERRY.md). Les graphiques ne sont relus qu'a l'ouverture d'une page.
+ * outils_docs/reference_berry/SOLIDIFICATION_BERRY.md). Les graphiques ne sont relus qu'a l'ouverture d'une page.
  * Description absente, tronquee, illisible ou invalide : aucun bouton, et la page repond « Description invalide »
  * avec le motif (log PAGES_GRAPHIQUES_ERREUR) ; les autres routes de la carte ne sont pas touchees.
  *

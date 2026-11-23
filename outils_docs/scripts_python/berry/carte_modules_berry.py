@@ -1,10 +1,10 @@
-r"""Genere outils_docs/CARTE_MODULES_BERRY.md : la carte des modules Berry par carte.
+r"""Genere outils_docs/reference_berry/CARTE_MODULES_BERRY.md : la carte des modules Berry par carte.
 
 UTILISATION
 -----------
   python outils_docs/scripts_python/berry/carte_modules_berry.py [--sortie CHEMIN] [--racine DEPOT]
 
-  Ecrit outils_docs/CARTE_MODULES_BERRY.md (regenere a chaque lancement), rien d'autre.
+  Ecrit outils_docs/reference_berry/CARTE_MODULES_BERRY.md (regenere a chaque lancement), rien d'autre.
 
 CE QU'IL LIT (lecture seule)
 ----------------------------
@@ -543,7 +543,7 @@ def main():
     ap.add_argument("--racine", default=RACINE)
     ap.add_argument("--sortie", default=None)
     a = ap.parse_args()
-    sortie = a.sortie or os.path.join(a.racine, "outils_docs", "CARTE_MODULES_BERRY.md")
+    sortie = a.sortie or os.path.join(a.racine, "outils_docs", "reference_berry", "CARTE_MODULES_BERRY.md")
     nm, nc, inco, infos = genere(a.racine, sortie)
     print("%s ecrit : %d modules, %d cartes, %d incoherences, %d informations." % (sortie, nm, nc, len(inco), len(infos)))
 

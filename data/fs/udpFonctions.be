@@ -88,7 +88,7 @@
            (discoveryFonctions.mqtt_discovery). Bancs : outils_docs/scripts_python/berry/test_discovery.be §8-10.
          * La fiche n'est reconstruite qu'à la connexion Wi-Fi : un ipMaitre reçu n'y entre qu'à la
            reconnexion suivante (ImAlive et MQTT annoncent l'ancienne valeur d'ici là).
-      Détail et tableaux : outils_docs/ANALYSE_BERRY_MODBUS_DISCOVERY.md §2.6.
+      Détail et tableaux : outils_docs/historique/ANALYSE_BERRY_MODBUS_DISCOVERY.md §2.6.
 -#
 
 #@ solidify:udpFonctions
@@ -533,7 +533,7 @@ def udpFonctions_envoiUDP(typeComm, ipDestinataire, message)
 
     udpFonctions.log("ENVOI_MSG_UDP: ------------------------ UDP sendUDP ----------------------", LOG_LEVEL_DEBUG_PLUS)
 
-    # Interface d'emission (2026-10-17, outils_docs/DIAGNOSTIC_UDP_2026-10-17.md, corrections C1 + C2) :
+    # Interface d'emission (2026-10-17, outils_docs/historique/DIAGNOSTIC_UDP_2026-10-17.md, corrections C1 + C2) :
     #   * ESCLAVE (udp.id > 0), unicast et multicast : socket liee a l'IP de SA STA. Sans liaison, lwIP
     #     prend la 1re interface du sous-reseau (ip4.c:171-178) : sur un esclave qui a AUSSI son point
     #     d'acces en 192.168.4.1/24, c'est ce point d'acces, et tout envoi vers le maitre 192.168.4.1 etait

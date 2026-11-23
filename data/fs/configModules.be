@@ -7,7 +7,7 @@
    table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
 FIN TAILLE DU BINOME -#
 # Definition du module
-# Rend ce module solidifiable (voir outils_docs/SOLIDIFICATION_BERRY.md).
+# Rend ce module solidifiable (voir outils_docs/reference_berry/SOLIDIFICATION_BERRY.md).
 # Nom sans slash : il finit colle dans un identifiant C par ## (un '/' y est illegal).
 #@ solidify:configModules
 var configModules = module("configModules")

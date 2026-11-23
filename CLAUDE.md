@@ -20,9 +20,9 @@ remplace la memoire.
 2. **`tasks/reprise-modbus-garage.md`** — ce qui reste du chantier ModBus : cibles = les 3 modules GARAGE (maitre
    P4, cuve, rideau) et le portail de jardin ; le grenier est en sommeil. Lire son encadre « SI TU REPRENDS A FROID ».
    Travail sur **`development`**. L'ancienne reprise (« grenier ») est dans `tasks/archive/`.
-3. **`outils_docs/SOLIDIFICATION_BERRY.md`** — le mecanisme complet, les pieges, l'etat reel et la regle des fichiers
+3. **`outils_docs/reference_berry/SOLIDIFICATION_BERRY.md`** — le mecanisme complet, les pieges, l'etat reel et la regle des fichiers
    de carte (§3 et §7), a lire des que le sujet Berry/solidification arrive.
-4. **`outils_docs/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
+4. **`outils_docs/reference_berry/PROTOCOLE_MODBUS.md`** — a lire des que le sujet ModBus arrive : carte
    des registres de la carte 16 relais (§8) et architecture de synchronisation (§9).
 5. **`tasks/plans/`** — plans de travail suivis (`statut: actif`, format `tasks/plans/_FORMAT.md`) :
    le mod `suivi-plan` en injecte le resume en debut de conversation ; sans le mod, lire le plan actif.
@@ -87,7 +87,7 @@ intermittent vient de l'indexeur C/C++ : `C_Cpp.files.exclude` ET `C_Cpp.exclusi
 - **Avant tout commit ou push** (decide le 2026-11-14) : lancer l'agent `controleur-secrets` (depot public), lire son rapport,
   puis seulement commiter, dans un appel suivant. Si le commit touche un `.be` de `data/`, lancer aussi `verificateur-solidification`
   (le vert des bancs ne prouve pas la solidification, panne du 2026-11-13). Un `.py` d'outil : `relecteur-outils-python`
-  est recommande (au jugement). **Avant tout push** : agent `preparateur-push` (appele par `/commite pousse`, verdict STOP = pas de push). Les autres agents de `outils_docs/SOUS_AGENTS.md` restent au jugement. Un agent qui
+  est recommande (au jugement). **Avant tout push** : agent `preparateur-push` (appele par `/commite pousse`, verdict STOP = pas de push). Les autres agents de `outils_docs/verification/SOUS_AGENTS.md` restent au jugement. Un agent qui
   signale un « bloquant » arrete le commit jusqu'a decision de l'utilisateur.
 
 ## Fichiers a ne jamais toucher sans accord

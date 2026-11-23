@@ -1,5 +1,5 @@
 # TAILLE DU BINOME : voir le bloc en tete de controleMqttLiaison.be (genere par mesure_binomes.py, ne pas editer)
-# Garde-fous de la voie MQTT maitre/esclaves (plan tasks/plans/voie-mqtt.md, A3 ; analyse outils_docs/ANALYSE_VOIE_MQTT_2026-11-16.md §6).
+# Garde-fous de la voie MQTT maitre/esclaves (plan tasks/plans/voie-mqtt.md, A3 ; analyse outils_docs/historique/ANALYSE_VOIE_MQTT_2026-11-16.md §6).
 # Ce module ne parle PAS a MQTT : il decide s'il faut envoyer un ordre, et classe ce qui revient. Le driver
 # (controleMqttLiaison, A4) fait les publish/subscribe. Le temps est passe en parametre (millisecondes, comparees par
 # DIFFERENCE : le debordement 32 bits de tasmota.millis() vers 24,8 jours est sans effet) : le module ne depend ni de

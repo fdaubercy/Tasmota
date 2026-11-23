@@ -4,7 +4,7 @@
 # du persist par l'interface d'ecran demarree (ecranFonctions.interface : ecranHaspmota, ecranCaveHaspmota ou ecranLvgl genere).
 # Commun aux cartes a ecran ; charge depuis le FS, forme SOLIDIFIABLE (fonctions nommees, `import` dans chaque fonction, etat dans
 # la map de la globale cachee ".ecranSysteme" rendue par ecranSysteme.etat(), jamais d'attribut ecrit dans le module : piege 12 de
-# outils_docs/SOLIDIFICATION_BERRY.md). Cadence (controleEcranSysteme, every_second) : RAM minimale et courbe d'une heure suivies
+# outils_docs/reference_berry/SOLIDIFICATION_BERRY.md). Cadence (controleEcranSysteme, every_second) : RAM minimale et courbe d'une heure suivies
 # EN CONTINU par tasmota.memory("heap_free") (sans map) ; mesures toutes les MAJ ms SEULEMENT page affichee ; commandes (Status 11,
 # UfsSize, UfsFree, RgxClients : chaque reponse part aussi en MQTT, support_command.ino::CmndStatusResponse) toutes les LENT ms ;
 # Status 1 et 2 une fois. CHAMPS = SEULE reference des donnees, relue ici par la page de l'atelier (expression reguliere : une

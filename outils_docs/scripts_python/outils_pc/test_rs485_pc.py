@@ -32,7 +32,7 @@ UN SEUL MAITRE SUR LE BUS
     sinon deux reponses se superposent.
 
     La carte relais sort d'usine a 9600 bauds, adresse 1 ; le bus du garage est a 19200
-    (outils_docs/PROTOCOLE_MODBUS.md, section 8).
+    (outils_docs/reference_berry/PROTOCOLE_MODBUS.md, section 8).
 """
 import sys as _sys, pathlib as _pl  # suivi de l'avancement sur la page Sondes en cours
 _sys.path.append(str(_pl.Path(__file__).resolve().parent.parent / "outils_pc"))

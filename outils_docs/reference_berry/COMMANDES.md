@@ -34,7 +34,7 @@ Toute commande ci-dessous accepte `help` (ou `aide`, `?`) : `<Commande> help` li
 
 Sur le maître ModBus (`data/fs/modBus_TasmotaSlaveModBus.be`, enregistrée sous `RUBANESCLAVE`) :
 
-- `RubanEsclave1 etat | auto | suivante` : mode du ruban de l'esclave du relais virtuel POWER1 (AUTO, ou MANUEL et minutes restantes), retour en AUTO, couleur suivante. L'index choisit le POWERn ; une réponse d'erreur dit si ce POWERn n'est pas un ruban virtuel ModBus. Bouton du maître : clé `bouton` du relais virtuel du ruban ; protocole : `outils_docs/PROTOCOLE_MODBUS.md`, fin du § 9.
+- `RubanEsclave1 etat | auto | suivante` : mode du ruban de l'esclave du relais virtuel POWER1 (AUTO, ou MANUEL et minutes restantes), retour en AUTO, couleur suivante. L'index choisit le POWERn ; une réponse d'erreur dit si ce POWERn n'est pas un ruban virtuel ModBus. Bouton du maître : clé `bouton` du relais virtuel du ruban ; protocole : `outils_docs/reference_berry/PROTOCOLE_MODBUS.md`, fin du § 9.
 - `HSBCOLOR1 <teinte>`, `HSBCOLOR2 <saturation>` et `DIMMER<id> <luminosité>` : sur un module à LEDs WS2812 pilotées en ModBus, remplacent les commandes Tasmota et envoient la valeur à l'esclave (`DIMMER 0` = POWER OFF).
 - `SCHEME 0..14` : animation des rubans WS2812 des esclaves ModBus (0 = une seule couleur) ; sans paramètre : la valeur mémorisée.
 

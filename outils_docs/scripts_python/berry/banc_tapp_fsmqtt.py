@@ -1,4 +1,4 @@
-"""Banc de l'exemple d'extension data/extensions/fsMqtt/ (gabarit A de outils_docs/EXTENSIONS_TAPP.md).
+"""Banc de l'exemple d'extension data/extensions/fsMqtt/ (gabarit A de outils_docs/reference_berry/EXTENSIONS_TAPP.md).
 
 UTILISATION
     python outils_docs/scripts_python/berry/banc_tapp_fsmqtt.py [--sans-mutants]

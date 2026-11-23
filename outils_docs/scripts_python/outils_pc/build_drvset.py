@@ -1,7 +1,7 @@
 """Sauvegarde et retablit /.drvset003 (calibrage et compteurs d'energie) autour d'un flash serie (page build).
 
 Un upload ou erase_upload serie reecrit le FS : le fichier du pilote d'energie (xdrv_03_esp32_energy.ino,
-tEnergySettings ; voir outils_docs/FICHIERS_DRVSET.md) disparaitrait, donc le calibrage et le Total.
+tEnergySettings ; voir outils_docs/reference_berry/FICHIERS_DRVSET.md) disparaitrait, donc le calibrage et le Total.
 
   sauvegarde(env, ip, dossier)   lit le fichier par le reseau AVANT le flash ; None si la carte est injoignable ou
                                  n'a pas ce fichier (carte sans mesure d'energie) : le flash n'est pas bloque.

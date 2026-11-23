@@ -6,7 +6,7 @@ Ce dossier n'est pas une carte : berry/carte_modules_berry.py::collecte l'ecarte
 gen_tapp.py n'est pas reentrant (redirect_stdout, AVERTISSEMENTS, fichier preambule de verifie_berry) : tout controle et toute
 construction passent par VERROU. Les lectures de carte ne le prennent jamais. Risque restant, non traite : le hook d'edition et ce module
 ecrivent le meme preambule temporaire ; contenu identique tant que la liste des globales ne change pas.
-Gabarits : copies des blocs de outils_docs/EXTENSIONS_TAPP.md (§ 5.2 et 5.3), test_tapp_web.py verifie l'egalite. Le document ne donne
+Gabarits : copies des blocs de outils_docs/reference_berry/EXTENSIONS_TAPP.md (§ 5.2 et 5.3), test_tapp_web.py verifie l'egalite. Le document ne donne
 pas le manifeste du gabarit B en entier (« meme forme ») : seul son nom vient de lui.
 Banc : test_tapp_web.py.
 """

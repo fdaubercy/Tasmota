@@ -443,7 +443,7 @@ custom_berry_solidify   =   ${berry_commun.socle}
 ```
 
 Un env **sans** `custom_berry_solidify` garde tous ses modules sur le LittleFS. Liste résolue de
-chaque env : `outils_docs/CARTE_MODULES_BERRY.md` (`berry/carte_modules_berry.py`).
+chaque env : `outils_docs/reference_berry/CARTE_MODULES_BERRY.md` (`berry/carte_modules_berry.py`).
 
 **2. `import` prefere le natif au fichier** (piege 4). Le firmware qui embarque le module
 solidifie utilise la version en flash ; celui qui ne l'embarque pas retombe sur le `.be` du

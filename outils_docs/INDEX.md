@@ -19,7 +19,7 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 | Après une correction de l'utilisateur | ajouter une ligne à `tasks/lessons.md` | format `[date] \| ce qui a raté \| règle` ; une récidive s'écrit `RECIDIVE de <date>` |
 | Reprendre un chantier à froid | le plan rattaché (bloc suiviPlan injecté), puis `tasks/reprise-*.md` s'il existe | prochaine action, ce qui reste ; une reprise sans plan actif est périmée |
 | Décisions et préférences de l'utilisateur | `MEMORY.md` (injecté) | choix tranchés, faits matériels non dérivables du code |
-| Pièges de solidification Berry | `outils_docs/SOLIDIFICATION_BERRY.md` §4 | 13 pièges payés ; le vert d'un banc ne prouve pas la solidification |
+| Pièges de solidification Berry | `outils_docs/reference_berry/SOLIDIFICATION_BERRY.md` §4 | 13 pièges payés ; le vert d'un banc ne prouve pas la solidification |
 | Pièges du build | `CLAUDE.md` § Vigilances de build ; détail `outils_docs/environnement/VIGILANCES_BUILD.md` | jamais deux `pio run`, aucune cible PlatformIO pendant un build, `PYTHONIOENCODING=utf-8` |
 
 ## 2. Référence Berry, drivers et protocoles (avant de toucher un module de `data/`)
@@ -29,19 +29,19 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 | Langage Berry, API Tasmota, extension C | `.doc_for_ai/BERRY_LANGUAGE_REFERENCE.md`, `BERRY_TASMOTA.md`, `BERRY_C_EXTENSION_REFERENCE.md` (amont) | syntaxe exacte ; le moteur `re` de Berry ignore `{n,m}` |
 | Pages web des cartes | `.doc_for_ai/TASMOTA_WEBUI_CODING_GUIDE.md` (amont) | conventions de la WebUI |
 | Écrans uDisplay, tactile | `.doc_for_ai/UDISPLAY_UTOUCH_GUIDE.md` (amont), skill `lvgl-haspmota` | `display.ini`, LVGL, HASPmota |
-| Quel module sur quelle carte | `outils_docs/CARTE_MODULES_BERRY.md` (généré, ne pas éditer) | solidifié, importé, gardes |
+| Quel module sur quelle carte | `outils_docs/reference_berry/CARTE_MODULES_BERRY.md` (généré, ne pas éditer) | solidifié, importé, gardes |
 | Logs Berry | `CLAUDE.md` § Logs Berry ; détail `data/fs/logFonctions.be` (en-tête) | 4 niveaux, `logFonctions.log`, jamais `log()` direct |
-| Solidification | `outils_docs/SOLIDIFICATION_BERRY.md` | mécanisme, vérification §5, pièges §4 |
-| ModBus : conception, registres, synchro | `outils_docs/PROTOCOLE_MODBUS.md` (§8 registres carte 16 relais, §9 synchro, §11 MQTT) | 3 transports, six pièges de la carte relais |
-| ModBus : commandes et trames | `outils_docs/Aide/MODBUS.md` | mode d'emploi, « Fermeture » contre « Open » |
+| Solidification | `outils_docs/reference_berry/SOLIDIFICATION_BERRY.md` | mécanisme, vérification §5, pièges §4 |
+| ModBus : conception, registres, synchro | `outils_docs/reference_berry/PROTOCOLE_MODBUS.md` (§8 registres carte 16 relais, §9 synchro, §11 MQTT) | 3 transports, six pièges de la carte relais |
+| ModBus : commandes et trames | `outils_docs/reference_berry/MODBUS_MODE_EMPLOI.md` | mode d'emploi, « Fermeture » contre « Open » |
 | Voie MQTT maître/esclaves | `outils_docs/README.md` § Voie MQTT ; `PROTOCOLE_MODBUS.md` §11 | garde-fous G3 à G5 ; esclave sans fiche ModBus = aucun repli |
 | Découverte des cartes | `outils_docs/README.md` § La découverte des cartes | ESP32 sans PSRAM : `serveur.discovery` OFF |
 | Graphiques, énergie, jauges, débits, écran 7B, MPU6050, volets, coprocesseur C6, Hue | `outils_docs/README.md`, section du même nom | mode d'emploi de chaque fonction des cartes |
 | Commandes Tasmota personnalisées (`ReglageGlobal`, `ReglageLog`, `ReglageUDP`, `ReglageModbus`...) | `outils_docs/reference_berry/COMMANDES.md` | liste vérifiée contre les `add_cmd` de `data/` ; sous-commandes et exemples |
 | Modifications du firmware amont (C++ en dur) | `outils_docs/reference_berry/MODIFICATIONS_FIRMWARE.md` | piège de synchro du fork : pied de page de `xdrv_01_9_webserver.ino`, comment le retrouver |
-| Volets roulants du firmware | `outils_docs/TASMOTA_VOLETS_ROULANTS.md` | doc Shutters traduite et écarts vérifiés |
-| Fichiers `.drvset*` | `outils_docs/FICHIERS_DRVSET.md` | contenu, sauvegarde, effacement |
-| Extensions `.tapp` | `outils_docs/EXTENSIONS_TAPP.md` | format, cycle de vie, pièges §7 ; jamais essayé sur carte |
+| Volets roulants du firmware | `outils_docs/reference_berry/TASMOTA_VOLETS_ROULANTS.md` | doc Shutters traduite et écarts vérifiés |
+| Fichiers `.drvset*` | `outils_docs/reference_berry/FICHIERS_DRVSET.md` | contenu, sauvegarde, effacement |
+| Extensions `.tapp` | `outils_docs/reference_berry/EXTENSIONS_TAPP.md` | format, cycle de vie, pièges §7 ; jamais essayé sur carte |
 | Écrire du Berry | skill `tasmota-berry` | modèle `controleXxx` + `xxxFonctions`, RAM |
 | Coût d'un binôme (driver + module) | bloc `TAILLE DU BINOME` en tête du driver ; `outils_docs/scripts_python/berry/mesure_binomes.py` | .be, .bec et solidifié ; mis à jour avant commit (`--verifier`) |
 
@@ -77,7 +77,7 @@ Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité
 | Sondes Chrome | `outils_pc/sonde_hermetique.py` ; arrêter les Chrome `sonde_*` après usage | barre commune réelle, Chrome orphelins |
 | Échec de build | agent `analyste-journaux-build` | des milliers de lignes dans la conversation |
 | Bug ou comportement inattendu | skill `superpowers:systematic-debugging` | correction sur hypothèse non vérifiée |
-| Liste et rôle des agents | `outils_docs/SOUS_AGENTS.md` | lequel lancer, avec quel modèle |
+| Liste et rôle des agents | `outils_docs/verification/SOUS_AGENTS.md` | lequel lancer, avec quel modèle |
 | Renvois des documents | `maintenance/verifie_references_docs.py`, agent `relecteur-docs` | `fichier:ligne` décalé, chemin disparu |
 | Cases cochées d'un plan | agent `verificateur-plans` | preuve absente |
 | Fichier de plus de 500 lignes | `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` | découpage refusé par l'utilisateur |
@@ -95,13 +95,13 @@ Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité
 
 | Sujet | Lire |
 |---|---|
-| Puces Espressif, compatibilité | `outils_docs/MODELES_ESP.md` |
+| Puces Espressif, compatibilité | `outils_docs/materiel/MODELES_ESP.md` |
 | Brochage d'une carte | `outils_docs/Schémas de branchement - Attribution des PINS des modules/<lieu>/<env>/` |
 | Écran 7B des débits | même dossier, `bureau/tasmota32s3-ecran-debits-pac/WAVESHARE_ESP32-S3-Touch-LCD-7B.md` |
 | ADS1115, ruban LED | `outils_docs/Electronique/ADS1115/` (le ruban LED y est rangé par erreur) |
-| Portail de jardin | `outils_docs/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md` |
+| Portail de jardin | `outils_docs/materiel/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md` |
 | Cartes relais de la cave | `outils_docs/cartes_relais_cave/README.md` |
-| Écran MIPI-DSI sur P4 (recherche, rien essayé) | `outils_docs/ECRAN_TACTILE_ESP32P4.md` |
+| Écran MIPI-DSI sur P4 (recherche, rien essayé) | `outils_docs/materiel/ECRAN_TACTILE_ESP32P4.md` |
 | Chauffage, équilibrage | `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md` |
 | Historique sur le Pi | `outils_docs/serveur_pi/historique_capteurs/README.md` |
 | PCB KiCad | skill `pcb-tasmota`, agents `placeur-pcb`, `relecteur-pcb` |
@@ -118,6 +118,6 @@ Doc de l'utilisateur. Claude la lit quand il modifie l'outil, avec le plan cité
 
 ## 8. Historique (lire seulement pour retrouver un pourquoi)
 
-Analyses, audits et diagnostics datés : `outils_docs/ANALYSE_*.md`, `AUDIT_*.md`, `DIAGNOSTIC_UDP_2026-10-17.md`,
+Analyses, audits et diagnostics datés, dans `outils_docs/historique/` : `ANALYSE_*.md`, `AUDIT_*.md`, `DIAGNOSTIC_UDP_2026-10-17.md`,
 `CHANGELOG.md` (arrêté en mai 2026). Ils gardent leurs numéros de ligne : ce sont des traces. L'état réel est dans la
 référence (§2) ou le plan.

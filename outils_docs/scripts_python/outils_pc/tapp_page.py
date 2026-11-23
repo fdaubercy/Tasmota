@@ -68,7 +68,7 @@ HTML = """<main>
   <section class="carte petit doux"><h2>À savoir</h2>
     <p>Une extension se lance <b>avant</b> <span class="chemin">/autoexec.be</span> : <span class="chemin">logFonctions</span> et <span class="chemin">LOG_LEVEL_*</span> n'existent pas encore pendant sa compilation ni son chargement : écrire <span class="chemin">global.LOG_LEVEL_INFO</span>, sinon elle ne se lance pas (d'où la minuterie du premier modèle).</p>
     <p>Un <span class="chemin">.tapp</span> envoyé à une carte n'est pas dans son image : il disparaît au prochain formatage du FS ou flash série.</p>
-    <p>Tout est expliqué dans <span class="chemin">outils_docs/EXTENSIONS_TAPP.md</span>.</p>
+    <p>Tout est expliqué dans <span class="chemin">outils_docs/reference_berry/EXTENSIONS_TAPP.md</span>.</p>
   </section>
 </div>
 <div id="fiche" hidden>

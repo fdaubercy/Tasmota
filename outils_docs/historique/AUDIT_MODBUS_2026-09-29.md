@@ -275,7 +275,7 @@ code 0x11 `ISALIVE` (autorisé, sans branche).
 prepareTrame(paramMSG, typeMsg)          <- meme signature : appelants et banc inchanges
   1. valide(paramMSG, typeMsg)            -> code autorise, type connu, nb de valeurs coherent ;
                                              erreur => Erreur pose ET retour nil
-  2. pdu = GABARITS[code][typeMsg](p)     -> 5 petites fonctions (une par forme de trame)
+  2. pdu = GABARITS[code][typeMsg](../p)     -> 5 petites fonctions (une par forme de trame)
   3. return trameRTU(adresse, code, pdu)  -> adresse + code + pdu + CRC
 ```
 

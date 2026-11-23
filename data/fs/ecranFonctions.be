@@ -1,7 +1,7 @@
 #- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
    fichier                                .be      .bec  solidifie
-   ecranFonctions.be                  14,5 Ko    7,1 Ko     5,4 Ko
-   total                              14,5 Ko    7,1 Ko     5,4 Ko  + 112 chaines
+   ecranFonctions.be                  14,6 Ko    7,1 Ko     5,4 Ko
+   total                              14,6 Ko    7,1 Ko     5,4 Ko  + 112 chaines
    .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
    (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
    table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
@@ -12,7 +12,7 @@ FIN TAILLE DU BINOME -#
 # bornes dans le persist, historique circulaire de N series pour une courbe. Le module metier (ecranDebitsFonctions) s'appuie dessus.
 # SOLIDIFIE dans les envs a ecran (liste berry_commun.ecran du cenv, decision du 2026-11-13) : fonctions nommees affectees
 # au module, appels par ecranFonctions.<nom>, aucun appel tasmota au niveau fichier, et l'ETAT ne vit pas dans la table du module
-# (en lecture seule une fois solidifie, piege 12 de outils_docs/SOLIDIFICATION_BERRY.md) mais dans la globale cachee
+# (en lecture seule une fois solidifie, piege 12 de outils_docs/reference_berry/SOLIDIFICATION_BERRY.md) mais dans la globale cachee
 # ".ecranFonctions", lue et ecrite par member/setmember. Les modules qui s'en servent font `import ecranFonctions` dans chaque fonction.
 # Reglages : bloc du persist modules.<bloc> (bloc pose par le driver, ex. "ecranDebits") : veille, extinction, luminosite, pwmInverse.
 # Logs : charte du CLAUDE.md (logFonctions.log, cible = bloc : ReglageLog ecranCave|ecranDebits <niveau>).

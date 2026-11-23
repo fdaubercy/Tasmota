@@ -1,6 +1,6 @@
 """Onglet Aide du sniffeur ModBus (sniffeur_modbus_web.py) : regles de formation des trames.
 
-Sources : la norme ModBus RTU ; outils_docs/PROTOCOLE_MODBUS.md (section 8 : carte 16 relais,
+Sources : la norme ModBus RTU ; outils_docs/reference_berry/PROTOCOLE_MODBUS.md (section 8 : carte 16 relais,
 section 9 : push UDP) ; le code des drivers modBus_Conn16channels.be et modBus_TasmotaSlaveModBus.be
 et, cote esclave, modbusFonctions.executeCmdModbus / prepareTrame.
 Les exemples sont calcules ici (CRC compris) : un clic dans la page les decode.

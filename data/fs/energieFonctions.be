@@ -24,7 +24,7 @@
  * Coupure : l'ecart est porte a l'heure de la note precedente si moins de ECART_CONSECUTIF_S ont passe (passage a
  * l'heure d'ete ou d'hiver compris), sinon a l'heure ecoulee au moment ou la carte le constate, sans repartition.
  *
- * SOLIDIFIE : aucun etat dans le module, table en lecture seule (piege 12 de outils_docs/SOLIDIFICATION_BERRY.md) ; la
+ * SOLIDIFIE : aucun etat dans le module, table en lecture seule (piege 12 de outils_docs/reference_berry/SOLIDIFICATION_BERRY.md) ; la
  * courbe de puissance vit dans le driver. Chaque fonction qui cite le module l'importe (il n'est pas un global).
 ********************************************************************************************* -#
 

@@ -25,9 +25,9 @@
 - **Organigramme des plans, en ligne : <https://fdaubercy.github.io/Tasmota/organigramme.html>** — les 48 plans de `tasks/plans/` par famille, avec dates, avancement et liens ; mise à jour : [section dédiée](#organigramme-des-plans-page-web-et-powerpoint).
 
 ### Berry
-- [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md) — la solidification Berry : fonctionnement, **vérification**, paramètres, 13 pièges.
+- [SOLIDIFICATION_BERRY.md](reference_berry/SOLIDIFICATION_BERRY.md) — la solidification Berry : fonctionnement, **vérification**, paramètres, 13 pièges.
   À retenir : la ligne `Berry solidification: …` d'un build **ne prouve rien** (§5).
-- [CARTE_MODULES_BERRY.md](CARTE_MODULES_BERRY.md) *(généré)* — module × carte : solidifié, importé, dépendance, garde du persist, incohérences.
+- [CARTE_MODULES_BERRY.md](reference_berry/CARTE_MODULES_BERRY.md) *(généré)* — module × carte : solidifié, importé, dépendance, garde du persist, incohérences.
 - [Les logs Berry : charte et réglages](#les-logs-berry--charte-et-réglages) — plus bas dans ce fichier.
 - [Inclinaison d'un volet ou d'une trappe (MPU6050)](#inclinaison-dun-volet-ou-dune-trappe-mpu6050) — capteur de position par l'angle, apprentissage des butées.
 - Conception de la solidification : [design](../docs/superpowers/specs/2026-07-15-solidification-berry-design.md),
@@ -35,11 +35,11 @@
   [plan de la phase 1](../docs/superpowers/plans/2026-07-15-solidification-berry-phase1.md).
 
 ### ModBus et réseau
-- [PROTOCOLE_MODBUS.md](PROTOCOLE_MODBUS.md) — référence de **conception** : TCP, 3 transports, file d'envoi, registres de la carte 16 relais (§8), synchronisation maître/esclave (§9).
-- [Aide/MODBUS.md](Aide/MODBUS.md) — **mode d'emploi** : commandes d'exemple (carte 16 relais, esclaves Tasmota), trames détaillées par code de fonction, activation dans Tasmota.
-- [ANALYSE_BERRY_MODBUS_DISCOVERY.md](ANALYSE_BERRY_MODBUS_DISCOVERY.md) — programmes ModBus Berry et table `/json/discovery.json`.
-- [AUDIT_MODBUS_2026-09-29.md](AUDIT_MODBUS_2026-09-29.md) — audit ModBus du garage (défauts, améliorations par priorité).
-- [ANALYSE_VOIE_MQTT_2026-11-16.md](ANALYSE_VOIE_MQTT_2026-11-16.md) — **analyse** (écrite avant le code ; l'état réel est dans § « Voie MQTT maître/esclaves » plus bas) : une voie MQTT maître/esclaves à côté de ModBus série et UDP (deux architectures, éléments virtuels `MQTT_<nom>`, garde-fous anti-boucle, persist, coût CPU/RAM, esclaves non ESP32, tableaux par puce, questions ouvertes).
+- [PROTOCOLE_MODBUS.md](reference_berry/PROTOCOLE_MODBUS.md) — référence de **conception** : TCP, 3 transports, file d'envoi, registres de la carte 16 relais (§8), synchronisation maître/esclave (§9).
+- [Aide/MODBUS.md](reference_berry/MODBUS_MODE_EMPLOI.md) — **mode d'emploi** : commandes d'exemple (carte 16 relais, esclaves Tasmota), trames détaillées par code de fonction, activation dans Tasmota.
+- [ANALYSE_BERRY_MODBUS_DISCOVERY.md](historique/ANALYSE_BERRY_MODBUS_DISCOVERY.md) — programmes ModBus Berry et table `/json/discovery.json`.
+- [AUDIT_MODBUS_2026-09-29.md](historique/AUDIT_MODBUS_2026-09-29.md) — audit ModBus du garage (défauts, améliorations par priorité).
+- [ANALYSE_VOIE_MQTT_2026-11-16.md](historique/ANALYSE_VOIE_MQTT_2026-11-16.md) — **analyse** (écrite avant le code ; l'état réel est dans § « Voie MQTT maître/esclaves » plus bas) : une voie MQTT maître/esclaves à côté de ModBus série et UDP (deux architectures, éléments virtuels `MQTT_<nom>`, garde-fous anti-boucle, persist, coût CPU/RAM, esclaves non ESP32, tableaux par puce, questions ouvertes).
 
 ### Configuration des cartes et électronique
 - [schemas/persist.schema.json](schemas/persist.schema.json) *(généré)* — schéma des `_persist.json` (autocomplétion et contrôle dans VS Code).
@@ -49,10 +49,10 @@
   [placeur-pcb](../.claude/agents/placeur-pcb.md) / [relecteur-pcb](../.claude/agents/relecteur-pcb.md).
 
 ### Outils et historique
-- [scripts_python/](scripts_python/) — outillage PC, rangé par usage : `build/`, `outils_pc/`, `berry/`, `maintenance/`, `sauvegarde/`, `reseau/` (détail dans [CLAUDE.md](../CLAUDE.md)).
+- [scripts_python/](scripts_python) — outillage PC, rangé par usage : `build/`, `outils_pc/`, `berry/`, `maintenance/`, `sauvegarde/`, `reseau/` (détail dans [CLAUDE.md](../CLAUDE.md)).
 - [HISTORIQUE_SYNCHRO_FORK.md](HISTORIQUE_SYNCHRO_FORK.md) *(généré)* — journal des synchronisations du fork.
 - [LIENS_WEB.md](LIENS_WEB.md) *(généré)* — tous les liens web cités dans le dépôt (par thème, avec le fichier qui les cite), les outils locaux et les documents fournis ; page de recherche et d'archivage : [Liens web](#liens-web-page-web).
-- [CHANGELOG.md](CHANGELOG.md) — historique des évolutions.
+- [CHANGELOG.md](historique/CHANGELOG.md) — historique des évolutions.
 - [Les graphiques des mesures](#les-graphiques-des-mesures-cartes-s3p4) — page `/graphiques` des cartes S3/P4, plus bas dans ce fichier.
 - [Build et téléversement (page web)](#build-et-téléversement-page-web) — compiler et téléverser les cartes (COM ou OTA) depuis http://127.0.0.1:7700, plus bas dans ce fichier.
 - [Fichiers Berry par env (page web)](#fichiers-berry-par-env-page-web) — sur le FS, exclu ou solidifié, et création d'un env, depuis http://127.0.0.1:7800, plus bas dans ce fichier.
@@ -385,7 +385,7 @@ Carte ESP32-S3 `tasmota32s3-bureau-serveur-debits-pac` (dossier `data/bureau/tas
 nourrice de la PAC : elle mesure le débit des **6 départs de radiateur** par leurs débitmètres à impulsions (YF-B2,
 K = 11 Hz par L/min) et les publie sur sa page web, dans son JSON SENSOR et par ModBus. L'écran est sur une seconde
 carte, la carte d'affichage (ci-dessous). Plans `tasks/plans/debitmetres-chauffage.md` et `tasks/plans/debits-deux-cartes.md`,
-analyse `outils_docs/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`. **Pas encore essayées sur des cartes réelles** (2026-11-11).
+analyse `outils_docs/historique/ANALYSE_DEBITMETRES_CHAUFFAGE_2026-11-08.md`. **Pas encore essayées sur des cartes réelles** (2026-11-11).
 
 **Deux cartes depuis le 2026-11-09** : l'acquisition compte et calcule, la carte d'affichage montre les débits sur son écran.
 
@@ -1642,7 +1642,7 @@ carte) : on ne l'en retire que par `custom_files_exclude`, ou par `custom_berry_
   DERNIER cité, puis la section `[env]` ; `opt =;x` vaut `;x`) : le banc le compare à son `ProjectConfig`.
 - Sans `custom_files_exclude_solidified = ON`, la page avertit : un fichier solidifié reste **aussi** sur le FS.
 - Passer à « Solidifié » ne vérifie rien : avant de builder, `berry/solidifie_et_compile_berry.py <fichier>` (voir
-  [SOLIDIFICATION_BERRY.md](SOLIDIFICATION_BERRY.md)).
+  [SOLIDIFICATION_BERRY.md](reference_berry/SOLIDIFICATION_BERRY.md)).
 
 ### Disposition et enregistrement
 
@@ -1944,7 +1944,7 @@ plans : `tasks/plans/autoexec-bat.md`, `tasks/plans/autoexec-mqtt-tapp.md` (voie
 - Les éléments des **métiers 2 à N** sont conservés lors d'une modification, mais non éditables (voir « Modifier ou supprimer un env existant »).
 - Une carte dont la section du `.h` (ou l'autoexec, ou la section du cenv) a été retouchée à la main au point qu'une ligne générée ne s'y retrouve plus est **refusée à la modification** (le refus cite le fichier et la ligne) : c'est le cas aujourd'hui de plusieurs cartes anciennes du parc — les reprendre à la main ou les recréer.
 - Clés `adressMAC` / `adresseMAC` et `telePeriod` : tranché le 2026-10-28 — `telePeriod` de `serveur.udp` et `serveur.rangeExtender` retirées (jamais lues), MAC écrite dans `adresseMAC` dès le boot par `globalFonctions`, `adressMAC` retirée ;
-  voir `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
+  voir `outils_docs/historique/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
 
 ### Bancs
 
@@ -2054,7 +2054,7 @@ Sept sondes l'appellent : `test_acces_repli_chrome.py`, `test_atelier_visuels_pa
 ## Fabrique d'extensions (page web)
 
 Page http://127.0.0.1:7980 pour fabriquer une extension Tasmota (`.tapp`) et l'envoyer à une carte. Ce qu'est une
-extension, quand s'en servir et ses pièges : [EXTENSIONS_TAPP.md](EXTENSIONS_TAPP.md). Lancement : tuile « Fabrique
+extension, quand s'en servir et ses pièges : [EXTENSIONS_TAPP.md](reference_berry/EXTENSIONS_TAPP.md). Lancement : tuile « Fabrique
 d'extensions » de l'annuaire (groupe Ateliers), tâche VS Code « Outil : fabrique d'extensions », ou cible Custom
 « Fabrique d'extensions (page web) » (`build/cible_tapp.py`, page démarrée détachée ; `pio run` : jamais pendant un build).
 Arrêt libre : rien n'est écrit ni envoyé sans un geste dans la page, aucune source n'est supprimée. La liste des

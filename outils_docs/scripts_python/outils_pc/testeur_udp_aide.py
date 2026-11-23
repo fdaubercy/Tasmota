@@ -1,6 +1,6 @@
 """Onglet Aide du testeur UDP (testeur_udp_web.py) : usage, modes de connexion, verdicts, commandes envoyees.
 
-Reference : outils_docs/PROTOCOLE_MODBUS.md, section 9, « Commandes sans fil vers les esclaves ».
+Reference : outils_docs/reference_berry/PROTOCOLE_MODBUS.md, section 9, « Commandes sans fil vers les esclaves ».
 Les commandes listees ici sont celles de testeur_udp_essais.py (construit_essai) et testeur_udp.py.
 """
 
@@ -106,10 +106,10 @@ sur l'esclave, réception <code>ModbusUDP &lt;tid&gt; ...</code> sur le maître,
 <tr><td>Push d'état</td><td>esclave</td><td><code>Br var h = modbusFonctions.etatRuban(1376) if h != nil modbusFonctions.pousseEtat(1376, "uint16", h) else print("PAS_DE_RUBAN") end</code>
 (état réel du ruban de la cuve, sans effet de bord) ; preuves : <code>POUSSE_ETAT: registre 1376 = ...</code> puis <code>LIRE_UDP</code> « ModbusPushUDP ... » sur le maître</td></tr>
 </table>
-<p>Référence : <code>outils_docs/PROTOCOLE_MODBUS.md</code>, §9 « Commandes sans fil vers les esclaves ».</p>
+<p>Référence : <code>outils_docs/reference_berry/PROTOCOLE_MODBUS.md</code>, §9 « Commandes sans fil vers les esclaves ».</p>
 
 <h2>7. Onglet Grille ModBus</h2>
-<p>La grille de validation de <code>outils_docs/AUDIT_MODBUS_2026-09-29.md</code> §6, ramenée à <b>un seul esclave</b> : celui dont l'ID, le Power du P4 et le
+<p>La grille de validation de <code>outils_docs/historique/AUDIT_MODBUS_2026-09-29.md</code> §6, ramenée à <b>un seul esclave</b> : celui dont l'ID, le Power du P4 et le
 registre sont lus dans le persist du maître (par défaut la cuve : ID 2, POWER1, registre 1376). Les deux cartes doivent être ouvertes (onglet Essais).
 Un seul test à la fois ; chaque test envoie ses commandes, lit les logs des deux cartes et juge chaque ligne :</p>
 <ul>

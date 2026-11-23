@@ -9,7 +9,7 @@
 #
 # Les modules (moteur et validation) sont charges COMME SOLIDIFIES : compile en portee globale (comme le solidifieur), puis sa globale et les noms
 # globaux de ses fonctions et de sa classe sont retires (une fois solidifie, ils n'existent pas : piege 12 de
-# outils_docs/SOLIDIFICATION_BERRY.md, lecons du 2026-10-31). L'import passe ensuite par init(), comme
+# outils_docs/reference_berry/SOLIDIFICATION_BERRY.md, lecons du 2026-10-31). L'import passe ensuite par init(), comme
 # demarrage.charge sur la carte : un init() qui importerait le module deborderait la pile ici aussi.
 # La derniere ligne, BANC_PAGES_GRAPHIQUES: OK|ECHEC, est lue par l'enveloppe pour son code de sortie.
 import global

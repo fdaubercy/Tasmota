@@ -22,7 +22,7 @@
 > 2. **Audit de la table de découverte** `/json/discovery.json` : construction, lecture,
 >    paramètres manquants, et le tableau des éléments restant à paramétrer.
 >
-> Complément technique : `outils_docs/PROTOCOLE_MODBUS.md` (§8 carte 16 relais, §9 synchro
+> Complément technique : `outils_docs/reference_berry/PROTOCOLE_MODBUS.md` (§8 carte 16 relais, §9 synchro
 > maître/esclave). Ce document-ci ne le remplace pas : il le **prolonge** côté découverte.
 >
 > **Méthode** : toute affirmation ci-dessous est référencée par `fichier:ligne`. Les
@@ -433,7 +433,7 @@ car `set_timer` **empile** toujours (`tasmota_class.be:275`) : avant le 2026-10-
 
 ## Références
 
-- `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP, implémentation maison, §8 carte
+- `outils_docs/reference_berry/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP, implémentation maison, §8 carte
   16 relais, §9 synchronisation maître/esclave.
 - `tasks/reprise-chantier-modbus-grenier.md` — état du chantier, prochaine action.
 - `tasks/lessons.md` — journal des erreurs et règles de méthode.

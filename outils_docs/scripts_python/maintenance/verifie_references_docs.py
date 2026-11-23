@@ -30,8 +30,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-DURABLES = ["CLAUDE.md", "outils_docs/README.md", "outils_docs/SOLIDIFICATION_BERRY.md",
-            "outils_docs/PROTOCOLE_MODBUS.md", "outils_docs/CARTE_MODULES_BERRY.md", "outils_docs/EXTENSIONS_TAPP.md",
+DURABLES = ["CLAUDE.md", "outils_docs/README.md", "outils_docs/reference_berry/SOLIDIFICATION_BERRY.md",
+            "outils_docs/reference_berry/PROTOCOLE_MODBUS.md", "outils_docs/reference_berry/CARTE_MODULES_BERRY.md", "outils_docs/reference_berry/EXTENSIONS_TAPP.md",
             "outils_docs/INDEX.md", "outils_docs/CARTE_DOCUMENTS.md", "outils_docs/verification/EXCEPTIONS_500_LIGNES.md",
             "outils_docs/environnement/NOUVEAU_POSTE.md", "outils_docs/environnement/VIGILANCES_BUILD.md",
             "outils_docs/environnement/SYNCHRO_FORK.md", "outils_docs/reference_berry/COMMANDES.md",

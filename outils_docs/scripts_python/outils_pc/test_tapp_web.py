@@ -38,7 +38,7 @@ import test_assistant_persist_autoexec as taa
 import test_assistant_persist_web as taw
 
 ICI = Path(__file__).resolve().parent
-DOC = ICI.parents[1] / "EXTENSIONS_TAPP.md"
+DOC = ICI.parents[1] / "reference_berry" / "EXTENSIONS_TAPP.md"
 ENTETES = {"X-Fabrique-Tapp": "1", "Content-Type": "application/json"}
 ECHECS = []
 REPONSES = []                    # texte de toutes les reponses, pour la recherche des secrets
@@ -136,7 +136,7 @@ def etat_vide(s, racine):
     verifie((st, "<title>Fabrique d'extensions</title>" in page, rep.getheader("Cache-Control")), (200, True, "no-store"), "GET / : la page")
     verifie("innerHTML" in page, False, "page : jamais d'innerHTML")
     verifie(("prefers-color-scheme" in page, 'data-theme="sombre"' in page, "max-width" in page), (True, True, True), "page : mode sombre et largeur de telephone")
-    verifie("outils_docs/EXTENSIONS_TAPP.md" in page, True, "page : le document est nomme")
+    verifie("outils_docs/reference_berry/EXTENSIONS_TAPP.md" in page, True, "page : le document est nomme")
     st, r = s.requete("GET", "/inconnue")
     verifie(st, 404, "GET route inconnue -> 404")
 

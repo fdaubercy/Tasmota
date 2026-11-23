@@ -55,7 +55,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `relecteur-outils-python`, `verificateur-plans` (preuves des cases cochees), `analyste-journaux-build`, `diagnostic-synchro-fork`
   (ne synchronise jamais), `relecteur-docs`, `auditeur-menage` (commande `/menage`, propositions de rangement), `preparateur-push` (verdict avant tout push), plus `relecteur-pcb` et
   `placeur-pcb`. Huit ont `memory: local` (dossier `.claude/agent-memory-local/`, ignore par git). Liste complete, modeles et quand les
-  lancer : `outils_docs/SOUS_AGENTS.md`.
+  lancer : `outils_docs/verification/SOUS_AGENTS.md`.
 - `.claude/skills/pcb-tasmota/` — skill PCB KiCad des cartes du fork (schema, placement, routage, fabrication) ; agents `placeur-pcb` et `relecteur-pcb`.
 - `build/cible_pont_serie.py` — cible Custom « Pont serie » (`pont_serie.py`), importee par le pre-script ou posee en `extra_scripts` d'un env ESP8266.
 - Atelier des visuels d'accueil, http://127.0.0.1:7985 (2026-11-13, plan `tasks/plans/atelier-visuels.md`, spec `docs/superpowers/specs/2026-11-13-atelier-visuels-accueil-design.md`) :
@@ -197,39 +197,39 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
   `http://192.168.0.51:8080/equilibrage`) avec le code du mode carte `equilibrage_carte.js` (debits en direct, reglages gardes
   dans `/json/equilibrage.json`, relais pour un favori sans Referer ; plan `tasks/plans/equilibrage-par-la-carte.md`). Mode
   d'emploi : `outils_docs/README.md`.
-- `outils_docs/EXTENSIONS_TAPP.md` — extensions Tasmota `.tapp` (2026-11-07) : format, cycle de vie, cas d'utilisation, gabarits
+- `outils_docs/reference_berry/EXTENSIONS_TAPP.md` — extensions Tasmota `.tapp` (2026-11-07) : format, cycle de vie, cas d'utilisation, gabarits
   A et B, envoi sur une carte, pieges (compilation avant `/autoexec.be`, formatage, image du FS). Essais sur carte : § 9, a faire (A10).
-- `outils_docs/MODELES_ESP.md` — puces Espressif (ESP32, S2, S3, C2 a C61, H2 a H21, P4, S31, E22, ESP8266/8285/8089) au
+- `outils_docs/materiel/MODELES_ESP.md` — puces Espressif (ESP32, S2, S3, C2 a C61, H2 a H21, P4, S31, E22, ESP8266/8285/8089) au
   2026-11-11 : processeur, memoire et PSRAM, competences, montages a plusieurs ESP sur un typon, compatibilite Tasmota lue
   dans les envs ; P4 v1.x / v3.x (P4R3) et comment les distinguer ; modele Tasmota du Waveshare 8DI-8RO.
-- `outils_docs/PLC_OPENPLC.md` — cours PLC (automate programmable) et OpenPLC (2026-11-15) : cycle de scrutation, langages IEC 61131-3,
+- `outils_docs/materiel/PLC_OPENPLC.md` — cours PLC (automate programmable) et OpenPLC (2026-11-15) : cycle de scrutation, langages IEC 61131-3,
   comparaison avec Tasmota/Berry, interet pour ce depot, listes de sites, lectures et videos (adresses NON verifiees, de memoire).
-- `outils_docs/ECRAN_TACTILE_ESP32P4.md` — ecran tactile MIPI-DSI sur ESP32-P4 (recherche du 2026-11-11, rien d'essaye) :
+- `outils_docs/materiel/ECRAN_TACTILE_ESP32P4.md` — ecran tactile MIPI-DSI sur ESP32-P4 (recherche du 2026-11-11, rien d'essaye) :
   pilote uDisplay `DSI` (WIP), descriptions `EK79007_P4ev_DSI.ini` et `JD9165_DSI.ini`, envs P4 SANS affichage (pas de
   `FIRMWARE_LVGL`), RAM interne et correctifs de la discussion arendst #24448, Waveshare ESP32-P4-WIFI6-Touch-LCD-7B (EK79007
   + GT911, ecarts a l'`.ini` Espressif), dalles DSI du kit du garage, kits P4 avec ecran ou relais (aucun P4 a 8 relais).
-- `outils_docs/FICHIERS_DRVSET.md` — inventaire des fichiers `.drvset*`/`.snsset*` du firmware : role, contenu, chargement, sauvegarde, effacement (2026-11-02).
+- `outils_docs/reference_berry/FICHIERS_DRVSET.md` — inventaire des fichiers `.drvset*`/`.snsset*` du firmware : role, contenu, chargement, sauvegarde, effacement (2026-11-02).
 - `outils_docs/sauvegarde_config/` — maquettes de l'onglet « Sauvegardes » de la page build (2026-11-02) : `modele-A.png` a `modele-C.png`, code `maquettes_sauvegarde.html`, contraintes `README.md`. Choix en attente, rien de realise.
-- `outils_docs/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
-- `outils_docs/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
+- `outils_docs/reference_berry/SOLIDIFICATION_BERRY.md` — mecanisme, verification (§5), parametres, 13 pieges.
+- `outils_docs/reference_berry/PROTOCOLE_MODBUS.md` — ModBus RTU/TCP standard, implementation maison (3 transports
   Serie/UDP/TCP), extension esclave->maitre, failles du mecanisme d'envoi, design de queue FIFO,
   carte des registres de la carte 16 relais (§8), architecture de synchronisation (§9).
-- `outils_docs/ANALYSE_BERRY_MODBUS_DISCOVERY.md` — **historique** (etat du 2026-09-22, encadre de tete :
+- `outils_docs/historique/ANALYSE_BERRY_MODBUS_DISCOVERY.md` — **historique** (etat du 2026-09-22, encadre de tete :
   numeros de ligne perimes, defauts du §2.3 corriges depuis le 2026-09-30) — fonctionnement des programmes ModBus
   Berry (3 transports, carte 16 relais, ESP32<->ESP32, push esclave->maitre) + audit de la
   table `/json/discovery.json` : formes ecrites/lues, 3 defauts bloquants la resolution
   d'IP en UDP, et tableau des elements restant a parametrer (importance/priorite/difficulte).
   §2.6 : cycle `forceEnvoiParams` -> `ImAlive` (presentation esclave -> maitre, usages de la
   table cote maitre, piege de la carte reaffectee) ; resume en tete de `data/fs/udpFonctions.be`.
-- `outils_docs/DIAGNOSTIC_UDP_2026-10-17.md` — diagnostic UDP maitre <-> esclave (Range Extender /
+- `outils_docs/historique/DIAGNOSTIC_UDP_2026-10-17.md` — diagnostic UDP maitre <-> esclave (Range Extender /
   Wi-Fi classique) : matrice attendue, cause prouvee (AP de l'esclave en 192.168.4.1/24 -> ses envois
   vers le maitre partent par son AP), corrections C1-C7, plan des essais. Resume dans
   `PROTOCOLE_MODBUS.md` §9 (avec les resultats des essais). C1 a C6 appliques et valides sur les cartes le
   2026-10-17, dans les deux modes ; multicast du maitre par la box seulement si un esclave y est decouvert.
   La reference est `data/fs/udpFonctions.be` (le diff d'origine, supprime le 2026-11-23, reste dans l'historique git).
-- Voie MQTT maitre/esclaves (2026-11-16, plan `tasks/plans/voie-mqtt.md`, analyse `outils_docs/ANALYSE_VOIE_MQTT_2026-11-16.md`) : le P4 du garage commande des esclaves Tasmota natifs (projecteur LED, pompe, cuve) par `cmnd/<topic>/...` avec garde-fous (G3 compare-avant-agir, G4 quarantaine, G5 coupe-circuit, accuses et renvois, alerte broker). `data/fs/mqttLiaisonFonctions.be` (SOLIDIFIE, pur, sans MQTT) et `controleMqttLiaison.be` (bloc `drivers.liaisonMqtt`, commande `ReglageMqttLiaison`), elements virtuels `MQTT_<nom>` dans `controleGeneral.be::set_power_handler`. Banc `berry/banc_mqtt_liaison.py` (mutants). Essais sur carte (2026-11-20 et 21) : ordres (A6, `recu` rend true), coupure du broker et alerte (A7), pompe de piscine ESP8266 sans Berry et bouton du maitre recale sur l'etat reel de l'esclave (A9, `controleMqttLiaison.be::recale`), lignes « perime » ; reste l'essai du portail de jardin (A10, jamais sans l'utilisateur) et la montee intermittente de la memoire Berry du P4 (cause inconnue, non reproduite le 2026-11-20, sonde relancee le 2026-11-21). Esclaves MQTT sans fiche ModBus (projecteur, pompe) : aucun repli (`PROTOCOLE_MODBUS.md` § 11). Mode d'emploi : `outils_docs/README.md` § « Voie MQTT maitre/esclaves ».
+- Voie MQTT maitre/esclaves (2026-11-16, plan `tasks/plans/voie-mqtt.md`, analyse `outils_docs/historique/ANALYSE_VOIE_MQTT_2026-11-16.md`) : le P4 du garage commande des esclaves Tasmota natifs (projecteur LED, pompe, cuve) par `cmnd/<topic>/...` avec garde-fous (G3 compare-avant-agir, G4 quarantaine, G5 coupe-circuit, accuses et renvois, alerte broker). `data/fs/mqttLiaisonFonctions.be` (SOLIDIFIE, pur, sans MQTT) et `controleMqttLiaison.be` (bloc `drivers.liaisonMqtt`, commande `ReglageMqttLiaison`), elements virtuels `MQTT_<nom>` dans `controleGeneral.be::set_power_handler`. Banc `berry/banc_mqtt_liaison.py` (mutants). Essais sur carte (2026-11-20 et 21) : ordres (A6, `recu` rend true), coupure du broker et alerte (A7), pompe de piscine ESP8266 sans Berry et bouton du maitre recale sur l'etat reel de l'esclave (A9, `controleMqttLiaison.be::recale`), lignes « perime » ; reste l'essai du portail de jardin (A10, jamais sans l'utilisateur) et la montee intermittente de la memoire Berry du P4 (cause inconnue, non reproduite le 2026-11-20, sonde relancee le 2026-11-21). Esclaves MQTT sans fiche ModBus (projecteur, pompe) : aucun repli (`PROTOCOLE_MODBUS.md` § 11). Mode d'emploi : `outils_docs/README.md` § « Voie MQTT maitre/esclaves ».
 - Emulation Hue pour Alexa (2026-11-22) : `data/fs/hueFonctions.be::appareils` (liste blanche des sorties a cle `alexa`, Shutters refuses, ids natifs) et `controleHue.be` (pont `global.hue_bridge`, une chaine pour tout id ; `controleHue.be::regle` : FriendlyName masques puis `Emulation 2`, compares avant envoi) ; persist `serveur.emulationHue` (OFF au depot), cible de log `emulationHue`, liste `berry_commun.emulation_hue` (P4 du garage, cave S3, deux greniers). Banc `berry/banc_hue.py` (mutants). Pas essaye sur carte. Mode d'emploi : `outils_docs/README.md` § « Émulation Hue pour Alexa ».
-- `outils_docs/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets
+- `outils_docs/historique/AUDIT_MODBUS_2026-09-29.md` — audit complet ModBus garage (B1 corrige, secrets
   en clair sur depot public, defauts G1-G8 actifs, L1-L13 latents, ameliorations par priorite).
 - `outils_docs/Electronique/Connecteur ModBus/` — docs constructeur de la carte 16 relais
   (`... commamd.docx` = jeu de commandes, `... Manual.docx` = caracteristiques).
@@ -259,10 +259,10 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `solidifie_et_compile_berry.py` (module solidifiable en ~10 s, compile le .h ; REFUSE pendant un build : il vide
     `berry_custom/src/embedded`, dont le build a besoin, incident du 2026-11-01),
     `nomme_fonctions_berry.py` (fonctions anonymes -> nommees), `carte_modules_berry.py`
-    (-> `outils_docs/CARTE_MODULES_BERRY.md`, sortie deterministe : ni date ni ordre de hachage), `genere_schema_persist.py`
+    (-> `outils_docs/reference_berry/CARTE_MODULES_BERRY.md`, sortie deterministe : ni date ni ordre de hachage), `genere_schema_persist.py`
     (-> `outils_docs/schemas/persist.schema.json`), `gen_tapp.py` (dossier -> `.tapp` sans compression ; refuse un nom du
     framework nu, `LOG_LEVEL_*` compris, car la carte compile l'extension avant `/autoexec.be` ; banc `test_gen_tapp.py` ;
-    exemple `data/extensions/fsMqtt/`, banc `banc_tapp_fsmqtt.{py,be}` sous `berry.exe -g -s` ; doc `outils_docs/EXTENSIONS_TAPP.md`),
+    exemple `data/extensions/fsMqtt/`, banc `banc_tapp_fsmqtt.{py,be}` sous `berry.exe -g -s` ; doc `outils_docs/reference_berry/EXTENSIONS_TAPP.md`),
     `banc_repartition_fichiers.{py,be}` (`gestionFileFolder.be::listeEtRepartitLesFichiers` : un fichier deplace au demarrage
     n'est jamais perdu, `.tapp` vers `/.extensions/`), et les bancs
     `banc_test_modbus.{py,be}`, `banc_leds.{py,be}` (ruban AUTO/MANUEL, bouton, LED du dev-kit),
@@ -528,7 +528,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `_modification`, ce dernier lent) + sonde Chrome
     `test_assistant_persist_page_chrome.py`. Mode d'emploi : `outils_docs/README.md` § « Assistant persist (page web) ».
     Spec : `docs/superpowers/specs/2026-10-27-assistant-persist-design.md` ; plan : `tasks/plans/assistant-persist.md` ;
-    analyse en attente de decision : `outils_docs/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
+    analyse en attente de decision : `outils_docs/historique/ANALYSE_CLES_MAC_TELEPERIOD_2026-10-27.md`.
     Onglet « autoexec.bat » (2026-11-05, modele C de `outils_docs/autoexec_bat/`) : `assistant_persist_autoexec.py` (routes),
     `autoexec_fichier.py` (lecture masquee, diff, ecriture), `autoexec_analyse.py` (avertissements), `autoexec_commandes.py`
     (fige `outils_docs/schemas/commandes_tasmota.json` ; `--verifier`, `--generer`), `autoexec_banque.py`
@@ -541,7 +541,7 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `docs/superpowers/specs/2026-11-03-onglet-autoexec-bat-design.md` ; plans `tasks/plans/autoexec-bat.md`, `tasks/plans/autoexec-mqtt-tapp.md`.
   - `tapp_web.py` (+ `tapp_page.py`, `tapp_sources.py`, `tapp_envoi.py`, `build/cible_tapp.py`) — page « Fabrique d'extensions »
     http://127.0.0.1:7980 (2026-11-07 ; tuile de l'annuaire, groupe Ateliers, arret libre ; tache VS Code ; cible Custom detachee,
-    `NOM_CIBLE` fabrique_tapp). Sources dans `data/extensions/<nom>/` (gabarits A et B de `outils_docs/EXTENSIONS_TAPP.md`), manifeste,
+    `NOM_CIBLE` fabrique_tapp). Sources dans `data/extensions/<nom>/` (gabarits A et B de `outils_docs/reference_berry/EXTENSIONS_TAPP.md`), manifeste,
     controle et fabrication par `berry/gen_tapp.py`, `.tapp` a cote du dossier (ignore par git) ; envoi HTTP ou MQTT vers
     `/.extensions/<nom>.tapp` par `autoexec_envoi.py` (identite, refus pendant un build, geste explicite ; en MQTT, lecture de la
     carte au seul clic « Lire la carte ») ; boutique locale de `/ext` (`GET /extensions/...`, publique, `tapp_sources.py::depot`) pour une carte dont

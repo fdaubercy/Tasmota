@@ -21,10 +21,10 @@ solidification de TOUS les envs (« strict: redefinition of builtin 'format' »)
 et les bancs étaient verts, car ils ne compilent pas en mode strict.
 
 Avant tout, lis :
-- `outils_docs/SOLIDIFICATION_BERRY.md` (mécanisme, §5 vérification, les 13 pièges) ;
+- `outils_docs/reference_berry/SOLIDIFICATION_BERRY.md` (mécanisme, §5 vérification, les 13 pièges) ;
 - `tasks/lessons.md` : les entrées qui citent solidification, builtin, `custom_berry_solidify`, `globs`
   (cherche par mot-clé, ne lis pas le fichier entier) ;
-- `outils_docs/CARTE_MODULES_BERRY.md` pour savoir quel module est solidifié dans quel env.
+- `outils_docs/reference_berry/CARTE_MODULES_BERRY.md` pour savoir quel module est solidifié dans quel env.
 
 Périmètre : les fichiers donnés, ou à défaut `git diff --name-only -- 'data/*.be'` + `git status --short -- 'data/*.be'`.
 Relis les lignes modifiées (`git diff -U5 -- <fichier>`) dans leur fonction entière.

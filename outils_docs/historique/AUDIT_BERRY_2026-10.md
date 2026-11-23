@@ -83,7 +83,7 @@ lancé pendant le build. À passer hors build si l'on veut une ligne de base com
 ### Carte des modules
 
 `berry/carte_modules_berry.py --sortie <scratchpad>` : 43 modules, 8 cartes, **14 incohérences**,
-29 informations. Contenu **identique** à `outils_docs/CARTE_MODULES_BERRY.md` (version du 2026-10-20) à
+29 informations. Contenu **identique** à `outils_docs/reference_berry/CARTE_MODULES_BERRY.md` (version du 2026-10-20) à
 l'ordre près de quelques lignes du graphe : l'ordre de sortie du générateur n'est pas stable d'une
 exécution à l'autre (cote **S**, constat sur l'outil).
 

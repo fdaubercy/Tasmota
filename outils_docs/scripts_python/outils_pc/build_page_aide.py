@@ -1,7 +1,7 @@
 """Onglet « Aide » de la page Build et televersement : texte fixe, CSS et HTML inseres dans build_page.PAGE a la place
 des marques /*CSS_AIDE*/ et <!--VUE_AIDE-->. Le changement d'onglet est dans build_page_fichiers.py (montreOnglet).
 
-Le detail des fichiers .drvset, avec ses renvois au code, est dans outils_docs/FICHIERS_DRVSET.md.
+Le detail des fichiers .drvset, avec ses renvois au code, est dans outils_docs/reference_berry/FICHIERS_DRVSET.md.
 """
 
 CSS = r"""
