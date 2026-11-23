@@ -40,6 +40,9 @@ Texte libre : pourquoi ce plan, décisions prises. Non compté.
 
 ## Vérification
 Texte libre. Non compté.
+
+## Bilan
+Obligatoire à la clôture (voir « Règles d'usage »). Texte libre, non compté.
 ```
 
 ## Règles de calcul
@@ -56,12 +59,23 @@ Texte libre. Non compté.
 - **Cocher une étape seulement après l'avoir vérifiée**, avec sa preuve après ` — preuve : `
   (commit, `fichier:ligne`, sortie d'un banc). Pas de coche sans preuve (même règle que `/fin-de-session`).
 - Mettre à jour `maj:` à chaque modification.
-- **Index des plans** : `tasks/README.md` liste chaque plan (objectif, statut, %). Son tableau est
-  régénéré par `node .claude/hooks/index_plans.mjs` — automatiquement quand Claude édite un plan (hook
-  `index_plans_edition.sh`), à la main après une édition hors Claude. `--verifier` : code 1 s'il est en retard.
+- **Index des plans** : `tasks/README.md` donne une ligne par plan actif ou en pause (objectif, %, ce qui attend
+  l'utilisateur ou une carte), groupées par famille, et une ligne par famille pour les plans clos ; ni les cases ni
+  les points restants n'y sont recopiés (le détail est dans le plan). Régénéré par
+  `node .claude/hooks/index_plans.mjs`, automatiquement quand Claude édite un plan (hook
+  `index_plans_edition.sh`), à la main après une édition hors Claude. `--verifier` : code 1 s'il est en retard
+  ou si un plan clos n'a pas son bilan (règle ci-dessous).
 - Ce qui reste hors du plan va dans « Améliorations restantes », avec son étiquette.
 - Plan fini (100 %) : `statut: clos`. Plusieurs plans peuvent être `actif` ; la ligne
   d'avancement montre le plus récemment modifié.
+- **Bilan à la clôture** : un plan passé en `statut: clos` porte une section `## Bilan` (en dernier, avant ou après
+  « Vérification ») avec quatre rubriques : ce qui a marché, ce qui a raté, la règle retenue (à remonter dans
+  `tasks/lessons.md` ou dans le document de référence du sujet), et les cases ouvertes, chacune **reportée** (vers
+  quel plan, ou « sans plan destinataire ») ou **abandonnée** (pourquoi) ; une case ouverte n'est jamais cochée pour
+  fermer le plan. Contrôle : `index_plans.mjs --verifier` signale un plan clos sans `## Bilan`.
+  **Transition** : seuls les plans clos dont `maj:` est postérieur ou égal au 2026-11-23 (`BILAN_DEPUIS` dans
+  `index_plans.mjs`) sont contrôlés ; les plans clos avant cette date n'ont pas de bilan et ne rendent pas le
+  contrôle rouge. Un `## Bilan` écrit dans un bloc de code ne compte pas.
 - **Plan d'une conversation** : une conversation suit le plan qu'elle a validé (ExitPlanMode), édité
   ou ouvert (`/suivi ouvrir`) ; `/suivi suivre <chantier>` la rattache à la main, `/suivi detacher`
   la libère (le plan reste intact). Quand l'onglet actif est une conversation Claude, la vue de droite

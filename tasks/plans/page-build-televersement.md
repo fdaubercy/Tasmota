@@ -2,9 +2,9 @@
 chantier: page-build-televersement
 titre: Page web « Build et téléversement » (port 7700, tuile de l'annuaire)
 objectif: Compiler et téléverser en série (COM ou OTA) les envs cochés depuis une page web, avec progression en direct
-statut: actif
+statut: clos
 cree: 2026-10-24
-maj: 2026-11-09
+maj: 2026-11-23
 famille: build
 spec: 2026-10-24-page-build-televersement-design.md
 ---
@@ -626,3 +626,26 @@ en dernier, n'est pas parti. Vider tout le FS est écarté : `/.settings`, `/.dr
 
 Tous les bancs `test_build_*.py` et `test_annuaire*.py` verts (code de sortie 0) ; page exécutée dans
 Chrome sans exception ; les 6 essais réels de A8 faits avec l'utilisateur.
+
+## Bilan
+
+Clos le 2026-11-23 : 89/89 étapes cochées. Deux cases d'« Améliorations restantes » restent ouvertes, reportées ci-dessous.
+
+**Ce qui a marché**
+- Un module Python par responsabilité (envs, progression, série, OTA, page, serveur), testé contre un faux `pio` (`build_faux_pio.py`) : aucun `pio run` lancé pendant la mise au point, les essais réels (A8) faits avec l'utilisateur, une carte à la fois.
+- Les 8 essais réels de A8 réussis (compilation, COM, OTA du firmware et du FS, échec provoqué, pause « rebranchez la carte »), puis l'OTA des esclaves derrière le maître (A11) et l'onglet « Fichiers » (A15 à A17).
+- La page est devenue la base de nombreux onglets et plans suivants (`temps-compilation`, `build-reparations`, `compilations-nuit`, `sauvegarde-config-cartes`).
+- Les bancs `test_build_*.py` et la sonde Chrome, avec témoins rouges, ont attrapé les régressions de chaque action.
+
+**Ce qui a raté**
+- `buildfs` construisait le FS avec le `data_dir` du lancement précédent (P4 avec le FS de la cuve, 2026-10-26) : corrigé par `build_envs.py::ecrit_data_dir` (A12).
+- Un module solidifié vide (`demarrage.be` sans `#@ solidify`) n'échouait qu'après 1 h de build : arrêt immédiat ajouté (`build_solidification.py`).
+- `garde_build` voyait les cibles d'outils comme des builds : corrigé (commit c741dc9ae).
+
+**Règle retenue**
+- Jamais de `PLATFORMIO_UPLOAD_PORT` ni de `PLATFORMIO_EXTRA_SCRIPTS` (ils changent l'empreinte du projet et purgent `.pio/build`) : le port passe par `--upload-port`.
+- Une action d'écriture sur une carte se fait après sauvegarde du persist, contrôle d'identité et accord de l'utilisateur.
+
+**Cases ouvertes**
+- Reportée, sans plan destinataire : l'OTA du FS par MQTT (`build_ota_mqtt.py`) n'a pas les parades de l'A17 (place vérifiée, fichiers identiques sautés).
+- Reportée, sans plan destinataire : la relance de l'OTA vers une carte déjà en safeboot n'est pas prouvée en réel. La détection existe (`build_ota_http.py::_page_safeboot`), mais le refus « HTTP 200 » du 2026-10-28 n'est pas élucidé (vrai refus ou mot de `ECHECS_PAGE` trouvé dans la page).

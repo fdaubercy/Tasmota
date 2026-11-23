@@ -1,14 +1,14 @@
-// Index des plans suivis : regenere le tableau de tasks/README.md (objectif, statut, % de chaque plan).
+// Index des plans suivis : regenere tasks/README.md (une ligne par plan actif : objectif, %, attentes ; plans clos en une ligne par famille).
 // Les % viennent du parseur partage avec le mod et l'extension (parseur-plan.mjs) : memes chiffres
 // que la vue de droite. Seul le bloc entre les deux marqueurs est reecrit, le reste du fichier est garde.
 //   node .claude/hooks/index_plans.mjs             -> regenere (silencieux si rien ne change)
-//   node .claude/hooks/index_plans.mjs --verifier  -> code 1 si tasks/README.md est en retard sur les plans
+//   node .claude/hooks/index_plans.mjs --verifier  -> code 1 si tasks/README.md est en retard ou si un plan clos depuis 2026-11-23 n'a pas de ## Bilan
 // Lance par le hook PostToolUse index_plans_edition.sh a chaque edition d'un plan par Claude.
 // Banc : node .claude/hooks/test_index_plans.mjs
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { analyse, barre } from "../mods/suivi-plan/hooks/parseur-plan.mjs"
+import { analyse } from "../mods/suivi-plan/hooks/parseur-plan.mjs"
 
 export const DEBUT = "<!-- debut-index-plans : bloc regenere par .claude/hooks/index_plans.mjs, ne pas editer -->"
 export const FIN = "<!-- fin-index-plans -->"
@@ -24,54 +24,64 @@ export function lignes(dossierPlans) {
                     || String(y.a.meta.maj).localeCompare(String(x.a.meta.maj)) || x.nom.localeCompare(y.nom))
 }
 
-// Ce qui reste d'un plan : etapes et ameliorations non cochees (vide = plan entierement realise).
-function restes(a) {
-  const etapes = a.actions.flatMap(act => act.etapes.filter(e => !e.fait).map(e => ({ texte: e.texte, ligne: `${act.id} — ${act.titre} : ${e.texte}` })))
-  const amelio = a.ameliorations.filter(x => !x.fait).map(x => `Amélioration [${x.portee}] : ${x.texte}`)
-  return { etapes, amelio }
-}
 // Ce qui attend un geste hors de Claude, deduit de mots du texte de l'etape (indicatif : un mot-cle, pas une preuve).
 export function blocage(texte) {
   if (/confirm|décid|décis|choix|accord|à valider|demander à/i.test(texte)) return "à vous"
   if (/sur (la |une |le |les )?(carte|P4|cuve|esclave|écran|matériel)|essai|à voir|câblage|flash/i.test(texte)) return "sur carte"
   return ""
 }
-const marque = s => s.texte ? (blocage(s.texte) ? `[${blocage(s.texte)}] ${s.ligne}` : s.ligne) : s
-const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`
+const court = (s, n) => { s = cellule(s); return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s }
+const nomPlan = nom => nom.replace(/\.md$/i, "")
+const lien = nom => `[${nomPlan(nom)}](plans/${nom})`
+const jour = m => String(m ?? "").match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? (cellule(m) || "—")
 
+// Index COURT : une ligne par plan actif ou en pause (groupes par famille), une ligne par famille pour les plans clos.
+// Ni cases ni gestes recopies : le detail est dans le plan lui-meme (lien de la premiere colonne).
 export function bloc(dossierPlans) {
   const plans = lignes(dossierPlans)
+  const ouverts = plans.filter(p => p.a.meta.statut !== "clos"), clos = plans.filter(p => p.a.meta.statut === "clos")
+  const familles = ps => [...new Set(ps.map(p => cellule(p.a.meta.famille) || "sans famille"))]
+    .sort((x, y) => (x === "sans famille") - (y === "sans famille") || x.localeCompare(y))
+  const deLaFamille = (ps, f) => ps.filter(p => (cellule(p.a.meta.famille) || "sans famille") === f)
   const r = [DEBUT, "",
     `${plans.length} plans : ` + ["actif", "en-pause", "clos"]
-      .map(s => `${plans.filter(p => p.a.meta.statut === s).length} ${s}`).join(", ") + ".", "",
-    "| Plan | Objectif principal | Statut | Avancement | Reste à faire | Créé | Mis à jour |",
-    "|---|---|---|---|---|---|---|"]
-  const notes = [], attente = []
-  for (const { nom, a } of plans) {
-    const m = a.meta
-    const avance = a.global == null ? "—" : `${barre(a.global)} ${a.global} % (${a.fait}/${a.total})`
-    const { etapes, amelio } = restes(a)
-    const reste = [etapes.length && pluriel(etapes.length, "étape"), amelio.length && pluriel(amelio.length, "amélioration")]
-      .filter(Boolean).join(", ")
-    r.push(`| [${cellule(a.titre || nom)}](plans/${nom}) | ${cellule(m.objectif) || "_à renseigner (clé `objectif:`)_"} ` +
-           `| ${cellule(m.statut) || "?"} | ${avance} | ${reste || "—"} | ${cellule(m.cree) || "—"} | ${cellule(m.maj) || "—"} |`)
-    if (m.statut === "actif") for (const s of etapes) if (blocage(s.texte)) attente.push(`- [${blocage(s.texte)}] [${cellule(a.titre || nom)}](plans/${nom}) — ${cellule(s.ligne)}`)
-    if (reste) notes.push("", `#### [${cellule(a.titre || nom)}](plans/${nom}) — ${a.global ?? "?"} %`, "",
-                          ...[...etapes, ...amelio].map(s => `- ${cellule(marque(s))}`))
+      .map(s => `${plans.filter(p => p.a.meta.statut === s).length} ${s}`).join(", ") + ".", ""]
+  for (const f of familles(ouverts)) {
+    r.push(`### ${f}`, "", "| Plan | Objectif | Avancement | Attend | Mis à jour |", "|---|---|---|---|---|")
+    for (const { nom, a } of deLaFamille(ouverts, f)) {
+      const m = a.meta
+      const attend = {}
+      for (const act of a.actions) for (const e of act.etapes) if (!e.fait && blocage(e.texte)) attend[blocage(e.texte)] = (attend[blocage(e.texte)] ?? 0) + 1
+      const avance = (a.global == null ? "—" : `${a.global} % (${a.fait}/${a.total})`) + (m.statut === "en-pause" ? ", en pause" : "")
+      r.push(`| ${lien(nom)} | ${court(m.objectif, 110) || "_à renseigner (clé `objectif:`)_"} | ${avance} ` +
+             `| ${Object.entries(attend).map(([k, n]) => `${n} ${k}`).join(", ") || "—"} | ${jour(m.maj)} |`)
+    }
+    r.push("")
   }
-  if (attente.length) r.splice(4, 0, "### Attendent un geste hors de Claude (plans actifs)", "",
-    "Étiquette déduite d'un mot de l'étape : `à vous` = confirmation ou choix, `sur carte` = essai ou envoi sur le matériel.", "", ...attente, "")
-  if (notes.length) r.push("", "### Points restants des plans non terminés", ...notes)
-  r.push("", FIN)
+  if (clos.length) {
+    r.push("### Plans clos", "")
+    for (const f of familles(clos)) r.push(`- ${f} (${deLaFamille(clos, f).length}) : ` + deLaFamille(clos, f).map(p => lien(p.nom)).join(", "))
+    r.push("")
+  }
+  r.push(FIN)
   return r.join("\n")
+}
+
+// A18 : un plan clos depuis le 2026-11-23 doit porter une section `## Bilan` (les plans clos avant n'en ont pas : transition).
+export const BILAN_DEPUIS = "2026-11-23"
+export function sansBilan(dossierPlans) {
+  return lignes(dossierPlans)
+    .filter(({ nom, a }) => a.meta.statut === "clos" && jour(a.meta.maj) >= BILAN_DEPUIS)
+    .filter(({ nom }) => !/^##\s+Bilan\s*$/m.test(fs.readFileSync(path.join(dossierPlans, nom), "utf8").replace(/```[\s\S]*?```/g, "")))
+    .map(p => p.nom)
 }
 
 const ENTETE = `# Suivi des plans de travail
 
 Trace des plans de modification du fork (\`tasks/plans/\`, format \`tasks/plans/_FORMAT.md\`).
-Avancement = moyenne des % des actions \`## A<n>\`, chaque action pesant autant (même calcul que la
-vue « Suivi du plan » de VS Code). Le tableau se met à jour seul dès qu'un plan change (extension VS Code) ;
-sans VS Code : \`node .claude/hooks/index_plans.mjs\`.
+Une ligne par plan actif, les plans clos en une ligne par famille. Le détail (étapes, preuves) est dans le plan.
+Avancement = moyenne des % des actions \`## A<n>\` (même calcul que la vue « Suivi du plan » de VS Code).
+Mise à jour seule dès qu'un plan change (extension VS Code) ; sans VS Code : \`node .claude/hooks/index_plans.mjs\`.
 
 `
 
@@ -83,9 +93,13 @@ export function regenere(depot, verifier = false) {
   const nouveau = i >= 0 && j > i
     ? ancien.slice(0, i) + nouveauBloc + ancien.slice(j + FIN.length)
     : ancien.replace(/\n*$/, "\n\n") + nouveauBloc + "\n"
-  if (nouveau === ancien) return 0
-  if (verifier) { console.error("tasks/README.md est en retard sur tasks/plans/ : node .claude/hooks/index_plans.mjs"); return 1 }
-  fs.writeFileSync(fichier, nouveau, "utf8")
+  if (verifier) {
+    const manque = sansBilan(path.join(depot, "tasks", "plans"))
+    if (manque.length) console.error(`Plan(s) clos sans section "## Bilan" (obligatoire depuis ${BILAN_DEPUIS}) : ${manque.join(", ")}`)
+    if (nouveau !== ancien) console.error("tasks/README.md est en retard sur tasks/plans/ : node .claude/hooks/index_plans.mjs")
+    return manque.length || nouveau !== ancien ? 1 : 0
+  }
+  if (nouveau !== ancien) fs.writeFileSync(fichier, nouveau, "utf8")
   return 0
 }
 

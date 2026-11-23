@@ -1,9 +1,9 @@
 ---
 chantier: sauvegarde-config-cartes
 titre: Onglet « Sauvegarde configuration » de la page build (modèle B)
-statut: actif
+statut: clos
 cree: 2026-11-03
-maj: 2026-11-03
+maj: 2026-11-23
 source: squishy-imagining-raven.md
 objectif: Sauvegarder, comparer, modifier paramètre par paramètre et restaurer la configuration (/dl : Settings + .drvset*) de chaque carte depuis la page build
 famille: build
@@ -96,3 +96,24 @@ thème à droite avec filtre) ; onglet nommé **« Sauvegarde configuration »**
 - Bancs : `test_build_sauvegarde.py`, `test_build_page_sauvegarde_chrome.py`, puis `test_build_web.py`, `test_build_page_chrome.py`, `test_build_serie.py` (A5) ; Python de PlatformIO, code de sortie 0 = vert.
 - Sur la carte (A7) : `Status 2`, `VoltageCal/CurrentCal/PowerCal`, `EnergyTotal`, `Timers` avant et après la restauration.
 - Page build relancée par l'annuaire, jamais pendant un build.
+
+## Bilan
+
+Clos le 2026-11-23 : 33/33 étapes cochées, aucune case ouverte.
+
+**Ce qui a marché**
+- decode-config (PyPI 16.0.0.0) dans un environnement Python dédié hors dépôt, plutôt qu'un décodeur maison : lecture d'un `.dmp`, modification paramètre par paramètre, nouveau `.dmp` hors ligne (`outils_pc/decode_config.py`).
+- Les bancs sur carte simulée avec mutants (masquage des mots de passe, MD5 faux, version non vérifiée) ont attrapé des défauts réels avant la carte : `test_build_sauvegarde.py` (54 puis 59 contrôles), `test_build_sauvegarde_mqtt.py`.
+- Essai réel de A7 sur le différentiel : sauvegarde, comparaison (0 écart), restauration en 27 s, calibrage 310/15963/124194 relu intact.
+- Relecture par un sous-agent : 10 défauts corrigés, dont la clé réseau Zigbee envoyée en clair à la page (masquage par `build_sauvegarde.SECRET`).
+
+**Ce qui a raté**
+- decode-config tronque la réserve de textes d'un ESP32 et efface `influxdb_host32` et `influxdb_bucket32` si on restaure le JSON complet : contourné par l'écriture des seules clés modifiées et `decode_config._pose_textes`, pas corrigé en amont.
+- Après la restauration du 2026-11-03, le relais est revenu ON alors que la sauvegarde le portait OFF (`PowerOnState 3`) : cause jamais trouvée, recherche abandonnée à la demande de l'utilisateur. Seul reste l'avertissement de la fenêtre de confirmation.
+
+**Règle retenue**
+- Un outil externe qui réécrit une configuration (decode-config) se prouve sur un vrai fichier, octet par octet, avant d'être branché : le défaut de la réserve de textes n'est apparu qu'ainsi.
+- Une valeur que le persist ou l'`autoexec.bat` reposent au démarrage est réécrite après une restauration : l'onglet le signale par la marque « démarrage » (`build_sauvegarde::POSEES`).
+
+**Cases ouvertes**
+- Aucune dans le plan. Deux étapes cochées portent une réserve : la restauration réelle par MQTT (A11) n'a jamais été essayée sur une vraie carte, seulement sur la carte MQTT simulée du banc (reportée à la demande de l'utilisateur, sans plan destinataire) ; la cause du relais revenu ON (A10) est abandonnée.

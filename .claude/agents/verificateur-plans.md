@@ -34,10 +34,11 @@ Contrôles, par plan :
 3. **Cohérence** : une étape `[x]` dont le commit est postérieur à un commit qui la défait ; une étape `[ ]` dont
    la preuve existe déjà (à cocher) ; une étape de commit cochée alors que `git status` montre des fichiers du
    chantier encore non commités ; un titre d'action « fait » avec des sous-étapes ouvertes.
-4. **Pourcentage** : recompte (`[x]` / total) et compare à la ligne de `tasks/README.md` ; si le compte diffère,
+4. **Pourcentage** : recompte (`[x]` / total) et compare à la ligne du plan dans `tasks/README.md` (une ligne par plan actif ou en pause ; un plan clos n'y a qu'un lien, son % se lit dans le plan) ; si le compte diffère,
    signale-le (le tableau se régénère par `node .claude/hooks/index_plans.mjs`, et `--verifier` rend le code 1 s'il
    est en retard : lance `node .claude/hooks/index_plans.mjs --verifier`).
-5. **Ouvertures oubliées** : améliorations restantes, « à décider », renvois vers un document ou une spec qui n'existe pas.
+5. **Bilan** : un plan `statut: clos` dont `maj:` est >= 2026-11-23 doit avoir une section `## Bilan` (`index_plans.mjs --verifier` la contrôle) ; ses cases ouvertes sont reportées ou abandonnées, jamais cochées.
+6. **Ouvertures oubliées** : améliorations restantes, « à décider », renvois vers un document ou une spec qui n'existe pas.
 
 Rapport : un tableau par plan (action, étape, verdict `vérifiée / sans preuve / preuve fausse / à cocher / non relancée`)
 puis un verdict d'une ligne par plan. Termine par la liste précise des cases à décocher ou à cocher, pour que la

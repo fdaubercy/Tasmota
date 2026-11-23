@@ -1,9 +1,9 @@
 ---
 chantier: jauges-cuve
 titre: Page dédiée « Niveau de la cuve » (jauges A, H et B), lien depuis l'encadré de la cuve
-statut: actif
+statut: clos
 cree: 2026-10-31
-maj: 2026-11-09
+maj: 2026-11-23
 source: squishy-imagining-raven.md
 objectif: Afficher volume (jauge A), taux (jauge H) et tensions brute et recalculée de la sonde (cadran B) de la cuve sur une page dédiée ouverte depuis son encadré, sur la cuve et le P4
 famille: debits-energie
@@ -125,3 +125,25 @@ Choix de conception (minimum pour un essai) :
 - Bancs : `banc_cuve_page.py` (code 0, témoin rouge), `banc_cuve.py`, `banc_graphiques.py` (Python de PlatformIO, cf. skill `bancs`).
 - Relecture : agent `relecteur-berry` sur les .be modifiés avant commit.
 - Sur carte : captures Chrome de l'accueil et de `/cuve` (P4 et cuve) ; valeurs de la page = valeurs de l'encadré ; ouverture de `/cuve` puis `/graphiques` : ECharts non retéléchargé (cache commun).
+
+## Bilan
+
+Clos le 2026-11-23 : 31/32 étapes cochées. Une étape (A6) et une amélioration restent ouvertes, reportées ci-dessous.
+
+**Ce qui a marché**
+- Page `/cuve` : jauge A (volume, echarts-liquidfill 3.1.0 compatible ECharts 6.1.0, prouvé en A1), jauge H (taux), cadran B des tensions ; `banc_cuve_page.py` (61 contrôles, 8 scénarios Chrome, mutant sans `* 100` vu rouge).
+- Module `cuvePageFonctions` solidifié dès le premier essai, fichiers de la page embarqués sur la cuve et le P4 seulement (liste `berry_commun.page_cuve`).
+- Tension recalculée transmise par ModBus de la cuve au P4 (registre 4708, A10) ; pleine échelle de l'ADS1115 servie au registre 4709 ; captures Chrome de l'accueil et de `/cuve` sur les deux cartes (2026-11-09).
+- Garde-fou du banc sur les clés de cache localStorage communes aux 4 chargeurs ECharts (`banc_cuve_page.py::verifie_cles_cache`).
+
+**Ce qui a raté**
+- Aucun envoi sur les cartes dans ce plan : un flash du P4 remettait ses réglages à l'usine (`CfgHolder` 1608 contre 1609), décision de l'utilisateur du 2026-11-09. Seuls les fichiers identiques au dépôt ont été vérifiés (téléchargés des cartes, comparés octet pour octet).
+- Le relevé ModBus 4708 n'a pas pu être vu : l'ADS1115 de la cuve était débranché avec la sonde (`I2CScan` : « No devices found »), la tension recalculée reste « -,-- » sans lui, simulation comprise.
+
+**Règle retenue**
+- Les fichiers d'une page ne partent que sur les envs qui s'en servent (exclusion dans le `custom_files_exclude` des autres).
+- Un module `data/fs` modifié et solidifié impose un nouveau firmware : choisir le moment du flash avec l'utilisateur plutôt que flasher pour une seule page.
+
+**Cases ouvertes**
+- Reportée, sans plan destinataire : relevé ModBus 4708 au sniffeur ou dans le log du P4 (A6). À refaire sonde et ADS1115 rebranchés.
+- Reportée, sans plan destinataire : factoriser le chargeur ECharts commun à `graphiques.js` et `cuve.js` (décision de l'utilisateur du 2026-11-09). À faire avec le prochain flash de ces cartes pour une autre raison ; le garde-fou du banc couvre l'attente. Coût : 3 modules solidifiés touchés, firmware à recompiler sur chaque carte à graphiques.

@@ -1,9 +1,9 @@
 ---
 chantier: energie-differentiel
 titre: Différentiel Nous D3T — persist corrigé, calibrage protégé, page « Énergie » (disposition B)
-statut: actif
+statut: clos
 cree: 2026-10-31
-maj: 2026-11-09
+maj: 2026-11-23
 source: squishy-imagining-raven.md
 objectif: Passer le différentiel sur le firmware du fork sans perdre calibrage, compteur ni minuteries, et lui donner une page Énergie (kWh par heure/jour/mois, coût, puissance 24 h)
 famille: debits-energie
@@ -167,3 +167,26 @@ Demande : expliquer l'intérêt de l'« Extension Manager », évaluer quel outi
 - Bancs : `banc_energie.py`, banc du calibrage, `banc_demarrage.py` (instantané du différentiel), `test_assistant_persist_modele.py`, `verifie_berry.py` (hook) ; témoins rouges sur mutants.
 - Build de l'env (A1, A4) ; jamais en parallèle d'un build de l'utilisateur.
 - Sur la carte (A8) : `Status 2/4/10`, `VoltageCal/CurrentCal/PowerCal`, `EnergyTotal`, `Timers`, page `/energie` en capture, fichiers `/energie/` après une heure pleine.
+
+## Bilan
+
+Clos le 2026-11-23 : 69/70 étapes cochées. L'unique case ouverte est reportée ci-dessous.
+
+**Ce qui a marché**
+- Persist du différentiel corrigé (E1 à E5) et calibrage protégé : 310/15963/124194 et Total relus intacts après le flash OTA du 2026-11-02 (A8).
+- Page `/energie` (disposition B) servie par `data/fs/energieFonctions.be` : kWh par heure, jour et mois, coût, courbe 24 h ; `banc_energie.py` avec témoins rouges, essai sur la carte les 2026-11-02 et 2026-11-03 (tarif HC/HP validé par l'utilisateur).
+- Le chantier a fait naître des outils réutilisés ailleurs : onglet « Sauvegarde configuration » (plan `sauvegarde-config-cartes`), onglet « Aide », outil `.drvset003` (`build_drvset.py`), onglet `autoexec.bat` (plan `autoexec-bat`), Fabrique d'extensions (plan `autoexec-mqtt-tapp`).
+- Correctif `implicit_cache` prouvé sur un vrai build : `clear_memoized_values()` dans `build/post_lto_parallele.py`, banc `build/test_scons_cache.py`.
+
+**Ce qui a raté**
+- Le relais a été trouvé ouvert deux fois (19:46 et avant 20:07 le 2026-11-02) sans cause trouvée, recherche arrêtée à la demande de l'utilisateur.
+- Un envoi OTA coupé (`WinError 10054`) a laissé la carte en safeboot ; corrigé par 4 essais espacés dans `build_ota_firmware.py::envoie_firmware_ota`, jamais éprouvé sur la vraie carte.
+- Le thermomètre (GPIO34) a lu ~2,2 V au lieu de 0,64 V après l'envoi du FS (15 °C au lieu de 27 °C) : `AdcParam1` rétabli, cause inconnue.
+- `discovery` doit rester OFF sur cette carte (ESP32 sans PSRAM : la rafale MQTT fait échouer les allocations).
+
+**Règle retenue**
+- Sauvegarder avant tout flash le firmware d'origine, `/dl` et les fichiers du FS, et écrire le retour arrière avant l'envoi : la carte n'avait pas d'accès série.
+- Sur un ESP32 sans PSRAM, ne pas laisser `discovery` actif (voir la mémoire du projet).
+
+**Cases ouvertes**
+- Reportée, sans plan destinataire : « Thermomètre corrigé » (A11). À rouvrir dans un plan neuf si la valeur reste fausse, avec la température réelle près du boîtier pour la comparer.
