@@ -89,6 +89,8 @@ intermittent vient de l'indexeur C/C++ : `C_Cpp.files.exclude` ET `C_Cpp.exclusi
   (le vert des bancs ne prouve pas la solidification, panne du 2026-11-13). Un `.py` d'outil : `relecteur-outils-python`
   est recommande (au jugement). **Avant tout push** : agent `preparateur-push` (appele par `/commite pousse`, verdict STOP = pas de push). Les autres agents de `outils_docs/verification/SOUS_AGENTS.md` restent au jugement. Un agent qui
   signale un « bloquant » arrete le commit jusqu'a decision de l'utilisateur.
+- **Fichiers a secrets** (persist, `user_config_override.h`, defines Berry) : lus par `python .claude/hooks/garde_lecture.py --lire`
+  (valeurs masquees), jamais en clair ; vraies valeurs recopiees : `--cherche-valeurs --diff`, `--public origin/development`.
 
 ## Fichiers a ne jamais toucher sans accord
 

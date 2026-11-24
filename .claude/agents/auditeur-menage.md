@@ -7,6 +7,8 @@ effort: medium
 memory: local
 ---
 
+Fichiers à secrets (`_persist.json`, `user_config_override.h`, defines Berry, sauvegardes de cartes) : le hook `garde_lecture` refuse leur lecture brute ; les lire par `python .claude/hooks/garde_lecture.py --lire <fichier>` (valeurs masquées) ; jamais de valeur affichée.
+
 MÉMOIRE (`memory: local`) : ton dossier de mémoire est lu au démarrage. Tu y notes UNIQUEMENT ce qui t'aurait fait
 gagner du temps : faux positif (fichier qui semblait orphelin mais est lu par un chemin dynamique), élément que
 l'utilisateur a décidé de GARDER (à ne plus proposer), commande de recherche qui marche. Un fait par fichier court, daté,

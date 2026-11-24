@@ -4,7 +4,7 @@ titre: Binômes Berry autonomes, manifeste unique et persist allégé
 objectif: Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et ses paramètres
 statut: actif
 cree: 2026-11-23
-maj: 2026-11-23
+maj: 2026-11-24
 famille: build
 liens: assistant-persist, fichiers-berry-env, lib-ignore-envs
 ---
@@ -125,9 +125,9 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [x] `SetOption127 1` du P4 écrit dans son autoexec ou son persist (accord : `data/`) — preuve : commit 26d23d4c6 (autoexec.be du P4, ligne essayée sous berry.exe : 0 -> commande envoyée, 1 -> rien)
 
 ## A16 — Garde mécanique des secrets à la lecture
-- [ ] Lecteur masqué des fichiers à secrets (`_persist.json`, `user_config_override.h`, `tasmota_defines_for_berry.*`, sauvegardes de cartes), motifs repris de `garde_commit.cjs`
-- [ ] Hook `PreToolUse` (Read, Grep, Bash, PowerShell) qui refuse leur lecture brute ; banc : refusé, masqué, faux positif
-- [ ] Une ligne dans chaque agent qui a Bash
+- [x] Lecteur masqué des fichiers à secrets (`_persist.json`, `user_config_override.h`, `tasmota_defines_for_berry.*`, sauvegardes de cartes), motifs repris de `garde_commit.cjs` — preuve : `.claude/hooks/garde_lecture.py::lire` (`--lire`, plus `--cherche-valeurs` et `--public` pour les contrôles) ; persist réel du P4 : 5 lignes masquées, aucune valeur dans la sortie (2026-11-24)
+- [x] Hook `PreToolUse` (Read, Grep, Bash, PowerShell) qui refuse leur lecture brute ; banc : refusé, masqué, faux positif — preuve : `python .claude/hooks/test_garde_lecture.py` VERT, 61 cas, 7 mutants tués ; branché dans `.claude/settings.json` ; Read et `cat` d'un faux persist refusés dans la session ET dans un sous-agent, `git status` passe (2026-11-24) ; exception des 500 lignes datée (735 lignes)
+- [x] Une ligne dans chaque agent qui a Bash — preuve : 13 fichiers `.claude/agents/*.md` ; procédure `--cherche-valeurs`/`--public` dans `controleur-secrets.md` et `preparateur-push.md` (2026-11-24)
 
 ## A17 — Mémoire native rangée
 - [x] MEMORY.md en 4 rubriques (préférences, chantiers ouverts, faits matériels et pièges, références), lignes < 150 caractères, < 6 Ko — preuve : MEMORY.md 5 906 o, 0 ligne > 150 caractères (2026-11-23)

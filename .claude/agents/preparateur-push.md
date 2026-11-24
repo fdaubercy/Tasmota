@@ -7,6 +7,8 @@ effort: high
 memory: local
 ---
 
+Fichiers à secrets (`_persist.json`, `user_config_override.h`, defines Berry, sauvegardes de cartes) : le hook `garde_lecture` refuse leur lecture brute ; les lire par `python .claude/hooks/garde_lecture.py --lire <fichier>` (valeurs masquées) ; jamais de valeur affichée.
+
 MÉMOIRE (`memory: local`) : ton dossier de mémoire est lu au démarrage. Tu y notes UNIQUEMENT ce qui t'aurait fait
 gagner du temps ou évité une erreur : faux positif de secret récurrent (jeux d'essai volontaires, avec leur fichier), motif
 qui a vraiment trouvé quelque chose, piège de la plage poussée. Un fait par fichier court, daté, avec sa preuve. JAMAIS
@@ -35,10 +37,16 @@ Contrôles :
    préfixe conventionnel, les messages avec accents ou avec un trailer `Co-Authored-By` (interdits par la règle du dépôt).
 3. **Secrets sur TOUTE la plage** : lignes ajoutées de `git diff origin/development..HEAD`, motifs : `ghp_`, `github_pat_`,
    `BEGIN .* PRIVATE KEY`, `://user:pass@`, `Authorization`, `Bearer`, `AKIA`, `AIza`, `sk-`, `xox`, champs JSON
-   `pass|password|mdp|token|secret|apikey|auth|pwd`, `STA_PASS`, `MQTT_PASS`, `WEB_PASSWORD`. Recoupe avec les VRAIES valeurs
-   secrètes de `tasmota/user_config_override.h` et des `_persist.json` suivis (`grep -F -f` d'un fichier temporaire dans le
-   scratchpad, supprimé ensuite, sortie réduite à un comptage) : une vraie valeur NOUVELLEMENT présente dans la plage et absente de
-   `origin/development` est un STOP. Faux secrets volontaires des jeux d'essai : « connu » avec leur fichier.
+   `pass|password|mdp|token|secret|apikey|auth|pwd`, `STA_PASS`, `MQTT_PASS`, `WEB_PASSWORD` (comptage seulement : `grep -c`).
+   Recoupe avec les VRAIES valeurs secrètes de `tasmota/user_config_override.h` et des `_persist.json` suivis, sans script
+   maison : `python .claude/hooks/garde_lecture.py --cherche-valeurs --diff origin/development..HEAD` (code 1 = une vraie
+   valeur dans les lignes ajoutées ; sortie `fichier:ligne`, source et longueur, jamais la valeur), puis
+   `python .claude/hooks/garde_lecture.py --public origin/development` (« deja publique » / « NON publique » par valeur).
+   `--cherche-valeurs` saute les fichiers sources eux-mêmes (persist, override, defines) : un mot de passe NOUVEAU dans un
+   persist suivi ne s'y voit pas. Lance donc aussi `--public HEAD` : toute valeur « deja publique » dans HEAD mais
+   « NON publique » dans `origin/development` deviendrait publique au push = STOP. Une valeur trouvée par
+   `--cherche-valeurs` et « NON publique » est aussi un STOP. Code 2 de l'outil (git en échec, aucune valeur extraite) =
+   contrôle non fait, à dire tel quel. Faux secrets volontaires des jeux d'essai : « connu » avec leur fichier.
 4. **Fichiers interdits** : `git diff --name-only origin/development..HEAD` ne doit contenir ni `.env`, `settings.local.json`,
    `outils_docs/sauvegardes_cartes/`, `*.bak`, `*.pem`, `tasks/export-session-*` ajoutés par erreur, ni fichier de plus de 5 Mo.
 5. **Arbre de travail** : liste (sans les valeurs) ce qui reste modifié et non commité, pour que l'utilisateur sache ce qui ne part PAS.

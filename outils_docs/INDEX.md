@@ -71,6 +71,7 @@ avec le plan cité). Détail technique de chaque outil (modules, bancs) : `outil
 |---|---|---|
 | Avant tout commit ou push | agent `controleur-secrets` | 12 fuites de secrets consignées, 10 depuis le 07/11 |
 | Avant tout push | `/commite pousse` (agent `preparateur-push`) | commits d'une autre session embarqués |
+| Lire un fichier à secrets, chercher une vraie valeur recopiée | `.claude/hooks/garde_lecture.py` (`--lire`, `--cherche-valeurs`, `--public`) ; banc `test_garde_lecture.py` | valeur affichée dans la conversation (le hook refuse Read, Grep, Bash qui la montreraient) |
 | Commit qui touche un `.be` de `data/` | agents `verificateur-solidification` puis `relecteur-berry` | panne de solidification du 2026-11-13 |
 | Après modif d'un `.py` d'outil, d'une page | agents `relecteur-outils-python`, `relecteur-pages-web` | écriture non atomique, XSS, sonde non hermétique |
 | Quel banc lancer | skill `bancs` | banc sur copie, banc Berry sans code de sortie |
