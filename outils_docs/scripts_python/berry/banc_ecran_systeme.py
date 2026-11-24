@@ -72,7 +72,7 @@ MUTANTS_LOGS = [
     ("info gardee aussi", "    else\n        logFonctions.noteErreur(msg)\n    end\n    log(msg, niveau)",
      "    end\n    logFonctions.noteErreur(msg)\n    log(msg, niveau)"),
     ("heure non gardee", 'l.push([type(h) == "int" ? h : nil, msg])', "l.push([nil, msg])"),
-    ("cible ecranSysteme absente", '"ecranCave", "ecranDebits", "ecranSysteme"]', '"ecranCave", "ecranDebits"]'),
+    ("cible ecranSysteme absente", '"ecranSysteme", "liaisonMqtt"', '"liaisonMqtt"'),
     ("bloc de la cible absent", '    elif c == "ecransysteme"        bloc = (modules != nil ? modules.find("ecranSysteme") : nil)\n', ""),
 ]
 

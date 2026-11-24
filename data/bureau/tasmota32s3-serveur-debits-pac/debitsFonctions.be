@@ -7,7 +7,7 @@
 # Un seul facteur K par voie (Hz par L/min, YF-B2 : F = 11 x Q), dans le persist : le calibrage du FlowRateMeter
 # est force a 1000 au demarrage (controleDebits.init), sinon il y aurait deux etalonnages pour la meme voie.
 # Compile en .bec par demarrage.compile(["debitsFonctions"], "modules.debits"), importe par controleDebits.be.
-# Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+# Logs : charte du CLAUDE.md, cible `debits` (seuil : modules.debits.log, ReglageLog debits <niveau>).
 var debitsFonctions = module("debitsFonctions")
 
 debitsFonctions.NB_VOIES = 6
@@ -27,7 +27,7 @@ debitsFonctions.ecranMs = nil                            # ms de la derniere ecr
 
 # Log du module sous le seuil `general` (ReglageLog general <niveau>) ; niveau = constante LOG_LEVEL_*
 def debitsFonctions_log(msg, niveau)
-    logFonctions.log(msg, niveau)
+    logFonctions.log(msg, niveau, "debits")         # cible declaree par controleDebits (plan binomes-berry A4)
 end
 debitsFonctions.log = debitsFonctions_log
 
@@ -153,7 +153,7 @@ def debitsFonctions_mesure()
     var e = tasmota.millis()
     debitsFonctions.ecran()
     debitsFonctions.ecranMs = tasmota.millis() - e    # duree d'une ecriture de l'ecran (plan A5, essai de charge A6)
-    if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS)
+    if logFonctions.actif(LOG_LEVEL_DEBUG_PLUS, "debits")
         debitsFonctions.log("MESURE_DEBITS: rates=" + str(rates) + " compteurs=" + str(c) + " debits=" + str(debitsFonctions.debits), LOG_LEVEL_DEBUG_PLUS)
     end
 end

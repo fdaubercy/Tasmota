@@ -17,8 +17,9 @@ class CONTROLE_PORTAIL : Driver
     var gpioEnPanne     # derniere lecture materielle du contact en echec, pour ne loguer qu'au changement
 
     def init()
+        logFonctions.declare("portail", "modules.portail", "portail de jardin (controlePortail)")    # cible de log du binome (plan binomes-berry A4)
         self.web_add_handler()          # le serveur web peut deja tourner : FUNC_WEB_ADD_HANDLER ne viendrait plus
-        logFonctions.log("CONTROLE_PORTAIL: Driver charge !", LOG_LEVEL_DEBUG)
+        logFonctions.log("CONTROLE_PORTAIL: Driver charge !", LOG_LEVEL_DEBUG, "portail")
     end
 
     def every_second()
@@ -60,7 +61,7 @@ class CONTROLE_PORTAIL : Driver
             ouvert = true
             gestionFileFolder.readFileByLineAndContentSend("/sd/js/volets.js")
         except .. as erreur, message
-            logFonctions.log("CONTROLE_PORTAIL_ERREUR: Facade : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR)
+            logFonctions.log("CONTROLE_PORTAIL_ERREUR: Facade : " + str(erreur) + " " + str(message) + " !", LOG_LEVEL_ERREUR, "portail")
         end
         if ouvert    webserver.content_send("</script>")    end
     end
@@ -108,7 +109,7 @@ class CONTROLE_PORTAIL : Driver
             n = gpio.digital_read(pin)
         except .. as erreur, message
             if (!self.gpioEnPanne)          # une ligne par panne, pas une par rafraichissement de la page
-                logFonctions.log("CONTROLE_PORTAIL_ERREUR: Broche " + str(pin) + " illisible (" + str(erreur) + " " + str(message) + "), etat du persist !", LOG_LEVEL_ERREUR)
+                logFonctions.log("CONTROLE_PORTAIL_ERREUR: Broche " + str(pin) + " illisible (" + str(erreur) + " " + str(message) + "), etat du persist !", LOG_LEVEL_ERREUR, "portail")
             end
             self.gpioEnPanne = true
             return e

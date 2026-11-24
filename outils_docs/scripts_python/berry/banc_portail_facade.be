@@ -25,7 +25,8 @@ var LOG_LEVEL_DEBUG = 3
 var LOG_LEVEL_DEBUG_PLUS = 4
 var boolMute = true
 var journal = []
-class LogStub def log(m, n, c) journal.push([str(m), n, c]) end end
+class LogStub var declarees def init() self.declarees = [] end def log(m, n, c) journal.push([str(m), n, c]) end
+    def declare(c, chemin, d) self.declarees.push([c, chemin]) end end
 var logFonctions = LogStub()
 class Driver end
 
@@ -98,6 +99,7 @@ var PIN = CONTACT["pin"]
 print("1. Chargement : driver enregistre, route posee")
 import controlePortail
 verifie(size(tasmota.drivers) == 1, "driver du portail enregistre")
+verifie(logFonctions.declarees == [["portail", "modules.portail"]], "cible de log declaree : portail -> modules.portail")
 verifie(size(webserver.routes) == 1 && webserver.routes[0][0] == "/portail", "route /portail posee des l'init")
 var pilote = tasmota.drivers[0]
 pilote.web_add_handler()
@@ -136,6 +138,9 @@ verifie(r != nil && r["ouverture"] == 0 && r["capteurs"]["fermeture"] == "ON", "
 r = route({"f": "position"})
 r = route({"f": "position"})
 verifie(nbJournal("CONTROLE_PORTAIL_ERREUR", 1) == 1, "une seule ligne d'erreur pour trois lectures en panne (" + str(nbJournal("CONTROLE_PORTAIL_ERREUR", 1)) + ")")
+var sousPortail = size(journal) > 0
+for l: journal    if (l[2] != "portail")    sousPortail = false    end    end
+verifie(sousPortail, "logs du portail sous la cible portail")
 gpio.panne = false
 CONTACT["etat"] = "OFF"
 gpio.niveaux = {}

@@ -1,13 +1,14 @@
 # Driver du module metier debits : 6 debitmetres de la nourrice de chauffage ; la logique est dans debitsFonctions.be.
 # Charge depuis le LittleFS par demarrage.chargeFichier("controleDebits", "modules.debits"), seulement
 # si modules.debits.activation vaut "ON" ; debitsFonctions est compile avant.
-# Logs : charte du CLAUDE.md (logFonctions.log, sans cible : seuil `general`).
+# Logs : charte du CLAUDE.md, cible `debits` declaree en tete de l'init (seuil : modules.debits.log).
 
 class CONTROLE_Debits : Driver
     var secondes        # secondes depuis la derniere mesure
 
     def init()
         import debitsFonctions
+        logFonctions.declare("debits", "modules.debits", "debitmetres de la nourrice (controleDebits, debitsFonctions)")
         self.secondes = 0
         # Un seul etalonnage par voie, le K du persist : FlowRateMeter en L/min, calibrage neutre (voir debitsFonctions)
         tasmota.cmd("Sensor96 0 0", boolMute)

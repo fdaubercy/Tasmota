@@ -59,8 +59,11 @@ global.LOG_LEVEL_DEBUG_PLUS = 4
 global.boolMute = true
 global.modules = {"debits": {"activation": "ON"}}
 var fauxLog = module("logFonctions")
-fauxLog.log = def (m, n, c) global.JOURNAL.push([m, n]) end
-fauxLog.actif = def (n, c) return true end
+fauxLog.log = def (m, n, c) global.JOURNAL.push([m, n, c]) end
+global.DECLAREES = []
+fauxLog.declare = def (c, chemin, d) global.DECLAREES.push([c, chemin]) end
+global.ACTIFS = []
+fauxLog.actif = def (n, c) global.ACTIFS.push(c) return true end
 global.logFonctions = fauxLog
 
 global.MS = 0
@@ -511,8 +514,13 @@ print("--- driver controleDebits")
 global.CMDS = []
 global.MB = {"notes": [], "limites": [], "push": []}
 debitsFonctions.fenetreModbus = nil                      # carte qui demarre : aucune limite declaree
+global.JOURNAL = []
 var pilote = compile(lis(CARTE + "controleDebits.be"))()
 verifie("driver enregistre et commande ajoutee", size(global.DRIVERS) == 1 && global.COMMANDES.contains("ReglageDebits"))
+verifie("cible de log declaree : debits -> modules.debits", global.DECLAREES == [["debits", "modules.debits"]])
+var sousDebits = size(global.JOURNAL) > 0
+for l: global.JOURNAL    if (l[2] != "debits")    sousDebits = false    end    end
+verifie("logs du binome sous la cible debits", sousDebits)
 # Sans limite declaree, la grace du demarrage servirait la 'value' du persist (vieux debits) comme une mesure fraiche
 verifie("modbus ON : limites declarees au chargement, avant toute mesure (2 fenetres de 15 s)", global.MB["notes"] == [] && global.MB["push"] == []
         && global.MB["limites"] == [[4704, 30000], [4705, 30000], [4706, 30000], [4707, 30000], [4708, 30000], [4709, 30000], [4710, 30000]])
@@ -536,6 +544,9 @@ for i: 1 .. 14    pilote.every_second()    end
 verifie("pas de mesure avant la fenetre (15 s)", debitsFonctions.releve == nil)
 pilote.every_second()
 verifie("mesure a la 15e seconde", debitsFonctions.releve != nil && debitsFonctions.releve["t"] == 100000)
+var gardes = size(global.ACTIFS) > 0
+for c: global.ACTIFS    if (c != "debits")    gardes = false    end    end
+verifie("gardes logFonctions.actif sous la cible debits", gardes)
 global.CAPTEURS = "pas du json"
 global.MS = 115000
 for i: 1 .. 15    pilote.every_second()    end
