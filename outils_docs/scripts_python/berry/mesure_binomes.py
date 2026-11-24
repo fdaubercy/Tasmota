@@ -90,6 +90,45 @@ def controle_interdits(entete: str) -> None:
             raise ValueError(f"sequence interdite {s!r} dans l'en-tete genere")
 
 
+LIGNE_MESURE = re.compile(r"^\s+(\S+)\s+([\d,]+) Ko\s+([\d,]+) Ko\s+(non solid\.|[\d,]+ Ko)(?:\s+\+ (\d+) chaines)?\s*$")
+LIEN_RENVOI = re.compile(r"voir le bloc en tete de (\S+\.be)")
+
+
+def lit_taille(chemin_be, _suivi=()):
+    """Taille du binome lue dans le bloc genere, SANS rien mesurer : {"fichiers": [{"nom", "be", "bec", "solidifie"}],
+    "total": {"be", "bec", "solidifie"}, "chaines": N}, en Ko (les valeurs ecrites dans le bloc, une decimale ;
+    "solidifie" vaut None pour « non solid. »). Un module qui porte la ligne de renvoi suit le driver nomme (meme
+    dossier). None si le fichier n'a ni bloc ni renvoi, est illisible, ou si le renvoi boucle ou vise un fichier sans bloc."""
+    chemin = Path(chemin_be)
+    try:
+        texte = chemin.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    lignes = texte.splitlines()
+    renvoi = next((LIEN_RENVOI.search(l) for l in lignes if l.startswith(RENVOI)), None)
+    if renvoi:
+        cible = chemin.with_name(renvoi.group(1))
+        return None if cible in _suivi or cible == chemin else lit_taille(cible, _suivi + (chemin,))
+    debut = next((i for i, l in enumerate(lignes) if l.startswith(DEBUT)), None)
+    if debut is None:
+        return None
+    lus, chaines = [], 0
+    for ligne in lignes[debut + 1:]:
+        if ligne.rstrip().endswith(FIN):
+            break
+        m = LIGNE_MESURE.match(ligne)
+        if m:
+            nom, be, bec, sol, ch = m.groups()
+            lus.append({"nom": nom, "be": float(be.replace(",", ".")), "bec": float(bec.replace(",", ".")),
+                        "solidifie": None if sol.startswith("non") else float(sol[:-3].replace(",", "."))})
+            chaines = int(ch) if ch else chaines
+    total = next((x for x in lus if x["nom"] == "total"), None)
+    if total is None:
+        return None
+    return {"fichiers": [x for x in lus if x["nom"] != "total"],
+            "total": {k: total[k] for k in ("be", "bec", "solidifie")}, "chaines": chaines}
+
+
 # ---------------------------------------------------------------- mesures (outils du PC)
 RACINE = Path(__file__).resolve().parents[3]
 BERRY = RACINE / "lib" / "libesp32" / "berry"

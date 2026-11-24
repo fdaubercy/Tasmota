@@ -52,9 +52,15 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [x] Passe sur les 35 groupes de `data/fs`, puis `--verifier` rc 0 et solidification des fichiers modifiés — preuve : `--verifier` rc 0 sur les 35 groupes le 2026-11-24 (aucun échec, environ 28 min) ; chaque fichier à directive `#@ solidify:` solidifié par `solidify_all_python.be` et son `.h` compilé (xtensa -Os) dans la même passe ; `controleEcranSysteme` sans directive (non solidifié, voulu) ; `git status lib/ data/fs/` propre
 
 ## A3 — Manifeste unique
-- [ ] Champs ajoutés aux `blocs` de `modele_persist.json` : fichiers, pages, defines, lib_ignore, cible, coût, bloc par défaut
-- [ ] Blocs manquants ajoutés (liaisonMqtt, emulationHue, qrcode, visuel, energie, page_cuve, pages_graphiques, ecran, ecranSysteme, fsMqtt, LoRaWan, ES8311, coprocesseur)
-- [ ] Listes `[berry_commun]` et exclusions générées depuis le manifeste, `--verifier` (code 1 si en retard)
+Décisions du 2026-11-24 : champs AJOUTÉS et optionnels (`fichiers`, `pages`, `defines`, `lib_ignore`, `cible` `{nom, chemin}`,
+`defaut`), lus par `.get` ; `solidify`, `exclude_si_inactif` et `h` restent tels quels. Coût : pas dans le manifeste, lu à la
+demande dans le bloc TAILLE DU BINOME du driver. Cenv : contrôle seul d'abord (`--verifier`, rien d'écrit), génération plus
+tard. Blocs sans clé d'activation (qrcode, visuel, pages_graphiques, fsMqtt, page_cuve) : champ `detection`, hors questions de
+l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, `coprocesseur`) : 10 blocs manquent, pas 13.
+- [x] Champs ajoutés aux `blocs` de `modele_persist.json` : fichiers, pages, defines, lib_ignore, cible, bloc par défaut ; coût lu dans le driver — preuve : 28 blocs portent les 6 champs, `solidify`/`exclude_si_inactif`/`h` intacts, feuilles secrètes identiques à HEAD (comparaison en mémoire) ; `mesure_binomes.py::lit_taille`, `test_mesure_binomes.py` 0 échec (2026-11-24)
+- [x] Blocs manquants ajoutés (liaisonMqtt, emulationHue, qrcode, visuel, energie, page_cuve, pages_graphiques, ecran, ecranSysteme, fsMqtt) — preuve : 10 blocs en fin de liste ; 4 questions de l'assistant (liaisonMqtt, emulationHue, energie, ecranSysteme), 6 en `detection` (dont `ecran` : deux clés de métier) ; bancs de l'assistant persist : mêmes KO qu'avant, aucun nouveau (comparaison ligne à ligne) ; création et modification VERT
+- [x] Listes `[berry_commun]` comparées au manifeste, `--verifier` (code 1 si écart) — preuve : `outils_pc/verifie_manifeste.py --verifier` rc 0 « ACCORD » ; `test_verifie_manifeste.py` 0 échec, 4 mutants rouges (2026-11-24)
+- [ ] Génération des listes `[berry_commun]` depuis le manifeste, après commit du cenv en cours ; `exclude_si_inactif` des 10 nouveaux blocs (le cenv de la cuve exclut déjà liaison_mqtt, emulation_hue, page_energie, ecran, ecran_systeme, pages_graphiques), `test_listes_cuve` à adapter
 - [ ] Lecteurs branchés : assistant persist, fichiers Berry par env, carte des modules
 
 ## A4 — Cibles de log déclarées par le binôme

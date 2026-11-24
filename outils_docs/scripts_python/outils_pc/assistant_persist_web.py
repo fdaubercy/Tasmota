@@ -191,7 +191,7 @@ def donnees_parc(racine):
         except ValueError as exc:
             broches[p], erreurs_broches[p] = [], str(exc)
     blocs = [{k: b.get(k, "") for k in ("id", "libelle", "aide", "puces", "dependances")}
-             for b in (modele["blocs"] if modele else [])]
+             for b in (modele["blocs"] if modele else []) if b["actif"]]     # un bloc de detection n'est jamais une question
     return {"puces": list(parc.PREFIXES), "bases": bases,
             "base_defaut": {p: parc.base_par_defaut(racine, p) for p in parc.PREFIXES},
             "maitres": parc.maitres(racine), "ids_pris": {str(i): d for i, d in parc.ids_pris(racine).items()},

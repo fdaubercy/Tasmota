@@ -28,6 +28,18 @@ FORME DU MODELE (contrat partage par les actions A1 a A6)
                   portent tous deux USE_WS2812) ; [] si le bloc n'a pas de define. Ces lignes ne figurent PAS dans
                   puces.<p>.h (Ruling 6) ; la partie « post-process » commune du .h en tire les defines derives
                   (USE_MODBUS -> USE_MODBUS_BRIDGE, USE_RTC_CHIPS -> USE_DS3231, USE_SHUTTER -> SHUTTER_SUPPORT...).
+                  MANIFESTE (plan binomes-berry A3, 2026-11-24) : champs AJOUTES, optionnels, lus par `.get`, que la
+                  generation ne lit pas encore : `fichiers` (.be, data/fs/...) et `pages` (data/sd/html|css|js/...),
+                  chemins litteraux ou references ${berry_commun.x} ; `defines` (noms des #define, tires de `h`) ;
+                  `lib_ignore` (bibliotheques ignorees quand le bloc est absent, [] si inconnu) ; `cible`
+                  {"nom": cible de ReglageLog, "chemin": bloc du persist qui porte son "log"} ou null ; `defaut` (bloc
+                  du persist quand le bloc est pose : socle ou puces.ajouts a la racine commune des cles de `actif`,
+                  `actif` appliquee) ou null. Le cout se lit dans le bloc TAILLE DU BINOME du driver
+                  (mesure_binomes.lit_taille). `detection` (blocs sans cle d'activation) : {"fichier_carte": fichier
+                  du dossier de la carte | "autoexec": module appele | "socle": true | "cenv_non_exclu": liste de
+                  [berry_commun] | "persist_une_cle": [cles dont une suffit]} ; un bloc a `actif` vide n'est ni une
+                  question de la page, ni coche (blocs_coches), ni traite par reponses_depuis_persist. Controle des
+                  listes [berry_commun] : outils_pc/verifie_manifeste.py --verifier.
   socle_autoexec  {entete: [lignes de commentaire], entrees: [meme forme]} ; seul le socle a l'appel compileSocle.
   metier          {gabarit, cles_propres, controle, fonctions, autoexec} : gabarit de modules.<metier> a
                   environnement vide ; cles_propres = cles de premier niveau propres a une carte, hors couverture

@@ -242,7 +242,7 @@ def _pose(obj, chemin, valeur):
 def blocs_coches(modele, r):
     """Ids des blocs coches (RTC -> ds3231), dans l'ordre du modele ; un id inconnu est ignore ici (coherence)."""
     voulus = set(r.blocs) | ({"ds3231"} if r.heure == "RTC" else set())
-    return [b["id"] for b in modele["blocs"] if b["id"] in voulus]
+    return [b["id"] for b in modele["blocs"] if b["id"] in voulus and b["actif"]]   # sans `actif` : bloc de detection
 
 
 def _blocs_permis(modele, r):
@@ -394,7 +394,7 @@ def coherence(modele, r, obj, texte_autoexec, listes, racine=None):
     refus, blocs = [], {b["id"]: b for b in modele["blocs"]}
     puce = modele["puces"].get(r.puce)
     coches = blocs_coches(modele, r)
-    for i in [x for x in r.blocs if x not in blocs]:
+    for i in [x for x in r.blocs if x not in blocs or not blocs[x]["actif"]]:
         refus.append(f"bloc inconnu : {i}")
     for i in coches:
         b = blocs[i]

@@ -81,6 +81,7 @@ avec le plan cité). Détail technique de chaque outil (modules, bancs) : `outil
 | Liste et rôle des agents | `outils_docs/verification/SOUS_AGENTS.md` | lequel lancer, avec quel modèle |
 | Renvois des documents | `maintenance/verifie_references_docs.py`, agent `relecteur-docs` | `fichier:ligne` décalé, chemin disparu |
 | Cases cochées d'un plan | agent `verificateur-plans` | preuve absente |
+| Après modif des `blocs` de `modele_persist.json` ou des listes `[berry_commun]` du cenv | `outils_pc/verifie_manifeste.py --verifier` (lecture seule ; banc `test_verifie_manifeste.py`) | liste du cenv sans bloc, fichier de liste absent du manifeste ou du disque |
 | Fichier de plus de 500 lignes | `outils_docs/verification/EXCEPTIONS_500_LIGNES.md` | découpage refusé par l'utilisateur |
 
 ## 5. Environnement de travail

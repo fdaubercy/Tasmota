@@ -1357,7 +1357,24 @@
 					"groupe": "chargement"
 				}
 			],
-			"h": []
+			"h": [],
+			"fichiers": [
+				"data/fs/udpFonctions.be",
+				"data/fs/controleUDP.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "udp",
+				"chemin": "serveur.udp"
+			},
+			"defaut": {
+				"activation": "ON",
+				"id": "{{id}}",
+				"log": "info",
+				"port": 2000
+			}
 		},
 		{
 			"id": "tcp",
@@ -1397,7 +1414,23 @@
 					"groupe": "chargement"
 				}
 			],
-			"h": []
+			"h": [],
+			"fichiers": [
+				"data/fs/tcpFonctions.be",
+				"data/fs/controleTCP.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "tcp",
+				"chemin": "serveur.tcp"
+			},
+			"defaut": {
+				"activation": "ON",
+				"id": "{{id}}",
+				"log": "info"
+			}
 		},
 		{
 			"id": "rangeExtender",
@@ -1435,7 +1468,31 @@
 					"groupe": "chargement"
 				}
 			],
-			"h": []
+			"h": [],
+			"fichiers": [
+				"data/fs/rangeExtenderFonctions.be",
+				"data/fs/controleRangeExtender.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "rangeExtender",
+				"chemin": "serveur.rangeExtender"
+			},
+			"defaut": {
+				"activation": "ON",
+				"id": "{{id}}",
+				"log": "info",
+				"ipMaitre": "",
+				"AP": {
+					"IPAddress": "192.168.4.1",
+					"Subnet": "255.255.255.0",
+					"routeNAPT": "OFF",
+					"SSID": "{{ssid_ap}}",
+					"mdp": "@secret:ap"
+				}
+			}
 		},
 		{
 			"id": "discovery",
@@ -1475,7 +1532,22 @@
 					"groupe": "chargement"
 				}
 			],
-			"h": []
+			"h": [],
+			"fichiers": [
+				"data/fs/discoveryFonctions.be",
+				"data/fs/controleDiscovery.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "discovery",
+				"chemin": "serveur.discovery"
+			},
+			"defaut": {
+				"activation": "ON",
+				"log": "info"
+			}
 		},
 		{
 			"id": "modbus",
@@ -1544,7 +1616,79 @@
 			],
 			"h": [
 				"            #define USE_MODBUS"
-			]
+			],
+			"fichiers": [
+				"data/fs/modbusFonctions.be",
+				"data/fs/modBus_Conn16channels.be",
+				"data/fs/modBus_TasmotaSlaveModBus.be",
+				"data/fs/controleModbus.be",
+				"data/fs/i2c_mcp23017.be"
+			],
+			"pages": [],
+			"defines": [
+				"USE_MODBUS"
+			],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "modbus",
+				"chemin": "drivers.ModBus"
+			},
+			"defaut": {
+				"activation": "ON",
+				"name": "ModBus RS485",
+				"id": "{{id}}",
+				"debit": 19200,
+				"mode": "8N1",
+				"timeoutReponse": 5000,
+				"voieCommandes": "Serial",
+				"timeoutReponseUDP": 2000,
+				"log": "info",
+				"activationReponseCMD": "ON",
+				"relaisPushMQTT": "OFF",
+				"typeComm": {
+					"Serial": "ON",
+					"UDP": "OFF",
+					"MQTT": "OFF",
+					"TCP": "OFF"
+				},
+				"environnement": {
+					"pinsModBus": {
+						"RX": {
+							"activation": "ON",
+							"nom": "ModBr Rx",
+							"pin": 4,
+							"id": 1,
+							"type": 9440,
+							"virtuel": "OFF"
+						},
+						"TX": {
+							"activation": "ON",
+							"nom": "ModBr Tx",
+							"pin": 5,
+							"id": 1,
+							"type": 9408,
+							"virtuel": "OFF"
+						}
+					},
+					"Conn16channels": {
+						"log": "info",
+						"Conn16channel1": {
+							"activation": "OFF",
+							"name": "Connecteur RS485 16 sorties",
+							"id": 1,
+							"verifieAuDemarrage": "OFF"
+						}
+					},
+					"TasmotaSlaveModBus": {
+						"log": "info",
+						"TasmotaSlaveModBus1": {
+							"activation": "OFF",
+							"name": "Slave ModBus",
+							"id": 0
+						}
+					}
+				}
+			}
 		},
 		{
 			"id": "modbusUdp",
@@ -1568,7 +1712,18 @@
 			"solidify": [],
 			"exclude_si_inactif": [],
 			"autoexec": [],
-			"h": []
+			"h": [],
+			"fichiers": [],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"Serial": "OFF",
+				"UDP": "ON",
+				"MQTT": "OFF",
+				"TCP": "OFF"
+			}
 		},
 		{
 			"id": "i2c",
@@ -1601,7 +1756,89 @@
 				"                #define I2CDRIVERS_128_159     0xFFFFFFFF        // Enable I2CDriver128 to I2CDriver159",
 				"                    #undef USE_DS1624                                 // [I2cDriver42] Enable DS1624, DS1621 temperature sensor (I2C addresses 0x48 - 0x4F) (+1k2 code)",
 				"            #endif"
-			]
+			],
+			"fichiers": [],
+			"pages": [],
+			"defines": [
+				"USE_I2C",
+				"I2CDRIVERS_0_31",
+				"I2CDRIVERS_32_63",
+				"I2CDRIVERS_64_95",
+				"I2CDRIVERS_96_127",
+				"I2CDRIVERS_128_159"
+			],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"activation": "ON",
+				"name": "Bus I2C",
+				"environnement": {
+					"pinsI2Cs": {
+						"pinsI2C1": {
+							"activation": "ON",
+							"nom": "I2C SDa",
+							"pin": 9,
+							"id": 1,
+							"type": 640
+						},
+						"pinsI2C2": {
+							"activation": "ON",
+							"nom": "I2C SCl",
+							"pin": 8,
+							"id": 1,
+							"type": 608
+						}
+					},
+					"ADS1115": {
+						"activation": "OFF",
+						"name": "Module ADS1115",
+						"adresseI2C": "0x48",
+						"I2CDriver": 13,
+						"affichageWebSensor": "OFF",
+						"alimentation_V": 3.3,
+						"voies": {
+							"A0": {
+								"mesure": "tension",
+								"plage": "0-10V",
+								"seuilMin_mV": 0
+							},
+							"A1": {
+								"mesure": "tension",
+								"plage": "0-10V",
+								"seuilMin_mV": 0
+							},
+							"A2": {
+								"mesure": "courant",
+								"plage": "0-20mA",
+								"seuilMin_mV": 0
+							},
+							"A3": {
+								"mesure": "courant",
+								"plage": "0-20mA",
+								"seuilMin_mV": 0
+							}
+						}
+					},
+					"TCA9554": {
+						"activation": "OFF",
+						"name": "Relais de la carte Waveshare 8DI-8RO (CH1-CH8)",
+						"adresseI2C": "0x20",
+						"I2CDriver": 81
+					},
+					"MCP23017": {
+						"activation": "OFF",
+						"name": "MCP23017 A=Ri1-8, B=Ri9-16",
+						"adresseI2C": "0x20",
+						"I2CDriver": 22
+					},
+					"DS3231": {
+						"activation": "OFF",
+						"name": "Real Time Clock",
+						"adresseI2C": "0x68",
+						"I2CDriver": 26
+					}
+				}
+			}
 		},
 		{
 			"id": "ads1115",
@@ -1638,7 +1875,46 @@
 			],
 			"h": [
 				"            #define USE_ADS1115                             // [I2cDriver13] Enable ADS1115 16 bit A/D converter (I2C address 0x48, 0x49, 0x4A or 0x4B) based on Adafruit ADS1x15 library (no library needed) (+0k7 code)"
-			]
+			],
+			"fichiers": [
+				"data/fs/i2c_ads1115.be"
+			],
+			"pages": [],
+			"defines": [
+				"USE_ADS1115"
+			],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"activation": "ON",
+				"name": "Module ADS1115",
+				"adresseI2C": "0x48",
+				"I2CDriver": 13,
+				"affichageWebSensor": "OFF",
+				"alimentation_V": 3.3,
+				"voies": {
+					"A0": {
+						"mesure": "tension",
+						"plage": "0-10V",
+						"seuilMin_mV": 0
+					},
+					"A1": {
+						"mesure": "tension",
+						"plage": "0-10V",
+						"seuilMin_mV": 0
+					},
+					"A2": {
+						"mesure": "courant",
+						"plage": "0-20mA",
+						"seuilMin_mV": 0
+					},
+					"A3": {
+						"mesure": "courant",
+						"plage": "0-20mA",
+						"seuilMin_mV": 0
+					}
+				}
+			}
 		},
 		{
 			"id": "ds3231",
@@ -1663,7 +1939,20 @@
 			"autoexec": [],
 			"h": [
 				"            #define USE_RTC_CHIPS                                 // Enable RTC chip support and NTP server"
-			]
+			],
+			"fichiers": [],
+			"pages": [],
+			"defines": [
+				"USE_RTC_CHIPS"
+			],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"activation": "ON",
+				"name": "Real Time Clock",
+				"adresseI2C": "0x68",
+				"I2CDriver": 26
+			}
 		},
 		{
 			"id": "sd",
@@ -1688,7 +1977,52 @@
 				"            #define USE_SPI                                  // Hardware SPI using GPIO12(MISO), GPIO13(MOSI) and GPIO14(CLK) in addition to two user selectable GPIOs(CS and DC)",
 				"            #define USE_SDCARD                      // mount SD Card, requires configured SPI pins and setting of `SDCard CS` gpio",
 				"            #define SDC_HIDE_INVISIBLES             // hide hidden directories from the SD Card, which prevents crashes when dealing SD created on MacOS"
-			]
+			],
+			"fichiers": [],
+			"pages": [],
+			"defines": [
+				"USE_SPI",
+				"USE_SDCARD",
+				"SDC_HIDE_INVISIBLES"
+			],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"activation": "ON",
+				"name": "Carte SD",
+				"environnement": {
+					"pinsSDs": {
+						"pinsSD1": {
+							"activation": "OFF",
+							"nom": "SPI_Clk",
+							"pin": 18,
+							"id": 1,
+							"type": 736
+						},
+						"pinsSD2": {
+							"activation": "OFF",
+							"nom": "SPI_MISO",
+							"pin": 19,
+							"id": 1,
+							"type": 672
+						},
+						"pinsSD3": {
+							"activation": "OFF",
+							"nom": "SPI_MOSI",
+							"pin": 23,
+							"id": 1,
+							"type": 704
+						},
+						"pinsSD4": {
+							"activation": "OFF",
+							"nom": "SDCard CS",
+							"pin": 5,
+							"id": 1,
+							"type": 6720
+						}
+					}
+				}
+			}
 		},
 		{
 			"id": "i2s",
@@ -1725,7 +2059,74 @@
 			],
 			"h": [
 				"            #define USE_I2S_ALL"
-			]
+			],
+			"fichiers": [
+				"data/fs/controleES8311.be"
+			],
+			"pages": [],
+			"defines": [
+				"USE_I2S_ALL"
+			],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "es8311",
+				"chemin": "drivers.I2S.environnement.ES8311"
+			},
+			"defaut": {
+				"activation": "ON",
+				"name": "Bus I2S",
+				"environnement": {
+					"pinsI2Ss": {
+						"pinsI2S1": {
+							"activation": "ON",
+							"nom": "I2S DOut",
+							"pin": 9,
+							"id": 1,
+							"type": 7776
+						},
+						"pinsI2S2": {
+							"activation": "ON",
+							"nom": "I2S WS",
+							"pin": 10,
+							"id": 1,
+							"type": 7840
+						},
+						"pinsI2S3": {
+							"activation": "ON",
+							"nom": "I2S DIn",
+							"pin": 11,
+							"id": 1,
+							"type": 7872
+						},
+						"pinsI2S4": {
+							"activation": "ON",
+							"nom": "I2S BClk",
+							"pin": 12,
+							"id": 1,
+							"type": 7808
+						},
+						"pinsI2S5": {
+							"activation": "ON",
+							"nom": "I2S MClk",
+							"pin": 13,
+							"id": 1,
+							"type": 9376
+						},
+						"pinsI2S6": {
+							"activation": "ON",
+							"nom": "Activation PA",
+							"pin": 53,
+							"id": 1,
+							"type": 3840
+						}
+					},
+					"ES8311": {
+						"activation": "ON",
+						"name": "Codec Audio ES8311",
+						"log": "info"
+					}
+				}
+			}
 		},
 		{
 			"id": "ethernet",
@@ -1747,7 +2148,41 @@
 			"solidify": [],
 			"exclude_si_inactif": [],
 			"autoexec": [],
-			"h": []
+			"h": [],
+			"fichiers": [],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"activation": "ON",
+				"name": "Bus Ethernet",
+				"environnement": {
+					"pinsEthernets": {
+						"pinsEthernet1": {
+							"activation": "ON",
+							"nom": "ETH MDC",
+							"pin": 31,
+							"id": 1,
+							"type": 5568
+						},
+						"pinsEthernet2": {
+							"activation": "ON",
+							"nom": "ETH Pwr",
+							"pin": 51,
+							"id": 1,
+							"type": 5536
+						},
+						"pinsEthernet3": {
+							"activation": "ON",
+							"nom": "ETH MDIO",
+							"pin": 52,
+							"id": 1,
+							"type": 5600
+						}
+					}
+				}
+			}
 		},
 		{
 			"id": "lorawan",
@@ -1796,7 +2231,28 @@
 			"h": [
 				"            #define USE_LORAWAN_BRIDGE      // Add support for LoRaWan bridge (+8k code)",
 				"            #define USE_LORA_SX126X         // Add driver support for LoRa on SX1262 based devices like LiliGo T3S3 Lora32 (+16k code)"
-			]
+			],
+			"fichiers": [
+				"data/fs/loRaWanFonctions.be",
+				"data/fs/controleLoRaWan.be"
+			],
+			"pages": [],
+			"defines": [
+				"USE_LORAWAN_BRIDGE",
+				"USE_LORA_SX126X"
+			],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "lorawan",
+				"chemin": "drivers.LoRaWan"
+			},
+			"defaut": {
+				"activation": "ON",
+				"name": "Connexion LoRaWan 868MHz",
+				"id": 0,
+				"log": "info",
+				"environnement": {}
+			}
 		},
 		{
 			"id": "voletRoulants",
@@ -1844,7 +2300,116 @@
 			],
 			"h": [
 				"            #define USE_SHUTTER // Add Shutter support for up to 4 shutter with different motortypes (+11k code)"
-			]
+			],
+			"fichiers": [
+				"data/fs/vrFonctions.be",
+				"data/fs/controleVoletRoulants.be",
+				"data/fs/vrReglage.be",
+				"data/fs/vrPages.be"
+			],
+			"pages": [
+				"data/sd/js/volets.js",
+				"data/sd/html/reglageVolets.html",
+				"data/sd/js/reglageVolets.js",
+				"data/sd/css/reglageVolets.css"
+			],
+			"defines": [
+				"USE_SHUTTER"
+			],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "volets",
+				"chemin": "drivers.voletRoulants"
+			},
+			"defaut": {
+				"activation": "ON",
+				"name": "Driver Volet Roulant",
+				"mode": 3,
+				"facade": {
+					"activation": "OFF",
+					"toit": "deuxPans"
+				},
+				"log": "info",
+				"environnement": {
+					"VRs": {
+						"VR1": {
+							"activation": "OFF",
+							"nom": "Volet Roulant Garage",
+							"id": 1,
+							"inverse": 1,
+							"facade": {
+								"type": "fenetre",
+								"place": 1
+							},
+							"etat": "STOPPED",
+							"position": 0,
+							"relais1": 2,
+							"boutons": {
+								"bouton1": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "toggle",
+									"mqtt": "OFF"
+								},
+								"bouton2": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "up",
+									"mqtt": "OFF"
+								},
+								"bouton3": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "down",
+									"mqtt": "OFF"
+								},
+								"bouton4": {
+									"activation": "OFF",
+									"id": -1,
+									"function": "updown",
+									"mqtt": "OFF"
+								}
+							},
+							"capteursPosition": {
+								"activation": "ON",
+								"capteurOuvert": "Switch1",
+								"capteurFerme": "Switch2",
+								"inclinaison": {
+									"activation": "OFF",
+									"adresse": 104,
+									"axes": "YZ",
+									"angleOuvert": 85.0,
+									"angleFerme": 3.0,
+									"marge": 3,
+									"blocage": 5,
+									"blocageDegres": 1,
+									"sensInverse": 3,
+									"surveillance": 0,
+									"positionReelle": "OFF"
+								}
+							},
+							"activationSiOuvert": {
+								"activation": "OFF",
+								"tabRelais": [],
+								"tabEtatRelais": []
+							},
+							"activationSiFerme": {
+								"activation": "OFF",
+								"tabRelais": [],
+								"tabEtatRelais": []
+							},
+							"tempsMontee": 15,
+							"tempsDescente": 15,
+							"led_temoin": {
+								"activation": "OFF",
+								"nom": "LED état Trappe",
+								"pin": 39,
+								"intervalle": 500
+							}
+						}
+					}
+				}
+			}
 		},
 		{
 			"id": "ruban",
@@ -1890,7 +2455,68 @@
 			],
 			"h": [
 				"            #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //"
-			]
+			],
+			"fichiers": [
+				"data/fs/ledsFonctions.be",
+				"data/fs/controleLeds.be"
+			],
+			"pages": [],
+			"defines": [
+				"USE_WS2812"
+			],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "leds",
+				"chemin": "drivers.leds"
+			},
+			"defaut": {
+				"activation": "ON",
+				"bouton": 0,
+				"dureeManuel": 30,
+				"appuiLong": 15,
+				"palette": [
+					{
+						"nom": "rouge",
+						"teinte": 0,
+						"saturation": 100
+					},
+					{
+						"nom": "orange",
+						"teinte": 30,
+						"saturation": 100
+					},
+					{
+						"nom": "jaune",
+						"teinte": 60,
+						"saturation": 100
+					},
+					{
+						"nom": "vert",
+						"teinte": 120,
+						"saturation": 100
+					},
+					{
+						"nom": "cyan",
+						"teinte": 180,
+						"saturation": 100
+					},
+					{
+						"nom": "bleu",
+						"teinte": 240,
+						"saturation": 100
+					},
+					{
+						"nom": "violet",
+						"teinte": 280,
+						"saturation": 100
+					},
+					{
+						"nom": "blanc",
+						"teinte": 0,
+						"saturation": 0
+					}
+				]
+			}
 		},
 		{
 			"id": "ledRGB",
@@ -1936,7 +2562,28 @@
 				"            #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //",
 				"            // 2e chaine WS2812 pilotee par Berry (Leds) : la LED RGB du dev-kit. Le ruban occupe TOUTE la memoire RMT de l'ESP32-S3 : sans le repli SPI, Leds() echoue (constate le 2026-10-11).",
 				"            #define TASMOTALED_HARDWARE_SPI 1"
-			]
+			],
+			"fichiers": [
+				"data/fs/ledsFonctions.be",
+				"data/fs/controleLeds.be"
+			],
+			"pages": [],
+			"defines": [
+				"USE_WS2812",
+				"TASMOTALED_HARDWARE_SPI"
+			],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "leds",
+				"chemin": "drivers.leds"
+			},
+			"defaut": {
+				"activation": "ON",
+				"pin": 48,
+				"id": 1,
+				"type": 1377,
+				"luminosite": 40
+			}
 		},
 		{
 			"id": "historique",
@@ -1988,7 +2635,37 @@
 					"groupe": "chargement"
 				}
 			],
-			"h": []
+			"h": [],
+			"fichiers": [
+				"data/fs/historiqueFonctions.be",
+				"data/fs/historiqueSeries.be",
+				"data/fs/graphiquesFonctions.be"
+			],
+			"pages": [
+				"data/sd/js/echarts.min.js.gz",
+				"data/sd/js/graphiques.js",
+				"data/sd/js/graphiques_trace.js",
+				"data/sd/js/graphiques_edition.js",
+				"data/sd/html/graphiques.html",
+				"data/sd/css/graphiques.css"
+			],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "historique",
+				"chemin": "diverses.historique"
+			},
+			"defaut": {
+				"activation": "ON",
+				"pasMinutes": 5,
+				"dureeHeures": 24,
+				"moisConserves": 24,
+				"seriesMax": 12,
+				"exclues": [],
+				"ajouts": [],
+				"compteurs": {},
+				"grafana": ""
+			}
 		},
 		{
 			"id": "coprocesseur",
@@ -2021,7 +2698,456 @@
 					"groupe": "chargement"
 				}
 			],
-			"h": []
+			"h": [],
+			"fichiers": [
+				"data/fs/controleCoprocesseur.be"
+			],
+			"pages": [
+				"data/sd/html/coprocesseur.html"
+			],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"activation": "ON",
+				"url": "https://ota.tasmota.com/tasmota32/coprocessor",
+				"mqtt": "ON",
+				"bloque": "2.6.6"
+			}
+		},
+		{
+			"id": "liaisonMqtt",
+			"libelle": "Voie MQTT maître/esclaves",
+			"aide": "Le maître pilote ses esclaves par MQTT, avec des garde-fous (module mqttLiaisonFonctions, driver controleMqttLiaison). P4 seulement.",
+			"puces": [
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"drivers.liaisonMqtt.activation": "ON"
+			},
+			"inactif": {
+				"drivers.liaisonMqtt.activation": "OFF"
+			},
+			"solidify": [
+				"${berry_commun.liaison_mqtt}"
+			],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 440,
+					"appel": "charge",
+					"modules": [
+						"controleMqttLiaison"
+					],
+					"condition": "drivers.liaisonMqtt",
+					"groupe": "chargement"
+				}
+			],
+			"h": [],
+			"fichiers": [
+				"data/fs/mqttLiaisonFonctions.be",
+				"data/fs/controleMqttLiaison.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "liaisonMqtt",
+				"chemin": "drivers.liaisonMqtt"
+			},
+			"defaut": {
+				"activation": "ON",
+				"environnement": {},
+				"log": "info",
+				"garde": {
+					"fenetreMs": 10000,
+					"maxParElement": 10,
+					"maxTotal": 60,
+					"quarantaineMs": 60000,
+					"coupureMs": 300000,
+					"delaiAccuseMs": 3000,
+					"essaisMax": 3
+				},
+				"esclaves": {}
+			}
+		},
+		{
+			"id": "emulationHue",
+			"libelle": "Émulation Hue pour Alexa",
+			"aide": "Pont Hue émulé (hueFonctions, controleHue) : Alexa commande les sorties de la carte. S3 et P4 seulement.",
+			"puces": [
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"serveur.emulationHue.activation": "ON"
+			},
+			"inactif": {
+				"serveur.emulationHue.activation": "OFF"
+			},
+			"solidify": [
+				"${berry_commun.emulation_hue}"
+			],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 450,
+					"appel": "charge",
+					"modules": [
+						"controleHue"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			],
+			"h": [],
+			"fichiers": [
+				"data/fs/hueFonctions.be",
+				"data/fs/controleHue.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "emulationHue",
+				"chemin": "serveur.emulationHue"
+			},
+			"defaut": {
+				"activation": "ON",
+				"log": "info"
+			}
+		},
+		{
+			"id": "energie",
+			"libelle": "Page énergie (relevé de consommation)",
+			"aide": "Page /energie et relevé de la consommation (energieFonctions, controleEnergie), pour les cartes à compteur BL0942.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"diverses.energie.activation": "ON"
+			},
+			"inactif": {
+				"diverses.energie.activation": "OFF"
+			},
+			"solidify": [
+				"data/fs/energieFonctions.be",
+				"data/fs/controleEnergie.be"
+			],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 590,
+					"appel": "charge",
+					"modules": [
+						"controleEnergie"
+					],
+					"condition": "diverses.energie",
+					"groupe": "chargement"
+				}
+			],
+			"h": [],
+			"fichiers": [
+				"data/fs/energieFonctions.be",
+				"data/fs/controleEnergie.be"
+			],
+			"pages": [
+				"data/sd/html/energie.html",
+				"data/sd/html/energieTarifs.html",
+				"data/sd/css/energie.css",
+				"data/sd/js/energie.js",
+				"data/sd/js/energieTarifs.js"
+			],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": {
+				"activation": "ON",
+				"enregistrement": "ON",
+				"calibrage": {
+					"PowerCal": 596,
+					"VoltageCal": 15187,
+					"CurrentCal": 251213
+				}
+			}
+		},
+		{
+			"id": "ecran",
+			"libelle": "Écran et ses bibliothèques (ecranFonctions)",
+			"aide": "Socle commun des écrans (cave, débits) : pas de question, détecté par les clés modules.ecranCave ou modules.ecranDebits.",
+			"puces": [
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [],
+			"h": [],
+			"fichiers": [
+				"data/fs/ecranFonctions.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [
+				"lvgl"
+			],
+			"cible": null,
+			"defaut": null,
+			"detection": {
+				"persist_une_cle": [
+					"modules.ecranCave.activation",
+					"modules.ecranDebits.activation"
+				]
+			}
+		},
+		{
+			"id": "ecranSysteme",
+			"libelle": "Page Système des écrans",
+			"aide": "Page Système des écrans tactiles (ecranSysteme, controleEcranSysteme), non solidifiée.",
+			"puces": [
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {
+				"modules.ecranSysteme.activation": "ON"
+			},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 910,
+					"appel": "compile",
+					"modules": [
+						"ecranSysteme"
+					],
+					"condition": "modules.ecranSysteme",
+					"groupe": "compilation"
+				},
+				{
+					"rang": 1000,
+					"appel": "chargeFichier",
+					"modules": [
+						"controleEcranSysteme"
+					],
+					"condition": "modules.ecranSysteme",
+					"groupe": "chargement"
+				}
+			],
+			"h": [],
+			"fichiers": [
+				"data/fs/ecranSysteme.be",
+				"data/fs/controleEcranSysteme.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": {
+				"nom": "ecranSysteme",
+				"chemin": "modules.ecranSysteme"
+			},
+			"defaut": {
+				"activation": "ON"
+			}
+		},
+		{
+			"id": "qrcode",
+			"libelle": "Page /qrcode des étiquettes QR",
+			"aide": "Module et page des étiquettes QR : pas de question, détecté par l'autoexec.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 600,
+					"appel": "charge",
+					"modules": [
+						"qrcodePage"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			],
+			"h": [],
+			"fichiers": [
+				"data/fs/qrcodePage.be"
+			],
+			"pages": [
+				"data/sd/html/qrcode.html",
+				"data/sd/css/qrcode.css",
+				"data/sd/js/qrcode.js",
+				"data/sd/js/qrcode_options.js",
+				"data/sd/js/qr-code-styling.min.js.gz"
+			],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": null,
+			"detection": {
+				"autoexec": "qrcodePage"
+			}
+		},
+		{
+			"id": "visuel",
+			"libelle": "Visuel d'accueil",
+			"aide": "Visuel animé de la façade : pas de question, détecté par visuel.json dans le dossier de la carte.",
+			"puces": [
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 620,
+					"appel": "charge",
+					"modules": [
+						"controleVisuel"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			],
+			"h": [],
+			"fichiers": [
+				"data/fs/visuelFonctions.be",
+				"data/fs/controleVisuel.be"
+			],
+			"pages": [
+				"data/sd/js/visuel.js"
+			],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": null,
+			"detection": {
+				"fichier_carte": "visuel.json"
+			}
+		},
+		{
+			"id": "pages_graphiques",
+			"libelle": "Pages de graphiques (atelier 7950)",
+			"aide": "Pages de graphiques composées dans l'atelier ; embarque aussi le moteur de trace, partagé avec /graphiques. Pas de question : détecté par pages_graphiques.json.",
+			"puces": [
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [
+				"historique"
+			],
+			"actif": {},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [
+				{
+					"rang": 610,
+					"appel": "charge",
+					"modules": [
+						"pagesGraphiques"
+					],
+					"condition": null,
+					"groupe": "chargement"
+				}
+			],
+			"h": [],
+			"fichiers": [
+				"data/fs/pagesGraphiques.be",
+				"data/fs/pagesGraphiquesValidation.be"
+			],
+			"pages": [
+				"data/sd/html/pages_graphiques.html",
+				"data/sd/css/pages_graphiques.css",
+				"data/sd/js/pages_graphiques_formule.js",
+				"data/sd/js/pages_graphiques.js",
+				"data/sd/js/graphiques_moteur.js"
+			],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": null,
+			"detection": {
+				"fichier_carte": "pages_graphiques.json"
+			}
+		},
+		{
+			"id": "fsMqtt",
+			"libelle": "Fichiers du FS reçus par MQTT",
+			"aide": "Réception des fichiers par MQTT (page Build 7700) : toutes les cartes, déjà dans le socle de l'autoexec.",
+			"puces": [
+				"ESP32",
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [],
+			"h": [],
+			"fichiers": [
+				"data/fs/fsMqtt.be"
+			],
+			"pages": [],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": null,
+			"detection": {
+				"socle": true
+			}
+		},
+		{
+			"id": "page_cuve",
+			"libelle": "Page /cuve (jauges du niveau)",
+			"aide": "Jauges du niveau de la cuve : la cuve et le maître P4 seulement. Pas de question : détectée par l'absence de la liste dans custom_files_exclude de l'env.",
+			"puces": [
+				"ESP32S3",
+				"ESP32P4"
+			],
+			"dependances": [],
+			"actif": {},
+			"inactif": {},
+			"solidify": [],
+			"exclude_si_inactif": [],
+			"autoexec": [],
+			"h": [],
+			"fichiers": [
+				"data/fs/cuvePageFonctions.be"
+			],
+			"pages": [
+				"data/sd/html/cuve.html",
+				"data/sd/css/cuve.css",
+				"data/sd/js/cuve.js",
+				"data/sd/js/echarts-liquidfill.min.js.gz"
+			],
+			"defines": [],
+			"lib_ignore": [],
+			"cible": null,
+			"defaut": null,
+			"detection": {
+				"cenv_non_exclu": "page_cuve"
+			}
 		}
 	],
 	"socle_autoexec": {
