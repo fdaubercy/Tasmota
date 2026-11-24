@@ -13,7 +13,8 @@ UTILISATION
 CE QUI EST MESURE (sur le texte SANS le bloc et la ligne generes)
 ------------------------------------------------------------------
   .be       : taille du source, ce qu'occupe le fichier sur le LittleFS s'il n'est pas solidifie ;
-  .bec      : bytecode compile par lib/libesp32/berry/berry.exe (PC, 64 bits) : ordre de grandeur du .bec de la carte
+  .bec      : bytecode compile par lib/libesp32/berry/berry.exe (PC, 64 bits) : le .bec de la carte a 0,4 % pres
+              (cuveFonctions 20 793 o sur PC, 20 716 sur la carte ; controleCuve 8 124 / 8 108 ; 2026-11-24)
               et de la RAM qu'occupe le code charge ; les globales du framework inconnues du compilateur PC sont
               declarees dans une copie (quelques octets de plus) ;
   solidifie : objet xtensa -Os du .h solidifie (memes etapes que solidifie_et_compile_berry.py), ce qu'occupe le module

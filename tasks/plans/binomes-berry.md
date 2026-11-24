@@ -42,7 +42,7 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 ## A1 — Mesures de départ
 - [x] Taille d'essai de 5 modules en `.be`, `.bec` et solidifié — preuve : conversation du 2026-11-23, volets 62,6 / 32,1 / 22,6 Ko, ModBus 227,9 / 89,9 / 60,5 Ko
 - [x] RAM d'un persist chargé, mesurée sur le P4 (texte 22 172 o) — preuve : `Br` sur 192.168.0.43 le 2026-11-23, rechargement 21 840 o (clés partagées) à 51 621 o (clés uniques)
-- [ ] Comparer un `.bec` mesuré sur PC à celui d'une carte (ex. `cuveFonctions.bec`)
+- [x] Comparer un `.bec` mesuré sur PC à celui d'une carte (ex. `cuveFonctions.bec`) — preuve : carte cuve (`/ufsd` de 192.168.0.43:8081) `cuveFonctions.bec` 20 716 o, `controleCuve.bec` 8 108 o ; PC (`mesure_binomes.taille_bec`, version du dépôt) 20 793 et 8 124 o, soit +0,4 % et +0,2 % ; versions plus anciennes à 250 o ou plus d'écart, donc la carte porte la version actuelle (2026-11-24)
 
 ## A2 — Bloc de taille généré (essai sur la paire volets)
 - [x] Script `outils_docs/scripts_python/berry/mesure_binomes.py` (`--ecrire`, `--verifier`, refus pendant un build) — preuve : `--ecrire` rc 0 puis `--verifier` rc 0 sur la paire volets, `git status lib/` propre, 2026-11-23
