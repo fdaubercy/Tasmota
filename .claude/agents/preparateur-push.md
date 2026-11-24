@@ -49,8 +49,13 @@ Contrôles :
    contrôle non fait, à dire tel quel. Faux secrets volontaires des jeux d'essai : « connu » avec leur fichier.
 4. **Fichiers interdits** : `git diff --name-only origin/development..HEAD` ne doit contenir ni `.env`, `settings.local.json`,
    `outils_docs/sauvegardes_cartes/`, `*.bak`, `*.pem`, `tasks/export-session-*` ajoutés par erreur, ni fichier de plus de 5 Mo.
-5. **Arbre de travail** : liste (sans les valeurs) ce qui reste modifié et non commité, pour que l'utilisateur sache ce qui ne part PAS.
-6. **Commande de push** : donne la commande exacte `git push origin <sha>:development` avec le sha relu (pas un `HEAD` mouvant si
+5. **Manifeste des binômes** (décision du 2026-11-24 : contrôle, pas de génération) : `python
+   outils_docs/scripts_python/outils_pc/verifie_manifeste.py --verifier`. Code 1 (écart entre les `blocs` de
+   `modele_persist.json` et les listes `[berry_commun]` du cenv) = STOP, avec les lignes `ECART` ; code 2 = contrôle non fait.
+   L'outil lit l'arbre de travail : si `git status --short` montre l'un de ces deux fichiers modifié, le verdict porte sur
+   l'arbre et non sur HEAD, à dire en « à vérifier ».
+6. **Arbre de travail** : liste (sans les valeurs) ce qui reste modifié et non commité, pour que l'utilisateur sache ce qui ne part PAS.
+7. **Commande de push** : donne la commande exacte `git push origin <sha>:development` avec le sha relu (pas un `HEAD` mouvant si
    d'autres sessions commitent).
 
 Rapport : verdict d'une ligne (« on peut pousser N commits » / « STOP : <raison> »), puis **bloquant / connu / à vérifier**, la plage

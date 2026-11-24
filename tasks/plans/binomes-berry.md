@@ -18,7 +18,7 @@ Conversation du 2026-11-23. Décisions de l'utilisateur :
 - ajouter ou retirer une fonctionnalité = `#define` du `user_config_override.h`, fichiers Berry (cenv, autoexec), partie
   JSON du persist ;
 - UN seul manifeste : les `blocs` de `outils_docs/schemas/modele_persist.json`, étendus ; les listes du cenv en sont
-  générées, avec un contrôle `--verifier` ;
+  générées, avec un contrôle `--verifier` (révisé le 2026-11-24 : contrôle seul, sans génération, lancé par `preparateur-push`) ;
 - cibles de log par `logFonctions.declare` (additif, repli sur `CIBLES`/`lieu()`) ;
 - `/json` : configuration venue du dépôt, EN LECTURE SEULE sur la carte (descriptions, gabarits, tables, façades), liée
   par une clé explicite du bloc du persist ; restent au persist : états, réglages faits sur une page, identité, clés
@@ -61,7 +61,7 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
 - [x] Blocs manquants ajoutés (liaisonMqtt, emulationHue, qrcode, visuel, energie, page_cuve, pages_graphiques, ecran, ecranSysteme, fsMqtt) — preuve : 10 blocs en fin de liste ; 4 questions de l'assistant (liaisonMqtt, emulationHue, energie, ecranSysteme), 6 en `detection` (dont `ecran` : deux clés de métier) ; bancs de l'assistant persist : mêmes KO qu'avant, aucun nouveau (comparaison ligne à ligne) ; création et modification VERT
 - [x] Listes `[berry_commun]` comparées au manifeste, `--verifier` (code 1 si écart) — preuve : `outils_pc/verifie_manifeste.py --verifier` rc 0 « ACCORD » ; `test_verifie_manifeste.py` 0 échec, 4 mutants rouges (2026-11-24)
 - [x] `exclude_si_inactif` des nouveaux blocs, `test_listes_cuve` adapté — preuve : 8 blocs (liaisonMqtt, emulationHue, energie, ecran, ecranSysteme, visuel, pages_graphiques, page_cuve) + `volets_pages` dans voletRoulants ; qrcode et fsMqtt restent vides (qrcode sur tous les envs depuis `e3865abdd`, fsMqtt au socle) ; `PAGES_AUTRES_CARTES` retiré de `assistant_persist_generation.py` (page énergie gardée quand le bloc energie est coché) ; `test_listes_cuve` recopié sur l'exclusion réelle de la cuve, 8 OK dont le témoin energie ; seuls restent les 2 KO déjà présents (`rejeu_parc`, `autoexec_cuve`), qui ne lisent pas ces listes ; `verifie_manifeste.py --verifier` rc 0 (2026-11-24)
-- [ ] Génération des listes `[berry_commun]` depuis le manifeste, après commit du cenv en cours (modifié par une autre session au 2026-11-24)
+- [x] Génération des listes `[berry_commun]` remplacée par un contrôle mécanique (décision du 2026-11-24 : listes et blocs pas un pour un, `--verifier` détecte déjà tout écart) — preuve : étape 5 de `.claude/agents/preparateur-push.md` (`verifie_manifeste.py --verifier`, code 1 = STOP) ; `--verifier` rc 0 « ACCORD » le 2026-11-24
 - [ ] Lecteurs branchés : assistant persist, fichiers Berry par env, carte des modules
 
 ## A4 — Cibles de log déclarées par le binôme
