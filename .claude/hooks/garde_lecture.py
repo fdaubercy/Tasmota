@@ -634,7 +634,7 @@ def valeurs_depot(racine):
         p = os.path.join(racine, n)
         if os.path.isfile(p):
             for _, _, _, cle, v in secrets_du_fichier(p):
-                if v and len(v) >= 4 and set(v) != {'*'}:
+                if v and len(v) >= 4 and set(v) != {'*'} and not v.startswith('@secret:') and '{{' not in v:   # marqueurs du modele
                     vals.setdefault(v, []).append((n.replace('\\', '/'), cle))
     if not vals:
         sys.stderr.write("garde_lecture : aucune valeur secrete extraite des fichiers proteges suivis : controle impossible\n")

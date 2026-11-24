@@ -63,6 +63,7 @@ def suite(module):
         ecrit(depot, 'tasmota/tasmota_defines_for_berry.be', BERRY)
         ecrit(depot, 'autre.txt', 'bonjour\nmdp ici\n')
         ecrit(depot, 'schemas/persist.schema.json', '{\n  "mdp": {\n    "type": "string"\n  }\n}\n')
+        ecrit(depot, 'schemas/modele_persist.json', '{\n  "mdp": "@secret:wifi1",\n  "pwd": "{{mot_de_passe}}"\n}\n')
         git(depot, 'add', '-A'); git(depot, 'commit', '-q', '-m', 'init')
 
         def hook(outil, ti, attendu, brut=None):
@@ -164,6 +165,10 @@ def suite(module):
         r = cli('--cherche-valeurs', 'autre.txt')
         if r.returncode != 0:
             echecs.append('--cherche-valeurs autre.txt : faux positif')
+        ecrit(depot, 'marqueur.txt', 'le socle cite @secret:wifi1 et {{mot_de_passe}}\n')
+        r = cli('--cherche-valeurs', 'marqueur.txt')
+        if r.returncode != 0:
+            echecs.append('--cherche-valeurs : un marqueur @secret: ou un gabarit {{...}} pris pour une valeur')
         with open(os.path.join(depot, 'autre.txt'), 'a', encoding='utf-8') as f:
             f.write('cle FauxMqtt123\n')
         r = cli('--cherche-valeurs', '--diff')
