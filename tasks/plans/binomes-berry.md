@@ -49,7 +49,7 @@ Chaque action = un commit, précédé de `controleur-secrets`.
 - [x] Banc `test_mesure_binomes.py` : idempotence, mutant d'un chiffre, séquences interdites absentes du bloc — preuve : 11 OK, 0 échec ; témoin (`retire_generes` neutralisé) : 4 échecs, rc 1
 - [x] Bloc écrit dans `controleVoletRoulants.be`, ligne de renvoi dans `vrFonctions.be`, compilés et solidifiables — preuve : `verifie_berry.py` 0 erreur, `solidifie_et_compile_berry.py` « LE .h COMPILE » pour les deux, diff +9/+1 lignes
 - [x] Accord de l'utilisateur pour étendre aux autres binômes de `data/fs` — preuve : réponse du 2026-11-23 (« passe le script sur tous les binômes de data/fs », vrReglage et vrPages dans le bloc des volets)
-- [ ] Passe sur les 35 groupes de `data/fs`, puis `--verifier` rc 0 et solidification des fichiers modifiés
+- [x] Passe sur les 35 groupes de `data/fs`, puis `--verifier` rc 0 et solidification des fichiers modifiés — preuve : `--verifier` rc 0 sur les 35 groupes le 2026-11-24 (aucun échec, environ 28 min) ; chaque fichier à directive `#@ solidify:` solidifié par `solidify_all_python.be` et son `.h` compilé (xtensa -Os) dans la même passe ; `controleEcranSysteme` sans directive (non solidifié, voulu) ; `git status lib/ data/fs/` propre
 
 ## A3 — Manifeste unique
 - [ ] Champs ajoutés aux `blocs` de `modele_persist.json` : fichiers, pages, defines, lib_ignore, cible, coût, bloc par défaut
