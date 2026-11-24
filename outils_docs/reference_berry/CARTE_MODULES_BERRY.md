@@ -8,87 +8,87 @@
 
 ## Tableau
 
-Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe par l'autoexec - **C** `compileModule` / `loadBerryFile` - **D** charge indirectement (importe par un module charge sur la carte) - **#** reference seulement commentee - **P** fichier propre a la carte - puis la garde d'activation evaluee sur le `_persist.json` de la carte : **ON** / **OFF** / **?** (non evaluable). Pas d'etat = pas de garde. Cellule vide = rien.
+Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe par l'autoexec - **C** `compileModule` / `loadBerryFile` - **D** charge indirectement (importe par un module charge sur la carte) - **#** reference seulement commentee - **P** fichier propre a la carte - puis la garde d'activation evaluee sur le `_persist.json` de la carte : **ON** / **OFF** / **?** (non evaluable). Pas d'etat = pas de garde. Cellule vide = rien. **Bloc** : bloc(s) du manifeste (`blocs` de `modele_persist.json`) dont `fichiers` contient le module. **Cout** : `solidifie Ko / .bec Ko`, lus dans le bloc TAILLE DU BINOME du driver (genere par `mesure_binomes.py --ecrire`), vide sans bloc de taille.
 
-| Module | Famille | bureau<br>tasmota32-interrupteur-energie | bureau<br>tasmota32s3-ecran-debits-pac | bureau<br>tasmota32s3-serveur-debits-pac | cave<br>tasmota32-serveur-rly | cave<br>tasmota32s3-ecran | cave<br>tasmota32s3-serveur-rly | etage2<br>tasmota32s3-grenier | garage<br>tasmota32-portail-jardin-modbus | garage<br>tasmota32p4-serveur-modbus | garage<br>tasmota32s3-capteurs-cuve-modbus | garage<br>tasmota32s3-portail-jardin-modbus | garage<br>tasmota32s3-rideau-garage-modbus | garage<br>tasmota32s3-serveur-modbus | jardin<br>tasmota32-projecteur-barbecue | jardin<br>tasmota32-projecteur-led | rdc<br>tasmota32s3-grenier |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `configDevices` | Socle | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON |
-| `configGlobal` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
-| `configModules` | Socle | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON |
-| `controleGeneral` | Socle | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I |
-| `controleLedTemoin` | Socle | S | S I | S I | S I | S I | S I | S I | S | S I | S I | S I | S I | S I | S | S | S I |
-| `controleWeb` | Socle | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I |
-| `diversFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
-| `gestionFileFolder` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
-| `globalFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
-| `logFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
-| `webFonctions` | Socle | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
-| `controleDiscovery` | Reseau | S I OFF | S | S I ON | S I OFF | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON |
-| `controleRangeExtender` | Reseau | S | S I ON | S I ON | S I OFF | S I ON | S I ON | S I ON | S | S I ON | S | S | S | S I ON | S I ON | S I ON | S I ON |
-| `controleTCP` | Reseau | S | S | S | S I OFF | S | S I OFF | S I OFF | S | S | S | S | S | S I ON | S | S | S I OFF |
-| `controleUDP` | Reseau | S | S I ON | S I ON | S I OFF | S I ON | S I ON | S I OFF | S | S I ON | S I ON | S I ON | S I ON | S I ON | S | S | S I ON |
-| `discoveryFonctions` | Reseau | S C OFF | S D | S D | S C OFF | S D | S C ON | S D | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S D |
-| `rangeExtenderFonctions` | Reseau | S D | S C ON | S D | S C OFF | S C ON | S C ON | S C ON | S D | S D | S D | S D | S D | S C ON | S C ON | S C ON | S C ON |
-| `tcpFonctions` | Reseau | S D | S D | S D | S C OFF | S D | S C OFF | S C OFF | S D | S D | S D | S D | S D | S C ON | S D | S D | S C OFF |
-| `udpFonctions` | Reseau | S D | S C ON | S C ON | S C OFF | S C ON | S C ON | S C OFF | S D | S C ON | S C ON | S C ON | S C ON | S C ON | S D | S D | S C ON |
-| `controleModbus` | ModBus |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I ON | S I ON | S I ON |  |  | S I ON |
-| `modBus_Conn16channels` | ModBus |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I ON | S I ON | S I ON |  |  | S I ON |
-| `modBus_TasmotaSlaveModBus` | ModBus |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I ON | S I ON | S I ON |  |  | S I ON |
-| `modbusFonctions` | ModBus | D | S I | S I | D | S I | S I | D | S D | S I | S I | S I | S I | S I C ON | D | D | S I |
-| `controleES8311` | Peripheriques |  |  |  |  |  |  |  |  | S I ON |  |  |  |  |  |  |  |
-| `controleLeds` | Peripheriques |  |  |  |  |  | S I C OFF | S I C OFF | S |  | S I C ? | S I C OFF | S I C OFF | S I C OFF |  |  | S I C ? |
-| `controleLoRaWan` | Peripheriques |  |  |  |  |  |  | S I OFF |  |  |  |  |  | S I ON |  |  |  |
-| `controleVoletRoulants` | Peripheriques |  |  |  |  |  |  | S I ON |  | S I ON |  |  |  | S I OFF |  |  | S I ON |
-| `i2c_ads1115` | Peripheriques |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I OFF | S I OFF | S I ON |  |  | S I ON |
-| `i2c_mcp23017` | Peripheriques |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I OFF | S I OFF | S I ON |  |  | S I ON |
-| `ledsFonctions` | Peripheriques | D | D | D | D | D | S D C OFF | S D C OFF | S D | D | S I C ON | S D C OFF | S D C OFF | S D C OFF | D | D | S C ON |
-| `ledsPanelFonctions` | Peripheriques | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D |
-| `loRaWanFonctions` | Peripheriques |  |  |  |  |  |  | S C OFF |  |  |  |  |  | S C ON |  |  |  |
-| `vrFonctions` | Peripheriques |  |  |  |  |  |  | S C ON |  | S D |  |  |  | S C OFF |  |  | S D |
-| `vrPages` | Peripheriques |  |  |  |  |  |  | S D |  | S D |  |  |  | D |  |  | S D |
-| `vrReglage` | Peripheriques |  |  |  |  |  |  | S D |  | S D |  |  |  | D |  |  | S D |
-| `controleCommandesEcran` | Carte |  |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |
-| `controleCuve` | Carte |  |  |  |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |
-| `controleDebits` | Carte |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `controleEcranCave` | Carte |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |
-| `controleEcranDebits` | Carte |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `controleGarage` | Carte |  |  |  |  |  |  |  |  | P C ON |  |  |  | P C ON |  |  |  |
-| `controleGrenier` | Carte |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |
-| `controleHumidite` | Carte |  |  |  | S P I ON |  | S P I ON |  |  |  |  |  |  |  |  |  |  |
-| `controlePompeVideCave` | Carte |  |  |  | S P I ON |  | S P I ON |  |  |  |  |  |  |  |  |  |  |
-| `controlePortail` | Carte |  |  |  |  |  |  |  | S P |  |  | S P I ON |  |  |  |  |  |
-| `controleRideau` | Carte |  |  |  |  |  |  |  |  |  |  |  | S P I ON |  |  |  |  |
-| `cuveFonctions` | Carte |  |  |  |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |
-| `debitsFonctions` | Carte |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `ecranCaveFonctions` | Carte |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |
-| `ecranCaveHaspmota` | Carte |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |
-| `ecranDebitsFonctions` | Carte |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `ecranHaspmota` | Carte |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `ecranLvgl` | Carte |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `equilibragePage` | Carte |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `garageFonctions` | Carte |  |  |  |  |  |  |  |  | P C ON |  |  |  | P C ON |  |  |  |
-| `preinit` | Carte |  | P |  |  | P |  |  |  |  |  |  |  |  |  |  |  |
-| `controleCoprocesseur` | Autres |  |  |  |  |  |  |  |  | S I ON |  |  |  |  |  |  |  |
-| `controleEcranSysteme` | Autres |  | C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `controleEnergie` | Autres | S I ON |  |  |  |  |  |  |  |  |  |  |  |  | S I ON | S I ON |  |
-| `controleHue` | Autres |  |  |  |  |  | S I | S I |  | S I |  |  |  |  |  |  | S I |
-| `controleMqttLiaison` | Autres |  |  |  |  |  |  |  |  | S I ON |  |  |  |  |  |  |  |
-| `controleVisuel` | Autres |  |  |  |  |  |  |  |  |  | S I |  |  |  |  |  |  |
-| `cuvePageFonctions` | Autres |  |  |  |  |  |  |  |  | S D | S D |  |  |  |  |  |  |
-| `demarrage` | Autres | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S | S I | S I | S I |
-| `ecranFonctions` | Autres |  | S D |  |  | S D |  |  |  |  |  |  |  |  |  |  |  |
-| `ecranSysteme` | Autres |  | C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `energieFonctions` | Autres | S D |  |  |  |  |  |  |  |  |  |  |  |  | S D | S D |  |
-| `fsMqtt` | Autres | S | S I | S I | S I | S I | S I | S | S | S I | S I | S I | S I | S | S | S | S I |
-| `graphiquesFonctions` | Autres |  |  | S I |  |  | S I | S I |  | S I | S I | S I | S I | S I |  |  | S I |
-| `historiqueFonctions` | Autres |  |  | S I C ON |  |  | S I C ON | S I C ON |  | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |  |  | S I C ON |
-| `historiqueSeries` | Autres |  |  | S I |  |  | S I | S I |  | S I | S I | S I | S I | S I |  |  | S I |
-| `hueFonctions` | Autres |  |  |  |  |  | S D | S D |  | S D |  |  |  |  |  |  | S D |
-| `mqttLiaisonFonctions` | Autres |  |  |  |  |  |  |  |  | S D |  |  |  |  |  |  |  |
-| `pagesGraphiques` | Autres |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| `pagesGraphiquesValidation` | Autres |  |  | D |  |  | D | D |  | D | D | D | D | D |  |  | D |
-| `qrcodePage` | Autres | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I |  | S I | S I | S I |
-| `visuelFonctions` | Autres |  |  |  |  |  |  |  |  |  | S D |  |  |  |  |  |  |
+| Module | Famille | Bloc | Cout | bureau<br>tasmota32-interrupteur-energie | bureau<br>tasmota32s3-ecran-debits-pac | bureau<br>tasmota32s3-serveur-debits-pac | cave<br>tasmota32-serveur-rly | cave<br>tasmota32s3-ecran | cave<br>tasmota32s3-serveur-rly | etage2<br>tasmota32s3-grenier | garage<br>tasmota32-portail-jardin-modbus | garage<br>tasmota32p4-serveur-modbus | garage<br>tasmota32s3-capteurs-cuve-modbus | garage<br>tasmota32s3-portail-jardin-modbus | garage<br>tasmota32s3-rideau-garage-modbus | garage<br>tasmota32s3-serveur-modbus | jardin<br>tasmota32-projecteur-barbecue | jardin<br>tasmota32-projecteur-led | rdc<br>tasmota32s3-grenier |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `configDevices` | Socle |  | 9,8 / 11,8 | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON |
+| `configGlobal` | Socle |  | 7,1 / 11,4 | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `configModules` | Socle |  | 2,7 / 3,8 | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON |
+| `controleGeneral` | Socle |  | 13,4 / 19,3 | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I |
+| `controleLedTemoin` | Socle |  | 2,4 / 3,0 | S | S I | S I | S I | S I | S I | S I | S | S I | S I | S I | S I | S I | S | S | S I |
+| `controleWeb` | Socle |  | 6,4 / 9,7 | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I |
+| `diversFonctions` | Socle |  | 5,9 / 8,1 | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `gestionFileFolder` | Socle |  | 6,0 / 8,4 | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `globalFonctions` | Socle |  | 14,9 / 23,3 | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `logFonctions` | Socle |  | 10,9 / 15,9 | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `webFonctions` | Socle |  | 1,1 / 1,9 | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |
+| `controleDiscovery` | Reseau | discovery | 2,0 / 2,9 | S I OFF | S | S I ON | S I OFF | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON | S I ON |
+| `controleRangeExtender` | Reseau | rangeExtender | 1,3 / 1,9 | S | S I ON | S I ON | S I OFF | S I ON | S I ON | S I ON | S | S I ON | S | S | S | S I ON | S I ON | S I ON | S I ON |
+| `controleTCP` | Reseau | tcp | 1,3 / 1,5 | S | S | S | S I OFF | S | S I OFF | S I OFF | S | S | S | S | S | S I ON | S | S | S I OFF |
+| `controleUDP` | Reseau | udp | 1,7 / 2,2 | S | S I ON | S I ON | S I OFF | S I ON | S I ON | S I OFF | S | S I ON | S I ON | S I ON | S I ON | S I ON | S | S | S I ON |
+| `discoveryFonctions` | Reseau | discovery | 15,1 / 21,0 | S C OFF | S D | S D | S C OFF | S D | S C ON | S D | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S C ON | S D |
+| `rangeExtenderFonctions` | Reseau | rangeExtender | 5,7 / 8,9 | S D | S C ON | S D | S C OFF | S C ON | S C ON | S C ON | S D | S D | S D | S D | S D | S C ON | S C ON | S C ON | S C ON |
+| `tcpFonctions` | Reseau | tcp | 3,2 / 4,6 | S D | S D | S D | S C OFF | S D | S C OFF | S C OFF | S D | S D | S D | S D | S D | S C ON | S D | S D | S C OFF |
+| `udpFonctions` | Reseau | udp | 13,4 / 20,5 | S D | S C ON | S C ON | S C OFF | S C ON | S C ON | S C OFF | S D | S C ON | S C ON | S C ON | S C ON | S C ON | S D | S D | S C ON |
+| `controleModbus` | ModBus | modbus | 3,2 / 5,1 |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I ON | S I ON | S I ON |  |  | S I ON |
+| `modBus_Conn16channels` | ModBus | modbus | 7,4 / 11,2 |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I ON | S I ON | S I ON |  |  | S I ON |
+| `modBus_TasmotaSlaveModBus` | ModBus | modbus | 27,4 / 36,9 |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I ON | S I ON | S I ON |  |  | S I ON |
+| `modbusFonctions` | ModBus | modbus | 56,0 / 82,7 | D | S I | S I | D | S I | S I | D | S D | S I | S I | S I | S I | S I C ON | D | D | S I |
+| `controleES8311` | Peripheriques | i2s | 15,6 / 11,0 |  |  |  |  |  |  |  |  | S I ON |  |  |  |  |  |  |  |
+| `controleLeds` | Peripheriques | ruban, ledRGB | 1,6 / 2,1 |  |  |  |  |  | S I C OFF | S I C OFF | S |  | S I C ? | S I C OFF | S I C OFF | S I C OFF |  |  | S I C ? |
+| `controleLoRaWan` | Peripheriques | lorawan | 0,8 / 1,0 |  |  |  |  |  |  | S I OFF |  |  |  |  |  | S I ON |  |  |  |
+| `controleVoletRoulants` | Peripheriques | voletRoulants | 3,0 / 3,8 |  |  |  |  |  |  | S I ON |  | S I ON |  |  |  | S I OFF |  |  | S I ON |
+| `i2c_ads1115` | Peripheriques | ads1115 | 4,9 / 6,6 |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I OFF | S I OFF | S I ON |  |  | S I ON |
+| `i2c_mcp23017` | Peripheriques | modbus | 1,9 / 2,6 |  | S I ON | S I ON |  | S I ON | S I ON |  | S | S I ON | S I ON | S I OFF | S I OFF | S I ON |  |  | S I ON |
+| `ledsFonctions` | Peripheriques | ruban, ledRGB | 14,2 / 19,3 | D | D | D | D | D | S D C OFF | S D C OFF | S D | D | S I C ON | S D C OFF | S D C OFF | S D C OFF | D | D | S C ON |
+| `ledsPanelFonctions` | Peripheriques |  | 4,0 / 10,9 | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D | S D |
+| `loRaWanFonctions` | Peripheriques | lorawan | 1,9 / 2,9 |  |  |  |  |  |  | S C OFF |  |  |  |  |  | S C ON |  |  |  |
+| `vrFonctions` | Peripheriques | voletRoulants | 19,2 / 27,5 |  |  |  |  |  |  | S C ON |  | S D |  |  |  | S C OFF |  |  | S D |
+| `vrPages` | Peripheriques | voletRoulants | 8,1 / 10,6 |  |  |  |  |  |  | S D |  | S D |  |  |  | D |  |  | S D |
+| `vrReglage` | Peripheriques | voletRoulants | 6,9 / 10,0 |  |  |  |  |  |  | S D |  | S D |  |  |  | D |  |  | S D |
+| `controleCommandesEcran` | Carte |  |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |
+| `controleCuve` | Carte |  |  |  |  |  |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |
+| `controleDebits` | Carte |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `controleEcranCave` | Carte |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |
+| `controleEcranDebits` | Carte |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `controleGarage` | Carte |  |  |  |  |  |  |  |  |  |  | P C ON |  |  |  | P C ON |  |  |  |
+| `controleGrenier` | Carte |  |  |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |
+| `controleHumidite` | Carte |  |  |  |  |  | S P I ON |  | S P I ON |  |  |  |  |  |  |  |  |  |  |
+| `controlePompeVideCave` | Carte |  |  |  |  |  | S P I ON |  | S P I ON |  |  |  |  |  |  |  |  |  |  |
+| `controlePortail` | Carte |  |  |  |  |  |  |  |  |  | S P |  |  | S P I ON |  |  |  |  |  |
+| `controleRideau` | Carte |  |  |  |  |  |  |  |  |  |  |  |  |  | S P I ON |  |  |  |  |
+| `cuveFonctions` | Carte |  |  |  |  |  |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |
+| `debitsFonctions` | Carte |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `ecranCaveFonctions` | Carte |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |
+| `ecranCaveHaspmota` | Carte |  |  |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |
+| `ecranDebitsFonctions` | Carte |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `ecranHaspmota` | Carte |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `ecranLvgl` | Carte |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `equilibragePage` | Carte |  |  |  |  | P C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `garageFonctions` | Carte |  |  |  |  |  |  |  |  |  |  | P C ON |  |  |  | P C ON |  |  |  |
+| `preinit` | Carte |  |  |  | P |  |  | P |  |  |  |  |  |  |  |  |  |  |  |
+| `controleCoprocesseur` | Autres | coprocesseur | 7,7 / 10,7 |  |  |  |  |  |  |  |  | S I ON |  |  |  |  |  |  |  |
+| `controleEcranSysteme` | Autres | ecranSysteme | non solid. / 1,1 |  | C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `controleEnergie` | Autres | energie | 2,4 / 3,1 | S I ON |  |  |  |  |  |  |  |  |  |  |  |  | S I ON | S I ON |  |
+| `controleHue` | Autres | emulationHue | 3,9 / 5,0 |  |  |  |  |  | S I | S I |  | S I |  |  |  |  |  |  | S I |
+| `controleMqttLiaison` | Autres | liaisonMqtt | 8,5 / 11,1 |  |  |  |  |  |  |  |  | S I ON |  |  |  |  |  |  |  |
+| `controleVisuel` | Autres | visuel | 0,7 / 1,0 |  |  |  |  |  |  |  |  |  | S I |  |  |  |  |  |  |
+| `cuvePageFonctions` | Autres | page_cuve | 1,7 / 2,4 |  |  |  |  |  |  |  |  | S D | S D |  |  |  |  |  |  |
+| `demarrage` | Autres |  | 3,2 / 4,6 | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S | S I | S I | S I |
+| `ecranFonctions` | Autres | ecran | 5,4 / 7,1 |  | S D |  |  | S D |  |  |  |  |  |  |  |  |  |  |  |
+| `ecranSysteme` | Autres | ecranSysteme | non solid. / 17,2 |  | C ON |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `energieFonctions` | Autres | energie | 12,2 / 16,1 | S D |  |  |  |  |  |  |  |  |  |  |  |  | S D | S D |  |
+| `fsMqtt` | Autres | fsMqtt | 6,2 / 7,6 | S | S I | S I | S I | S I | S I | S | S | S I | S I | S I | S I | S | S | S | S I |
+| `graphiquesFonctions` | Autres | historique | 8,7 / 11,6 |  |  | S I |  |  | S I | S I |  | S I | S I | S I | S I | S I |  |  | S I |
+| `historiqueFonctions` | Autres | historique | 12,6 / 16,2 |  |  | S I C ON |  |  | S I C ON | S I C ON |  | S I C ON | S I C ON | S I C ON | S I C ON | S I C ON |  |  | S I C ON |
+| `historiqueSeries` | Autres | historique | 3,9 / 4,6 |  |  | S I |  |  | S I | S I |  | S I | S I | S I | S I | S I |  |  | S I |
+| `hueFonctions` | Autres | emulationHue | 3,6 / 4,5 |  |  |  |  |  | S D | S D |  | S D |  |  |  |  |  |  | S D |
+| `mqttLiaisonFonctions` | Autres | liaisonMqtt | 6,0 / 8,2 |  |  |  |  |  |  |  |  | S D |  |  |  |  |  |  |  |
+| `pagesGraphiques` | Autres | pages_graphiques | 6,5 / 9,4 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `pagesGraphiquesValidation` | Autres | pages_graphiques | 10,4 / 12,9 |  |  | D |  |  | D | D |  | D | D | D | D | D |  |  | D |
+| `qrcodePage` | Autres | qrcode | 2,3 / 3,3 | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I | S I |  | S I | S I | S I |
+| `visuelFonctions` | Autres | visuel | 7,6 / 10,1 |  |  |  |  |  |  |  |  |  | S D |  |  |  |  |  |  |
 
 Envs : `bureau/tasmota32-interrupteur-energie` = `tasmota32-bureau-interrupteur-energie` ; `bureau/tasmota32s3-ecran-debits-pac` = `tasmota32s3-bureau-ecran-debits-pac` ; `bureau/tasmota32s3-serveur-debits-pac` = `tasmota32s3-bureau-serveur-debits-pac` ; `cave/tasmota32-serveur-rly` = `tasmota32-cave-serveur-rly` ; `cave/tasmota32s3-ecran` = `tasmota32s3-cave-ecran` ; `cave/tasmota32s3-serveur-rly` = `tasmota32s3-cave-serveur-rly` ; `etage2/tasmota32s3-grenier` = `tasmota32s3-etage2-grenier` ; `garage/tasmota32-portail-jardin-modbus` = `tasmota32-garage-portail-jardin-modbus` ; `garage/tasmota32p4-serveur-modbus` = `tasmota32p4-garage-serveur-modbus` ; `garage/tasmota32s3-capteurs-cuve-modbus` = `tasmota32s3-garage-capteurs-cuve-modbus` ; `garage/tasmota32s3-portail-jardin-modbus` = `tasmota32s3-garage-portail-jardin-modbus` ; `garage/tasmota32s3-rideau-garage-modbus` = `tasmota32s3-garage-rideau-garage-modbus` ; `garage/tasmota32s3-serveur-modbus` = `tasmota32s3-garage-serveur-modbus` ; `jardin/tasmota32-projecteur-barbecue` = `tasmota32-jardin-projecteur-barbecue` ; `jardin/tasmota32-projecteur-led` = `tasmota32-jardin-projecteur-led` ; `rdc/tasmota32s3-grenier` = `tasmota32s3-rdc-grenier`
 

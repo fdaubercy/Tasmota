@@ -16,8 +16,10 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     GET  /              la page (assistant_persist_page.PAGE)
     GET  /execution     {en_cours: false} : la cible Custom l'interroge pour savoir si la page tourne
     GET  /parc          {puces, bases: {puce: [env]}, base_defaut: {puce: env}, maitres, ids_pris: {id: [dossier]},
-                        id_libre, reseaux, blocs: [{id, libelle, aide, puces, dependances}], erreur_modele,
+                        id_libre, reseaux, blocs: [{id, libelle, aide, puces, dependances, cout, defines, lib_ignore}], erreur_modele,
                         broches: {puce: [GPIO]}, erreur_broches: {puce: message}, groupes: [{id, singulier, gabarit}]}  (editeur des entrees/sorties)
+                        cout = {be, bec, solidifie, fichiers} en Ko ou null ; defines, lib_ignore = listes de noms : rappel
+                        en LECTURE SEULE sous la case du bloc (rien n'en est ecrit ni genere)
     GET  /modele/etat   {ajouts, disparues, divergentes, a_completer, erreur} : bandeau du modele (A6) ; ajouts = cles
                         fusionnees d'office au demarrage, erreur = modele illisible (rien n'est alors fusionne ni ecrit)
     GET  /interrompues  operations arretees en plein vol (marque restee dans leur sauvegarde)
@@ -177,6 +179,16 @@ def etat_modele(racine, ajouts, erreur_demarrage=""):
             "valeurs": {c: apr.valeur_affichee(modele, c) for c in apm.a_completer(modele)}}
 
 
+def _cout(racine, fichiers):
+    """Cout en Ko d'un bloc (mesure_binomes.cout_bloc, lu dans les blocs TAILLE DU BINOME) ; None sans bloc de taille."""
+    sys.path.insert(0, str(gen.RACINE / "outils_docs" / "scripts_python" / "berry"))    # exception a la regle du meme dossier
+    try:
+        import mesure_binomes
+    finally:
+        sys.path.pop(0)
+    return mesure_binomes.cout_bloc(racine, fichiers)
+
+
 def donnees_parc(racine):
     modele, erreur = _modele(racine)
     ini, bases = fbi.lit_sections(racine), {p: [] for p in parc.PREFIXES}
@@ -190,7 +202,8 @@ def donnees_parc(racine):
             broches[p] = ape.broches_valides(p, racine)
         except ValueError as exc:
             broches[p], erreurs_broches[p] = [], str(exc)
-    blocs = [{k: b.get(k, "") for k in ("id", "libelle", "aide", "puces", "dependances")}
+    blocs = [{**{k: b.get(k, "") for k in ("id", "libelle", "aide", "puces", "dependances")},
+              "cout": _cout(racine, b.get("fichiers", [])), "defines": b.get("defines", []), "lib_ignore": b.get("lib_ignore", [])}
              for b in (modele["blocs"] if modele else []) if b["actif"]]     # un bloc de detection n'est jamais une question
     return {"puces": list(parc.PREFIXES), "bases": bases,
             "base_defaut": {p: parc.base_par_defaut(racine, p) for p in parc.PREFIXES},

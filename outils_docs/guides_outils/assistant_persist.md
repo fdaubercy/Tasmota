@@ -31,7 +31,10 @@ Port **7900**. Depuis un autre appareil : lien à jeton affiché dans la console
 
 ### Les étapes de la page
 
-1. **Questions** : identité de la carte (puce, lieu, nom, topic, IP), réseau, fonctions à activer.
+1. **Questions** : identité de la carte (puce, lieu, nom, topic, IP), réseau, fonctions à activer. Sous chaque case de
+   fonction, une ligne grise rappelle, **en lecture seule**, son coût en Ko (lu dans les blocs `TAILLE DU BINOME`, solidifié
+   et `.bec`), ses `#define` et ses `lib_ignore` (bibliothèques ignorées quand le bloc est absent) ; rien de cela n'est
+   écrit ni généré, la sortie de l'assistant ne change pas. Une fonction sans bloc de taille n'affiche que ce qu'elle a.
 2. **Entrées et sorties du bloc métier** : un éditeur par groupe (boutons, interrupteurs, relais, capteurs, compteurs,
    thermomètres, analogiques, `pinsTechniques`, `debitmetres`). Les broches proposées sont celles de la puce d'après `data/fs/configGlobal.be`.
    `pinsTechniques` porte les broches du gabarit qui ne sont ni relais ni capteurs (UART de la BL0942 et 2e bobine du

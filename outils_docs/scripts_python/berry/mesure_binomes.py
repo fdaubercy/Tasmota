@@ -102,7 +102,7 @@ def lit_taille(chemin_be, _suivi=()):
     chemin = Path(chemin_be)
     try:
         texte = chemin.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, ValueError):      # ValueError : UnicodeDecodeError
         return None
     lignes = texte.splitlines()
     renvoi = next((LIEN_RENVOI.search(l) for l in lignes if l.startswith(RENVOI)), None)
@@ -117,7 +117,7 @@ def lit_taille(chemin_be, _suivi=()):
         if ligne.rstrip().endswith(FIN):
             break
         m = LIGNE_MESURE.match(ligne)
-        if m:
+        if m and all(v.count(",") <= 1 for v in m.groups()[1:4]):   # « 1,2,3 » : ligne abimee, ignoree
             nom, be, bec, sol, ch = m.groups()
             lus.append({"nom": nom, "be": float(be.replace(",", ".")), "bec": float(bec.replace(",", ".")),
                         "solidifie": None if sol.startswith("non") else float(sol[:-3].replace(",", "."))})
@@ -127,6 +127,21 @@ def lit_taille(chemin_be, _suivi=()):
         return None
     return {"fichiers": [x for x in lus if x["nom"] != "total"],
             "total": {k: total[k] for k in ("be", "bec", "solidifie")}, "chaines": chaines}
+
+
+def cout_bloc(racine, fichiers):
+    """Cout d'un bloc du manifeste (champ `fichiers` de modele_persist.json) : {"be", "bec", "solidifie", "fichiers"}
+    en Ko, somme des lignes des blocs TAILLE DU BINOME lus pour ses .be, chaque fichier compte une fois ;
+    "solidifie" ne somme que les fichiers solidifiables. None si aucun .be du bloc n'a de bloc de taille."""
+    vus = {}
+    for f in fichiers:
+        if f.endswith(".be"):
+            for x in (lit_taille(Path(racine) / f) or {}).get("fichiers", []):
+                vus.setdefault(x["nom"], x)
+    if not vus:
+        return None
+    somme = lambda k: round(sum(x[k] or 0 for x in vus.values()), 1)
+    return {"be": somme("be"), "bec": somme("bec"), "solidifie": somme("solidifie"), "fichiers": sorted(vus)}
 
 
 # ---------------------------------------------------------------- mesures (outils du PC)

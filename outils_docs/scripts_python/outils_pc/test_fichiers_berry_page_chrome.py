@@ -16,6 +16,7 @@ copie modifie) ; le formulaire de creation se preremplit.
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -27,11 +28,16 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 from test_build_page_chrome import CHROMES, Cdp, attend, port_libre, tue_arbre   # client DevTools stdlib
+import verifie_manifeste as vm
 
 ECHECS = []
 RIDEAU = "tasmota32s3-garage-rideau-garage-modbus"
 BASE = "tasmota32s3-base-N16R8"
 DISPARU = "data/fs/controleVoletRoulants.be"      # dans le custom_files_exclude propre du rideau
+# En-tete de bloc au-dessus d'un fichier, dans les trois colonnes (null : fichier sans en-tete, « absent » : introuvable)
+ENTETE = ("(function(c){var ids=['col-fs','col-exclu','col-solidifie'];for(var i=0;i<ids.length;i++){var t=null,"
+          "k=document.getElementById(ids[i]).children;for(var j=0;j<k.length;j++){if(k[j].classList.contains('bloc-tete'))"
+          "t=k[j].textContent;else if(k[j].title===c)return t;}}return 'absent';})(%s)")
 MARQUE_TEMOIN = 'var envs = [], etat = null, attente = {}'
 INJECTION_TEMOIN = '\n$("bouton-qui-n-existe-pas").onclick = null;   // TEMOIN : TypeError au chargement\n'
 
@@ -66,6 +72,9 @@ class Montage:
         self.depot = tfc.depot_essai(self.t / "depot")
         shutil.copytree(tfc.RACINE / "data" / "fs", self.depot / "data" / "fs",
                         ignore=lambda d, noms: [n for n in noms if not n.endswith(".be")])
+        manifeste = self.depot / vm.MODELE                    # blocs du manifeste : regroupement des colonnes
+        manifeste.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(tfc.RACINE / vm.MODELE, manifeste)
         environ = dict(os.environ, OUTILS_TASMOTA_DOSSIER=str(self.t / "outils"), PYTHONIOENCODING="utf-8")
         self.port = port_libre()
         self.url = f"http://127.0.0.1:{self.port}/"
@@ -115,8 +124,31 @@ def choisit(cdp, chemin, etat):
                   "'); if(!r) return 'pas de radio'; r.checked=true; r.dispatchEvent(new Event('change')); return s.value;})()")
 
 
+def sonde_blocs(m):
+    """Colonnes regroupees par bloc du manifeste (avant que sonde_page ne retire controleVoletRoulants.be : le cout en depend)."""
+    cdp = m.cdp
+    cdp.appel("Page.navigate", url=m.url + "?env=" + RIDEAU)
+    verifie(attend(cdp, "document.getElementById('col-solidifie') && document.getElementById('col-solidifie').textContent.indexOf('controleRideau.be') >= 0", 40),
+            True, "colonnes : page chargee (en-tetes de bloc attendus)")
+    entete = lambda chemin: cdp.js(ENTETE % json.dumps(chemin))
+    volets = re.compile(r"voletRoulants · \d+,\d Ko solidifié, \d+,\d Ko en \.bec")   # suit les remesures du binome
+    ok = lambda x: bool(x and volets.fullmatch(x))
+    verifie((ok(entete("data/fs/vrFonctions.be")), ok(entete("data/fs/controleVoletRoulants.be"))), (True, True),
+            "colonnes : vrFonctions et controleVoletRoulants sous « voletRoulants », cout du bloc")
+    verifie(entete("data/fs/ledsFonctions.be").startswith("ruban, ledRGB · "), True, "colonnes : fichier de deux blocs sous « ruban, ledRGB »")
+    verifie(entete("data/fs/configGlobal.be"), "Sans bloc", "colonnes : fichier sans bloc sous « Sans bloc »")
+    lignes = "document.querySelectorAll('#col-fs .fichier, #col-exclu .fichier, #col-solidifie .fichier').length"
+    avec = cdp.js(lignes)
+    cdp.js("window.__g = etat.groupes; etat.groupes = []; dessine(); 1")            # TEMOIN : sans groupes, rien n'est regroupe
+    verifie((cdp.js("document.querySelectorAll('.bloc-tete').length"), entete("data/fs/vrFonctions.be"), cdp.js(lignes)),
+            (0, None, avec), "TEMOIN : sans groupes, aucun en-tete, les memes lignes (le controle regroupe voit la difference)")
+    cdp.js("etat.groupes = window.__g; dessine(); 1")
+    verifie(ok(entete("data/fs/vrFonctions.be")), True, "colonnes : groupes remis, en-tetes revenus")
+
+
 def sonde_page(m):
     cdp = m.cdp
+    sonde_blocs(m)
     cenv = m.depot / "platformio_tasmota_cenv.ini"
     avant = cenv.read_bytes()
     (m.depot / DISPARU).unlink()                 # ligne propre de custom_files_exclude du rideau -> « disparue »

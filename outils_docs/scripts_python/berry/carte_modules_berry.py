@@ -12,6 +12,8 @@ CE QU'IL LIT (lecture seule)
   et le _persist.json de chaque carte, et custom_berry_solidify de chaque env PlatformIO
   (valeur RESOLUE par ProjectConfig, jamais le .ini parse a la main). ProjectConfig vit dans
   le Python de penv : la lecture est isolee dans un sous-processus. Aucun `pio run`.
+  Colonnes Bloc et Cout : `id` et `fichiers` des `blocs` de outils_docs/schemas/modele_persist.json (rien d'autre
+  n'en est lu : le fichier porte des secrets), et le bloc TAILLE DU BINOME du driver (mesure_binomes.lit_taille).
 
 CODES DES CELLULES
 ------------------
@@ -30,6 +32,8 @@ COMMENT LA GARDE EST TROUVEE
   Tout le reste donne "?".
 """
 import argparse, json, os, re, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mesure_binomes   # meme dossier : lit_taille (bloc TAILLE DU BINOME)
 
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 RACINES_PERSIST = ("serveur", "diverses", "modules", "drivers")
@@ -401,6 +405,31 @@ def cellule(nom, carte, fs, propre_carte):
         bloque = all(b for _, b in res)
     return (" ".join(codes + ([etat] if etat else [])), etat, bool(actives), bloque)
 
+def blocs_manifeste(racine):
+    """{fichier data/fs/x.be: [ids de blocs, ordre du manifeste]} ; seuls `id` et `fichiers` sont lus."""
+    chemin = os.path.join(racine, "outils_docs", "schemas", "modele_persist.json")
+    try:
+        with open(chemin, encoding="utf-8-sig") as f:
+            blocs = json.load(f).get("blocs", [])
+    except (OSError, ValueError) as exc:
+        print(f"AVERTISSEMENT : manifeste illisible, colonne Bloc vide ({type(exc).__name__})", file=sys.stderr)
+        return {}
+    par = {}
+    for b in blocs:
+        for f in b.get("fichiers") or []:
+            if isinstance(f, str) and f.endswith(".be") and b.get("id") not in par.setdefault(f, []):
+                par[f].append(b["id"])
+    return par
+
+def cout_module(racine, nom):
+    """`solidifie Ko / .bec Ko` (virgule decimale) du module `nom`, lu dans le bloc TAILLE DU BINOME ; '' sans bloc."""
+    t = mesure_binomes.lit_taille(os.path.join(racine, "data", "fs", nom + ".be"))
+    x = next((x for x in (t or {}).get("fichiers", []) if x["nom"] == nom + ".be"), None)
+    if x is None:
+        return ""
+    ko = lambda v: ("%.1f" % v).replace(".", ",")
+    return "%s / %s" % ("non solid." if x["solidifie"] is None else ko(x["solidifie"]), ko(x["bec"]))
+
 # --- Rendu Markdown ---
 def court(rel):
     p = rel.split("/")
@@ -514,11 +543,15 @@ def genere(racine, sortie):
          "Legende : **S** solidifie dans l'env (`custom_berry_solidify`) - **I** importe par l'autoexec - "
          "**C** `compileModule` / `loadBerryFile` - **D** charge indirectement (importe par un module charge sur la carte) - **#** reference seulement commentee - **P** fichier propre a la carte "
          "- puis la garde d'activation evaluee sur le `_persist.json` de la carte : **ON** / **OFF** / **?** (non evaluable). "
-         "Pas d'etat = pas de garde. Cellule vide = rien.", "",
-         "| Module | Famille | " + " | ".join(court(c["rel"]) for c in cartes) + " |",
-         "|---|---|" + "---|" * len(cartes)]
+         "Pas d'etat = pas de garde. Cellule vide = rien. "
+         "**Bloc** : bloc(s) du manifeste (`blocs` de `modele_persist.json`) dont `fichiers` contient le module. "
+         "**Cout** : `solidifie Ko / .bec Ko`, lus dans le bloc TAILLE DU BINOME du driver (genere par `mesure_binomes.py --ecrire`), vide sans bloc de taille.", "",
+         "| Module | Famille | Bloc | Cout | " + " | ".join(court(c["rel"]) for c in cartes) + " |",
+         "|---|---|---|---|" + "---|" * len(cartes)]
+    par_bloc = blocs_manifeste(racine)
     for n, p in modules:
-        L.append("| `%s` | %s | " % (n, famille(n, p)) + " | ".join(c["cellules"][n][0] for c in cartes) + " |")
+        bloc, cout = ("", "") if p else (", ".join(par_bloc.get("data/fs/%s.be" % n, [])), cout_module(racine, n))
+        L.append("| `%s` | %s | %s | %s | " % (n, famille(n, p), bloc, cout) + " | ".join(c["cellules"][n][0] for c in cartes) + " |")
     L += ["", "Envs : " + " ; ".join("`%s` = `%s`" % (c["rel"].replace("data/", ""), c["env"]) for c in cartes), "",
           "## Incoherences detectees", "",
           "Constats factuels, sans jugement : un module peut etre volontairement dans cet etat.", ""]

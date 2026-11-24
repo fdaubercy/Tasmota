@@ -45,6 +45,7 @@ HTML = r"""<!doctype html>
   .grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 12px;margin-bottom:8px}
   .grille label{display:flex;flex-direction:column;font-size:12px;color:var(--doux);gap:2px}
   .cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 12px}
+  .cases .rappel{display:block;margin-left:22px;line-height:1.3}
   .cases label{cursor:pointer}.cases label.grise{color:var(--discret);cursor:not-allowed}
   .radios label{display:block;margin:3px 0;cursor:pointer}
   .indice{font-size:11.5px;color:var(--vert)}.indice.av{color:var(--orange)}

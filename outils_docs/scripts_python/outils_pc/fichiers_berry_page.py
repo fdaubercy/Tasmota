@@ -38,6 +38,7 @@ PAGE = r"""<!doctype html>
   .colonnes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   @media (max-width:800px){.colonnes{grid-template-columns:minmax(0,1fr)}}
   .colonne h2 .compte{font-weight:400;color:var(--discret);font-size:12px}
+  .bloc-tete{margin-top:8px;font-size:12px;font-weight:600;color:var(--doux)}
   .fichier{padding:3px 0;border-top:1px solid var(--bord);font-family:ui-monospace,Consolas,monospace;font-size:12.5px;overflow-wrap:anywhere}
   .badge{display:inline-block;font-family:system-ui,sans-serif;font-size:10.5px;padding:0 6px;margin-left:4px;border-radius:8px;background:var(--bleu-fond);color:var(--bleu)}
   .badge.carte-b{background:#e3f5e1;color:#1d6b2c}.badge.amont{background:var(--orange-fond);color:var(--orange)}
@@ -161,6 +162,7 @@ function h(balise, attrs) {
   return e;
 }
 /*JS_LIEUX_COMMUN*/
+/*JS_BLOCS*/
 function vide(e) { while (e.firstChild) e.removeChild(e.firstChild); return e; }
 
 // Appel HTTP qui ne leve jamais : {ok, statut, donnees, texte}. Les POST portent X-Fichiers-Berry: 1.
@@ -225,7 +227,8 @@ async function chargeEnvs() {
 
 async function chargeEtat() {
   $("statut").textContent = "recensement…";
-  var r = await appel("/etat?env=" + encodeURIComponent($("env").value));
+  var voulu = $("env").value, r = await appel("/etat?env=" + encodeURIComponent(voulu));
+  if (voulu !== $("env").value) return;           // env change pendant l'appel : reponse perimee, la plus recente gagne
   if (!r.ok) { $("statut").textContent = r.texte; return; }
   etat = r.donnees;
   $("statut").textContent = etat.fichiers.length + " fichiers recensés à l'instant";
@@ -269,15 +272,15 @@ function dessine() {
   var cols = {fs: [], exclu: [], solidifie: []};
   etat.fichiers.forEach(function (f) {
     var e = etatAffiche(f), col = e === "absent" ? "exclu" : e;
-    cols[col].push(h.apply(null, ["div", {"class": "fichier" + (attente[f.chemin] ? " attente" : ""), title: f.chemin},
-                                   nom(f.chemin) + (e === "absent" ? " (absent)" : "")].concat(badges(f))));
+    cols[col].push({chemin: f.chemin, el: h.apply(null, ["div", {"class": "fichier" + (attente[f.chemin] ? " attente" : ""), title: f.chemin},
+                                   nom(f.chemin) + (e === "absent" ? " (absent)" : "")].concat(badges(f)))});
   });
   etat.hors_perimetre.forEach(function (x) {
-    cols.exclu.push(h("div", {"class": "fichier", title: x.chemin}, nom(x.chemin), h("span", {"class": "badge", texte: "hors périmètre"})));
+    cols.exclu.push({chemin: "", el: h("div", {"class": "fichier", title: x.chemin}, nom(x.chemin), h("span", {"class": "badge", texte: "hors périmètre"}))});
   });
   ["fs", "exclu", "solidifie"].forEach(function (c) {
     var col = vide($("col-" + c));
-    cols[c].forEach(function (e) { col.appendChild(e); });
+    remplitColonne(col, cols[c]);                  // regroupe par bloc du manifeste (fichiers_berry_blocs.JS)
     $("n-" + c).textContent = "(" + cols[c].length + ")";
   });
   var av = vide($("avertissements"));
@@ -490,6 +493,7 @@ chargeInterrompues();
 
 import fichiers_berry_page_envs as _envs     # panneaux Renommer / Supprimer (spec §9, §10)
 
+import fichiers_berry_blocs as _blocs         # noqa: E402 - regroupement des colonnes par bloc
 import lieux                                 # noqa: E402 - remplitParLieu (listes par lieu)
 
-PAGE = PAGE.replace("/*JS_LIEUX_COMMUN*/", lieux.JS).replace("<!--PANNEAUX_ENVS-->", _envs.HTML).replace("/*JS_ENVS*/", _envs.JS)
+PAGE = PAGE.replace("/*JS_LIEUX_COMMUN*/", lieux.JS).replace("<!--PANNEAUX_ENVS-->", _envs.HTML).replace("/*JS_ENVS*/", _envs.JS).replace("/*JS_BLOCS*/", _blocs.JS)

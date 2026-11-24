@@ -108,9 +108,27 @@ def test_get(b):
             (True, True, False), "GET /parc : id libre, absent des ids pris")
     verifie("SERVEUR-GARAGE-GATEWAY" in p["reseaux"], True, "GET /parc : reseaux dont la passerelle du maitre")
     blocs = {x["id"]: x for x in p["blocs"]}
-    verifie(sorted(blocs["ds3231"]), ["aide", "dependances", "id", "libelle", "puces"], "GET /parc : forme d'un bloc")
+    verifie(sorted(blocs["ds3231"]), ["aide", "cout", "defines", "dependances", "id", "lib_ignore", "libelle", "puces"],
+            "GET /parc : forme d'un bloc (dont le rappel cout, defines, lib_ignore)")
     verifie((blocs["ds3231"]["dependances"], blocs["ledRGB"]["puces"]), (["i2c"], ["ESP32S3"]),
             "GET /parc : dependances et puces des blocs (RTC -> i2c ; LED RGB S3)")
+
+
+def test_rappel_blocs(b):
+    """Rappel en lecture seule sous la case d'un bloc : cout lu dans les blocs TAILLE DU BINOME, defines, lib_ignore (par HTTP)."""
+    modele = apm.charge_modele(tac.RACINE)
+    attendu = apw._cout(tac.RACINE, next(x for x in modele["blocs"] if x["id"] == "voletRoulants")["fichiers"])
+    blocs = {x["id"]: x for x in b.requete("GET", "/parc")[1]["blocs"]}
+    vr = blocs["voletRoulants"]
+
+    def transmis(bloc):      # le cout transmis est celui des blocs de taille, pas une cle vide
+        c = bloc["cout"]
+        return bool(c) and c["solidifie"] > 0 and c["bec"] > 0 and c["be"] > 0 and c == attendu
+    verifie((transmis(vr), vr["defines"]), (True, ["USE_SHUTTER"]), "rappel : voletRoulants porte son cout (> 0, = cout_bloc) et USE_SHUTTER")
+    verifie(blocs["ads1115"]["defines"], ["USE_ADS1115"], "rappel : ads1115 porte son define")
+    verifie(blocs["i2c"]["cout"], None, "rappel : bloc sans fichier .be -> cout null")
+    verifie(transmis(dict(vr, cout=None)), False, "TEMOIN rappel : un cout non transmis est refuse par le controle")
+    verifie(transmis(dict(vr, cout=dict(vr["cout"], solidifie=0))), False, "TEMOIN rappel : un cout a zero est refuse par le controle")
 
 
 def test_hote(b):
@@ -408,7 +426,7 @@ def valeurs_reelles():
 
 
 def principal():
-    for test in (test_get, test_hote, test_demarrage_robuste, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_modification_suppression, test_content_length, test_interrompues, test_erreur_inattendue, test_analyse_pendant_envoi):
+    for test in (test_get, test_rappel_blocs, test_hote, test_demarrage_robuste, test_post_securite, test_broches_illisibles, test_apercu, test_prepare_creation, test_modification_suppression, test_content_length, test_interrompues, test_erreur_inattendue, test_analyse_pendant_envoi):
         with tempfile.TemporaryDirectory() as t:
             os.environ["OUTILS_TASMOTA_DOSSIER"] = os.path.join(t, "outils")    # sauvegardes hors du vrai dossier
             b = Banc(t)

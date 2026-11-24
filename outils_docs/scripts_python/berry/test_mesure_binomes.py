@@ -74,6 +74,18 @@ with tempfile.TemporaryDirectory() as d:
     verifie(mb.lit_taille(d / "boucle.be") is None, "lit_taille renvoi sur soi-meme : None")
     verifie(mb.lit_taille(d / "vide.be") is None, "lit_taille renvoi vers un fichier absent : None")
     verifie(mb.lit_taille(d / "n_existe_pas.be") is None, "lit_taille fichier absent : None")
+    # cout_bloc : driver et module du meme binome comptes une fois, fichier sans bloc et page ignores
+    cout = mb.cout_bloc(d, ["controleX.be", "xFonctions.be", "libre.be", "page.js"])
+    verifie(cout == {"be": 61.1, "bec": 31.3, "solidifie": 3.0, "fichiers": ["controleX.be", "xFonctions.be"]},
+            "cout_bloc : binome compte une fois, « non solid. » compte 0")
+    verifie(mb.cout_bloc(d, ["libre.be", "page.js"]) is None, "cout_bloc sans bloc de taille : None")
+    # fichier abime : ligne « 1,2,3 Ko » ignoree (total seul : aucun fichier), .be non UTF-8 -> None, sans exception
+    texte = (d / "controleX.be").read_text(encoding="utf-8")
+    (d / "abime.be").write_text(texte.replace("10,5 Ko", "1,2,3 Ko"), encoding="utf-8")
+    verifie([f["nom"] for f in mb.lit_taille(d / "abime.be")["fichiers"]] == ["xFonctions.be"],
+            "lit_taille ligne abimee : ignoree sans exception")
+    (d / "latin1.be").write_bytes(b"# \xe9t\xe9\n")
+    verifie(mb.lit_taille(d / "latin1.be") is None, "lit_taille fichier non UTF-8 : None sans exception")
     # temoin : une valeur alteree dans le fichier change la valeur lue (la lecture suit bien le texte)
     (d / "controleX.be").write_text((d / "controleX.be").read_text(encoding="utf-8").replace("10,5 Ko", "99,9 Ko"),
                                     encoding="utf-8")

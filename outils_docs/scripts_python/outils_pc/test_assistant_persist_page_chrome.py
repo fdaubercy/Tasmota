@@ -208,6 +208,8 @@ def sonde_page(m):
             "ADS1115 : i2c coche d'office et grise")
     verifie(cdp.js("document.getElementById('note-deps').textContent.indexOf('i2c') >= 0"), True, "dependance expliquee")
     verifie(cdp.js("document.getElementById('bloc-i2c').parentNode.textContent.indexOf('requis par') >= 0"), True, "case grisee : raison affichee")
+    verifie(cdp.js(r"/\d+,\d Ko solidifié, \d+,\d Ko en \.bec · #define USE_SHUTTER$/.test(document.getElementById('bloc-voletRoulants').parentNode.textContent)"),
+            True, "rappel sous la case : cout en Ko et #define du bloc, en lecture seule")
     clic(cdp, "bloc-ads1115")
     verifie(cdp.js("[document.getElementById('bloc-i2c').checked, document.getElementById('bloc-i2c').disabled]"), [False, False],
             "ADS1115 decoche : i2c libere")

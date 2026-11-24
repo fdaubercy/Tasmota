@@ -2,7 +2,8 @@
 
 Etat unique E (les reponses), tout est re-derive de lui :
   - l'apercu (POST /apercu, anti-rebond 300 ms, reponses perimees ignorees) ;
-  - les cases de fonctions : dependances cochees d'office et expliquees, cases grisees avec leur raison ;
+  - les cases de fonctions : dependances cochees d'office et expliquees, cases grisees avec leur raison, rappel en lecture
+    seule du cout (Ko), des #define et des lib_ignore du bloc (rappelBloc) ;
   - le bandeau du modele (GET /modele/etat) : cles ajoutees d'office a relire, retraits et alignements proposes par le
     bouton « Mettre a jour le modele » (diff, puis validation) ;
   - « Creer l'env » : actif seulement si le dernier « Voir le diff » n'a aucun refus ET si rien n'a ete saisi depuis
@@ -80,6 +81,14 @@ function requisPar(id, ferme) {
   if (id === "ds3231" && E.heure === "RTC") par.push("réglage de l'heure RTC");
   return par;
 }
+// Rappel en lecture seule sous la case d'un bloc : cout en Ko, #define, lib_ignore (rien n'en est ecrit ni genere).
+function rappelBloc(b) {
+  var ko = function (n) { return n.toFixed(1).replace(".", ",") + " Ko"; }, c = b.cout, parts = [];
+  if (c) parts.push(c.solidifie > 0 ? ko(c.solidifie) + " solidifié, " + ko(c.bec) + " en .bec" : ko(c.bec) + " en .bec (non solidifié)");
+  if ((b.defines || []).length) parts.push("#define " + b.defines.join(", "));
+  if ((b.lib_ignore || []).length) parts.push("lib_ignore (bloc absent) : " + b.lib_ignore.join(", "));
+  return parts.join(" · ");
+}
 function dessineFonctions() {
   var ferme = fermeture(), cases = vide($("cases")), notes = [];
   parc.blocs.forEach(function (b) {
@@ -91,6 +100,8 @@ function dessineFonctions() {
     else if (par.length) { raison = " (requis par " + par.join(", ") + ")"; if (E.blocs.indexOf(b.id) < 0) notes.push(b.id + " coché d'office : requis par " + par.join(", ")); }
     if (c.disabled) l.className = "grise";
     l.appendChild(c); l.appendChild(document.createTextNode(" " + b.libelle + raison));
+    var rappel = rappelBloc(b);
+    if (rappel) l.appendChild(el("span", {"class": "rappel discret"}, rappel));
     cases.appendChild(l);
   });
   $("note-deps").textContent = notes.join(" · ");

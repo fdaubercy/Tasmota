@@ -14,7 +14,8 @@ Routes (les POST exigent l'en-tete X-Fichiers-Berry: 1 et la meme origine ; JSON
     GET  /           la page (fichiers_berry_page.PAGE ; a defaut, une page provisoire)
     GET  /execution  {en_cours: false} : la cible Custom l'interroge pour savoir si la page tourne
     GET  /envs       {envs: [{nom, famille}]} : envs ESP32 du cenv
-    GET  /etat       ?env=<env> : etat de chaque fichier (recensement refait a chaque appel) ; 404 env inconnu
+    GET  /etat       ?env=<env> : etat de chaque fichier (recensement refait a chaque appel) + `groupes` (blocs du
+                     manifeste et leur cout, fichiers_berry_blocs ; [] si manifeste illisible) ; 404 env inconnu
     GET  /build      {build_en_cours: true|false|null} : a part, la detection prend 2 s et plus (null : impossible)
     GET  /identite   ?base=&lieu=&nom= : {env, define, identite} proposes pour une creation
     POST /prepare    {env, demandes: [{chemin, etat, raison?, partage_accepte?}]} -> diff, empreinte,
@@ -41,6 +42,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import acces_web
+import fichiers_berry_blocs as fbb
 import fichiers_berry_creation as fbc
 import fichiers_berry_ecriture as fbw
 import fichiers_berry_etat as fbe
@@ -176,7 +178,7 @@ def fabrique_gestionnaire(acces, racine, builds_en_cours):
                 elif url.path == "/envs":
                     self._json({"envs": [{**e, "lieu": lieux.lieu(e["nom"]) if e["famille"] == "cartes" else None} for e in fbe.envs_proposes(racine)], **lieux.pour_page()})
                 elif url.path == "/etat":
-                    self._json(fbe.etat_env(racine, params.get("env", [""])[0]))
+                    self._json({**fbe.etat_env(racine, params.get("env", [""])[0]), "groupes": fbb.groupes(racine)})
                 elif url.path == "/build":
                     builds = builds_en_cours()            # None : detection impossible
                     self._json({"build_en_cours": None if builds is None else bool(builds)})

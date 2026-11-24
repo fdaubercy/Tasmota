@@ -63,6 +63,11 @@ carte) : on ne l'en retire que par `custom_files_exclude`, ou par `custom_berry_
    « Appliquer ». Plusieurs « Appliquer » s'accumulent avant d'enregistrer (marqués « en attente »).
 2. Les trois colonnes **Sur le FS · Exclu · Solidifié** montrent l'état complet de l'env ; chaque entrée héritée
    porte un badge de son origine (`socle`, `modbus`, `historique` de `[berry_commun]`, ou l'env de base).
+   Dans chaque colonne, les fichiers sont **regroupés par bloc du manifeste** (`blocs` de `outils_docs/schemas/modele_persist.json`),
+   sous un en-tête qui donne le coût du bloc entier : « voletRoulants · 37,2 Ko solidifié, 51,9 Ko en .bec » (le survol donne le
+   libellé). Deux blocs qui portent les mêmes fichiers forment un seul groupe (« ruban, ledRGB »), et tout fichier hors manifeste
+   (socle, fichiers de la carte, modules de l'amont) est sous « Sans bloc ». Lecture seule : les lignes et leurs boutons sont
+   inchangés, et si le manifeste est illisible la colonne redevient une liste à plat. Code : `fichiers_berry_blocs.py`.
 3. « Voir le diff » puis « Enregistrer » : sauvegarde horodatée avant d'écrire (voir « Sauvegardes » plus bas),
    fins de ligne et encodage gardés, **refus pendant un build** et si le fichier a changé depuis le diff.
 
@@ -162,6 +167,6 @@ marque, la sauvegarde reste.
 Dans `outils_docs/scripts_python/outils_pc/`, avec le Python du penv PlatformIO (code de sortie 0 = vert) :
 `test_fichiers_berry_ini.py`, `_etat.py`, `_ecriture.py` (relecture par `ProjectConfig` de PlatformIO),
 `_creation.py` (copie du dépôt dans un dossier temporaire), `_suppression.py`, `_renommage.py`, `_sauvegarde.py`,
-`_web.py`, et la sonde Chrome
+`_web.py`, `_blocs.py` (regroupement par bloc, avec témoins), et la sonde Chrome
 `test_fichiers_berry_page_chrome.py` ; cible Custom : `build/test_cible_fichiers_berry.py`. Aucun banc n'écrit
 dans le vrai dépôt ni dans le vrai dossier des sauvegardes.
