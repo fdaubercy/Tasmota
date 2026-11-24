@@ -2276,7 +2276,8 @@
 			],
 			"exclude_si_inactif": [
 				"data/fs/vrFonctions.be",
-				"data/fs/controleVoletRoulants.be"
+				"data/fs/controleVoletRoulants.be",
+				"${berry_commun.volets_pages}"
 			],
 			"autoexec": [
 				{
@@ -2732,7 +2733,9 @@
 			"solidify": [
 				"${berry_commun.liaison_mqtt}"
 			],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.liaison_mqtt}"
+			],
 			"autoexec": [
 				{
 					"rang": 440,
@@ -2790,7 +2793,9 @@
 			"solidify": [
 				"${berry_commun.emulation_hue}"
 			],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.emulation_hue}"
+			],
 			"autoexec": [
 				{
 					"rang": 450,
@@ -2839,7 +2844,9 @@
 				"data/fs/energieFonctions.be",
 				"data/fs/controleEnergie.be"
 			],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.page_energie}"
+			],
 			"autoexec": [
 				{
 					"rang": 590,
@@ -2888,7 +2895,9 @@
 			"actif": {},
 			"inactif": {},
 			"solidify": [],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.ecran}"
+			],
 			"autoexec": [],
 			"h": [],
 			"fichiers": [
@@ -2922,7 +2931,9 @@
 			},
 			"inactif": {},
 			"solidify": [],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.ecran_systeme}"
+			],
 			"autoexec": [
 				{
 					"rang": 910,
@@ -3015,7 +3026,9 @@
 			"actif": {},
 			"inactif": {},
 			"solidify": [],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.visuel_accueil}"
+			],
 			"autoexec": [
 				{
 					"rang": 620,
@@ -3057,7 +3070,9 @@
 			"actif": {},
 			"inactif": {},
 			"solidify": [],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.pages_graphiques}"
+			],
 			"autoexec": [
 				{
 					"rang": 610,
@@ -3129,7 +3144,9 @@
 			"actif": {},
 			"inactif": {},
 			"solidify": [],
-			"exclude_si_inactif": [],
+			"exclude_si_inactif": [
+				"${berry_commun.page_cuve}"
+			],
 			"autoexec": [],
 			"h": [],
 			"fichiers": [

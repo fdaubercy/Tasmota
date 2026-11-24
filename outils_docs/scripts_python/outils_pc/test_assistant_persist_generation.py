@@ -212,11 +212,17 @@ PAGES = {"${berry_commun.page_cuve}", "${berry_commun.page_energie}", "${berry_c
 
 def test_listes_cuve(modele):
     l = gen.listes_cenv(modele, _reponses_cuve(modele))
-    attendu_exclude = {"data/fs/vrFonctions.be", "data/fs/loRaWanFonctions.be", "data/fs/controleVoletRoulants.be",
-                       "data/fs/controleLoRaWan.be", "data/fs/controleES8311.be", "data/fs/controleCoprocesseur.be"}
-    # + pages des autres cartes, toujours exclues d'un env cree (la vraie cuve a repris page_cuve a la main)
-    attendu_exclude |= PAGES
-    verifie(set(l["exclude"]), attendu_exclude, "listes_cuve : exclude = celui du cenv de la cuve + pages des autres cartes")
+    # recopie du custom_files_exclude de l'env de la cuve (cenv, 2026-11-24)
+    attendu_exclude = {"data/fs/vrFonctions.be", "${berry_commun.liaison_mqtt}", "${berry_commun.emulation_hue}",
+                       "${berry_commun.volets_pages}", "${berry_commun.page_energie}", "${berry_commun.ecran}",
+                       "${berry_commun.ecran_systeme}", "data/fs/loRaWanFonctions.be", "data/fs/controleVoletRoulants.be",
+                       "data/fs/controleLoRaWan.be", "data/fs/controleES8311.be", "data/fs/controleCoprocesseur.be",
+                       "${berry_commun.pages_graphiques}"}
+    # + blocs de detection, jamais coches par l'assistant : la vraie cuve a repris page_cuve et son visuel a la main
+    attendu_exclude |= {"${berry_commun.page_cuve}", "${berry_commun.visuel_accueil}"}
+    verifie(set(l["exclude"]), attendu_exclude, "listes_cuve : exclude = celui du cenv de la cuve + blocs de detection")
+    energie = gen.listes_cenv(modele, _nouvelle(blocs=["energie"]))["exclude"]
+    verifie("${berry_commun.page_energie}" in energie, False, "listes : page energie gardee avec le bloc energie")
     sans = gen.listes_cenv(modele, _nouvelle(blocs=[]))["exclude"]
     verifie("${berry_commun.pages_graphiques_moteur}" in sans, True, "listes : moteur des pages exclu sans historique")
     avec = gen.listes_cenv(modele, _nouvelle(blocs=["historique"]))["exclude"]
