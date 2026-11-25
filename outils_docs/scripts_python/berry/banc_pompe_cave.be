@@ -149,6 +149,7 @@ def monte(suspendus, sansCle)
     mqtt.relie = false
     mqtt.publies.clear()
     logFonctions.journal.clear()
+    logFonctions.declarees.clear()
     configDevices.activationAuBranchement = nil
     GF = charge_fichier(SOURCES + "/globalFonctions.be")
     global.globalFonctions = GF
@@ -167,6 +168,7 @@ def flotteur(cle, valeur) GF.changementEtatCapteur(valeur, "Switch" + str(pompe(
 
 print("--- appui_bouton_desactive_flotteurs")
 monte([], false)
+verifie("cible de log declaree : pompe -> modules.pompeVideCave", "[['pompe', 'modules.pompeVideCave']]", str(logFonctions.declarees))
 appuiBouton()
 verifie("relais 1 ON", true, tasmota.puissance[0])
 verifie("capteurs OFF et suspendu ON", "OFF/OFF/ON/ON", etatCapteurs())
@@ -243,6 +245,9 @@ tick(4)
 verifie("pas d'alerte avant 5 s", "", alerte())
 tick(2)
 verifie("alerte incoherence apres 6 s", true, string.find(alerte(), "ncoherence") >= 0)
+var erreursPompe = []
+for l: logFonctions.journal    if (l[0] == LOG_LEVEL_ERREUR)    erreursPompe.push(l[2])    end    end
+verifie("erreur de la pompe loguee sous la cible pompe", true, size(erreursPompe) > 0 && erreursPompe.find("pompe") != nil && erreursPompe.find(nil) == nil)
 verifie("publiee sur la voie ALERTE_POMPE", "['incoherence']", evenements())
 tick(10)
 verifie("une seule publication", "['incoherence']", evenements())

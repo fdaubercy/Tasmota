@@ -17,6 +17,7 @@ var controleHumidite = module("controleHumidite")
 
 class CONTROLE_HUMIDITE : Driver
     def init()
+        logFonctions.declare("humidite", "modules.Thermo-Hygrometre", "humidite de la cave (controleHumidite)")    # cible de log du binome (plan binomes-berry A4)
         # Commande Tasmota (console, HTTP, MQTT cmnd/<topic>/...) : ReglageHumidite [<basse> <haute>]
         #   sans argument : rend les bornes ; avec deux entiers : les regle (memes controles que la page /humidite)
         tasmota.add_cmd("ReglageHumidite", def(cmd, idx, payload, payload_json)
@@ -76,13 +77,13 @@ class CONTROLE_HUMIDITE : Driver
         import persist
         var th = self.thermo()
         if (th == nil)    return "Aucun thermomètre AM2301 actif."    end
-        if (re.match("^[0-9]{1,3}$", str(bas)) == nil || re.match("^[0-9]{1,3}$", str(haut)) == nil)    return "Valeurs invalides : deux entiers de 0 à 100."    end
+        if (re.match("^[0-9][0-9]?[0-9]?$", str(bas)) == nil || re.match("^[0-9][0-9]?[0-9]?$", str(haut)) == nil)    return "Valeurs invalides : deux entiers de 0 à 100."    end
         var b = int(bas)
         var h = int(haut)
         if (h > 100 || h - b < 5)    return "La borne haute doit être au plus 100 et dépasser la basse d'au moins 5 points."    end
         th["limites"] = [b, h]
         persist.save(true)      # true : modif imbriquee, save() seul n'ecrit rien
-        logFonctions.log(string.format("HUMIDITE: Bornes réglées à %i et %i %% !", b, h), LOG_LEVEL_INFO)
+        logFonctions.log(string.format("HUMIDITE: Bornes réglées à %i et %i %% !", b, h), LOG_LEVEL_INFO, "humidite")
         return nil
     end
 

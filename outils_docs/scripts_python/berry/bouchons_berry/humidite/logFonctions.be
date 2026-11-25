@@ -1,0 +1,8 @@
+# Bouchon de logFonctions pour banc_humidite.be : memorise [niveau, message] dans logFonctions.journal.
+var logFonctions = module("logFonctions")
+logFonctions.journal = []
+logFonctions.log = def (m, n, c) logFonctions.journal.push([n, str(m), c]) end
+logFonctions.declarees = []
+logFonctions.declare = def (c, chemin, d) logFonctions.declarees.push([c, chemin]) end
+logFonctions.actif = def (n, c) return false end
+return logFonctions

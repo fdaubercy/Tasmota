@@ -77,6 +77,7 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
 
     def init()
         import string
+        logFonctions.declare("pompe", "modules.pompeVideCave", "pompe vide-cave (controlePompeVideCave)")    # cible de log du binome (plan binomes-berry A4)
         # Commandes Tasmota (console, HTTP, MQTT cmnd/<topic>/...) : reponse sur stat/<topic>/RESULT
         #   EtatPompe      -> {"EtatPompe": {"Pompe": "ON", "Niveaux": {...}, "Alerte": "", ...}}
         #   AcquittePompe  -> efface l'alerte et le compteur de relances, puis renvoie l'etat
@@ -127,7 +128,7 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
 
     def leveAlerte(relai, evenement, message)
         relai["alerte"] = message
-        logFonctions.log("POMPE_VIDE_CAVE_ERREUR: " + message, LOG_LEVEL_ERREUR)
+        logFonctions.log("POMPE_VIDE_CAVE_ERREUR: " + message, LOG_LEVEL_ERREUR, "pompe")
         controleGeneral.publieAlerteRelance("pompeVideCave", relai, evenement, message, 0, relai.find("relance", {}).find("maxRelances", 3))
     end
 
