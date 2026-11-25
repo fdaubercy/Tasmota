@@ -139,22 +139,7 @@
 				"capteur": 1
 			},
 			"environnement": {
-				"boutons": {
-					"bouton1": {
-						"activation": "OFF",
-						"nom": "Bouton 1",
-						"id": 1,
-						"pin": -1,
-						"type": 1024,
-						"virtuel": "OFF",
-						"SwitchMode": 2,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": []
-						}
-					}
-				},
+				"boutons": {},
 				"interrupteurs": {
 					"interrupteur1": {
 						"activation": "ON",
@@ -214,85 +199,10 @@
 						}
 					}
 				},
-				"analogiques": {
-					"activation": "OFF",
-					"name": "Capteurs analogiques",
-					"valeurMin": 0,
-					"valeurMax": 0,
-					"analogique1": {
-						"activation": "OFF",
-						"nom": "Ana 1",
-						"id": 1,
-						"pin": -1,
-						"type": 4704,
-						"virtuel": "I2C_ADS1115",
-						"value": 0,
-						"limites": [5, 100],
-						"conversion_mV_cm": 31,
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						},
-						"publishMQTT": {
-							"topic": []
-						}
-					}
-				},
-				"capteurs": {
-					"capteur1": {
-						"activation": "OFF",
-						"nom": "Capteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						}
-					}
-				},
-				"compteurs": {
-					"affichageWebSensor": "OFF",
-					"compteur1": {
-						"activation": "OFF",
-						"nom": "Coompteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 352,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"value": 0,
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						}
-					}
-				},
-				"thermometres": {
-					"affichageWebSensor": "OFF",
-					"thermometre1": {
-						"activation": "OFF",
-						"nom": "Thermo 1",
-						"serialNumber": "041600F6FBFF",
-						"type": 1312,
-						"virtuel": "OFF",
-						"pin": -1,
-						"id": 1,
-						"value": 0,
-						"limites": [],
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF"
-						}
-					}
-				}
+				"analogiques": {},
+				"capteurs": {},
+				"compteurs": {},
+				"thermometres": {}
 			}
 		}
 	},

@@ -226,35 +226,7 @@
 						}
 					}
 				},
-				"interrupteurs": {
-					"interrupteur1": {
-						"activation": "OFF",
-						"nom": "Interrupteur 1",
-						"id": -1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
-						}
-					}
-				},
+				"interrupteurs": {},
 				"relais": {
 					"relai1": {
 						"activation": "ON",
@@ -288,39 +260,7 @@
 						"idModBus": -1
 					}
 				},
-				"analogiques": {
-					"activation": "OFF",
-					"name": "",
-					"valeurMin": 0,
-					"valeurMax": 0,
-					"analogique1": {
-						"activation": "OFF",
-						"nom": "Capteur analogique 1",
-						"id": 1,
-						"pin": -1,
-						"type": 4704,
-						"virtuel": "I2C_ADS1115",
-						"value": 0,
-						"limites": [],
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
-						},
-						"publishMQTT": {
-							"topic": []
-						},
-						"idModBus": 1
-					}
-				},
+				"analogiques": {},
 				"capteurs": {
 					"capteur1": {
 						"activation": "ON",
@@ -375,66 +315,8 @@
 						}
 					}
 				},
-				"compteurs": {
-					"affichageWebSensor": "OFF",
-					"compteur1": {
-						"activation": "OFF",
-						"nom": "Compteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 352,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"value": 0,
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
-						}
-					}
-				},
-				"thermometres": {
-					"affichageWebSensor": "OFF",
-					"thermometre1": {
-						"activation": "OFF",
-						"nom": "T° 1",
-						"serialNumber": "041600F6FBFF",
-						"type": 1312,
-						"virtuel": "OFF",
-						"pin": -1,
-						"id": 1,
-						"value": 0,
-						"limites": [],
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": [
-								"OFF"
-							]
-						},
-						"idModBus": 1
-					}
-				}
+				"compteurs": {},
+				"thermometres": {}
 			}
         },
 		"Thermo-Hygrometre": {
@@ -448,65 +330,8 @@
 				"fileLogSize_Ko": 10000
 			},
 			"environnement": {
-				"boutons": {
-					"bouton1": {
-						"activation": "OFF",
-						"nom": "Bouton 1",
-						"id": 1,
-						"pin": -1,
-						"type": 32,
-						"virtuel": "OFF",
-						"SwitchMode": 2,
-						"typeAction": "ON/OFF",
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "Switch",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
-						}
-					}
-				},
-				"interrupteurs": {
-					"interrupteur1": {
-						"activation": "OFF",
-						"nom": "Interrupteur 1",
-						"id": -1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
-						}
-					}
-				},
+				"boutons": {},
+				"interrupteurs": {},
 				"relais": {
 					"relai1": {
 						"activation": "ON",
@@ -530,94 +355,9 @@
 						"idModBus": -1
 					}
 				},
-				"analogiques": {
-					"activation": "OFF",
-					"name": "",
-					"valeurMin": 0,
-					"valeurMax": 0,
-					"analogique1": {
-						"activation": "OFF",
-						"nom": "Capteur analogique 1",
-						"id": 1,
-						"pin": -1,
-						"type": 4704,
-						"virtuel": "I2C_ADS1115",
-						"value": 0,
-						"limites": [],
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
-						},
-						"publishMQTT": {
-							"topic": []
-						},
-						"idModBus": 1
-					}
-				},
-				"capteurs": {
-					"capteur1": {
-						"activation": "OFF",
-						"nom": "Capteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"OFF"
-							]
-						}
-					}
-				},
-				"compteurs": {
-					"affichageWebSensor": "OFF",
-					"compteur1": {
-						"activation": "OFF",
-						"nom": "Compteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 352,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"value": 0,
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
-						}
-					}
-				},
+				"analogiques": {},
+				"capteurs": {},
+				"compteurs": {},
 				"thermometres": {
 					"affichageWebSensor": "OFF",
 					"thermometre1": {
@@ -698,35 +438,7 @@
 						}
 					}
 				},
-				"interrupteurs": {
-					"interrupteur1": {
-						"activation": "OFF",
-						"nom": "Interrupteur 1",
-						"id": -1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"TOGGLE"
-							],
-							"etatSiOFF": [
-								""
-							]
-						}
-					}
-				},
+				"interrupteurs": {},
 				"relais": {
 					"relai1": {
 						"activation": "ON",
@@ -792,126 +504,10 @@
 						"idModBus": -1
 					}
 				},
-				"analogiques": {
-					"activation": "OFF",
-					"name": "",
-					"valeurMin": 0,
-					"valeurMax": 0,
-					"analogique1": {
-						"activation": "OFF",
-						"nom": "Capteur analogique 1",
-						"id": 1,
-						"pin": -1,
-						"type": 4704,
-						"virtuel": "I2C_ADS1115",
-						"value": 0,
-						"limites": [],
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": []
-						},
-						"publishMQTT": {
-							"topic": []
-						},
-						"idModBus": 1
-					}
-				},
-				"capteurs": {
-					"capteur1": {
-						"activation": "OFF",
-						"nom": "Capteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 160,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"etat": "OFF",
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"OFF"
-							]
-						}
-					}
-				},
-				"compteurs": {
-					"affichageWebSensor": "OFF",
-					"compteur1": {
-						"activation": "OFF",
-						"nom": "Compteur 1",
-						"id": 1,
-						"pin": -1,
-						"type": 352,
-						"virtuel": "OFF",
-						"SwitchMode": 1,
-						"value": 0,
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [],
-							"etatSiOFF": [
-								"TOGGLE"
-							]
-						}
-					}
-				},
-				"thermometres": {
-					"affichageWebSensor": "OFF",
-					"thermometre1": {
-						"activation": "OFF",
-						"nom": "T° 1",
-						"serialNumber": "041600F6FBFF",
-						"type": 1312,
-						"virtuel": "OFF",
-						"pin": -1,
-						"id": 1,
-						"value": 0,
-						"limites": [],
-						"relaisLie": {
-							"modules": [],
-							"ids": [],
-							"type": "ON/OFF",
-							"delaiSiON": [
-								0
-							],
-							"delaiSiOFF": [
-								0
-							],
-							"etatSiON": [
-								"ON"
-							],
-							"etatSiOFF": [
-								"OFF"
-							]
-						},
-						"idModBus": 1
-					}
-				}
+				"analogiques": {},
+				"capteurs": {},
+				"compteurs": {},
+				"thermometres": {}
 			}
         }
     },

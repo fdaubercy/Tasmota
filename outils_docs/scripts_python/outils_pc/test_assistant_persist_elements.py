@@ -3,7 +3,7 @@
 Code de sortie 0 = vert. Lecture seule des vrais persists du parc (jamais imprimes : un echec n'affiche que des
 chemins, des noms de groupe et des broches) ; la generation et la creation se jouent dans un depot d'essai.
   - rejeu_environnement : l'environnement du bloc metier PRINCIPAL de chaque carte du parc (la cuve d'abord),
-    relu par reponses_depuis_persist puis regenere par persist, est celui du vrai persist ;
+    relu par reponses_depuis_persist puis regenere par persist, est celui du vrai persist (groupe vide a {} au palier 2 = regenere sans element ON) ;
   - couverture_cles : chaque cle d'element du parc est decrite par metier.elements (gabarit ou optionnelles) ;
   - broches : plage de la puce lue dans data/fs/configGlobal.be, doublons, broches des drivers ;
   - le parc entier passe verifie_elements sans refus (pas de faux refus) ;
@@ -107,13 +107,27 @@ def test_broches():
         verifie(True, True, "puce inconnue : ValueError")
 
 
+def vide_au_palier2(vrai, obtenu):
+    """Palier 2 d'A5 (binomes-berry) : un groupe dont aucun element n'est ON est vide a {} dans le persist, cles du
+    groupe comprises (affichageWebSensor, valeurMin... lus seulement si un element est ON, configDevices.be) ; le
+    regenere, lui, remet ces cles. Egal si le vrai vaut {} et que le regenere n'a aucun element ON."""
+    return vrai == {} and isinstance(obtenu, dict) and not any(
+        isinstance(e, dict) and e.get("activation") != "OFF" for e in obtenu.values())
+
+
+assert vide_au_palier2({}, {"affichageWebSensor": "OFF", "a": {"activation": "OFF"}})
+assert not vide_au_palier2({}, {"a": {"activation": "OFF"}, "b": {"activation": "ON"}})   # temoin : un element ON
+assert not vide_au_palier2({"name": "x"}, {"name": "y"})                                     # temoin : vrai non vide
+
+
 def test_rejeu_environnement(modele):
     for dossier, donnees in cartes():
         r, obj = rejoue(modele, dossier, donnees)
         principal = r.metiers[0]
         vrai = donnees["modules"][principal]["environnement"]
         obtenu = obj["modules"][principal]["environnement"]
-        ecarts = [g for g in sorted(set(vrai) | set(obtenu)) if vrai.get(g) != obtenu.get(g)]
+        ecarts = [g for g in sorted(set(vrai) | set(obtenu))
+                  if vrai.get(g) != obtenu.get(g) and not vide_au_palier2(vrai.get(g), obtenu.get(g))]
         verifie(ecarts, [], f"rejeu_environnement : {dossier.rsplit('/', 1)[-1]} ({principal}) : environnement identique")
         if dossier == CUVE:
             verifie(obtenu == vrai, True, "rejeu_environnement : l'environnement de la cuve rejoue = le vrai")
