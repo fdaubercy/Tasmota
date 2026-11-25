@@ -131,6 +131,33 @@ reflash**. On perd exactement ce que le framework `data/fs` apporte : éditer un
 | Fichier propre à une carte (dossier `data/<lieu>/<carte>/`) | **Règle décidée le 2026-11-23 : se solidifie si la carte manque de RAM ET si le fichier est presque finalisé ou peu modifié.** Une carte à l'aise en RAM, ou un fichier encore en chantier, reste sur le LittleFS. |
 | Module dont l'activation varie d'un appareil à l'autre | Attention : un module solidifié est dans le firmware **sans condition**. Sans impact ici (un firmware par appareil), mais la granularité `_persist.json` ne s'y applique plus. |
 
+## 3 bis. Persist ou `/json` : où ranger un paramètre (décidé le 2026-11-25, plan `binomes-berry` A6)
+
+Le persist est chargé en entier en RAM au démarrage et y reste. Un fichier de `/json` ne coûte de la RAM que pendant sa
+lecture. Une configuration qui vient du dépôt et que la carte ne modifie jamais (description, gabarit, table, façade) peut
+donc quitter le persist.
+
+| Reste au persist | Peut aller dans `/json`, en lecture seule |
+|---|---|
+| états, réglages faits sur une page ou par une commande, identité (`serveur`), clés `activation`, blocs lus par plusieurs binômes | ce que seul le binôme lit et que personne n'écrit sur la carte |
+
+La forme :
+- le fichier est posé dans `data/<lieu>/<carte>/<nom>.json` ; au démarrage, `gestionFileFolder.be::gestionFileFolder_listeEtRepartitLesFichiers`
+  le déplace dans `/json/<nom>.json` (tout `.json` de la racine sauf `_persist.json`) ;
+- le bloc du binôme dans le persist le désigne par une clé `"json": "/json/<nom>.json"`, lue par `.find("json", <chemin par défaut>)`.
+  Le défaut garde valides les modules qui ont déjà leur chemin en dur (`qrcodePage.FICHIER`, `graphiquesFonctions.FICHIER_REGLAGES`,
+  `pagesGraphiques.FICHIER`) : rien n'est à migrer ;
+- lecture à la demande, dans la fonction qui en a besoin : `json.load(gestionFileFolder.readFile(chemin))` (`readFile` rend `false`
+  pour un fichier absent, donc `json.load` rend `nil`), jamais gardée dans un attribut du module (RAM, et piège 12 si le module
+  est solidifié). Fichier absent ou illisible : log `erreur` et repli sur `{}`. Modèle : `pagesGraphiques.be::pagesGraphiques_lisDescription`
+  (existence, taille maximale, puis lecture) ;
+- un fichier que la carte réécrit (une page de réglage, par exemple) n'est plus en lecture seule : c'est un état, il retourne au persist.
+
+Mesure du 2026-11-25 sur les 5 ESP32 sans PSRAM, après le retrait des blocs morts : aucun bloc de cette sorte n'a une taille
+utile (la façade du portail fait 66 o). Le reste est l'identité, des réglages, et les `environnement` des modules, où l'état
+des sorties est écrit directement (`globalFonctions.be`, `device["etat"] = value`). Le gain se trouve dans le vidage des groupes
+tous à OFF (A5, palier 2), pas ici.
+
 ## 4. Les pièges
 
 ### Piège 1 — Croire que `.bec` économise de la RAM

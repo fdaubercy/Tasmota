@@ -31,7 +31,7 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 | Écrans uDisplay, tactile | `.doc_for_ai/UDISPLAY_UTOUCH_GUIDE.md` (amont), skill `lvgl-haspmota` | `display.ini`, LVGL, HASPmota |
 | Quel module sur quelle carte | `outils_docs/reference_berry/CARTE_MODULES_BERRY.md` (généré, ne pas éditer) | solidifié, importé, gardes |
 | Logs Berry | `CLAUDE.md` § Logs Berry ; réglages `outils_docs/reference_berry/LOGS.md` ; en-tête de `data/fs/logFonctions.be` | 4 niveaux, `logFonctions.log`, jamais `log()` direct |
-| Solidification | `outils_docs/reference_berry/SOLIDIFICATION_BERRY.md` | mécanisme, vérification §5, pièges §4 |
+| Solidification ; persist ou `/json` | `outils_docs/reference_berry/SOLIDIFICATION_BERRY.md` | mécanisme, vérification §5, pièges §4 ; où ranger un paramètre (clé `"json"`) §3 bis |
 | ModBus : conception, registres, synchro | `outils_docs/reference_berry/PROTOCOLE_MODBUS.md` (§8 registres carte 16 relais, §9 synchro, §11 MQTT) | 3 transports, six pièges de la carte relais |
 | ModBus : commandes et trames | `outils_docs/reference_berry/MODBUS_MODE_EMPLOI.md` | mode d'emploi, « Fermeture » contre « Open » |
 | Voie MQTT maître/esclaves | `outils_docs/reference_berry/VOIE_MQTT.md` ; `PROTOCOLE_MODBUS.md` §11 | garde-fous G3 à G5 ; esclave sans fiche ModBus = aucun repli |

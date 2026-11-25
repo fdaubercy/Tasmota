@@ -82,8 +82,8 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
 - [ ] Palier 2 (groupes du niveau 3 tous OFF vidés à `{}`) : après l'essai du palier 1 sur une carte
 
 ## A6 — Paramètres en lecture seule dans `/json`
-- [ ] Forme de la clé explicite et lecture à la demande décidées
-- [ ] Premier candidat sur une carte sans PSRAM en service (projecteur LED), gain mesuré par `tasmota.gc()`
+- [x] Forme de la clé explicite et lecture à la demande décidées — preuve : `SOLIDIFICATION_BERRY.md` §3 bis (clé `"json": "/json/<nom>.json"` lue par `.find` avec le chemin en dur pour défaut, lecture à la demande sur le modèle de `pagesGraphiques_lisDescription`), choix de l'utilisateur du 2026-11-25 (« Fixer la forme, sans candidat »)
+- [x] Premier candidat sur une carte sans PSRAM : sans objet — preuve : mesure du 2026-11-25 (scratchpad `a6_tailles.py`, `a6_facade.py`) sur les 5 ESP32 après le palier 1 : persist compact de 5,5 à 10,8 Ko, aucun bloc en lecture seule de taille utile (façade du portail 66 o) ; l'`environnement` porte l'état (`globalFonctions.be`, `device["etat"]`) ; gain reporté au palier 2 d'A5
 
 ## A7 — Doublons et règles écrites
 - [ ] `controlePompeVideCave` : copie du S3 retenue, sort de l'env ESP32 de la cave décidé
