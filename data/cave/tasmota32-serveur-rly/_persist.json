@@ -156,6 +156,10 @@
 			"activation": "ON",
 			"reglage": "OFF",
 			"log": "detail",
+			"pannes": {
+				"antiRebond": 5,
+				"maxArretsMinuterie": 3
+			},
 			"logs": {
 				"nbLogsFiles": 15,
 				"fileLogName": "/logs/pompe-vide-cave.log",

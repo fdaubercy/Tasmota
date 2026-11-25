@@ -1,15 +1,15 @@
-# Pompe vide-cave, carte S3 de la cave (tasmota32s3-cave-serveur-rly) : SOLIDIFIABLE, sur le modele de controlePortail. La classe
+# Pompe vide-cave, cartes S3 et ESP32 de la cave (tasmota32s3-cave-serveur-rly, tasmota32-cave-serveur-rly) : SOLIDIFIABLE, sur le modele de controlePortail. La classe
 # est portee par le module 'controlePompeVideCave' ; autoexec le charge par 'import' (version en FLASH). 'import' appelle
 # AUTOMATIQUEMENT controlePompeVideCave_init(m), en pied de fichier, qui porte la garde d'activation.
 #
 # Affiche sur la page principale de Tasmota l'etat de la pompe vide-cave : derniere mise en route, nb de cycles du jour,
 # intervalle depuis la mise en route precedente, et une cuve dessinee d'apres les deux flotteurs (cuve()). Surveille aussi les
-# pannes des flotteurs (voir plus bas).
+# pannes des flotteurs (voir plus bas), seulement si le persist porte pompeVideCave.pannes.
 #
 # Module solidifie : aucun import ni fonction de niveau fichier (le code de niveau fichier ne s'execute pas) ; tout est methode de
 # la classe, les imports sont dans chaque methode ou closure qui les utilise.
-# Meme affichage (heure(), cuve()) et memes commandes EtatPompe / AcquittePompe que data/cave/tasmota32-serveur-rly/controlePompeVideCave.be
-# (carte ESP32, sans la gestion des pannes de flotteurs) : garder ces parties identiques.
+# Fichier IDENTIQUE dans data/cave/tasmota32s3-serveur-rly/ et data/cave/tasmota32-serveur-rly/ (copie du S3 retenue le
+# 2026-11-23, recopiee sur l'ESP32 le 2026-11-25, plan binomes-berry A7) : garder les deux copies identiques.
 #@ solidify:controlePompeVideCave
 var controlePompeVideCave = module("controlePompeVideCave")
 
@@ -114,7 +114,8 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
             var nom = role[0]
             self.niv[nom] = capteur.find("etat", "?")
             if (nom == "Bas")    self.idBas = capteur["id"]    else    self.idHaut = capteur["id"]    end
-            tasmota.add_rule(string.format("Switch%i#Action", capteur["id"]), def(value, trigger, msg) self.niv[nom] = str(value) end)
+            # id propre : configDevices pose et retire ses regles SwitchN#Action sans id, il n'emporterait pas celle-ci
+            tasmota.add_rule(string.format("Switch%i#Action", capteur["id"]), def(value, trigger, msg) self.niv[nom] = str(value) end, "pompeVideCave_" + nom)
         end
     end
 
@@ -141,10 +142,10 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
         var capteurs = pompe["environnement"]["capteurs"]
         var bas = self.niv["Bas"]
         var haut = self.niv["Haut"]
-        var maintenant = tasmota.rtc()["local"]
         var etat = relai.find("etat", "OFF")
 
         if (bas == "OFF" && haut == "ON")
+            var maintenant = tasmota.rtc()["local"]     # lu ici seulement : pas de map allouee a chaque seconde
             if (self.debutIncoh == 0)
                 self.debutIncoh = maintenant
             elif (!self.alerteIncoh && maintenant - self.debutIncoh >= pannes.find("antiRebond", 5))

@@ -1,45 +1,31 @@
-# Pompe vide-cave, carte ESP32 de la cave (tasmota32-cave-serveur-rly, IP 192.168.0.48) : SOLIDIFIABLE, sur le modele de
-# controlePortail. La classe est portee par le module 'controlePompeVideCave' ; autoexec le charge par 'import' (version en
-# FLASH). 'import' appelle AUTOMATIQUEMENT controlePompeVideCave_init(m), en pied de fichier, qui porte la garde d'activation.
+# Pompe vide-cave, cartes S3 et ESP32 de la cave (tasmota32s3-cave-serveur-rly, tasmota32-cave-serveur-rly) : SOLIDIFIABLE, sur le modele de controlePortail. La classe
+# est portee par le module 'controlePompeVideCave' ; autoexec le charge par 'import' (version en FLASH). 'import' appelle
+# AUTOMATIQUEMENT controlePompeVideCave_init(m), en pied de fichier, qui porte la garde d'activation.
 #
 # Affiche sur la page principale de Tasmota l'etat de la pompe vide-cave : derniere mise en route, nb de cycles du jour,
-# intervalle depuis la mise en route precedente, et une cuve dessinee d'apres les deux flotteurs (cuve()).
+# intervalle depuis la mise en route precedente, et une cuve dessinee d'apres les deux flotteurs (cuve()). Surveille aussi les
+# pannes des flotteurs (voir plus bas), seulement si le persist porte pompeVideCave.pannes.
 #
-# Migre 'afficheSensorPompeCave()' (webFonctions.be) + 'web_sensor()' (gestionWeb.be)
-# de l'ancien module (tasmota32-serveur-rly-sauvegarde) vers le framework actuel :
-#  - persist a plat ('modules', pas 'parametres.modules')
-#  - capteurs de niveau ranges sous 'capteurs' (pas 'capteursPosition'), type+id separes
-#  - 'diversFonctions.afficheDateTime()' ne formate plus que l'heure courante (elle ne
-#    prend plus de timestamp en parametre) -> formatage local du timestamp stocke ici.
-#
-# Module solidifie : aucun import ni fonction de niveau fichier (le code de niveau fichier ne s'execute pas) ; tout est
-# methode de la classe, les imports sont dans chaque methode qui les utilise. Meme rendu de la cuve que
-# data/cave/tasmota32s3-serveur-rly/controlePompeVideCave.be (copie du S3, solidifiee aussi) : garder les deux identiques.
+# Module solidifie : aucun import ni fonction de niveau fichier (le code de niveau fichier ne s'execute pas) ; tout est methode de
+# la classe, les imports sont dans chaque methode ou closure qui les utilise.
+# Fichier IDENTIQUE dans data/cave/tasmota32s3-serveur-rly/ et data/cave/tasmota32-serveur-rly/ (copie du S3 retenue le
+# 2026-11-23, recopiee sur l'ESP32 le 2026-11-25, plan binomes-berry A7) : garder les deux copies identiques.
 #@ solidify:controlePompeVideCave
 var controlePompeVideCave = module("controlePompeVideCave")
 
 class CONTROLE_POMPE_VIDE_CAVE : Driver
-    def init()
-        # Commandes Tasmota (console, HTTP, MQTT cmnd/<topic>/...) : reponse sur stat/<topic>/RESULT
-        #   EtatPompe      -> {"EtatPompe": {"Pompe": "ON", "Niveaux": {...}, "Alerte": "", ...}}
-        #   AcquittePompe  -> efface l'alerte et le compteur de relances, puis renvoie l'etat
-        # L'aide (traiteAide) : sujet == nil -> [[nom, syntaxe, resume]] ; sujet non nil -> nil (pas de detail)
-        tasmota.add_cmd("EtatPompe", def(cmd, idx, payload, payload_json)
-            import json
-            import global
-            import diversFonctions
-            if diversFonctions.traiteAide("EtatPompe", payload, / sujet -> sujet == nil ? [["", "(sans argument)", "affiche l'etat de la pompe vide-cave, des niveaux et de l'alerte"]] : nil, false)    return    end
-            tasmota.resp_cmnd(json.dump({"EtatPompe": global.controlePompeVideCave.etat()}))
-        end)
-        tasmota.add_cmd("AcquittePompe", def(cmd, idx, payload, payload_json)
-            import json
-            import global
-            import diversFonctions
-            if diversFonctions.traiteAide("AcquittePompe", payload, / sujet -> sujet == nil ? [["", "(sans argument)", "efface l'alerte et le compteur de relances, puis affiche l'etat"]] : nil, false)    return    end
-            global.controlePompeVideCave.acquitte()
-            tasmota.resp_cmnd(json.dump({"AcquittePompe": "OK", "EtatPompe": global.controlePompeVideCave.etat()}))
-        end)
-    end
+    # Pannes des flotteurs (persist pompeVideCave.pannes = {"antiRebond": s, "maxArretsMinuterie": n}, sans la cle : rien)
+    #  - incoherence : haut ON et bas OFF depuis plus de antiRebond s (physiquement impossible)
+    #  - flotteurBas : n arrets de suite par la minuterie (duree >= timer - 1 s) alors que le haut est OFF et le bas encore ON ;
+    #    remis a 0 par un arret avec le bas OFF ; rien n'est compte pendant une marche manuelle (flotteurs suspendus)
+    # Alerte sur la voie de controleGeneral::publieAlerteRelance (topicAlerte, relai["alerte"], effacee par AcquittePompe).
+    # Limites connues : l'alerte flotteurBas peut etre vide jusqu'a 1 s apres chaque arret (finTimerRelai l'efface, le tick
+    # suivant la repose) ; AcquittePompe pendant une incoherence en cours acquitte l'episode, elle ne revient qu'a un nouvel episode.
+    # Niveaux des flotteurs : jamais de read_sensors() ici (every_second et json_append, ce dernier appele DANS la telemetrie
+    # SENSOR dont read_sensors() vide le tampon). Ils viennent d'une regle SwitchN#Action propre au driver (elle tourne meme
+    # flotteur suspendu par une marche manuelle), amorcee par l'etat memorise du persist (corrige au demarrage par
+    # controleGeneral::resynchroniseCapteurs, qui rejoue l'etat reel).
+    var debutIncoh, alerteIncoh, arrets, etatPrec, manuelPrec, niv, idBas, idHaut
 
     # Formate un timestamp epoch en 'HHhMM'.
     def heure(timestamp)
@@ -87,6 +73,122 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
                         "<div>Niveau haut : " + etatHaut + "</div>" +
                     "</div>" +
                 "</div>"
+    end
+
+    def init()
+        import string
+        logFonctions.declare("pompe", "modules.pompeVideCave", "pompe vide-cave (controlePompeVideCave)")    # cible de log du binome (plan binomes-berry A4)
+        # Commandes Tasmota (console, HTTP, MQTT cmnd/<topic>/...) : reponse sur stat/<topic>/RESULT
+        #   EtatPompe      -> {"EtatPompe": {"Pompe": "ON", "Niveaux": {...}, "Alerte": "", ...}}
+        #   AcquittePompe  -> efface l'alerte et le compteur de relances, puis renvoie l'etat
+        # L'aide (traiteAide) : sujet == nil -> [[nom, syntaxe, resume]] ; sujet non nil -> nil (pas de detail)
+        tasmota.add_cmd("EtatPompe", def(cmd, idx, payload, payload_json)
+            import json
+            import global
+            import diversFonctions
+            if diversFonctions.traiteAide("EtatPompe", payload, / sujet -> sujet == nil ? [["", "(sans argument)", "affiche l'etat de la pompe vide-cave, des niveaux et de l'alerte"]] : nil, false)    return    end
+            tasmota.resp_cmnd(json.dump({"EtatPompe": global.controlePompeVideCave.etat()}))
+        end)
+        tasmota.add_cmd("AcquittePompe", def(cmd, idx, payload, payload_json)
+            import json
+            import global
+            import diversFonctions
+            if diversFonctions.traiteAide("AcquittePompe", payload, / sujet -> sujet == nil ? [["", "(sans argument)", "efface l'alerte et le compteur de relances, puis affiche l'etat"]] : nil, false)    return    end
+            global.controlePompeVideCave.acquitte()
+            tasmota.resp_cmnd(json.dump({"AcquittePompe": "OK", "EtatPompe": global.controlePompeVideCave.etat()}))
+        end)
+
+        self.debutIncoh = 0
+        self.alerteIncoh = false
+        self.arrets = 0
+        self.etatPrec = "OFF"
+        self.manuelPrec = false
+        self.niv = {"Bas": "?", "Haut": "?"}
+        var pompe = modules.find("pompeVideCave")
+        if (type(pompe) != "instance")    return    end
+        var capteurs = pompe.find("environnement", {}).find("capteurs", {})
+        var cleHaut = pompe.find("environnement", {}).find("relais", {}).find("relai1", {}).find("relance", {}).find("capteur", "")
+        for role: [["Bas", "capteur1"], ["Haut", cleHaut]]
+            var capteur = capteurs.find(role[1])
+            if (type(capteur) != "instance" || type(capteur.find("id")) != "int")    continue    end
+            var nom = role[0]
+            self.niv[nom] = capteur.find("etat", "?")
+            if (nom == "Bas")    self.idBas = capteur["id"]    else    self.idHaut = capteur["id"]    end
+            # id propre : configDevices pose et retire ses regles SwitchN#Action sans id, il n'emporterait pas celle-ci
+            tasmota.add_rule(string.format("Switch%i#Action", capteur["id"]), def(value, trigger, msg) self.niv[nom] = str(value) end, "pompeVideCave_" + nom)
+        end
+    end
+
+    # ON tant qu'un flotteur est suspendu par une marche manuelle
+    def manuel(capteurs)
+        for cleCapteur: capteurs.keys()
+            if (type(capteurs[cleCapteur]) == "instance" && capteurs[cleCapteur].find("suspendu", "OFF") == "ON")    return true    end
+        end
+        return false
+    end
+
+    def leveAlerte(relai, evenement, message)
+        relai["alerte"] = message
+        logFonctions.log("POMPE_VIDE_CAVE_ERREUR: " + message, LOG_LEVEL_ERREUR, "pompe")
+        controleGeneral.publieAlerteRelance("pompeVideCave", relai, evenement, message, 0, relai.find("relance", {}).find("maxRelances", 3))
+    end
+
+    def every_second()
+        var pompe = modules["pompeVideCave"]
+        var pannes = pompe.find("pannes", false)
+        if (!pannes || pompe.find("activation", "OFF") != "ON" || self.idBas == nil || self.idHaut == nil)    return    end
+
+        var relai = pompe["environnement"]["relais"]["relai1"]
+        var capteurs = pompe["environnement"]["capteurs"]
+        var bas = self.niv["Bas"]
+        var haut = self.niv["Haut"]
+        var etat = relai.find("etat", "OFF")
+
+        if (bas == "OFF" && haut == "ON")
+            var maintenant = tasmota.rtc()["local"]     # lu ici seulement : pas de map allouee a chaque seconde
+            if (self.debutIncoh == 0)
+                self.debutIncoh = maintenant
+            elif (!self.alerteIncoh && maintenant - self.debutIncoh >= pannes.find("antiRebond", 5))
+                self.alerteIncoh = true
+                self.leveAlerte(relai, "incoherence", "Incoherence des flotteurs : niveau haut actif alors que le niveau bas est inactif. Verifier les capteurs.")
+            end
+        else
+            self.debutIncoh = 0
+            self.alerteIncoh = false
+        end
+
+        if (self.etatPrec == "ON" && etat == "OFF" && !self.manuelPrec)
+            var timer = relai.find("timer", 0)
+            if (bas == "OFF")
+                self.arrets = 0
+            elif (haut == "OFF" && timer > 0 && relai["timestamp"]["OFF"] - relai["timestamp"]["ON"] >= timer - 1)
+                self.arrets += 1
+                var max = pannes.find("maxArretsMinuterie", 3)
+                var message = "Pompe arretee par la minuterie alors que le niveau bas reste actif : probable defaut du capteur de niveau bas (ou pompe inefficace)."
+                if (self.arrets == max)
+                    self.leveAlerte(relai, "flotteurBas", message)
+                elif (self.arrets > max)
+                    relai["alerte"] = message       # controleGeneral::finTimerRelai l'a effacee a cet arret : elle reste tant que ca dure
+                end
+            end
+        end
+        # memorise pendant la marche : a l'arret, controleGeneral a deja reactive les flotteurs
+        if (etat == "ON")    self.manuelPrec = self.manuel(capteurs)    end
+        self.etatPrec = etat
+    end
+
+    # Etat lu par l'ecran de la cave (SENSOR) : "PompeVideCave": {"Pompe", "Manuel", "Niveaux": {"Bas", "Haut"}, "Alerte"}
+    def json_append()
+        import json
+        import string
+        var pompe = modules["pompeVideCave"]
+        if (pompe.find("activation", "OFF") != "ON")    return    end
+        var relai = pompe["environnement"]["relais"]["relai1"]
+        var capteurs = pompe["environnement"]["capteurs"]
+        tasmota.response_append(string.format(',"PompeVideCave":{"Pompe":"%s","Manuel":"%s","Niveaux":{"Bas":"%s","Haut":"%s"},"Alerte":%s}',
+            relai.find("etat", "OFF"), self.manuel(capteurs) ? "ON" : "OFF",
+            self.niv["Bas"], self.niv["Haut"],
+            json.dump(relai.find("alerte", ""))))
     end
 
     def web_sensor()
@@ -157,7 +259,7 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
                             "<div>" + str(int(horodatage.find("delai", 0) / 60)) + "min</div>" +
                         "</div>"
 
-        # Cuve : bas = capteur1, haut = capteur de la relance ; rien si l'un des deux est inactif
+        # Cuve : bas = capteur1, haut = capteur de la relance (comme init()) ; rien si l'un des deux est inactif
         var sensors = controleGeneral.lectureSensors()      # Lecture a la demande (cache 1 s)
         var cBas = capteurs.find("capteur1")
         var cHaut = capteurs.find(relai.find("relance", {}).find("capteur", ""))
@@ -209,6 +311,7 @@ class CONTROLE_POMPE_VIDE_CAVE : Driver
         var relai = modules["pompeVideCave"]["environnement"]["relais"]["relai1"]
         controleGeneral.acquitteRelance("pompeVideCave", relai)
         relai["alerte"] = ""
+        self.arrets = 0
     end
 end
 

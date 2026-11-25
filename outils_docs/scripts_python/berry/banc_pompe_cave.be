@@ -54,7 +54,7 @@ class TasmotaStub
     def memory() return {"program": 100, "program_free": 50, "heap_free": 1} end
     def rtc() return {"local": self.t, "utc": self.t} end
     def add_driver(d) end
-    def add_rule(a, b, c) self.rules.push([a, b]) end
+    def add_rule(a, b, c) self.rules.push([a, b, c]) end
     def add_cmd(n, f) end
     def add_cron(c, f, id) end
     def remove_cron(id) end
@@ -169,6 +169,15 @@ def flotteur(cle, valeur) GF.changementEtatCapteur(valeur, "Switch" + str(pompe(
 print("--- appui_bouton_desactive_flotteurs")
 monte([], false)
 verifie("cible de log declaree : pompe -> modules.pompeVideCave", "[['pompe', 'modules.pompeVideCave']]", str(logFonctions.declarees))
+def idsFlotteurs()
+    var ids = []
+    for r: tasmota.rules
+        if (r[0] == "Switch1#Action" || r[0] == "Switch2#Action")    ids.push(r[0] + "=" + str(r[2]))    end
+    end
+    return ids
+end
+# configDevices retire ses regles SwitchN#Action sans id : sans id propre, il emporterait celles du driver
+verifie("regles des flotteurs posees avec un id", "['Switch1#Action=pompeVideCave_Bas', 'Switch2#Action=pompeVideCave_Haut']", str(idsFlotteurs()))
 appuiBouton()
 verifie("relais 1 ON", true, tasmota.puissance[0])
 verifie("capteurs OFF et suspendu ON", "OFF/OFF/ON/ON", etatCapteurs())
