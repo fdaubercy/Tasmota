@@ -19,7 +19,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif | Avancement | Attend | Mis à jour |
 |---|---|---|---|---|
-| [binomes-berry](plans/binomes-berry.md) | Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et se… | 96 % (75/78) | 1 sur carte | 2026-11-25 |
+| [binomes-berry](plans/binomes-berry.md) | Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et se… | 98 % (76/78) | 1 sur carte | 2026-11-25 |
 | [cartes-simulees](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou d… | 75 % (18/24) | 2 sur carte | 2026-11-14 |
 
 ### cave
