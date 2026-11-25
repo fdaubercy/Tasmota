@@ -92,7 +92,11 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
   log perdus) ; bloc remis à l'identique de `6573064f2^`, `banc_demarrage` VERT ; contrôle de tous les gestes : c'était le
   seul bloc actif touché. Bureau (192.168.0.49, firmware du 9/11) : code du 9/11 relu, `controleDiscovery` lit
   `serveur["discovery"]` en direct mais n'est chargé que si le bloc est ON (`demarrage_activation`, bloc absent = OFF).
-  Restent : bureau, portail ESP32 (derrière le NAPT du P4) ;
+  Bureau FAIT le 2026-11-25 (persist corrigé + autoexec d'origine) : persist réécrit 6 486 → 5 849 o, relais resté ON,
+  7 drivers, journal sans erreur, `tasmota.gc()` 33 053 → 31 536 o (−1,5 Ko). Sauvegardes : scratchpad `deploiement_bureau/`.
+  Portail ESP32 : la carte branchée sur COM3 (ESP32-D0WD-V3, CH340) porte encore le firmware « Rideau de
+  garage » 15.1.0.1 du 26/10/2025 : palier 1 après le flash du firmware `tasmota32-garage-portail-jardin-modbus` par
+  l'utilisateur (page Build). Reste aussi :
   la cave ESP32 est la remplaçante du S3 (même IP) : à ne charger que la carte en main, jamais sur 192.168.0.48 en service.
 - [ ] Palier 2 (groupes du niveau 3 tous OFF vidés à `{}`) : après l'essai du palier 1 sur une carte
 
