@@ -79,6 +79,21 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
 - [x] Proposition chiffrée par env, validée par l'utilisateur — preuve : réponses du 2026-11-25 : palier 1 appliqué aux 5 ESP32 (18,5 Ko de texte, 0,7 à 0,9 Ko de RAM par carte en régime établi ; I2C et ModBus en squelette, lus en direct par `globalFonctions::changementEtatCapteur` et `configDevices`) ; `drivers.leds` GARDÉ ON sur bureau et cave (décision du 23/11 annulée : lu par `configModules.be::configDevicesByJon`, LedPower/LedState/SetOption31) ; palier 2 (groupes du niveau 3 tous OFF vidés à `{}`, 1,1 à 4 Ko par carte) reporté après un essai sur carte ; `_incertain` du portail ESP32 reporté dans la doc puis retiré. Rapport : scratchpad `inventaire/proposition2_sortie.txt`. Décisions d'origine (2026-11-23 : `drivers.leds` à ON sans lecteur passé à OFF sur le bureau et la cave ESP32, pas retiré ; PORTAIL ESP32 jugé sur son autoexec CIBLE, pas sur le palier 1 : le P4 le commande par ModBus (relais virtuels 20 et 22 vers l'esclave 4), donc `drivers.ModBus`, `drivers.leds`, `serveur.udp` et `modules.portail` gardés, `modbusFonctions` reste solidifié)
 - [x] Palier 1 retiré dans le dépôt (5 `_persist.json`) — preuve : persist de HEAD + gestes appliqués en mémoire == fichier écrit, feuilles identiques (secrets compris), fins de ligne inchangées ; texte 14 311 → 8 549 o (LED), 14 328 → 8 566 (barbecue), 13 671 → 9 139 (bureau), 25 723 → 17 793 (cave), 14 927 → 8 342 (portail) ; `banc_demarrage.py --dossier --env` VERT sur les 5, instantané (drivers, règles, commandes, crons, globales, erreurs) identique à celui des persists de HEAD, témoin `drivers.ModBus` à ON : 8 écarts et code 1 ; `_incertain` recopié dans `PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md` (2026-11-25)
 - [ ] Déploiement sur les 5 cartes avec l'utilisateur (supprimer persist et autoexec, redémarrer, renvoyer, garder `/json/driversInactifs.json`), puis RAM relevée par `tasmota.gc()`
+  Projecteur LED (192.168.0.41) FAIT le 2026-11-25 avec l'utilisateur : persist du dépôt + autoexec D'ORIGINE de la carte
+  (celui du dépôt charge `qrcodePage`, absent du firmware du 21/11) ; relu identique, carte revenue, framework chargé
+  (9 drivers, `ReglageLog` répond, capteurs présents), aucune erreur au journal web ; persist réécrit 5 939 → 5 247 o ;
+  `Br tasmota.gc()` 31 642 o contre 33 023 sur le projecteur barbecue (même code, non allégé) : environ 1,4 Ko de RAM Berry
+  en moins. Écarts carte/dépôt normaux : listes vides élaguées (`diversFonctions_elagueListesVides`), adresse MAC,
+  `template.ARCH`, horodatages. Sauvegardes d'avant : scratchpad `deploiement_led/`.
+  Projecteur barbecue (192.168.0.50) FAIT le 2026-11-25, même procédure (autoexec d'origine, firmware du 22/11 00:00) :
+  persist réécrit 5 968 → 5 264 o, framework chargé (9 drivers), journal sans erreur, `tasmota.gc()` 33 023 → 31 702 o
+  (−1,3 Ko). Sauvegardes : scratchpad `deploiement_bbq/`.
+  CORRECTIF du 2026-11-25 : `serveur.udp` du bureau était ON, le palier 1 l'avait pourtant réduit à `{activation}` (id, port,
+  log perdus) ; bloc remis à l'identique de `6573064f2^`, `banc_demarrage` VERT ; contrôle de tous les gestes : c'était le
+  seul bloc actif touché. Bureau (192.168.0.49, firmware du 9/11) : code du 9/11 relu, `controleDiscovery` lit
+  `serveur["discovery"]` en direct mais n'est chargé que si le bloc est ON (`demarrage_activation`, bloc absent = OFF).
+  Restent : bureau, portail ESP32 (derrière le NAPT du P4) ;
+  la cave ESP32 est la remplaçante du S3 (même IP) : à ne charger que la carte en main, jamais sur 192.168.0.48 en service.
 - [ ] Palier 2 (groupes du niveau 3 tous OFF vidés à `{}`) : après l'essai du palier 1 sur une carte
 
 ## A6 — Paramètres en lecture seule dans `/json`

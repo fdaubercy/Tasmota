@@ -100,7 +100,10 @@
 			"mdp": "Lune5676"
 		},
 		"udp": {
-			"activation": "ON"
+			"activation": "ON",
+			"id": 0,
+			"log": "info",
+			"port": 2000
 		},
 		"tcp": {
 			"activation": "OFF"
