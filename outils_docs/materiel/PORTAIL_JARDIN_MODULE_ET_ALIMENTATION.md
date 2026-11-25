@@ -135,3 +135,20 @@ Précautions :
 - [ ] Obtenir le brochage Tasmota du module retenu, ou le déduire à la main.
 - [ ] Confirmer la direction du RS485 (DE/RE) si le module est un KinCony.
 - [ ] Essai des entrées Total et Piet, en présence de l'utilisateur, un mouvement à la fois (plan A10).
+
+### Notes de conception du persist de l'esclave 4
+
+Recopiées de la clé racine `_incertain` du `_persist.json` de `data/garage/tasmota32-portail-jardin-modbus`, retirée du persist
+le 2026-11-25 (plan `binomes-berry`, A5 : aucun lecteur, 1,1 Ko en RAM).
+
+- Architecture : l'esclave 4 n'a aucun Shutter. Deux relais réels (1 = ouverture d'un vantail, 2 = ouverture des deux)
+  commandent les entrées 1 et 2 de la carte électronique du portail ; les Shutters (mode 3) tournent sur le P4.
+- Relais 1 et 2 : timer 1 = auto-OFF après 1 s (`controleGeneral.be`, en secondes), filet de sécurité si le OFF du P4 se
+  perd. Si le P4 coupe à 0,5 s (PulseTime 5 de `vrFonctions.be`), le OFF arrive avant et annule ce timer.
+- [ ] GPIO : relais 41 et 42, interrupteur de fermeture 47, RX 4 / TX 5, LED 38 et 39 recopiés du persist du rideau (même
+  dev-kit ESP32-S3), template GPIO identique à celui du rideau. LED 38 et 39 : à confirmer si la carte du portail les porte.
+- [ ] `afficheWeb` OFF pour les 2 relais : choix à confirmer.
+- [ ] Capteur de fermeture Switch1 : polarité non vérifiée (doit valoir ON portail fermé, SwitchMode 2 recopié du rideau).
+- [ ] `groupTopic1` `tasmotas/garage` recopié du rideau : une commande de groupe atteindrait aussi le portail.
+- Env PlatformIO, autoexec, `user_config_override` du portail : à créer par l'utilisateur (note d'origine). Rien n'était
+  essayé sur carte à cette date.

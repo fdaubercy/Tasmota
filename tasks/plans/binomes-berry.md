@@ -4,7 +4,7 @@ titre: Binômes Berry autonomes, manifeste unique et persist allégé
 objectif: Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et ses paramètres
 statut: actif
 cree: 2026-11-23
-maj: 2026-11-24
+maj: 2026-11-25
 famille: build
 liens: assistant-persist, fichiers-berry-env, lib-ignore-envs
 ---
@@ -76,8 +76,10 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
 
 ## A5 — Blocs morts du persist
 - [x] Inventaire des lecteurs des 5 ESP32 sans PSRAM — preuve : rapport du sous-agent du 2026-11-23 (scripts `scratchpad/inventaire/`) ; projecteur LED 3 517 o de texte retirables (leds, SD, ecran, KNX, LoRaWan ; squelettes `{"name","activation":"OFF","environnement":{}}` pour I2C et ModBus, `{"activation":"OFF"}` pour serveur.tcp ; `name` exigé par `controleWeb.be`, `activation` par `configModules.be`). CORRECTIF : `diversFonctions::hiberneDriversInactifs` (appelée par `demarrage` à chaque démarrage) range déjà l'`environnement` des drivers OFF dans `/json/driversInactifs.json` et réécrit le persist : en régime établi le gain en RAM n'est que d'environ 350 o par projecteur ; le vrai gain restant est au niveau 3 (`modules.projecteur.environnement`, 3 122 o dont `analogiques` 1 039 o tous OFF), non couvert par l'hibernation
-- [ ] Proposition chiffrée par env, validée par l'utilisateur (décidé le 2026-11-23 : `drivers.leds` à ON sans lecteur passé à OFF sur le bureau et la cave ESP32, pas retiré ; PORTAIL ESP32 jugé sur son autoexec CIBLE, pas sur le palier 1 : le P4 le commande par ModBus (relais virtuels 20 et 22 vers l'esclave 4), donc `drivers.ModBus`, `drivers.leds`, `serveur.udp` et `modules.portail` gardés, `modbusFonctions` reste solidifié)
-- [ ] Retrait dans le dépôt et déploiement (supprimer persist et autoexec, redémarrer, renvoyer)
+- [x] Proposition chiffrée par env, validée par l'utilisateur — preuve : réponses du 2026-11-25 : palier 1 appliqué aux 5 ESP32 (18,5 Ko de texte, 0,7 à 0,9 Ko de RAM par carte en régime établi ; I2C et ModBus en squelette, lus en direct par `globalFonctions::changementEtatCapteur` et `configDevices`) ; `drivers.leds` GARDÉ ON sur bureau et cave (décision du 23/11 annulée : lu par `configModules.be::configDevicesByJon`, LedPower/LedState/SetOption31) ; palier 2 (groupes du niveau 3 tous OFF vidés à `{}`, 1,1 à 4 Ko par carte) reporté après un essai sur carte ; `_incertain` du portail ESP32 reporté dans la doc puis retiré. Rapport : scratchpad `inventaire/proposition2_sortie.txt`. Décisions d'origine (2026-11-23 : `drivers.leds` à ON sans lecteur passé à OFF sur le bureau et la cave ESP32, pas retiré ; PORTAIL ESP32 jugé sur son autoexec CIBLE, pas sur le palier 1 : le P4 le commande par ModBus (relais virtuels 20 et 22 vers l'esclave 4), donc `drivers.ModBus`, `drivers.leds`, `serveur.udp` et `modules.portail` gardés, `modbusFonctions` reste solidifié)
+- [x] Palier 1 retiré dans le dépôt (5 `_persist.json`) — preuve : persist de HEAD + gestes appliqués en mémoire == fichier écrit, feuilles identiques (secrets compris), fins de ligne inchangées ; texte 14 311 → 8 549 o (LED), 14 328 → 8 566 (barbecue), 13 671 → 9 139 (bureau), 25 723 → 17 793 (cave), 14 927 → 8 342 (portail) ; `banc_demarrage.py --dossier --env` VERT sur les 5, instantané (drivers, règles, commandes, crons, globales, erreurs) identique à celui des persists de HEAD, témoin `drivers.ModBus` à ON : 8 écarts et code 1 ; `_incertain` recopié dans `PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md` (2026-11-25)
+- [ ] Déploiement sur les 5 cartes avec l'utilisateur (supprimer persist et autoexec, redémarrer, renvoyer, garder `/json/driversInactifs.json`), puis RAM relevée par `tasmota.gc()`
+- [ ] Palier 2 (groupes du niveau 3 tous OFF vidés à `{}`) : après l'essai du palier 1 sur une carte
 
 ## A6 — Paramètres en lecture seule dans `/json`
 - [ ] Forme de la clé explicite et lecture à la demande décidées
