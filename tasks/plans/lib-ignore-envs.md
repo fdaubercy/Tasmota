@@ -4,7 +4,7 @@ titre: lib_ignore pour chaque env personnel, avec garde au pre-build
 objectif: Etendre a tous les envs personnels le lib_ignore valide sur la cuve, chaque liste etablie et controlee par un script avant le scan des dependances
 statut: clos
 cree: 2026-10-31
-maj: 2026-11-02
+maj: 2026-11-25
 famille: build
 parent: lib-ignore-cuve
 liens: lib-ignore-cuve
@@ -120,3 +120,23 @@ Limites :
 - Cave ESP32 : 21 min 29 en premier de la série, contrôle 168 s contre 7 à 57 s ailleurs ; cause non cherchée.
 - Le coût du contrôle reste faible : 7 à 57 s, hors cave ESP32.
 
+## Bilan
+
+Clos le 2026-11-02 ; bilan écrit le 2026-11-25 d'après le plan seul. Le tableau « Gains par env » est dans la section Vérification.
+
+### Ce qui a marché
+- `build/verifie_lib_ignore.py` (398 lignes, plus `lecture_gardes.py` 167) branché au pré-build, affiché sur la page Build, avec son banc et ses mutants.
+- 9 envs personnels dotés d'un `lib_ignore` (`[lib_inutiles]` commun et sans écran, plus des listes propres) ; 7 envs compilés en succès sur la série du 2026-11-01 au 2026-11-02 ; cartes flashées déclarées vérifiées par l'utilisateur (Claude n'a vu que le P4).
+
+### Ce qui a raté
+- P4 (`ESP8266SAM.h`) et cuve (`ESPFtpServer.h`) en échec de compilation alors que la garde affichait ✔ : retrait des commentaires en deux passes (`//*****` effaçait un fichier jusqu'à la ligne 1912) et macro du framework (`ESP_IDF_VERSION_MAJOR`) crue fausse. Listes recalculées.
+- Build du différentiel arrêté net pendant une modification de `verifie_lib_ignore.py`, importé par le pré-script : le contrôle ne bloque plus jamais en cas de défaut propre.
+- Échec de solidification de la cuve sans lien avec `lib_ignore` : une autre conversation avait lancé `solidifie_et_compile_berry.py`, qui refuse désormais de tourner pendant un build.
+- Gain de temps prouvé sur la cuve seulement et non isolé de l'effet des réglages SCons du 2026-11-01 ; cave ESP32 : contrôle de 168 s, cause non cherchée.
+
+### Règle retenue
+Un contrôle de build ne doit jamais bloquer sur son propre défaut, et une liste d'exclusions se rejoue sur chaque env avant de compiler. Remontée dans `outils_docs/environnement/VIGILANCES_BUILD.md` (section « lib_ignore : scan des dependances (LDF) ») et `outils_docs/CARTE_DOCUMENTS.md` (entrée de `verifie_lib_ignore.py`).
+
+### Cases ouvertes
+- [projet] Piscine (ESP8266) : liste établie à la main avec `--propose` si un jour utile : reportée, sans plan destinataire.
+- [projet] Cache des inclusions par date de modification si les ~11 s du contrôle pèsent : reportée, sans plan destinataire.

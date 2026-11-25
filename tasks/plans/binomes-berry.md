@@ -85,7 +85,7 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
 
 ## A7 — Doublons et règles écrites
 - [ ] `controlePompeVideCave` : copie du S3 retenue, sort de l'env ESP32 de la cave décidé
-- [ ] Règle de solidification des fichiers de carte écrite dans `SOLIDIFICATION_BERRY.md` §3
+- [x] Règle de solidification des fichiers de carte écrite dans `SOLIDIFICATION_BERRY.md` §3 — preuve : ligne « Fichier propre à une carte » du tableau du §3 (règle du 2026-11-23 : RAM courte ET fichier presque finalisé), reprise au §7 avec l'état des fichiers de carte solidifiés ou non (relu le 2026-11-25)
 - [ ] `nouveau-module.md` (skill Berry) aligné sur la paire de référence
 
 ## A8 — Leçons réellement injectées au démarrage
@@ -149,7 +149,7 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
 - [x] Section `## Bilan` (marché, raté, règle retenue, cases reportées) ajoutée à `_FORMAT.md` et contrôlée par `index_plans.mjs --verifier` — preuve : commit a38c6df0f
 - [x] `sauvegarde-config-cartes`, `energie-differentiel`, `page-build-televersement`, `jauges-cuve` clos avec bilan — preuve : commit a38c6df0f
 - [x] `ethernet-p4` clos « remplacé par » `voie-reseau-ethernet` et `rgx-ethernet-uplink` ; `relais-cave-s3`, `audit-relais-cave-s3`, `cave-s3-waveshare` fusionnés (décidé le 2026-11-23) ; `navigateur-ftp-cartes-a5-reprise` lié par `parent:` — preuve : ethernet-p4.md statut clos + ## Bilan ; relais-cave-s3.md 70 cases = 22 + 24 + 24 ; deux plans dans tasks/archive/ ; index --verifier rc 0 (commit des plans du 2026-11-23)
-- [ ] Enseignements de `temps-compilation`, `lib-ignore-*`, `graphiques-web`, `*-mpu6050`, `build-reparations` remontés dans les références
+- [x] Enseignements de `temps-compilation`, `lib-ignore-*`, `graphiques-web`, `*-mpu6050`, `build-reparations` remontés dans les références — preuve : `VIGILANCES_BUILD.md` (sections « Temps de compilation : mesures et decisions » et « lib_ignore : scan des dependances (LDF) »), `GRAPHIQUES.md` (« Choix et pièges »), `INCLINAISON_MPU6050.md`, `NOUVEAU_POSTE.md`, guides `build_web*.md` ; `## Bilan` dans les 7 plans ; `index_plans.mjs --verifier` rc 0, `verifie_references_docs.py` rc 0 (2026-11-25)
 
 ## A19 — Rangement des .md libres d'`outils_docs/`
 - [x] `git mv` vers `historique/` (ANALYSE_*, AUDIT_*, DIAGNOSTIC_UDP, CHANGELOG), `materiel/` (MODELES_ESP, ECRAN_TACTILE_ESP32P4, PORTAIL_JARDIN, ICONES_BOUTONS_RELAIS, PLC_OPENPLC), `reference_berry/` (PROTOCOLE_MODBUS, `Aide/MODBUS.md` -> MODBUS_MODE_EMPLOI.md, SOLIDIFICATION_BERRY, CARTE_MODULES_BERRY, FICHIERS_DRVSET, EXTENSIONS_TAPP, TASMOTA_VOLETS_ROULANTS), `verification/` (SOUS_AGENTS) — preuve : 22 git mv (rangement A19), Aide/MODBUS.md -> reference_berry/MODBUS_MODE_EMPLOI.md

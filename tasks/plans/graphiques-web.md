@@ -4,7 +4,7 @@ titre: Graphiques des mesures dans les pages web des cartes S3/P4 (uPlot)
 objectif: Afficher l'historique et le temps réel des mesures en graphiques dans les pages web des cartes S3/P4
 statut: clos
 cree: 2026-10-18
-maj: 2026-10-20
+maj: 2026-11-25
 source: resilient-soaring-stearns.md
 famille: graphiques-ecrans
 liens: modbus-garage, plan-par-conversation
@@ -279,3 +279,24 @@ Choix de Claude (à contester), revus le 2026-10-19 pour ECharts et le temps ré
 - Sur carte : page `/graphiques` du P4 ouverte depuis le PC et depuis un téléphone ; heap suivi
   (`ReglageLog` + sortie `detail` pour les `BRY: GC`) ; logs lus par la skill `logs-cartes`.
 - Avant commit : `relecteur-berry`, puis `/commite`.
+
+## Bilan
+
+Clos le 2026-10-20 ; bilan écrit le 2026-11-25 d'après le plan seul.
+
+### Ce qui a marché
+- Socle `/histo` validé sur le P4, page `/graphiques` servie par la carte (route Berry, ECharts compressé), séries découvertes sans liste écrite, temps réel, composition modifiable et enregistrée sur la carte, bouton Grafana des ESP32 classiques (mécanisme seul).
+- `banc_graphiques.py` : 100 contrôles Berry et 28 de rendu, mutants détectés ; `relecteur-berry` passé sur le Berry touché ; essais réels sur le P4 (heap, ECharts en 1,37 s, redémarrage) et la cuve.
+
+### Ce qui a raté
+- Faux zéros de la cuve dans l'historique du P4 tant que l'esclave n'était pas valide : filtre `controleGarage.filtreHistorique`.
+- Séries brutes `TasmotaSlaveModBus.*` découvertes en double avec des valeurs périmées : `exclues` dans le persist du P4.
+- Deux redémarrages du P4 à cause d'un ancien `.bec` en cache puis du persist réécrit par `System#Save` (renvoi à `tasks/lessons.md`, 2026-10-18).
+- uPlot, construit puis servi, a été remplacé par ECharts sur décision de l'utilisateur ; Chrome sans interface se bloquait sur un processeur saturé par un build.
+- Rideau, S3 serveur-modbus et S3 serveur-rly : LittleFS non téléversé avec la découverte générique, donc non vérifiés (écartés par l'utilisateur le 2026-10-19).
+
+### Règle retenue
+Un fichier servi par une route Berry vit sous `data/sd/js/` ou `data/sd/css/` (jamais un `.js` à la racine), la page ne tient pas dans un module solidifié, et le persist ne garde que ce que la relève de chaque minute lit. Remontée dans `outils_docs/reference_berry/GRAPHIQUES.md` (section « Choix et pièges »).
+
+### Cases ouvertes
+Aucune. Abandonnées par décision de l'utilisateur le 2026-10-18 : mini-courbe sur l'accueil, CDN de secours, export CSV (raisons dans le plan et dans la référence).

@@ -60,6 +60,10 @@ Sous `drivers.voletRoulants.environnement.VRs.<VR>.capteursPosition` :
 - `filtre` (facultatif, 6 par défaut) : filtre passe-bas du MPU6050 (registre `0x1A`, 0 à 6 ; 6 = ~5 Hz) contre
   les vibrations du moteur. Écrit une fois, au réveil du capteur.
 
+`ShutterSetClose` sur « ouverture » est voulu (2026-10-28, plan `inclinaison-trappe-mpu6050`) : `ShutterInvert 1` (posé par `configVRByJson`) et `100 − payload`
+(`xdrv_27_esp32_shutter.ino`) croisent les deux commandes. Ne pas le « corriger » (commentaire « Croisement VOULU » dans
+`vrFonctions.be::changementEtatCapteur`). `ShutterInvert` n'inverse pas `Direction` : 1 vaut toujours ouverture.
+
 ### Détection de blocage
 
 Pendant la course, si l'angle bouge de moins de `blocageDegres` (1° par défaut) pendant `blocage` secondes
@@ -70,6 +74,8 @@ mouvement et à chaque nouvelle course : un départ lent ne déclenche rien tant
 secondes. Régler `blocage` au-dessus du temps de démarrage réel du moteur.
 Angle figé sur la butée vers laquelle va le volet, quand cette butée n'est pas désignée `"Inclinaison"` : c'est une
 arrivée, pas un blocage. Le moteur qui force est arrêté de la même façon, sans erreur ni alerte.
+
+Il n'y a pas de relance automatique après un blocage (écarté le 2026-10-28, plan `blocage-trappe-mpu6050` : dangereux si quelque chose coince la trappe).
 
 Un blocage s'affiche aussi sur la page d'accueil (« BLOQUÉ » sur la ligne du volet) et part en MQTT, **retenu**, sur
 `tele/<topic>/INCLINAISON<id>` : `{"Volet": 1, "Bloque": true, "Angle": 40.0, "Etat": "entre"}`. La course suivante

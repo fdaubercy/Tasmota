@@ -52,7 +52,9 @@ Conception : [spec](../../docs/superpowers/specs/2026-10-24-page-build-televerse
   solidifiés, la page arrête `pio` aussitôt, avec le motif « solidification vide : <module> (cause) », au lieu
   de laisser l'édition des liens échouer une heure plus tard sur `undefined reference to be_native_module_<module>`.
   Cause habituelle : le `.be` déclare `module("X")` sans la ligne `#@ solidify:X` (cas de `demarrage.be` le
-  2026-10-26).
+  2026-10-26). Le contrôle ne s'applique qu'à un env Berry, c'est-à-dire quand la sortie de pio a montré « Will solidify » :
+  `modules.h` garde les entrées du dernier env Berry et `solidify/` est vide pour un ESP8266, d'où un faux positif le
+  2026-11-15 (`build_serie.py::_lance_pio`, plan `build-reparations`).
 - **COM ou OTA par ligne.** Le port COM est lu dans le `upload_port` de l'env (y compris hérité par `extends`),
   vide s'il n'y en a pas. L'IP OTA est lue dans `WIFI_IP_ADDRESS` de `tasmota/user_config_override.h`, bloc du
   firmware de l'env. L'OTA est grisée pour les envs qui ne chargent pas `pre_utilitaires_platformio.py` (ESP8266)

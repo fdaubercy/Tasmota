@@ -19,9 +19,12 @@ Tiré de `outils_docs/README.md` le 2026-11-23 (plan `binomes-berry`, A20). Aigu
 - **Le cache grossit sans fin** (17 Go le 2026-11-01) :
   `python outils_docs/scripts_python/maintenance/purge_cache_build.py --dry-run` montre ce que libérerait la
   suppression des objets inutilisés depuis 30 jours ; sans `--dry-run`, il les supprime (refus pendant un build).
+  Le critère est la date de modification du fichier : SCons (`CacheDir.py::CacheRetrieveFunc`) la remet à jour à chaque
+  reprise depuis le cache, donc elle vaut « dernière utilisation » (plan `temps-compilation`, 2026-11-01).
   Même purge sur la page Build (:7700), onglet Build : bouton « Purger le cache de compilation », avec confirmation.
 - **Windows Defender** : `outils_docs/scripts_python/maintenance/exclusions_defender.ps1`, en administrateur,
   exclut `.pio`, `.cache` et `~/.platformio` de l'analyse en temps réel.
+  Mesures et décisions de temps de build : `outils_docs/environnement/VIGILANCES_BUILD.md`.
 
 ### Le dossier `data_dir` : posé avant chaque `pio run`
 

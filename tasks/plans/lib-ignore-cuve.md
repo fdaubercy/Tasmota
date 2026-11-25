@@ -4,7 +4,7 @@ titre: Accélérer le scan des dépendances (LDF) — essai lib_ignore sur l'env
 objectif: Réduire le temps du scan LDF et de la compilation de l'env cuve en ignorant les bibliothèques qu'il n'utilise pas, mesuré avant et après
 statut: clos
 cree: 2026-10-31
-maj: 2026-11-01
+maj: 2026-11-25
 famille: build
 liens: lib-ignore-envs
 ---
@@ -110,3 +110,22 @@ Berry chargé ; le P4 voit `sensorsCuve` et `TasmotaSlaveModBus1`. Hauteur lue =
 
 Conclusion provisoire (avant le bilan) : l'exclusion Defender ne raccourcit pas le scan ; le manque de mémoire domine.
 À remesurer après un redémarrage (mémoire propre, seuls VS Code et la conversation ouverts).
+
+## Bilan
+
+Clos le 2026-11-01 ; bilan écrit le 2026-11-25 d'après le plan seul. Le « Bilan (2026-10-31) » de la section Vérification en donne les chiffres.
+
+### Ce qui a marché
+- 23 bibliothèques ignorées sur la cuve : 138 → 115 compatibles, scan LDF 21 min 42 → 7 min 36, pré-build 27 min 17 → 14 min 12, firmware identique (−80 o, RAM égale), carte flashée et fonctionnelle.
+- Liste validée par l'utilisateur avant l'édition du cenv, puis étendue aux autres envs (plan `lib-ignore-envs`) et mise en `[lib_inutiles]`.
+
+### Ce qui a raté
+- Essai 1 en échec : `esp_wireguard_tasmota` est incluse par Berry crypto sous une garde active (`xdrv_52_3_berry_crypto.ino`) ; retirée de la liste.
+- Un lancement fautif de `pio run` à 12:43 a purgé `.pio/build` (renvoi à `tasks/lessons.md`) ; la mesure 2 (exclusion Defender) a été arrêtée à plus de 29 min de scan.
+- Gain de temps non isolé : le témoin P4 sans `lib_ignore` gagnait −21 % le même soir, et l'exclusion Defender n'a démontré aucun gain (retirée le 2026-10-31).
+
+### Règle retenue
+Avant d'ignorer, vérifier les inclusions de TOUS les en-têtes d'une bibliothèque, `lib_ignore` d'un env remplace l'hérité, Matter, SendMail et KNX restent actifs. Remontée dans `outils_docs/environnement/VIGILANCES_BUILD.md` (section « lib_ignore : scan des dependances (LDF) »).
+
+### Cases ouvertes
+- [projet] Couper par `#undef` les 7 fonctions actives inutiles (IR, DALI, TM1638, LoRa, iBeacon, Berry Animation, SEN5X) puis ignorer leurs bibliothèques : reportée, sans plan destinataire (firmware différent, à valider sur carte).

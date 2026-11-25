@@ -11,7 +11,9 @@ Quand un `pio run` de la série échoue sur une panne connue, la page la corrige
   concernées (`prebuild`, `compilation`, `liens`, `buildfs`) et une liste d'actions. Règles de base : `outils_docs/schemas/reparations_build.json`
   (suivi par git, la page ne l'écrit jamais ; aujourd'hui `verrou_fichier` : un `PermissionError` sur un chemin du dépôt, pas sur un port COM).
   Règles locales : `%LOCALAPPDATA%\outils_tasmota\build\reparations.json` (règles ajoutées par l'IA, clé `supprimees`), elles l'emportent à id égal.
-  Une règle locale fautive est ignorée et signalée, une base illisible n'arrête pas la série.
+  Une règle locale fautive est ignorée et signalée, une base illisible n'arrête pas la série. Le motif est une expression
+  compilée et validée à l'ajout, cherchée sur la fin du journal seulement (pas de retour arrière catastrophique sur 100 000 lignes) ;
+  journal vide ou tronqué, ou chemin du motif absent : aucune règle ne s'applique, la série échoue comme avant (2026-11-14, plan `build-reparations`).
 - **Actions permises**, liste fermée (`build_reparations.py::ACTIONS`), aucune commande libre : `attendre {secondes}`, `libere_verrou` (ferme ou attend
   le processus qui tient le fichier du message d'erreur), `vide_build` (vide `.pio/build/<env>` de l'env raté seulement).
 - **Garde-fous** : 2 relances au plus par étape (env, action, cible) et par série (`build_reparations.py::RELANCES_MAX`) ; une règle ne s'applique pas deux fois à la même panne (signature = id de la règle + ligne
@@ -20,7 +22,8 @@ Quand un `pio run` de la série échoue sur une panne connue, la page la corrige
 - **Processus qui tient le fichier** (`build_reparations_verrou.py`) : la liste blanche `cpptools-srv.exe`, `cpptools.exe` est fermée sans demander.
   Un `pio`, `scons` ou `python` d'une autre origine n'est jamais fermé : on attend la fin de ce build. Pour tout autre processus, la page pose la
   question Fermer / Attendre / Annuler ; sans réponse en 10 minutes, l'env échoue et la série continue. La page, le `pio` de la série et `claude`
-  ne sont jamais touchés.
+  ne sont jamais touchés. Le repérage passe par le Restart Manager de Windows (`ctypes`) et les noms par Toolhelp32 :
+  `Get-CimInstance` coûtait 15 à 25 s par panne (`build_reparations_verrou.py::processus_du_fichier`, 2026-11-15, plan `build-reparations`).
 - **Sur la page** : un bandeau « Réparation en cours : <titre> » (puis « réussie » ou « échouée ») sur la ligne de l'env, une ligne `[réparation] …`
   dans son journal, et le panneau « Réparations » (liste des règles, origine, bouton Supprimer sur une règle locale seulement). L'état se
   reconstruit au rechargement par les événements rejoués.
@@ -31,6 +34,9 @@ Quand un `pio run` de la série échoue sur une panne connue, la page la corrige
   (origine `ia`) que si la relance réussit.
 - **Case « Relancer après réparation par l'IA »** (décochée par défaut, mémorisée dans le navigateur) : même chose sans clic, un seul diagnostic par env
   et par lancement, seulement pour une panne `pio` sans règle du catalogue, jamais pour un envoi, refusée si un build étranger tourne.
+- **Promouvoir une règle de l'IA dans le catalogue de base** (décidé le 2026-11-15, plan `build-reparations`) : à la main, par un commit de l'utilisateur ;
+  la page n'écrit jamais `reparations_build.json`. Une règle est mûre après plusieurs succès sur des journaux différents, avec
+  un motif précis et des actions de la liste fermée.
 - **Ce PC seulement** : un client distant (jeton) peut lire le panneau, rien de plus, et sa case de l'IA est ignorée.
 - **Limites** : non essayé sur une vraie série de production (bancs avec un faux `pio`, un diagnostic réel en lecture seule sur un journal archivé) ;
   les échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu) ne sont pas couverts.

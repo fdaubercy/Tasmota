@@ -4,7 +4,7 @@ titre: Réparation automatique des pannes de la page Build
 objectif: La page Build reconnaît une panne de compilation connue, la corrige, le dit sur la page et relance ; panne inconnue : diagnostic par l'IA et catalogue qui s'enrichit
 statut: clos
 cree: 2026-11-14
-maj: 2026-11-15
+maj: 2026-11-25
 famille: build
 liens: ecran-cave-vues-commandes, facade-garage-capteurs
 spec: 2026-11-14-build-reparations-design.md
@@ -153,3 +153,26 @@ Entrées que la spec laisse ouvertes et qui peuvent gêner, avec le test attendu
 ## Vérification
 Bancs `test_build_reparations*.py`, `test_build_serie.py`, `test_build_web.py`, sonde `test_build_page_reparations_chrome.py` ;
 `verifie_references_docs.py` ; `node .claude/hooks/index_plans.mjs --verifier`.
+
+## Bilan
+
+Clos le 2026-11-15 ; bilan écrit le 2026-11-25 d'après le plan seul.
+
+### Ce qui a marché
+- Catalogue de règles, liste fermée d'actions, relance bornée à 2 par étape, fermeture de processus en liste blanche, bandeau et panneau sur la page, diagnostic par l'IA en lecture seule, case de relance automatique, contrôle de solidification limité aux envs Berry : chaque étape écrite après un banc rouge, avec mutants.
+- Essai réel hors série de production (vrai verrou Windows, vrai Restart Manager) : 53 contrôles sur 53 ; diagnostic réel sur un journal archivé en 23 s (cause juste, motif validé, rien écrit).
+
+### Ce qui a raté
+- Défaut constaté sur une vraie panne le 2026-11-15 : la case de relance était cochée et rien ne s'est passé, `build_reparations.py::pour_serie` ne branchait pas le diagnostic de l'IA.
+- Faux positif du contrôle de solidification sur un env ESP8266 (`modules.h` gardait les entrées du dernier env Berry).
+- `Get-CimInstance` trop lent (15 à 25 s) pour repérer le processus : remplacé par Restart Manager et Toolhelp32 par `ctypes`.
+- Non prouvé : `POST /reparation` sur un vrai `build_web`, un vrai `cpptools-srv.exe`, le panneau dans la page réelle ; 14 Chrome `sonde_*` encore vivants après les sondes (arrêtés à la main).
+
+### Règle retenue
+Une réparation automatique ne relance qu'un `pio` raté, jamais un envoi, avec une liste fermée d'actions ; brancher le diagnostic de l'IA et le prouver sur une vraie panne, pas seulement sur un faux `pio`. Remontée dans `outils_docs/guides_outils/build_web_reparations.md` (motif validé et cherché sur la fin du journal, repérage du processus, promotion d'une règle de l'IA à la main) et `outils_docs/guides_outils/build_web.md` (solidification seulement pour un env Berry).
+
+### Cases ouvertes
+- [projet] Essai réel d'une relance qui réussit après un diagnostic de l'IA, sur une vraie panne : reportée, sans plan destinataire.
+- [projet] Étendre les réparations aux échecs d'envoi OTA (HTTP, MQTT) et série (port COM tenu) : reportée, sans plan destinataire.
+- [projet] Promouvoir une règle de l'IA éprouvée dans `reparations_build.json` (bouton « Copier pour le dépôt » si une règle revient) : reportée, sans plan destinataire.
+- Points mineurs notés par la relecture et laissés : filtre `ERR_CONNECTION_REFUSED` trop large dans la sonde, test serveur du refus distant d'`ia_auto` par `traite_post`, clôture « réussie » d'une règle IA non applicable (cosmétique).

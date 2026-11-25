@@ -115,10 +115,38 @@ le firmware recompilé). Il n'apparaît pas là où l'historique est actif, le b
 déjà. Clé laissée vide (`"grafana": ""`, donc pas de bouton) sur la cave et le bureau (décidé le 2026-10-18) : le tableau `historique-cuve` n'a que
 des panneaux de cuve, leurs courbes y seraient vides.
 
+### Choix et pièges (plan `graphiques-web`, 2026-10-18 au 2026-10-20)
+
+Chaque puce porte la date de la décision ou de la mesure.
+
+- **ECharts complet à la place d'uPlot** (2026-10-18) : décision de l'utilisateur (préféré à une version réduite et au maintien
+  d'uPlot) ; uPlot est retiré. Version épinglée, empreinte SHA-256 en tête de `graphiquesFonctions.be`. Premier chargement
+  mesuré sur le P4 : 368 202 o en 1,37 s, tas interne à 203 Ko après chargement.
+- **Route Berry, pas `UfsServe`** (2026-10-18) : Berry ne peut pas poser d'en-tête de réponse, et `UFILESYS_STATIC_SERVING`
+  (`xdrv_50_filesystem.ino`) trouve le `.gz` mais l'envoie sans `Content-Encoding` ni `Cache-Control`, avec CORS ouvert pour
+  tout le serveur. La route `/graphiques?f=` envoie donc le fichier par morceaux, tel quel.
+- **Où mettre un fichier servi** (2026-10-18) : `gestionFileFolder.be::listeEtRepartitLesFichiers` déplace vers `/sd/js/`, en le relisant
+  en mode texte, tout fichier de la racine dont le nom contient `.js` quand une carte SD est présente : un `.gz` y serait
+  corrompu. Les bibliothèques vivent donc déjà sous `data/sd/js/` et `data/sd/css/` (la règle ne trie que la racine).
+- **Pas dans `controleWeb` ni `webFonctions`** (décidé le 2026-10-18) : ils sont solidifiés, chaque retouche demanderait un
+  firmware pour tous les envs, et ils sont aussi embarqués sur les ESP32 classiques, sans historique. La page vit dans
+  `graphiquesFonctions.be` (non solidifié, S3 et P4 seulement, importé par la route : aucune RAM tant que la page n'est pas
+  ouverte). Seul le bouton Grafana, commun, est dans `controleWeb`. Chargé une fois, ce module coûte ~14 Ko de heap Berry
+  (22 Ko de source) ; un enregistrement de la composition ne laisse aucune chute durable (mesure P4 du 2026-10-20, 2 x 10 POST).
+- **Séries brutes en double** (2026-10-18) : sur le P4, les séries `TasmotaSlaveModBus.*` découvertes doublonnent celles de l'esclave relayé
+  et gardent des valeurs périmées quand il se tait ; `"exclues": ["TasmotaSlaveModBus"]` dans son persist.
+- **Écartés** (décisions de l'utilisateur, 2026-10-18) : mini-courbe 24 h sur l'accueil (il se rafraîchit toutes les ~2 s et
+  doit rester léger, le bouton y mène en un clic) ; CDN de secours (les esclaves derrière le NAPT n'ont pas Internet, et un
+  secours masquerait un déploiement incomplet, que le message « HTTP 404 » signale) ; export CSV d'une vue (Grafana l'offre).
+- **Non vérifié sur carte** : la découverte générique des séries n'a été relevée en réel que sur le P4 et la cuve ; le LittleFS
+  du rideau, du S3 serveur-modbus et du S3 serveur-rly n'a pas été téléversé avec elle (écartés par l'utilisateur le 2026-10-19).
+
 ### Vérifier
 
 - `/histo?p=liste`, `/histo?p=jour`, `/histo?p=direct`, `/histo?p=mois&m=AAAA-MM` donnent le JSON brut. En `curl`, ajouter
-  `-H "Referer: http://<ip>/"` : sans lui, Tasmota coupe la connexion sans réponse (`curl: (52)`).
+  `-H "Referer: http://<ip>/"` : sans lui, Tasmota coupe la connexion sans réponse (`curl: (52)`), les routes à accès
+  privilégié (`/histo`, `/cm`, `/in`, `/cs`) exigeant un `Referer` qui désigne la carte (`SetOption128` à 0, à ne pas changer pour
+  autant). Un navigateur qui ouvre la page sur la carte l'envoie : la page n'est pas concernée.
 - Banc hors carte : `python outils_docs/scripts_python/berry/banc_graphiques.py` (code de sortie 0 = vert ;
   inclut `banc_historique.be` : découverte des séries, compteurs, redécouverte horaire).
 - Séries retenues par une carte : log `HISTORIQUE: Series enregistrees : [...]` (puis `Nouvelles series`),

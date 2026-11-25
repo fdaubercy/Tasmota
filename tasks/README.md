@@ -19,7 +19,7 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif | Avancement | Attend | Mis à jour |
 |---|---|---|---|---|
-| [binomes-berry](plans/binomes-berry.md) | Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et se… | 84 % (67/76) | 4 à vous, 1 sur carte | 2026-11-24 |
+| [binomes-berry](plans/binomes-berry.md) | Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et se… | 87 % (69/76) | 4 à vous, 1 sur carte | 2026-11-24 |
 | [cartes-simulees](plans/cartes-simulees.md) | Simuler n'importe quelle carte du parc hors ligne (pages réelles, routes Berry réelles, valeurs rejouées ou d… | 75 % (18/24) | 2 sur carte | 2026-11-14 |
 
 ### cave
@@ -72,11 +72,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 ### Plans clos
 
-- build (18) : [page-build-televersement](plans/page-build-televersement.md), [sauvegarde-config-cartes](plans/sauvegarde-config-cartes.md), [compilations-nuit](plans/compilations-nuit.md), [build-fin-partitions](plans/build-fin-partitions.md), [build-reparations](plans/build-reparations.md), [classement-par-lieu](plans/classement-par-lieu.md), [lieu-partage-syslog-mqtt](plans/lieu-partage-syslog-mqtt.md), [autoexec-bat](plans/autoexec-bat.md), [autoexec-mqtt-tapp](plans/autoexec-mqtt-tapp.md), [lib-ignore-envs](plans/lib-ignore-envs.md), [temps-compilation](plans/temps-compilation.md), [default-envs-page](plans/default-envs-page.md), [lib-ignore-cuve](plans/lib-ignore-cuve.md), [assistant-persist-modification](plans/assistant-persist-modification.md), [assistant-persist](plans/assistant-persist.md), [assistant-synchro-fork](plans/assistant-synchro-fork.md), [fichiers-berry-env](plans/fichiers-berry-env.md), [fichiers-berry-suppression](plans/fichiers-berry-suppression.md)
+- build (18) : [build-reparations](plans/build-reparations.md), [lib-ignore-cuve](plans/lib-ignore-cuve.md), [lib-ignore-envs](plans/lib-ignore-envs.md), [temps-compilation](plans/temps-compilation.md), [page-build-televersement](plans/page-build-televersement.md), [sauvegarde-config-cartes](plans/sauvegarde-config-cartes.md), [compilations-nuit](plans/compilations-nuit.md), [build-fin-partitions](plans/build-fin-partitions.md), [classement-par-lieu](plans/classement-par-lieu.md), [lieu-partage-syslog-mqtt](plans/lieu-partage-syslog-mqtt.md), [autoexec-bat](plans/autoexec-bat.md), [autoexec-mqtt-tapp](plans/autoexec-mqtt-tapp.md), [default-envs-page](plans/default-envs-page.md), [assistant-persist-modification](plans/assistant-persist-modification.md), [assistant-persist](plans/assistant-persist.md), [assistant-synchro-fork](plans/assistant-synchro-fork.md), [fichiers-berry-env](plans/fichiers-berry-env.md), [fichiers-berry-suppression](plans/fichiers-berry-suppression.md)
 - debits-energie (3) : [energie-differentiel](plans/energie-differentiel.md), [jauges-cuve](plans/jauges-cuve.md), [energie-atelier](plans/energie-atelier.md)
-- graphiques-ecrans (3) : [atelier-graphiques](plans/atelier-graphiques.md), [atelier-destinations](plans/atelier-destinations.md), [graphiques-web](plans/graphiques-web.md)
+- graphiques-ecrans (3) : [graphiques-web](plans/graphiques-web.md), [atelier-graphiques](plans/atelier-graphiques.md), [atelier-destinations](plans/atelier-destinations.md)
 - methode (8) : [navigateur-ftp-cartes](plans/navigateur-ftp-cartes.md), [navigateur-ftp-cartes-a5-reprise](plans/navigateur-ftp-cartes-a5-reprise.md), [menage-appliquer](plans/menage-appliquer.md), [menage-page](plans/menage-page.md), [sondes-en-cours](plans/sondes-en-cours.md), [audit-berry](plans/audit-berry.md), [plan-par-conversation](plans/plan-par-conversation.md), [suivi-plan](plans/suivi-plan.md)
-- modbus-reseau (5) : [ethernet-p4](plans/ethernet-p4.md), [blocage-trappe-mpu6050](plans/blocage-trappe-mpu6050.md), [inclinaison-trappe-mpu6050](plans/inclinaison-trappe-mpu6050.md), [alerte-firmware-c6](plans/alerte-firmware-c6.md), [modbus-garage](plans/modbus-garage.md)
+- modbus-reseau (5) : [blocage-trappe-mpu6050](plans/blocage-trappe-mpu6050.md), [inclinaison-trappe-mpu6050](plans/inclinaison-trappe-mpu6050.md), [ethernet-p4](plans/ethernet-p4.md), [alerte-firmware-c6](plans/alerte-firmware-c6.md), [modbus-garage](plans/modbus-garage.md)
 - voie-mqtt (1) : [voie-mqtt-bloc1](plans/voie-mqtt-bloc1.md)
 
 <!-- fin-index-plans -->

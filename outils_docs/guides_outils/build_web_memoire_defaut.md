@@ -32,8 +32,17 @@ lieu, bases en dernier) en choisit un autre sans toucher aux cases.
 - **4 ou 6 partitions** : acceptées, le FS restant dernier et un safeboot restant en 0x10000. Sans safeboot, l'env reçoit
   `board_upload.arduino.flash_extra_images =` (vide) et l'OTA du firmware est refusée. Avec un FS, le « Téléverser le
   firmware » par câble est refusé, seul « Effacer puis téléverser » passe : `post_esp32.py::patch_partitions_bin` suppose
-  5 partitions. ⚠️ La page ne contrôle pas un `pio run -t upload` lancé hors d'elle ; une telle table n'a pas encore été
+  5 partitions (relu le 2026-11-01, plan `temps-compilation` ; taille du FS aux octets 0x89-0x8B, empreinte MD5 en 0xA0 : avec 4 ou 6 partitions il corromprait la
+  table), et `partition_core.be::resize_fs_to_max` et `::invalidate_spiffs` supposent le FS en dernière position.
+  `post_esp32.py::esp32_detect_flashsize` ne teste la flash que pour la cible `upload` exacte, jamais pour `erase_upload` :
+  plutôt qu'un contrôle de la flash détectée, `build_partitions.py::motifs_envoi` refuse l'`upload` par câble de ces tables.
+  ⚠️ La page ne contrôle pas un `pio run -t upload` lancé hors d'elle ; une telle table n'a pas encore été
   essayée sur une carte.
+- **Essayer une table sans carte** (2026-11-01, plan `temps-compilation`) : impossible. QEMU d'Espressif (esp-develop 9.2.2, ESP32-S3 seulement, sans support
+  officiel) charge la ROM puis s'arrête sur le chargeur de démarrage de Tasmota (flash émulée M25P80, commandes 0x5A, 0x77,
+  0x7A, 0x90 inconnues) ; essai du 2026-11-01 abandonné. Le seul essai valable est celui d'une carte, par câble
+  (fait par l'utilisateur le 2026-11-01 sur une table modifiée : démarrage, FS et Berry vérifiés, OTA de nouveau permise ;
+  les tables à 4 ou 6 partitions n'ont pas été essayées).
 - **Après l'écriture** : la nouvelle table ne part qu'avec un « Effacer puis téléverser » par câble, qui remplace aussi
   le persist de la carte par celui du dépôt. D'ici là, toute OTA de l'env est refusée (une OTA n'écrit jamais la
   table). Le prochain build repart de zéro (le cenv a changé).

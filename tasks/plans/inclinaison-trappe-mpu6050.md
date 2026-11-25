@@ -4,7 +4,7 @@ titre: Capteur d'inclinaison MPU6050 pour les volets (trappe du grenier)
 objectif: Lire l'angle réel de la trappe du grenier par un MPU6050 pour recaler la position du volet
 statut: clos
 cree: 2026-10-28
-maj: 2026-10-28
+maj: 2026-11-25
 source: tranquil-sleeping-taco.md
 famille: modbus-reseau
 parent: blocage-trappe-mpu6050
@@ -104,3 +104,23 @@ Bloc persist ajouté sous `capteursPosition` :
 De bout en bout sur PC : `banc_inclinaison.py` (capteur simulé, témoins), solidification + compilation du `.h`
 des deux modules, bancs de démarrage inchangés. Sur carte : rien ne change tant que `inclinaison.activation`
 vaut OFF ; l'essai réel est hors de ce plan (améliorations restantes).
+
+## Bilan
+
+Clos le 2026-10-28 ; bilan écrit le 2026-11-25 d'après le plan seul.
+
+### Ce qui a marché
+- Lecture de l'angle en Berry par `wire`, sans recompilation ni pilote `USE_MPU6050` ; garde d'activation (ni bus ni minuterie sans `activation: "ON"`) ; livré désactivé dans les 7 persists et le modèle ; apprentissage des butées ; ligne sur la page d'accueil.
+- Banc d'abord, rouge avant le code (`banc_inclinaison.py`, mutants détectés), `banc_boot.py` et `banc_demarrage.py` verts, `.h` solidifiés compilés ; `relecteur-berry` : vecteur nul au réveil (faux « fermé ») corrigé, apprentissage refusé en course.
+
+### Ce qui a raté
+- Aucun essai réel sur la trappe du grenier.
+- `banc_demarrage` rouge au premier passage (`'vrFonctions' undeclared` dans `web_sensor`, corrigé par `import vrFonctions`) ; fichiers recopiés par `cp`, donc hook `verifie_berry_edition` non déclenché et lancé à la main.
+
+### Règle retenue
+Lire le capteur en Berry par `wire` plutôt qu'avec le pilote C (une seule lecture par TelePeriod, capteur disputé), et ne rien lire tant que l'activation n'est pas `ON`. Remontée dans `outils_docs/reference_berry/INCLINAISON_MPU6050.md` ; la suite est dans le plan `blocage-trappe-mpu6050`.
+
+### Cases ouvertes
+- [projet] Essai réel sur la trappe du grenier (SDA/SCL, câble court, calibrage, activation dans le persist du grenier) : reportée, sans plan destinataire (même case dans `blocage-trappe-mpu6050`).
+- [projet] Détection de blocage : réalisée par le plan `blocage-trappe-mpu6050` (case laissée ouverte ici, non cochée pour fermer le plan).
+- [conversation] Commit sur demande : fait, commit 9676bd2e4 cité par le plan `blocage-trappe-mpu6050` (case laissée ouverte ici).

@@ -3,7 +3,7 @@ chantier: temps-compilation
 titre: Réduire le temps des compilations et éviter les recompilations complètes
 statut: clos
 cree: 2026-11-01
-maj: 2026-11-02
+maj: 2026-11-25
 source: breezy-mapping-backus.md
 objectif: Ne plus recompiler tasmota.ino.cpp ni purger .pio/build sans raison, mesurer avant de séparer les dossiers de build par env, puis montrer l'occupation mémoire et régler les partitions depuis la page build
 famille: build
@@ -192,3 +192,27 @@ Annulées par l'utilisateur le 01/11 : réutiliser le résultat du LDF, sortir l
 - A3 : journal d'un `nobuild upload` sans les 11-24 s du contrôle.
 - A4/A5 : `-Verifier` et `--dry-run` en lecture seule, puis exécution par l'utilisateur.
 - Aucun `pio run` lancé par Claude pendant un build de l'utilisateur.
+
+## Bilan
+
+Clos le 2026-11-02 ; bilan écrit le 2026-11-25 d'après le plan seul.
+
+### Ce qui a marché
+- `CFG_HOLDER` n'est plus incrémenté que si `user_config_override.h` a changé (`build/cfg_holder.py`), puis par carte : cuve à 51 min avant, 23 min 24 s sans changement (1 fichier compilé, 771 repris du cache).
+- `tasmota.ino.cpp` stable (`build/ino_stable.py`, 771 s → 355 s), réglages SCons du pré-script (parcours de ~230 s → ~20 s), contrôle `lib_ignore` sauté sans compilation, script d'exclusions Defender, purge du cache objet (17 391 Mo, 5 383 Mo libérables).
+- Mesure avant décision : la purge de `.pio/build` au changement d'env ne coûte rien de mesurable, donc pas de dossier de build par env.
+- Onglet « Mémoire et partitions » (A7 à A10) avec OTA bloquée après changement de table ; essai réel par câble fait par l'utilisateur le 2026-11-01.
+
+### Ce qui a raté
+- Le « 655 s pour 1 fichier » du 31/10 venait d'un build échoué : chiffre faux.
+- La première « preuve » de la jointure du FS (07:43) ne valait pas : `AlwaysBuild` visait un chemin relatif sans effet, l'elf y était refait.
+- `ino_stable.py` a rendu `firmware.elf` reprenable, donc sans `firmware.map` : échec de `firmware.bin` sans message sur la cuve.
+- `nobuild upload` n'avait pas de règle pour `firmware.bin` : carte envoyée sans FS (FS vide après `erase_upload`).
+- Lien LTO : `make` n'a donné aucun gain et la cause du `lto1` unique n'a pas été trouvée. QEMU : essai abandonné.
+
+### Règle retenue
+Mesurer avant de décider (un chiffre tiré d'un build échoué ne compte pas), et ne pas annoncer un gain sans journal d'un build réussi. Remontée dans les références : `outils_docs/environnement/VIGILANCES_BUILD.md` (section « Temps de compilation : mesures et decisions »), `outils_docs/guides_outils/build_web_compilation.md`, `build_web_memoire_defaut.md`, `outils_docs/environnement/NOUVEAU_POSTE.md`.
+
+### Cases ouvertes
+- [projet] VS Code lui-même prend ~1,1 cœur pendant un build : reportée, sans plan destinataire (à mesurer).
+- Annulées par l'utilisateur le 2026-11-01 : réutiliser le résultat du LDF, sortir le port COM du cenv (abandonnées).

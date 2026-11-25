@@ -4,7 +4,7 @@ titre: Détection de blocage d'un volet par son inclinaison (MPU6050)
 objectif: Arrêter un volet et loguer une erreur quand son inclinaison ne bouge plus pendant la course (trappe bloquée)
 statut: clos
 cree: 2026-10-28
-maj: 2026-10-29
+maj: 2026-11-25
 famille: modbus-reseau
 liens: inclinaison-trappe-mpu6050
 ---
@@ -89,3 +89,24 @@ JAMAIS pendant une course. Appliquée à l'arrêt seulement (fin de course, surv
 - [ ] [projet] Accessoire — température interne du MPU6050 (registre `0x41`) comme capteur du grenier
 - Écartés : relance automatique après un blocage (danger si quelque chose coince la trappe) ; apprentissage qui commande le moteur (refusé le 2026-10-28).
 - [x] [conversation] Commit sur demande de l'utilisateur — preuve : commit 2a7a35884, poussé sur development
+
+## Bilan
+
+Clos le 2026-10-29 ; bilan écrit le 2026-11-25 d'après le plan seul.
+
+### Ce qui a marché
+- Détection de blocage, arrêt en butée, blocage visible (ligne web, MQTT retenu), filtre passe-bas, sens inverse, durées de course, surveillance à l'arrêt, position réelle : chaque fonction écrite après un banc rouge (`banc_inclinaison.be`, sections 10 à 16, 9 mutants en échec), puis banc, `banc_boot.py` et `banc_demarrage.py` verts, `.h` solidifiés compilés.
+- `relecteur-berry` : aucun bloquant, points corrigés avec un test rouge puis vert. Commits 2a7a35884, 945c016af et dae984ee7, poussés sur `development`.
+
+### Ce qui a raté
+- Défauts trouvés par `relecteur-berry` avant commit (A7) : `Direction 0` synchrone qui donnait deux recalages, et butée non désignée qui déclenchait une alerte.
+- Quatre autres points corrigés en A12 : commandes différées après un arrêt, cache de position, position en surveillance après un mouvement, période doublée quand le capteur est muet.
+
+### Règle retenue
+Lire `xdrv_27_esp32_shutter.ino` avant de commander un volet depuis Berry : `ShutterSetPosition` remet la direction à 0 sans couper le moteur (jamais en course), `ShutterStop` précède le recalage, et une commande envoyée dans le délai d'arrêt moteur boucle sur `loop()` (la différer). Remontée dans `outils_docs/reference_berry/INCLINAISON_MPU6050.md` (détection de blocage, arrêt en butée, position réelle, absence de relance automatique, croisement voulu de `ShutterInvert`).
+
+### Cases ouvertes
+- [projet] Essai réel sur la trappe du grenier : reportée, sans plan destinataire (même case dans `inclinaison-trappe-mpu6050`).
+- [projet] Angle dans le JSON SENSOR (Grafana, historique ; vérifier que `historiqueSeries` n'exclut pas les volets) : reportée, sans plan destinataire.
+- [projet] Température interne du MPU6050 (registre `0x41`) comme capteur du grenier : reportée, sans plan destinataire.
+- Écartés : relance automatique après un blocage (danger si quelque chose coince la trappe) ; apprentissage qui commande le moteur (refusé le 2026-10-28).

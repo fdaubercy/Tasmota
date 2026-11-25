@@ -116,3 +116,7 @@ malgre l'exclusion, puis 0 sur 10 une fois `exclusionPolicy` pose.
 existe en amont — toute modification entrerait en conflit a chaque synchronisation du fork.
 
 Prise en compte a chaud, sans redemarrer VS Code.
+
+**Autres exclusions de l'indexeur** (mesure du 2026-11-01, plan `temps-compilation`) : `cpptools` occupait ~0,5 coeur pendant
+un build. Ajouter `**/.pio`, `**/.cache` et `${workspaceFolder}/lib` a `C_Cpp.files.exclude`, et `.pio`, `.cache` a
+`files.watcherExclude`, dans le meme profil actif : 0,0 coeur ensuite (15 min relevees avant, 71 s apres, une seule fenetre).
