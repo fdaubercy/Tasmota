@@ -514,3 +514,19 @@ gardes ; entree ecrite a la main, pas par le script.
 - ● `4d293ddaf` Add ESP32-S31 to build devel CI
 - ● `dca9c17fd` add ESP32-S31 in family list
 -   `81ff76526` Add s31 targets and update pioarduino installation
+
+## 2026-11-26 05:33 — 9 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+**3 commit(s) ● a lire de pres.**
+
+- ● `e9bafc2db` Fix SML memory leak on ESP32 when serial mode is changed with sml(-1 ...) (#25327)
+-   `a86fd9d13` TLS: handshake timeout configurable (#25309)
+- ● `016be6317` Matter bridge remote Relay + Power always reporting OFF (#25328)
+-   `6d1a2e430` compile NimBLE lib only when needed (#25330)
+- ● `28f00e004` Fix don't send Berry console content when redirecting (#25333)
+-   `2299da31e` Add GPIO pin definitions for new camera models
+-   `0078ac6c2` Fix typo in program version string in Vietnamese (#25336)
+-   `b711f2e6c` changes for IDF 6.2 compat (#25337)
+-   `770e76ab8` WebUI incomplete or corrupt HTTP responses after a short TCP write (#25335)
