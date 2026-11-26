@@ -2,7 +2,7 @@
 chantier: binomes-berry
 titre: Binômes Berry autonomes, manifeste unique et persist allégé
 objectif: Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et ses paramètres
-statut: actif
+statut: clos
 cree: 2026-11-23
 maj: 2026-11-26
 famille: build
@@ -197,3 +197,29 @@ l'assistant. LoRaWan, ES8311 et coprocesseur existent déjà (`lorawan`, `i2s`, 
 
 ## Vérification
 Mesures relancées par `mesure_binomes.py --verifier` ; RAM réelle par `tasmota.gc()` sur une carte à PSRAM (32 bits, même disposition).
+
+## Bilan
+Clos le 2026-11-26, 22 sections, toutes les cases cochées avec preuve.
+
+**Ce qui a marché**
+- Chaque binôme porte son bloc TAILLE généré (`mesure_binomes.py --verifier`) ; un seul manifeste (`blocs` de `modele_persist.json`) lu par les pages 7900, 7800 et la carte des modules.
+- Persist allégé des blocs morts, paliers 1 et 2 déployés sur les 5 ESP32 : LED −3,6 Ko, barbecue −3,5, bureau −4,5, cave −12,7 ; portail flashé.
+- Le binôme déclare ce qu'il apporte au cadre : sa cible de log (`logFonctions.declare`, A4), sa voie de relais (`controleGeneral.declareVoie`, A22), essayée sur le P4 par les deux voies.
+- Budget de RAM Berry par puce (A21) : avertissement sur 7900 et 7800, aucun dépassement dans le parc.
+- Rangement de la documentation (A9 à A20) : `INDEX.md` aiguille, CLAUDE.md allégé, un guide par outil, garde mécanique des secrets à la lecture (A16).
+
+**Ce qui a raté**
+- `serveur.udp` du bureau réduit alors qu'il était ON sur la carte (leçon du 2026-11-25).
+- Le bug d'affichage « 29 927 793 min » de la pompe de la cave a été vu par l'utilisateur, pas par mes contrôles d'après déploiement (leçon du 2026-11-26).
+- Un premier push a été refusé par l'utilisateur : il embarquait `user_config_override.h` et les defines sans son accord.
+- Écarts au plan : l'ESP8266 n'a pas de clé `budget` (pas de Berry, la clé cassait un banc) ; les budgets S3, P4 et ESP32 avec PSRAM et le facteur 1,4 du persist restent des estimations.
+
+**Règle retenue** (dans `tasks/lessons.md`, 2026-11-25 et 2026-11-26)
+- Relire la carte réelle avant de retirer un bloc de son persist.
+- Après un persist neuf, relire aussi les pages métier ; toute durée calculée depuis un horodatage exige une heure valide (> START_VALID_TIME).
+
+**Cases ouvertes** : aucune. Suites sans plan destinataire :
+- confirmer par mesure `tasmota.gc()` les budgets S3, P4 et ESP32 avec PSRAM ;
+- vérifier sur la cave S3 et le grenier les relais `I2C_TCA9554`, qui ne lèvent plus `key_error` depuis A22 ;
+- persist du portail : `modbusUdp` coché sans `modbus` ;
+- `banc_test_modbus.be` (2 383 lignes) et `banc_mqtt_liaison.be` (520) dépassent 500 lignes sans exception écrite.

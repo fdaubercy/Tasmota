@@ -1275,7 +1275,7 @@
    "nom": "binomes-berry",
    "titre": "Binômes Berry autonomes, manifeste unique et persist allégé",
    "objectif": "Créer un env ou un persist sans oubli, chaque binôme driver plus module portant sa taille, ses fichiers et ses paramètres",
-   "statut": "actif",
+   "statut": "clos",
    "famille": "build",
    "parent": "",
    "liens": [
