@@ -283,7 +283,7 @@ function dessine() {
     remplitColonne(col, cols[c]);                  // regroupe par bloc du manifeste (fichiers_berry_blocs.JS)
     $("n-" + c).textContent = "(" + cols[c].length + ")";
   });
-  var av = vide($("avertissements"));
+  var av = vide($("avertissements")); avertitBudget(av);   // fichiers_berry_blocs.JS
   if (etat.copies_temporaires.length)
     av.appendChild(h("div", {"class": "avert", texte: "Copies temporaires d'un build dans le dossier de la carte (identiques à data/fs, ignorées) : " + etat.copies_temporaires.join(", ")}));
   if (!etat.exclude_solidified)

@@ -144,6 +144,16 @@ def sonde_blocs(m):
             (0, None, avec), "TEMOIN : sans groupes, aucun en-tete, les memes lignes (le controle regroupe voit la difference)")
     cdp.js("etat.groupes = window.__g; dessine(); 1")
     verifie(ok(entete("data/fs/vrFonctions.be")), True, "colonnes : groupes remis, en-tetes revenus")
+    # budget de RAM Berry (budget_ram_berry.pour_carte) : le rideau S3 tient, ligne rouge seulement au-dela
+    budget = "(function(){var e=document.getElementById('budget-ram'); return e ? [e.textContent, !!e.querySelector('b')] : null;})()"
+    verifie((cdp.js("!!etat.budget && etat.budget.depasse === false && etat.budget.budget > 0"), cdp.js(budget)), (True, None),
+            "budget RAM : le rideau sous le budget de sa puce, aucune ligne")
+    message = "RAM Berry : <b>essai</b> au-dela du budget"
+    cdp.js("window.__b = etat.budget; etat.budget = {depasse: true, message: " + json.dumps(message) + "}; dessine(); 1")
+    verifie(cdp.js(budget), [message, False], "budget RAM : depasse -> ligne rouge, message en texte (pas de HTML injecte)")
+    cdp.js("etat.budget.depasse = false; dessine(); 1")                              # TEMOIN : sous le budget, plus de ligne
+    verifie(cdp.js(budget), None, "TEMOIN : budget non depasse, la ligne disparait (le controle voit la difference)")
+    cdp.js("etat.budget = window.__b; dessine(); 1")
 
 
 def sonde_page(m):

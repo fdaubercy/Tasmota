@@ -43,7 +43,7 @@ banc ou piège principal). Jamais un paragraphe dans `CLAUDE.md`. Contrôle : `r
 | Fichiers `.drvset*` | `outils_docs/reference_berry/FICHIERS_DRVSET.md` | contenu, sauvegarde, effacement |
 | Extensions `.tapp` | `outils_docs/reference_berry/EXTENSIONS_TAPP.md` | format, cycle de vie, pièges §7 ; jamais essayé sur carte |
 | Écrire du Berry | skill `tasmota-berry` | modèle `controleXxx` + `xxxFonctions`, RAM |
-| Coût d'un binôme (driver + module) | bloc `TAILLE DU BINOME` en tête du driver ; `outils_docs/scripts_python/berry/mesure_binomes.py` | .be, .bec et solidifié ; mis à jour avant commit (`--verifier`) |
+| Coût d'un binôme (driver + module) | bloc `TAILLE DU BINOME` en tête du driver ; `outils_docs/scripts_python/berry/mesure_binomes.py` | .be, .bec et solidifié ; mis à jour avant commit (`--verifier`) ; budget de RAM Berry par puce : `puces.<puce>.budget` de `modele_persist.json`, `outils_pc/budget_ram_berry.py` (avertissement des pages 7900 et 7800) |
 
 ## 3. Outils de l'annuaire (http://127.0.0.1:7600), par groupe
 

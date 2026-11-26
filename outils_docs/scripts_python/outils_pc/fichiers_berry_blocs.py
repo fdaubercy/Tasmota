@@ -60,6 +60,11 @@ function coutBloc(c) {
   if (!c) return "coût non mesuré";
   return (c.solidifie ? ko(c.solidifie) + " Ko solidifié" : "non solidifiable") + ", " + ko(c.bec) + " Ko en .bec";
 }
+// Budget de RAM Berry de la puce (budget_ram_berry.pour_carte, champ budget de GET /etat) : ligne rouge s'il est depasse.
+function avertitBudget(av) {
+  var b = etat.budget;
+  if (b && b.depasse) av.appendChild(h("div", {"class": "avert rouge", id: "budget-ram", texte: b.message}));
+}
 function remplitColonne(col, entrees) {
   var groupes = etat.groupes || [];
   if (!groupes.length) { entrees.forEach(function (e) { col.appendChild(e.el); }); return; }

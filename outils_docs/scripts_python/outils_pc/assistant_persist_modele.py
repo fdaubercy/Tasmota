@@ -16,7 +16,8 @@ FORME DU MODELE (contrat partage par les actions A1 a A6)
                   longueur puces.<p>.gpio. Secrets : "@secret:wifi1", "@secret:wifi2", "@secret:mqtt", "@secret:ap",
                   "@secret:ftp" (valeur reprise cote serveur, jamais dans le modele).
   roles           {"autonome"|"maitre"|"esclave": {"<chemin.pointe>": valeur}}.
-  puces           {"ESP32"|"ESP32S3"|"ESP32P4": {gpio, historique, prefixe_env, h, ajouts}} ; h = lignes du gabarit
+  puces           {"ESP32"|"ESP32S3"|"ESP32P4": {budget, gpio, historique, prefixe_env, h, ajouts}} ; budget = RAM Berry
+                  {ram_berry_ko, a_confirmer, source} lue par budget_ram_berry.py seulement (plan A21) ; h = lignes du gabarit
                   de la section `#elif` du .h (variables {{env}}, {{define}} et celles du socle ; mots de passe
                   {{@wifi1}}, {{@wifi2}}, {{@ap}}) ; ajouts = {"<chemin.pointe>": valeur}.
   blocs           liste ordonnee (ordre des questions) de {id, libelle, aide, puces, dependances, actif, inactif,

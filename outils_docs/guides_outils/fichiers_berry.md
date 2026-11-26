@@ -68,6 +68,8 @@ carte) : on ne l'en retire que par `custom_files_exclude`, ou par `custom_berry_
    libellé). Deux blocs qui portent les mêmes fichiers forment un seul groupe (« ruban, ledRGB »), et tout fichier hors manifeste
    (socle, fichiers de la carte, modules de l'amont) est sous « Sans bloc ». Lecture seule : les lignes et leurs boutons sont
    inchangés, et si le manifeste est illisible la colonne redevient une liste à plat. Code : `fichiers_berry_blocs.py`.
+   Une carte qui dépasse le **budget de RAM Berry de sa puce** (`puces.<puce>.budget` du manifeste) reçoit une ligne rouge
+   « RAM Berry : env estimé à … » en tête des avertissements ; calcul partagé avec l'assistant persist : `budget_ram_berry.py`.
 3. « Voir le diff » puis « Enregistrer » : sauvegarde horodatée avant d'écrire (voir « Sauvegardes » plus bas),
    fins de ligne et encodage gardés, **refus pendant un build** et si le fichier a changé depuis le diff.
 

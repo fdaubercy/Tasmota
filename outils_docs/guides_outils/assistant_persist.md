@@ -35,6 +35,9 @@ Port **7900**. Depuis un autre appareil : lien à jeton affiché dans la console
    fonction, une ligne grise rappelle, **en lecture seule**, son coût en Ko (lu dans les blocs `TAILLE DU BINOME`, solidifié
    et `.bec`), ses `#define` et ses `lib_ignore` (bibliothèques ignorées quand le bloc est absent) ; rien de cela n'est
    écrit ni généré, la sortie de l'assistant ne change pas. Une fonction sans bloc de taille n'affiche que ce qu'elle a.
+   Si l'env dépasse le **budget de RAM Berry de sa puce** (`puces.<puce>.budget` du manifeste : 21 Ko sur un ESP32 sans
+   PSRAM), l'aperçu, le diff de création et celui de modification portent un avertissement « RAM Berry : env estimé à … »
+   (`.bec` des fichiers non solidifiés + 1,4 × le persist compact ; calcul `outils_pc/budget_ram_berry.py`, partagé avec la page 7800).
 2. **Entrées et sorties du bloc métier** : un éditeur par groupe (boutons, interrupteurs, relais, capteurs, compteurs,
    thermomètres, analogiques, `pinsTechniques`, `debitmetres`). Les broches proposées sont celles de la puce d'après `data/fs/configGlobal.be`.
    `pinsTechniques` porte les broches du gabarit qui ne sont ni relais ni capteurs (UART de la BL0942 et 2e bobine du

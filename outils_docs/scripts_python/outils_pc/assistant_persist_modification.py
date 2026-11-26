@@ -12,7 +12,8 @@ Partie 2 : preparer puis ecrire la modification (spec §10.2) en appliquant au V
 (A = reponses relues, B = reponses de la page), jamais une regeneration.
   prepare_modification(racine, env, r) -> {env, dossier, diff (masque), empreinte, avertissements, refus, vide,
                                    chemins}. Rien n'est ecrit. `chemins` = chemins JSON de l'ecart du persist (jamais
-                                   une valeur). Ecart vide -> aucun controle, `vide` vrai, aucun refus.
+                                   une valeur). Ecart vide -> aucun controle, `vide` vrai, aucun refus ; seul le
+                                   budget de RAM Berry de la puce depasse (budget_ram_berry.py) est alors averti.
   modifie(racine, env, r, empreinte_lue, builds_en_cours) -> {modifie, env, diff, sauvegarde, avertissements}.
                                    RuntimeError (409) : build en cours ou inconnu, refus, empreinte perimee ;
                                    ValueError (400) : ecart vide. Une Transaction : tout ou rien.
@@ -36,6 +37,7 @@ import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
 import assistant_persist_texte as texte
+import budget_ram_berry as bud
 import lieux
 import fichiers_berry_coprocesseur as fbcp
 import fichiers_berry_creation as fbc
@@ -239,6 +241,7 @@ def _calcule_brut(racine, env, r, secrets):
                                                           (rel["h"], fbc._eol(t_h))) if apres[f] != avant[f]}
     if n_p != t_p:                                            # le persist garde ses octets : seul l'ecart est ecrit
         ecritures[rel["persist"]] = n_p.encode("utf-8", errors="surrogateescape")
+    res["avertissements"] += [a for a in [bud.avertissement(racine, modele, b, n_p, env)] if a]    # meme sans changement
     res["vide"] = not ecritures and not squelettes and not refus
     if res["vide"]:
         return res                                            # rien ne change : rien a controler, rien a ecrire

@@ -23,7 +23,8 @@ Routes (les POST exigent l'en-tete X-Assistant-Persist: 1 et la meme origine ; J
     GET  /modele/etat   {ajouts, disparues, divergentes, a_completer, erreur} : bandeau du modele (A6) ; ajouts = cles
                         fusionnees d'office au demarrage, erreur = modele illisible (rien n'est alors fusionne ni ecrit)
     GET  /interrompues  operations arretees en plein vol (marque restee dans leur sauvegarde)
-    POST /apercu        {reponses} -> {persist, autoexec, refus, avertissements} (sans mot de passe, sans ecriture)
+    POST /apercu        {reponses} -> {persist, autoexec, refus, avertissements} (sans mot de passe, sans ecriture) ;
+                        avertissements : aussi le budget de RAM Berry de la puce depasse (budget_ram_berry.py)
     POST /prepare       {reponses} -> assistant_persist_creation.prepare : diff, empreinte (vide si refus precoce), refus
     POST /creation      {reponses, empreinte} -> assistant_persist_creation.cree ; 409 si build, empreinte perimee, refus
     POST /modele/prepare {} -> {diff, empreinte, retraits, alignements} : retraits et alignements proposes, rien d'ecrit
@@ -63,6 +64,7 @@ import lieux
 import assistant_persist_parc as parc
 import assistant_persist_autoexec as apx
 import assistant_persist_relue as apr
+import budget_ram_berry as bud
 from annuaire_outils import hote_autorise
 import fichiers_berry_creation as fbc
 import fichiers_berry_etat as fbe
@@ -260,6 +262,7 @@ def apercu(racine, r):
         texte_auto, listes = gen.autoexec(modele, r), gen.listes_cenv(modele, r)
         res["refus"] = gen.coherence(modele, r, obj, texte_auto, listes, racine)
         res["persist"], res["autoexec"] = gen.texte_persist(obj, "\n"), texte_auto
+        res["avertissements"] += [a for a in [bud.avertissement(racine, modele, r, obj, v["env"])] if a]
     except (ValueError, KeyError) as exc:
         res["refus"].append(str(exc.args[0]) if isinstance(exc, KeyError) else str(exc))
         return res

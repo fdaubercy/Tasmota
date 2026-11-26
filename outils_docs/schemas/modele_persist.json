@@ -694,6 +694,16 @@
 	},
 	"puces": {
 		"ESP32": {
+			"budget": {
+				"ram_berry_ko": 21,
+				"a_confirmer": false,
+				"source": "ESP32 sans PSRAM. Budget net = code Berry non solidifie (.bec) + 1,4 x persist compact (outils_pc/budget_ram_berry.py), a comparer a 21 Ko. Plafond de tasmota.gc() 50 Ko : plus haut releve stable (cave ESP32 50 899 o avant allegement) ; saturation (MEMORY ALLOCATION FAILED) vers 57 Ko sur le projecteur barbecue avec la decouverte (21/11/2026) ; la cave plantait avec un tas libre de 18 a 29 Ko, le FTP sous 25 Ko. Facteur 1,4 : allegement de la cave, meme code, gc() 50 899 -> 38 204 o pour un persist compact de 15 786 -> 6 838 o (26/11/2026). Socle 29 Ko = gc() - 1,4 x persist compact, le plus haut des cartes en service (cave, avant comme apres allegement ; tas libre 55 a 61 Ko apres) ; LED 28 003 o, barbecue 28 016, bureau 26 923, portail 24 161 donnent 18 a 23 Ko (plan binomes-berry A5, 25-26/11/2026). 50 - 29 = 21 Ko.",
+				"avec_psram": {
+					"ram_berry_ko": 512,
+					"a_confirmer": true,
+					"source": "Estimation, a confirmer par mesure : Berry vit en PSRAM (4 Mo sur un ESP32 WROVER). Aucune carte de ce type au parc (toutes derivent de tasmota32-base, sans PSRAM) : non applique par les outils."
+				}
+			},
 			"gpio": 36,
 			"historique": false,
 			"prefixe_env": "tasmota32",
@@ -856,6 +866,11 @@
 			}
 		},
 		"ESP32S3": {
+			"budget": {
+				"ram_berry_ko": 1024,
+				"a_confirmer": true,
+				"source": "Estimation, a confirmer par mesure : le S3 (N16R8) a 8 Mo de PSRAM, ou vit Berry ; 1 Mo retenu par prudence (ecrans LVGL et tampons partagent la PSRAM). Aucun plafond mesure."
+			},
 			"gpio": 38,
 			"historique": true,
 			"prefixe_env": "tasmota32s3",
@@ -1005,6 +1020,11 @@
 			}
 		},
 		"ESP32P4": {
+			"budget": {
+				"ram_berry_ko": 1024,
+				"a_confirmer": true,
+				"source": "Estimation, a confirmer par mesure : le P4 a 8 Mo de PSRAM, ou vit Berry ; 1 Mo retenu par prudence (ecrans LVGL et tampons partagent la PSRAM). Mesure : un persist de 22 172 o de texte occupe 21 840 o (cles partagees) a 51 621 o (cles uniques) de RAM Berry (P4, 23/11/2026, plan binomes-berry A1)."
+			},
 			"gpio": 55,
 			"historique": true,
 			"prefixe_env": "tasmota32p4",

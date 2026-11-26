@@ -11,6 +11,7 @@ carte modele :
   prepare(racine, r)  -> {env, dossier, define, diff, empreinte, avertissements, refus, apercu: {persist, autoexec}}
                          Rien n'est ecrit. Les mots de passe ne sortent JAMAIS : le diff, l'apercu, les refus sont
                          construits avec "***" (les vraies valeurs ne servent qu'a l'ecriture dans cree()).
+                         avertissements : aussi le budget de RAM Berry de la puce depasse (budget_ram_berry.py).
   cree(racine, r, empreinte_lue, builds_en_cours) -> {cree, env, dossier, diff, avertissements, sauvegarde, resume,
                          liens}. RuntimeError (-> 409) : build en cours ou indetectable, saisie ou fichiers changes
                          depuis le diff (empreinte), refus. Une seule Transaction : une ecriture qui echoue defait
@@ -32,6 +33,7 @@ import assistant_persist_elements as ape
 import assistant_persist_generation as gen
 import assistant_persist_modele as apm
 import assistant_persist_parc as parc
+import budget_ram_berry as bud
 import fichiers_berry_coprocesseur as fbcp
 import fichiers_berry_creation as fbc
 import fichiers_berry_etat as fbe
@@ -219,6 +221,7 @@ def _calcule_brut(racine, r):
         refus.append("persist genere refuse par le schema : " + ", ".join(erreurs[:12]))
     if refus:
         return res
+    res["avertissements"] += [a for a in [bud.avertissement(racine, modele, r, masque, env)] if a]
     p4 = fbcp.est_p4(v["base"])
     copie = fbcp.adapte_cenv(_section_cenv(modele, v, listes), p4, res["avertissements"])
     cenv = fbc._insere_cenv(ini, l_cenv, r.lieu, copie)
