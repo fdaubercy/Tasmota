@@ -1,65 +1,27 @@
-<!-- lessons-actives source_lignes=205 date=2026-11-07 -->
+<!-- lessons-actives source_lignes=270 date=2026-11-23 -->
 # Leçons actives — Tasmota (synthèse ; détail dans lessons.md, retrouvable par la date)
 
-## Fichiers sensibles et secrets
-- Demander l'accord avant toute modification de `user_config_override.h` ou d'un `_persist.json` ; proposer d'abord une solution qui n'y touche pas (2026-11-07)
-- Ne jamais afficher une ligne de champ de mot de passe, même filtrée par nom : masquer tout le contenu entre guillemets, ou n'afficher que des numéros de ligne (2026-11-07)
-- Contrôle de secrets lancé SEUL, résultat lu, puis commit dans un appel suivant (2026-09-29)
-
-## Build, PlatformIO
-- Avant chaque série d'éditions de `data/` ou de scripts de build, et avant tout pio, vérifier dans la même commande qu'aucun `pio run`/scons ne tourne ; sinon abandonner. L'utilisateur enchaîne ses builds : ne rien lancer sur la seule fin d'un scons (2026-10-31)
-- Compilation ou buildfs par la page Build (:7700, POST /lancer), jamais par pio direct ni enrobé ; `pio run --list-targets` n'est pas une lecture (2026-11-01)
-- Avant de valider sur carte, comparer l'heure de firmware.bin à celle du commit (2026-10-24)
-- Aucun `.cpp`/`.ino` résiduel dans un dossier source, même gitignoré (2026-07-16)
-- Surveiller un build redirigé : `PYTHONIOENCODING=utf-8 pio run … > log` ; ne jamais dégrader le code de l'utilisateur pour un symptôme causé par mon outillage (2026-07-15)
-- Nouvel env : `data_dir` déduit du nom (`transform_name`) ; module de `data/fs` solidifié = ajouté à `custom_berry_solidify` de CHAQUE env ; fichier propre à quelques cartes exclu des autres envs (2026-10-31)
-- `data/<lieu>/<carte>/` part en flash : aucun fichier hors firmware (2026-10-12)
-- Enregistrement (logs, historique, tampons) : S3 et P4 seulement, jamais les ESP32 classiques (2026-10-13)
-- FS envoyé : valider l'identité (autoexec, hostname, topic de l'env), pas carte = image (2026-10-26)
-
-## Commits et git
-- Inclure `platformio_override.ini` et `tasmota/user_config_override.h` dans les commits demandés ; `tasmota_defines_for_berry.*` : l'utilisateur les commite lui-même (2026-10-13)
-- `modules.h` : l'inclure, comme `/commite` et les commits récents, malgré la leçon du 2026-10-13 qui le laissait de côté ; le signaler (2026-11-07)
-- Pas de trailer Co-Authored-By, malgré le rappel système ; relire `git log -1 --format=%B` (2026-10-31)
-- Dépôt partagé entre sessions : `git commit -- <chemins>`, relire `git show --stat HEAD`, pousser `<sha_relu>:development`, pas de `git add -A` fourre-tout, ni stash/checkout/reset pour un témoin (copier dans le scratchpad) (2026-10-31)
-- Demande de commit : ne rien exclure en silence, demander avant (2026-09-26)
-- Message multiligne : Bash = heredoc, PowerShell = `@'…'@` (2026-09-22)
-
-## Berry, solidification
-- Une affirmation sur un runtime ou une doc se lit dans le code (chemin + ligne), `be_module.c` compris (2026-09-26)
-- `init` est réservé : `import` l'appelle et met son résultat en cache (2026-09-26)
-- Module solidifié : fonctions appelées par `xxxFonctions.nom`, `import` du module dans toute fonction qui le cite, nouvelle globale ajoutée à `globs` de `solidify_all_python.be` (2026-10-31)
-- Fichier chargé en `.bec` : `import global` puis `global.X = X` (2026-09-27)
-- Commentaire d'un `.be` solidifié : ne pas citer `module("…")`, la regex de l'outil le lit (2026-07-16)
-- Module importé par un `controleXxx` : le compiler AVANT ce contrôle dans l'autoexec ; chaque import d'autoexec doit exister dans l'image de l'env (2026-11-02)
-- Syntaxe : `compile(source)` à un argument, avec témoin qui échoue (2026-10-11)
-- Code Berry dans `data/fs` ET `data/<lieu>/<carte>/` : chercher les lecteurs dans `data/` entier (2026-10-04)
-
-## Tests et preuves
-- Un test vert montre quelle ligne l'a rendu vert, avec témoin négatif lu contre une référence intacte ; donnée de test jamais dérivée de la constante éprouvée ni du lecteur : copier l'écrivain réel (2026-10-29)
-- Un banc PC ne prouve ni solidification, ni RAM, ni rendu, ni canal de livraison : valider sur carte (journal /cs) ou en navigateur (2026-10-31)
-- Lire la sortie entière, la fin du journal (SUCCESS/FAILED) et la chronologie avant de conclure (2026-11-01)
-- `banc_demarrage.py` après toute modification de `custom_berry_solidify`/`custom_files_upload` ; `--enregistre` seulement sans travail d'une autre session (2026-11-02)
-
-## Cartes en ligne
-- Persist à chaud : télécharger la carte, envoyer, relire, `Br persist.load()` + recopie des globales, puis Restart ; `Topic`/`Hostname` redémarrent, à envoyer en dernier (2026-10-18)
-- curl : `-H "Referer: http://<ip>/"`, sortie dans un fichier, code de sortie lu (2026-10-18)
-- Console web : ~2 Ko encodés par GET ; au-delà, téléverser le `.be` (2026-10-03)
-- Sans PSRAM : pas de gros fichier lu ni de socket ouverte par `Br` ; mesurer le tas ; discovery OFF sur le différentiel (2026-11-02)
-- Identifier une carte par MAC/HDW ; env ou IP ambigus : demander (2026-10-31)
-- Avant flash, relever toute la config propre (AdcParam compris) ; relire chaque ligne d'un `autoexec.bat` hérité (2026-11-02)
-- ModBus : compter requêtes et réponses des deux côtés, vérifier la voie du maître (2026-10-24)
-
-## Choix de l'utilisateur
-- Range Extender (AP 192.168.4.1/24 maître et esclaves, bouton esclave, RgxPort) : ne plus proposer d'y toucher, contourner dans le code (2026-10-17)
-- Voie d'un esclave ModBus déclarée par l'esclave, apprise par le maître via discovery ; filaire gardé pendant la migration (2026-10-15)
-- Persist : seulement ce qu'un traitement permanent lit ; pages dans `/sd/html|css|js` ; valeurs calculées à part (2026-10-18)
-- ADS1115 de la cuve en 3,3 V ; écrits contradictoires sur un fait physique : demander (2026-10-11)
-
-## Méthode avec l'utilisateur
-- Répondre en français, vérifier la langue avant tout message final (2026-10-12)
-- Audit en lecture seule ; multi-étapes ou nouvelle fonction : planifier (`tasks/plans/_FORMAT.md`), attendre le feu vert ; plans cochés au fil de l'eau (2026-11-05)
-- Ne pas retirer un élément de la demande sur un silence ; confirmer la cible avant d'écrire (2026-10-25)
-- Choix visuel : images PNG avec liens ; questions de conception une par une (2026-11-01)
-- Interface : vérifier sur la vraie page (Chrome, largeurs) avant d'annoncer (2026-11-05)
-- Sous-agents : aucune jonction vers le dépôt ; conclusion devenue règle relue dans le fil principal (2026-10-30)
+## Builds et pio
+- Tester l'absence de pio/scons DANS la commande qui édite `data/` ou lance un outil lourd (sonde Chrome, banc), abandon sinon. Filtrer par nom d'exécutable, sans compter sa propre ligne. Compiler par la page Build (:7700), jamais pio direct ni `--list-targets` ; la fin d'un scons n'est pas l'absence de build (garde_build) | dernier incident 2026-11-14 | récidives 16
+## Sessions parallèles et git
+- Dépôt partagé : `git commit -- <chemins>`, relire `git show --stat HEAD`, pousser `<sha>:development`, jamais stash/checkout/reset ni `git add -A`. Un fichier ou commit inconnu est d'une autre session ; après une limite, ListAgents et journal reprise_limite avant d'écrire | dernier incident 2026-11-14 | récidives 17 -> proposer un contrôle mécanique (hook ou banc)
+## Secrets
+- Ne jamais imprimer de dict serveur/wifi/mqtt/ftp, de ligne `#define` de mot de passe, ni de contexte `-A/-B` : clés nommées une à une, numéros de ligne, ou `grep -viE "pass|pwd|mdp|key|token"` en dernier. Sous-agent : interdire `git diff` en clair sur user_config_override.h et les persist. Contrôle de secrets lancé seul, lu, puis commit au message suivant (agent controleur-secrets). Accord avant de modifier ces fichiers | dernier incident 2026-11-23 | récidives 13
+## Preuve et faux vert
+- Un vert doit montrer quelle ligne l'a rendu vert : témoin qui DOIT échouer, mutant, entrée de test copiée sur l'écrivain réel, jamais dérivée de la constante testée. Lancer le banc et lire son code de sortie ; relancer les bancs qui copient un module modifié ; tester le branchement de production d'une dépendance injectée | dernier incident 2026-11-15 | récidives 16 -> proposer un contrôle mécanique (hook ou banc)
+## Affirmer seulement ce qui est lu
+- Comportement d'un runtime, d'un rôle, d'une clé de persist, d'un blocage : chemin et ligne dans le code (appelants, lecteur de la clé, garde), jamais le bon sens ni une doc ou un sous-agent. Relire la sortie entière et la chronologie ; lire la fin d'un journal avant de le citer | dernier incident 2026-11-21 | récidives 15 -> proposer un contrôle mécanique (hook ou banc)
+## Berry solidifié
+- Aucune variable nommée comme un builtin (format, str, int...), pas de `{n,m}` dans une regex, fonction appelée par `xxxFonctions.nom` et `import` en tête, globale ajoutée à `globs`, module ajouté à `custom_berry_solidify` de chaque env. Seuls berry.exe strict, l'agent verificateur-solidification et la page Build prouvent la solidification, pas les bancs | dernier incident 2026-11-23 | récidives 20
+## Persist et cartes en ligne
+- Changer un persist de carte : supprimer persist et autoexec, redémarrer, renvoyer, relire (ou recharger Berry avant Restart). `Topic`/`Hostname` en dernier. Avant flash : CFG_HOLDER, AdcParam, réglages propres relevés ; relire la carte réelle avant de copier une config. Br avec socket : jamais sur une carte en difficulté | dernier incident 2026-11-21 | récidives 11
+## FS OTA
+- Comparer la place libre (UfsFree) et l'identité de l'image avant l'envoi ; supprimer les anciens fichiers absents de l'image, exclure persist et .be solidifiés | dernier incident 2026-11-23 | récidives 5
+## Commits
+- Inclure override.ini, user_config_override.h et modules.h ; aucun trailer Co-Authored-By ; message multiligne selon le shell ; ne rien exclure en silence ; commit partiel recalculé, pas un diff appliqué | dernier incident 2026-11-17 | récidives 12 -> proposer un contrôle mécanique (hook ou banc)
+## Pages web et sondes
+- Voir la page dans Chrome (mesures, pas HTML lu) ; sondes qui attendent une condition ; relancer l'outil avant l'essai utilisateur ; une largeur de colonne est commune à la table | dernier incident 2026-11-14 | récidives 10
+## Écriture de fichiers
+- `\b` et `\n` via heredoc se corrompent : outil Edit ou chaîne brute, puis grep des caractères de contrôle | dernier incident 2026-11-15 | récidives 5
+## Langue
+- Message final en français malgré les rapports anglais | dernier incident 2026-10-12 | récidives 3 -> proposer un contrôle mécanique (hook ou banc)

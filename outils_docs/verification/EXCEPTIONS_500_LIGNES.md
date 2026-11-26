@@ -98,3 +98,8 @@ satisfaire le compteur.
 A3 : exception plutot qu'un decoupage ; il en avait deja 551 avant les colonnes Bloc et Cout). Generateur unique de `CARTE_MODULES_BERRY.md` :
 lecture des modules, des autoexec, des persists, du cenv (ProjectConfig) et du manifeste ; banc `maintenance/test_verifie_references_docs.py`
 (sortie deterministe). Ne pas le decouper pour satisfaire le compteur.
+
+`outils_docs/scripts_python/berry/banc_pompe_cave.be` fait **514 lignes**, et c'est **voulu** (decide le 2026-11-26 : exception plutot
+qu'un decoupage ; 501 lignes avant le scenario `delai_sans_mise_en_route_valide`, +13 pour le delai calcule depuis une heure non
+synchronisee). Banc unique de la pompe vide-cave : tous les scenarios partagent le meme montage (`monte`, bouchon `TasmotaStub`, vrais
+`controleGeneral.be` et `globalFonctions.be`) ; le couper dupliquerait ce montage. Ne pas le decouper pour satisfaire le compteur.
