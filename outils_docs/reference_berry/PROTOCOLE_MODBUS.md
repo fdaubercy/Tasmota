@@ -329,7 +329,9 @@ Usine : **9600 bauds, 8N1, adresse 0x01**. Deux jeux de commandes reconnus autom
 
 Exemple : canal 1 Open → `01 06 00 01 01 00 D9 9A`.
 C'est exactement ce que construit `modBus_Conn16channels.be` (`Values: [valueModBus, 0]`,
-`type: "uint8"`, `Count: 1`).
+`type: "uint8"`, `Count: 1`). L'ordre d'un relais virtuel `ModBus_<module>` du maître part par
+`modbusFonctions.be::modbusFonctions_voieRelai`, voie « ModBus » que `controleModbus.be` déclare au registre de
+`controleGeneral.be::declareVoie` (plan binomes-berry A22).
 
 ### Relecture d'etat — fonction 0x03 (LE point cle)
 

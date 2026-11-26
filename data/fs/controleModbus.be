@@ -1,8 +1,8 @@
 #- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
    fichier                                .be      .bec  solidifie
-   controleModbus.be                  22,9 Ko    5,1 Ko     3,2 Ko
-   modbusFonctions.be                199,8 Ko   82,7 Ko    56,0 Ko
-   total                             222,7 Ko   87,8 Ko    59,2 Ko  + 850 chaines
+   controleModbus.be                  23,3 Ko    5,2 Ko     3,3 Ko
+   modbusFonctions.be                201,6 Ko   83,7 Ko    56,8 Ko
+   total                             224,9 Ko   88,9 Ko    60,1 Ko  + 862 chaines
    .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
    (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
    table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
@@ -386,6 +386,10 @@ def controleModbus_init(m)
     if (drivers["ModBus"].find("activation", "OFF") == "ON")
         global.controleModbus = m.CONTROLE_MODBUS()
         tasmota.add_driver(global.controleModbus)
+        # Voie des relais virtuels ModBus_<module> (registre de controleGeneral.set_power_handler, plan binomes-berry A22)
+        import modbusFonctions
+        # demarrage.be pose global.controleGeneral = {} : seule l'instance (controleGeneral charge) a declareVoie
+        if (type(global.controleGeneral) == "instance")    global.controleGeneral.declareVoie("ModBus", modbusFonctions.voieRelai)    end
     end
     return m
 end

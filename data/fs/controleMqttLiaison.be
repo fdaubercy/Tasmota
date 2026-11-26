@@ -1,8 +1,8 @@
 #- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
    fichier                                .be      .bec  solidifie
-   controleMqttLiaison.be             20,6 Ko   11,1 Ko     8,5 Ko
+   controleMqttLiaison.be             21,1 Ko   11,4 Ko     8,8 Ko
    mqttLiaisonFonctions.be            15,7 Ko    8,2 Ko     6,0 Ko
-   total                              36,3 Ko   19,3 Ko    14,5 Ko  + 288 chaines
+   total                              36,8 Ko   19,7 Ko    14,8 Ko  + 294 chaines
    .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
    (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
    table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
@@ -315,6 +315,13 @@ class CONTROLE_MQTT_LIAISON : Driver
         return code
     end
 
+    # Voie MQTT des relais virtuels « MQTT_<esclave> » (registre de controleGeneral.set_power_handler, plan binomes-berry A22) :
+    # rend le code de ordonne ("hors_ligne" ou "coupe" declenchent le repli du relais sur sa seconde voie)
+    def voieRelai(relai, cible, etat, id)
+        import string
+        return self.ordonne(string.split(cible, "_")[1], relai.find("mqtt", {}).find("commande", "Power1"), etat)
+    end
+
     # Ligne d'alerte de l'accueil, rafraichie ~2 s : chaine precalculee ; puis les lignes « perime » (decision A2 du 2026-11-20)
     def web_sensor()
         if size(self.ligne) > 0    tasmota.web_send(self.ligne)    end
@@ -398,6 +405,7 @@ def controleMqttLiaison_init(m)
         var inst = m.CONTROLE_MQTT_LIAISON()
         global.mqttLiaisonDriver = inst
         tasmota.add_driver(inst)
+        if (type(global.controleGeneral) == "instance")    global.controleGeneral.declareVoie("MQTT", / r, c, e, i -> inst.voieRelai(r, c, e, i))    end
     end
     return m
 end

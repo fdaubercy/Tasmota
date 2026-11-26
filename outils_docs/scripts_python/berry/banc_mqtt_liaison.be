@@ -231,9 +231,14 @@ verifie(size(go.attente) == 0 && go.demande("p/r1", "ON", 1100) == "envoyer", "b
 # --- 7 bis. LE DRIVER (controleMqttLiaison) : abonnements, ordres, retours, renvois, commande
 import mqtt
 import json
+class FauxGeneral var voies def init() self.voies = {} end def declareVoie(p, f) self.voies[p] = f end end
+global.controleGeneral = FauxGeneral()                   # registre des voies (plan binomes-berry A22)
 import controleMqttLiaison
+var voiesDeclarees = global.controleGeneral.voies
+global.controleGeneral = nil
 var D = global.mqttLiaisonDriver
 var garde = global.mqttLiaisonGarde
+verifie(voiesDeclarees.contains("MQTT") && size(voiesDeclarees) == 1, "driver : voie MQTT declaree au registre de controleGeneral")
 verifie(D != nil && size(tasmota.pilotes) == 1 && tasmota.cmds.contains("ReglageMqttLiaison"), "driver : instance globale, add_driver et commande ReglageMqttLiaison")
 verifie(size(D.esclaves) == 2 && D.esclaves["projecteur"] == "jardin/projecteur_led" && D.esclaves["pompe"] == "pompe", "driver : seuls les esclaves actifs, valides et sans doublon sont declares")
 verifie(size(mqtt.abonnes) == 6 && mqtt.abonnes.contains("stat/jardin/projecteur_led/+") && mqtt.abonnes.contains("tele/pompe/LWT"), "driver : 3 abonnements par esclave (stat, LWT, SENSOR), jamais de joker global")
@@ -241,6 +246,7 @@ verifie(size(mqtt.abonnes) == 6 && mqtt.abonnes.contains("stat/jardin/projecteur
 # ordres : reseau coupe -> rien n'est emis ni compte
 tasmota.reseau = false
 verifie(D.ordonne("projecteur", "Power1", "ON") == "hors_ligne" && size(mqtt.publies) == 0 && size(garde.attente) == 0, "ordre sans reseau : hors_ligne, rien publie, rien compte")
+verifie(voiesDeclarees["MQTT"]({"mqtt": {"commande": "Power1"}}, "MQTT_projecteur", "ON", 7) == "hors_ligne" && size(mqtt.publies) == 0, "voie declaree : MQTT_projecteur passe par ordonne (hors_ligne sans reseau, declenche le repli)")
 tasmota.reseau = true
 mqtt.connecte = false
 verifie(D.ordonne("projecteur", "Power1", "ON") == "hors_ligne" && size(mqtt.publies) == 0, "ordre sans broker : hors_ligne")

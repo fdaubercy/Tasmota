@@ -1601,6 +1601,36 @@ def modbusFonctions_envoiMsgModbus(paramMSG, typeMsg, id)
 end
 modbusFonctions.envoiMsgModbus = modbusFonctions_envoiMsgModbus
 
+# Voie ModBus des relais virtuels « ModBus_<module> » (plan binomes-berry A22) : declaree par controleModbus aupres de
+# controleGeneral.declareVoie, appelee par son set_power_handler (ou par son repli si la voie n'est pas declaree).
+# Ecrit l'etat du relai (registre type + idModBus - 1 sur un esclave Tasmota, idModBus sinon) par une trame 0x06.
+def modbusFonctions_voieRelai(relai, cible, etat, id)
+    import string
+    import re
+    var typeConnex = string.split(cible, "_")[0]
+    var moduleConnex = string.split(cible, "_")[1]
+    var groupeConnex = re.search("([a-zA-Z0-9]+[^0-9$]+)", moduleConnex)[0]
+    if (!string.endswith(groupeConnex, "s"))    groupeConnex = groupeConnex + "s"    end
+    var pilote = drivers.find(typeConnex, {})
+    var esclave = pilote.find("environnement", {}).find(groupeConnex, {}).find(moduleConnex, {})
+    if (pilote.find("activation", "OFF") != "ON" || esclave.find("activation", "OFF") != "ON")    return nil    end
+    if (relai.find("idModBus", false) == false)    return nil    end
+    # Composants : type 224 « Relais » et 1376 « WS2812 » (0x02 = ON), type 256 « Relais_i » (inverse)
+    var valeur
+    if (relai["type"] == 224 || relai["type"] == 1376)
+        valeur = (etat == "ON" ? 0x02 : 0x01)
+    elif (relai["type"] == 256)
+        valeur = (etat == "ON" ? 0x01 : 0x02)
+    end
+    var trame = {"DeviceAddress": esclave["id"], "FunctionCode": 6,
+                 "StartAddress": (groupeConnex == "TasmotaSlaveModBus" ? relai["type"] + relai["idModBus"] - 1 : relai["idModBus"]),
+                 "type": "uint8", "Count": 1, "Values": [valeur, 0]}
+    modbusFonctions.log(string.format("GESTION_RELAIS: Publie sur le réseau ModBus pour le relai n°%i !", id), LOG_LEVEL_INFO)
+    modbusFonctions.envoiMsgModbus(trame, "Commande", trame["DeviceAddress"])
+    return nil
+end
+modbusFonctions.voieRelai = modbusFonctions_voieRelai
+
 def modbusFonctions_envoiMsgModbusSerial(paramMSG, typeMsg)
     import string
     import json

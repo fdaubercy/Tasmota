@@ -548,6 +548,17 @@ drivers["ModBus"]["environnement"]["TasmotaSlaveModBus"]["TasmotaSlaveModBus2"][
 envoyes = []
 m.releveEsclaves()
 verifie("temoin esclave rideau desactive : seule la cuve est relevee", "2 : cuve=true rideau=false relai=false ruban=true", resume(envoyes))
+# Voie ModBus des relais virtuels (registre de controleGeneral, plan binomes-berry A22) : trame 0x06 au registre type + idModBus - 1
+var trames = []
+modbusFonctions.envoiMsgModbus = def (t, typeMsg, id) trames.push(string.format("%i/%i/%i/%s/%s", t["DeviceAddress"], t["FunctionCode"], t["StartAddress"], typeMsg, str(t["Values"]))) end
+modbusFonctions.voieRelai({"type": 1376, "idModBus": 1}, "ModBus_TasmotaSlaveModBus1", "ON", 1)
+modbusFonctions.voieRelai({"type": 224, "idModBus": 3}, "ModBus_TasmotaSlaveModBus1", "OFF", 4)
+verifie("voie ModBus : ruban ON (0x02) au 1376, relai OFF (0x01) au 226, esclave id 2", "['2/6/1376/Commande/[2, 0]', '2/6/226/Commande/[1, 0]']", str(trames))
+trames.clear()
+modbusFonctions.voieRelai({"type": 256, "idModBus": 1}, "ModBus_TasmotaSlaveModBus2", "ON", 2)
+modbusFonctions.voieRelai({"type": 224}, "ModBus_TasmotaSlaveModBus1", "ON", 5)
+modbusFonctions.voieRelai({"type": 224, "idModBus": 1}, "ModBus_Inconnu1", "ON", 6)
+verifie("voie ModBus : esclave desactive, relai sans idModBus, module inconnu : aucune trame", "[]", str(trames))
 modbusFonctions.envoiMsgModbus = vraiEnvoi
 modules = sauveModules
 drivers = sauveDrivers

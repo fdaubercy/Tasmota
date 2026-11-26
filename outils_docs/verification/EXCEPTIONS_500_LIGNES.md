@@ -41,7 +41,7 @@ chaque groupe lisible seul. Meme decision le 2026-11-13 (plan `tasks/plans/facad
 `data/sd/js/volets.js` (**971 lignes**, +11 le 2026-11-15 : constantes NUIT et PORTAIL_DECALAGE (voile plus sombre, vantail droit 5 s avant le gauche), capteur de fermeture suivant le vantail gauche, cones elargis jusqu'au sol, cone de la camera de la maison, pourcentage masque ; +1 le 2026-11-15 : voile de nuit et bouton Auto, Jour, Nuit pour le decor `maison` avec `finition` ; +113 le 2026-11-15 : decor et perspective du portail d'apres la maquette validee, pergola a deux arches, haie, grillage ; +281 le 2026-11-15 : finition de la facade, cones de la camera et de la lampe, voile de nuit selon le soleil, portail de jardin, commande par clic ; decors garage et maison, fins de course, rapporteur de la trappe, camera ; le couper
 ajouterait un fichier a `volets_pages` du cenv) et sa sonde `outils_pc/test_volets_chrome.py` (**754 lignes**, +20 le 2026-11-15 : captures de nuit et de crepuscule avec camera et lampe ; +50 le 2026-11-15 : scenarios maison et rideau avec la nuit ; +81 le 2026-11-15 : scénarios portail et soleil).
 
-`data/fs/modbusFonctions.be` (**3389 lignes**), `modBus_TasmotaSlaveModBus.be` (**1536**), `udpFonctions.be` (**938**), `globalFonctions.be` (**890**)
+`data/fs/modbusFonctions.be` (**3420 lignes**, +31 le 2026-11-26 : voie ModBus des relais virtuels, binomes-berry A22), `modBus_TasmotaSlaveModBus.be` (**1536**), `udpFonctions.be` (**938**), `globalFonctions.be` (**890**)
 et `discoveryFonctions.be` (**894**) depassent **500 lignes**, et c'est **voulu** (decide le 2026-11-14 : exceptions declarees plutot qu'un
 decoupage). Modules SOLIDIFIES charges ensemble par les autoexec : les scinder ajouterait des entrees de `custom_berry_solidify` et de l'autoexec
 de chaque env. Les copies de `lib/libesp32/berry_custom/src/embedded/` sont GENEREES et ignorees par git : ne pas les compter.
@@ -99,7 +99,7 @@ A3 : exception plutot qu'un decoupage ; il en avait deja 551 avant les colonnes 
 lecture des modules, des autoexec, des persists, du cenv (ProjectConfig) et du manifeste ; banc `maintenance/test_verifie_references_docs.py`
 (sortie deterministe). Ne pas le decouper pour satisfaire le compteur.
 
-`outils_docs/scripts_python/berry/banc_pompe_cave.be` fait **514 lignes**, et c'est **voulu** (decide le 2026-11-26 : exception plutot
+`outils_docs/scripts_python/berry/banc_pompe_cave.be` fait **537 lignes**, et c'est **voulu** (decide le 2026-11-26 : exception plutot
 qu'un decoupage ; 501 lignes avant le scenario `delai_sans_mise_en_route_valide`, +13 pour le delai calcule depuis une heure non
-synchronisee). Banc unique de la pompe vide-cave : tous les scenarios partagent le meme montage (`monte`, bouchon `TasmotaStub`, vrais
+synchronisee ; +23 le meme jour : registre des voies des relais, plan binomes-berry A22). Banc unique de la pompe vide-cave : tous les scenarios partagent le meme montage (`monte`, bouchon `TasmotaStub`, vrais
 `controleGeneral.be` et `globalFonctions.be`) ; le couper dupliquerait ce montage. Ne pas le decouper pour satisfaire le compteur.

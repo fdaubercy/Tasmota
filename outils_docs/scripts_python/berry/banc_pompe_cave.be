@@ -511,4 +511,33 @@ tasmota.t += 600
 depart()
 verifie("delai entre deux mises en route reelles", 600, relai()["timestamp"]["delai"])
 
-print("BANC_POMPE_CAVE: " +(echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")") + " (" + str(nbControles) + " controles)")
+print("--- voies_relais_declarees")
+# Registre des voies (plan binomes-berry A22) : l'ordre d'un relais virtuel part par la voie declaree de son prefixe
+monte([], false)
+var ordres = []
+cg.declareVoie("ModBus", def (r, cible, e, id) ordres.push(cible + "/" + e + "/" + str(id)) end)
+cg.declareVoie("MQTT", def (r, cible, e, id) ordres.push(cible + "/" + e) return "hors_ligne" end)
+relai()["virtuel"] = "ModBus_TasmotaSlaveModBus1"
+depart()
+verifie("voie ModBus declaree : ordre ON du relai 1", "['ModBus_TasmotaSlaveModBus1/ON/1']", str(ordres))
+relai()["virtuel"] = "MQTT_pompe"
+relai()["repli"] = "ModBus_TasmotaSlaveModBus1"
+ordres.clear()
+GF.modifEtatRelai("pompeVideCave", 1, "OFF", "OFF", false, true, 0)
+verifie("voie MQTT hors ligne : repli sur la voie ModBus", "['MQTT_pompe/OFF', 'ModBus_TasmotaSlaveModBus1/OFF/1']", str(ordres))
+
+print("--- voie_non_declaree_code_d_avant")
+monte([], false)                                       # aucune voie declaree, pas de driver de liaison MQTT
+relai()["virtuel"] = "MQTT_pompe"
+depart()
+var erreursVoie = 0
+for l: logFonctions.journal    if (l[0] == LOG_LEVEL_ERREUR && string.find(l[1], "Voie MQTT inactive") >= 0)    erreursVoie += 1    end    end
+verifie("MQTT non declare : erreur « voie MQTT inactive » du code d'avant", 1, erreursVoie)
+# Relais I2C_TCA9554 (cave S3, grenier) : idModBus -1, aucune voie ; avant le registre, key_error sur drivers.I2C...TCAs
+monte([], false)
+relai()["virtuel"] = "I2C_TCA95541"
+relai()["idModBus"] = -1
+depart()
+verifie("relais I2C_ sans voie : etat ON enregistre, sans exception", "ON", relai()["etat"])
+
+print("BANC_POMPE_CAVE: " + (echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")") + " (" + str(nbControles) + " controles)")

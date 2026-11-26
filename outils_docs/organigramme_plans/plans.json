@@ -1286,8 +1286,8 @@
    "specs": [],
    "cree": "2026-11-23",
    "maj": "2026-11-26",
-   "pct": 98,
-   "etapes": "81/83",
+   "pct": 100,
+   "etapes": "88/88",
    "url": "https://github.com/fdaubercy/Tasmota/blob/development/tasks/plans/binomes-berry.md",
    "urls_spec": []
   }

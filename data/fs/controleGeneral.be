@@ -1,8 +1,8 @@
 #- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
    fichier                                .be      .bec  solidifie
-   controleGeneral.be                 40,3 Ko   19,3 Ko    13,4 Ko
+   controleGeneral.be                 39,8 Ko   19,2 Ko    12,0 Ko
    globalFonctions.be                 47,1 Ko   23,3 Ko    14,9 Ko
-   total                              87,4 Ko   42,6 Ko    28,3 Ko  + 583 chaines
+   total                              86,9 Ko   42,5 Ko    26,9 Ko  + 573 chaines
    .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
    (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
    table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
@@ -58,6 +58,7 @@ class CONTROLE_GENERAL : Driver
 	var debutSansEth				# tasmota.millis() du debut de l'absence de lien Ethernet, nil si lien
 	var repliWifi					# vrai apres le repli sur le Wi-Fi (voie Ethernet sans lien), jusqu'au redemarrage
 	var debutLienEth				# pendant le repli : tasmota.millis() du retour du lien, nil si absent
+	var voies						# voies des relais virtuels declarees par leur binome : {"MQTT": fonction, "ModBus": fonction} (binomes-berry A22)
 
 	# Lance par le cron "heureReboot" (diverses.heureReboot, arme a Time#Initialized par globalFonctions)
 	def heureReboot()
@@ -163,6 +164,7 @@ class CONTROLE_GENERAL : Driver
 		self.debutSansEth = nil
 		self.repliWifi = false
 		self.debutLienEth = nil
+		self.voies = {}
 
 		# Les sensors sont lus A LA DEMANDE par lectureSensors() (plus a l'init ni chaque seconde)
 		self.sensors = {}
@@ -585,6 +587,43 @@ class CONTROLE_GENERAL : Driver
 			"g();window.addEventListener('resize',g);})(" + str(ids) + ");</script>")
 	end
 
+	# Registre des voies des relais virtuels (plan binomes-berry A22), sur le modele de logFonctions.declare : un binome
+	# declare la voie de son prefixe (« MQTT » pour MQTT_<esclave>, « ModBus » pour ModBus_<module>) a l'init de son driver.
+	# fonction(relai, cible, etat, id) envoie l'ordre et rend "hors_ligne" ou "coupe" si la voie est indisponible (repli).
+	def declareVoie(prefixe, fonction)
+		self.voies[prefixe] = fonction
+	end
+
+	# Ordre d'un relais virtuel par la voie declaree du prefixe de 'cible', sinon par le code d'avant le registre
+	def envoieVoie(relai, cible, etat, id)
+		import string
+		var f = self.voies.find(string.split(cible, "_")[0])
+		if (f != nil)	return f(relai, cible, etat, id)	end
+		return self.voieHistorique(relai, cible, etat, id)
+	end
+
+	# Prefixe non declare : MQTT par global.mqttLiaisonDriver, ModBus par la trame de modbusFonctions (relai avec idModBus
+	# seulement : modbusFonctions n'est importe qu'alors, une carte sans ModBus ne l'a pas)
+	def voieHistorique(relai, cible, etat, id)
+		import string
+		import global
+		if (string.find(cible, "MQTT_") == 0)
+			var pilote = global.mqttLiaisonDriver
+			if (pilote != nil)
+				return pilote.ordonne(string.split(cible, "_")[1], relai.find("mqtt", {}).find("commande", "Power1"), etat)
+			end
+			logFonctions.log(string.format("GESTION_RELAIS_ERREUR: Voie MQTT inactive, ordre du relai n°%i non envoyé !", id), LOG_LEVEL_ERREUR)
+			return nil
+		end
+		# I2C_, Calcul_... : rien ici (avant le registre, I2C_TCA9554 avec idModBus -1 levait key_error sur drivers.I2C...TCAs)
+		if (string.find(cible, "ModBus_") != 0 || relai.find("idModBus", false) == false)	return nil	end
+		if (global.controleModbus == nil && drivers.find("ModBus", {}).find("activation", "OFF") == "ON")
+			logFonctions.log("GESTION_RELAIS: Attention le Driver 'controleModbus' n'est pas activé !", LOG_LEVEL_INFO)
+		end
+		import modbusFonctions
+		return modbusFonctions.voieRelai(relai, cible, etat, id)
+	end
+
 	#- Se déclenche sur modification d'état d'un relai par l'interface webUI ou commande Power
 	        Enregistre le nouvel état des relais en json
 	        Enregistre le timestamp de modification d'état en json
@@ -599,8 +638,6 @@ class CONTROLE_GENERAL : Driver
 		import diversFonctions
 		import globalFonctions
 		import persist
-		import introspect
-		import re
 
 		var etat = ""
 
@@ -700,66 +737,16 @@ class CONTROLE_GENERAL : Driver
 											end
 										end
 
-										# Relais virtuel MQTT_<esclave> : ordre cmnd/<topic>/<commande> par la voie MQTT (plan voie-mqtt A6)
+										# Relais virtuel (MQTT_<esclave>, ModBus_<module>...) : ordre par la voie declaree de son prefixe
+										# (registre, plan binomes-berry A22). Voie indisponible (broker, esclave hors ligne, coupe-circuit) :
+										# repli sur la seconde voie du relais (ex. "ModBus_TasmotaSlaveModBus1"), sinon l'ordre est perdu.
 										var virtuelRly = relais[cleRLY].find("virtuel", "OFF")
-										if (string.find(virtuelRly, "MQTT_") == 0 && relais[cleRLY]["id"] == nb + 1)
-											import global
-											var pilote = global.mqttLiaisonDriver
-											if (pilote != nil)
-												var reponse = pilote.ordonne(string.split(virtuelRly, "_")[1], relais[cleRLY].find("mqtt", {}).find("commande", "Power1"), etat)
-												# Voie MQTT indisponible (broker, esclave hors ligne ou coupe-circuit) : repli sur la seconde voie du relais (ex. "ModBus_TasmotaSlaveModBus1"), sinon l'ordre est perdu
-												var repli = relais[cleRLY].find("repli", "OFF")
-												if ((reponse == "hors_ligne" || reponse == "coupe") && type(repli) == "string" && repli != "OFF" && string.find(repli, "MQTT_") != 0)
-													logFonctions.log(string.format("GESTION_RELAIS: Voie MQTT indisponible, repli du relai n°%i sur %s !", nb + 1, repli), LOG_LEVEL_INFO)
-													virtuelRly = repli
-												end
-											else
-												logFonctions.log(string.format("GESTION_RELAIS_ERREUR: Voie MQTT inactive, ordre du relai n°%i non envoyé !", nb + 1), LOG_LEVEL_ERREUR)
-											end
-										end
-
-										# Vérifie si il doit y avoir emission d'un message ModBus
-										if (virtuelRly != "OFF" && string.find(virtuelRly, "MQTT_") != 0)
-											var typeConnex = string.split(virtuelRly, "_")[0]
-											var moduleConnex = string.split(virtuelRly, "_")[1]
-											var groupeConnex = re.search("([a-zA-Z0-9]+[^0-9$]+)", string.split(virtuelRly, "_")[1])[0]
-
-											if (!string.endswith(groupeConnex , "s"))
-												groupeConnex = groupeConnex + "s"
-											end
-
-											if (drivers[typeConnex]["activation"] == "ON" && drivers[typeConnex]["environnement"][groupeConnex][moduleConnex]["activation"] == "ON")
-												if (introspect.members("controleModbus") == nil)
-													logFonctions.log("GESTION_RELAIS: Attention le Driver 'controleModbus' n'est pas activé !", LOG_LEVEL_INFO)
-												end
-
-												if (relais[cleRLY].find("idModBus", false) != false)
-													# Componentes   -> type=224: "Relais",
-													#               -> type=1376: "WS2812"
-													#               -> type=256: "Relais_i"
-													var valueModBus 
-													if (relais[cleRLY]["type"] == 224 || relais[cleRLY]["type"] == 1376)
-														valueModBus = (etat == "ON" ? 0x02 : 0x01)
-													elif (relais[cleRLY]["type"] == 256)
-														valueModBus = (etat == "ON" ? 0x01 : 0x02)
-													end
-
-													# Construit la trame
-													var trameModBus = 	{
-																			"DeviceAddress": drivers[typeConnex]["environnement"][groupeConnex][moduleConnex]["id"], 
-																			"FunctionCode": 6, 
-																			"StartAddress": (groupeConnex == "TasmotaSlaveModBus" ? relais[cleRLY]["type"] + relais[cleRLY]["idModBus"] - 1 : relais[cleRLY]["idModBus"]),
-																			"type": "uint8", 
-																			"Count": 1, 
-																			"Values": [valueModBus, 0]
-																		}
-
-													# Envoi l'ordre sur le réseau ModBus
-													logFonctions.log(string.format("GESTION_RELAIS: Publie sur le réseau ModBus pour le relai n°%i !", nb + 1), LOG_LEVEL_INFO)
-													
-													import modbusFonctions
-													modbusFonctions.envoiMsgModbus(trameModBus, "Commande", trameModBus["DeviceAddress"])
-                                                end
+										if (virtuelRly != "OFF")
+											var reponse = self.envoieVoie(relais[cleRLY], virtuelRly, etat, nb + 1)
+											var repli = relais[cleRLY].find("repli", "OFF")
+											if ((reponse == "hors_ligne" || reponse == "coupe") && type(repli) == "string" && repli != "OFF" && string.split(repli, "_")[0] != string.split(virtuelRly, "_")[0])
+												logFonctions.log(string.format("GESTION_RELAIS: Voie %s indisponible, repli du relai n°%i sur %s !", string.split(virtuelRly, "_")[0], nb + 1, repli), LOG_LEVEL_INFO)
+												self.envoieVoie(relais[cleRLY], repli, etat, nb + 1)
 											end
 										end
 
