@@ -1,8 +1,8 @@
 #- TAILLE DU BINOME (genere par outils_docs/scripts_python/berry/mesure_binomes.py --ecrire, ne pas editer)
    fichier                                .be      .bec  solidifie
-   controleGeneral.be                 40,0 Ko   19,3 Ko    13,4 Ko
+   controleGeneral.be                 40,3 Ko   19,3 Ko    13,4 Ko
    globalFonctions.be                 47,1 Ko   23,3 Ko    14,9 Ko
-   total                              87,1 Ko   42,5 Ko    28,2 Ko  + 583 chaines
+   total                              87,4 Ko   42,6 Ko    28,3 Ko  + 583 chaines
    .be : LittleFS si non solidifie (hors ce bloc). .bec : LittleFS, et ordre de grandeur de la RAM du code charge
    (berry.exe du PC). solidifie : partition app (objet xtensa -Os), pas de RAM pour le code ; chaines dans la
    table globale du firmware, en partie partagees. RAM reelle : tasmota.gc() sur une carte.
@@ -643,7 +643,9 @@ class CONTROLE_GENERAL : Driver
 										# Ajoute des détails de déclenchement en json (timestamp et délai)
 										relais[cleRLY]["etat"] = etat
 										if etat == "ON"
-											if tasmota.rtc()["local"] > relais[cleRLY]["timestamp"]["ON"]
+											# ON pose avant le NTP (configDevices au boot : rtc = secondes depuis le demarrage) : pas de delai.
+											# Seuil START_VALID_TIME de tasmota.h (2016-01-01), celui du firmware (support_rtc.ino::RtcSecond)
+											if relais[cleRLY]["timestamp"]["ON"] > 1451602800 && tasmota.rtc()["local"] > relais[cleRLY]["timestamp"]["ON"]
                                                 logFonctions.log((string.format("GESTION_RELAIS: Enregistre le timestamp de passage à 'ON' du Relai n°%i = %s", nb + 1, etat)), LOG_LEVEL_DEBUG)
 												relais[cleRLY]["timestamp"]["delai"] = tasmota.rtc()["local"] - relais[cleRLY]["timestamp"]["ON"]
 											end

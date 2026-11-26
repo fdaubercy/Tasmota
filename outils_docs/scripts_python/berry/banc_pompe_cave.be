@@ -497,4 +497,18 @@ verifie("pauseApresMax 0 : pompe arretee", true, string.find(alerte(), "Pompe ar
 verifie("pauseApresMax 0 : aucune relance armee", false, tasmota.timers.contains("relance_relai1"))
 verifie("pauseApresMax 0 : compteur remis a zero", 0, cg.relances.find("pompeVideCave_1", 0))
 
-print("BANC_POMPE_CAVE: " + (echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")") + " (" + str(nbControles) + " controles)")
+print("--- delai_sans_mise_en_route_valide")
+# Bug du 2026-11-26 (cave ESP32) : configDevices pose timestamp.ON avant le NTP (rtc = secondes depuis le boot),
+# set_power_handler en tirait un delai de 1,8 milliard de s (29 927 793 min a l'ecran)
+monte([], false)
+relai()["timestamp"]["ON"] = 1
+relai()["timestamp"]["delai"] = 0
+tasmota.t = 1795667586
+depart()
+verifie("delai non calcule depuis une heure non synchronisee", 0, relai()["timestamp"]["delai"])
+GF.modifEtatRelai("pompeVideCave", 1, "OFF", "OFF", false, true, 0)
+tasmota.t += 600
+depart()
+verifie("delai entre deux mises en route reelles", 600, relai()["timestamp"]["delai"])
+
+print("BANC_POMPE_CAVE: " +(echecs == 0 ? "OK" : "ECHEC (" + str(echecs) + ")") + " (" + str(nbControles) + " controles)")
