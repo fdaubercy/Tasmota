@@ -1,0 +1,303 @@
+   0.14 BROKER 18:38:18.609 CMD: MeshBroker
+   0.14 BROKER 18:38:18.610 SRC: Serial
+   0.14 BROKER 18:38:18.611 CMD: Grp 0, Cmd 'MESHBROKER', Idx 1, Len 0, Pld -99, Data ''
+   0.14 BROKER 18:38:18.620 MSH: Broker MAC 4E:C3:82:BF:2E:D0
+   0.14 BROKER 18:38:18.627 MQT: stat/bureau/essai-mesh-broker/RESULT = {"MeshBroker":11}
+   5.01 NOEUD 18:38:23.849 CMD: MeshNode 4EC382BF2ED0
+   5.01 NOEUD 18:38:23.850 SRC: Ser18:38:23.849 CMD: MeshNode 4EC382BF2ED0
+   5.12 NOEUD 18:38:23.850 SRC: S Pld 4, Data '4EC382BF2ED0'
+   6.71 NOEUD 18:38:25.000 RTC: Synced by Mesh
+   6.71 NOEUD 18:38:25.001 MSH: Packet to resend ...
+   6.71 NOEUD 18:38:25.027 MSH: Next packet 2 to resend of type 5, TTL 2
+   6.71 NOEUD 18:38:25.031 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   6.71 NOEUD 18:38:25.452 MSH: Successfully connected to Mesh Broker using MAC 4EC382BF2ED0 as ESP_BF2ED0 on channel 11
+   6.71 NOEUD 18:38:25.473 MSH: Peer 4E:C3:82:BF:2E:D0 added successful
+   6.71 NOEUD 18:38:25.474 MSH: Register node with topic 'bureau/essai-mesh-noeud'
+   6.71 NOEUD 18:38:25.480 MSH: Topic in payload 'stat/bureau/essai-mesh-noeud/RESULT'
+   6.71 NOEUD 18:38:25.484 MSH:  Data in payload '{"MeshNode":11}'
+   6.71 NOEUD 18:38:25.489 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"MeshNode":11}
+   6.71 NOEUD 18:38:25.501 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   6.71 NOEUD 18:38:25.514 RTC: UTC 2026-11-27T17:38:25Z, DST 2026-03-29T02:00:00, STD 2026-10-25T03:00:00
+   6.81 NOEUD 18:38:25.033 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   6.81 NOEUD 18:38:25.126 MSH: Next packet 2 to resend of type 5, TTL 1
+   6.81 NOEUD 18:38:25.138 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   6.90 BROKER 18:38:25.260 MSH: Rcvd from EC:FA:BC:CB:30:05
+   6.90 BROKER 18:38:25.262 MSH: Peer EC:FA:BC:CB:30:05 added successful
+   6.90 BROKER 18:38:25.265 MQT: S'abonner à cmnd/bureau/essai-mesh-noeud/#
+   6.90 BROKER 18:38:25.272 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+   6.90 BROKER 18:38:25.305 MSH: Rcvd from EC:FA:BC:CB:30:05
+   6.90 BROKER 18:38:25.307 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+   6.90 BROKER 18:38:25.308 MSH: Rcvd from EC:FA:BC:CB:30:05
+   6.90 BROKER 18:38:25.309 MSH: Packet 2 from EC:FA:BC:CB:30:05 to queue
+   6.90 BROKER 18:38:25.331 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"MeshNode":11}
+   6.90 BROKER 18:38:25.404 MSH: Rcvd from EC:FA:BC:CB:30:05
+   6.90 BROKER 18:38:25.405 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+   6.92 NOEUD 18:38:25.177 MSH: Next packet 2 to resend of type 5, TTL 0
+   6.92 NOEUD 18:38:25.227 MSH: Next packet 1 to resend of type 0, TTL 1
+   7.03 NOEUD 18:38:25.276 MSH: Next packet 1 to resend of type 0, TTL 0
+   7.34 NOEUD 18:38:25.126 CFG: Enregistré en flash à F8, Compte 28, Octets 4096
+   7.56 NOEUD 18:38:25.395 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   7.66 BROKER 18:38:26.154 MSH: Rcvd from EC:FA:BC:CB:30:05
+   7.66 BROKER 18:38:26.155 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+   8.62 NOEUD 18:38:26.395 MSH: Topic in payload 'tele/bureau/essai-mesh-noeud/STATE'
+   8.62 NOEUD 18:38:26.396 MSH:  Data in payload '{"Time":"2026-11-27T18:38:26","Uptime":"0T00:24:21","UptimeSec":1461,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":37,'
+   8.62 NOEUD 18:38:26.406 MSH:  Data in payload '"MqttCount":1,"POWER1":"OFF","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}'
+   8.62 NOEUD 18:38:26.417 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T18:38:26","Uptime":"0T00:24:21","UptimeSec":1461,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":37,"MqttCount":1,"POWER1":"OFF","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+   8.62 NOEUD 18:38:26.444 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   8.73 NOEUD 18:38:26.471 MSH: Next packet 2 to resend of type 5, TTL 2
+   8.73 NOEUD 18:38:26.474 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   8.73 NOEUD 18:38:26.520 MSH: Next packet 2 to resend of type 5, TTL 1
+   8.73 NOEUD 18:38:26.524 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   8.84 NOEUD 18:38:26.570 MSH: Next packet 2 to resend of type 5, TTL 0
+   8.84 NOEUD 18:38:26.620 MSH: Next packet 1 to resend of type 5, TTL 2
+   8.84 NOEUD 18:38:26.624 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   8.84 NOEUD 18:38:26.671 MSH: Next packet 1 to resend of type 5, TTL 1
+   8.84 NOEUD 18:38:26.674 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   8.94 BROKER 18:38:27.202 MSH: Rcvd from EC:FA:BC:CB:30:05
+   8.94 BROKER 18:38:27.204 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+   8.94 BROKER 18:38:27.232 MSH: Rcvd from EC:FA:BC:CB:30:05
+   8.94 BROKER 18:38:27.233 MSH: Packet 2 from EC:FA:BC:CB:30:05 to queue
+   8.94 BROKER 18:38:27.282 MSH: Rcvd from EC:FA:BC:CB:30:05
+   8.94 BROKER 18:38:27.283 MSH: Packet 2 from EC:FA:BC:CB:30:05 to queue
+   8.94 BROKER 18:38:27.383 MSH: Rcvd from EC:FA:BC:CB:30:05
+   8.94 BROKER 18:38:27.384 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+   8.94 BROKER 18:38:27.396 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T18:38:26","Uptime":"0T00:24:21","UptimeSec":1461,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":37,"MqttCount":1,"POWER1":"OFF","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+   8.94 BROKER 18:38:27.432 MSH: Rcvd from EC:FA:BC:CB:30:05
+   8.94 BROKER 18:38:27.433 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+   8.94 NOEUD 18:38:26.720 MSH: Next packet 1 to resend of type 5, TTL 0
+   9.67 NOEUD 18:38:27.422 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+   9.69 BROKER 18:38:28.181 MSH: Rcvd from EC:FA:BC:CB:30:05
+   9.69 BROKER 18:38:28.182 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  10.54 NOEUD 18:38:28.376 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  10.65 BROKER 18:38:29.135 MSH: Rcvd from EC:FA:BC:CB:30:05
+  10.65 BROKER 18:38:29.136 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  11.60 NOEUD 18:38:29.373 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  11.65 BROKER 18:38:30.132 MSH: Rcvd from EC:FA:BC:CB:30:05
+  11.65 BROKER 18:38:30.134 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  12.56 NOEUD 18:38:30.377 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  12.65 BROKER 18:38:31.136 MSH: Rcvd from EC:FA:BC:CB:30:05
+  12.65 BROKER 18:38:31.137 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  13.21 NOEUD 18:38:30.971 SRC: MQTT
+  13.21 NOEUD 18:38:30.973 CMD: Grp 0, Cmd 'POWER', Idx 1, Len 2, Pld -99, Data ''
+  13.21 NOEUD 18:38:30.975 MSH: Topic in payload 'stat/bureau/essai-mesh-noeud/RESULT'
+  13.21 NOEUD 18:38:30.976 MSH:  Data in payload '{"POWER1":"OFF"}'
+  13.21 NOEUD 18:38:30.980 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"OFF"}
+  13.21 NOEUD 18:38:30.987 MSH: Topic in payload 'stat/bureau/essai-mesh-noeud/POWER1'
+  13.21 NOEUD 18:38:30.993 MSH:  Data in payload 'OFF'
+  13.21 NOEUD 18:38:30.997 MSH: stat/bureau/essai-mesh-noeud/POWER1 = OFF
+  13.21 NOEUD 18:38:31.017 MSH: Next packet 2 to resend of type 5, TTL 2
+  13.21 NOEUD 18:38:31.020 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  13.32 NOEUD 18:38:31.068 MSH: Next packet 2 to resend of type 5, TTL 1
+  13.32 NOEUD 18:38:31.077 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  13.32 NOEUD 18:38:31.118 MSH: Next packet 2 to resend of type 5, TTL 0
+  13.43 NOEUD 18:38:31.168 MSH: Next packet 1 to resend of type 5, TTL 2
+  13.43 NOEUD 18:38:31.173 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  13.43 NOEUD 18:38:31.217 MSH: Next packet 1 to resend of type 5, TTL 1
+  13.43 NOEUD 18:38:31.233 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  13.51 BROKER 18:38:31.622 CMD: Publish cmnd/bureau/essai-mesh-noeud/Power
+  13.51 BROKER 18:38:31.623 SRC: Serial
+  13.51 BROKER 18:38:31.624 CMD: Grp 0, Cmd 'PUBLISH', Idx 1, Len 34, Pld -99, Data 'cmnd/bureau/essai-mesh-noeud/Power'
+  13.51 BROKER 18:38:31.640 MQT: cmnd/bureau/essai-mesh-noeud/Power =
+  13.51 BROKER 18:38:31.716 MSH: Intercept payload 'cmnd/bureau/essai-mesh-noeud/Power'
+  13.51 BROKER 18:38:31.722 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  13.51 BROKER 18:38:31.782 MSH: Rcvd from EC:FA:BC:CB:30:05
+  13.51 BROKER 18:38:31.783 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  13.51 BROKER 18:38:31.819 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"OFF"}
+  13.51 BROKER 18:38:31.840 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  13.51 BROKER 18:38:31.840 MSH: Rcvd from EC:FA:BC:CB:30:05
+  13.51 BROKER 18:38:31.935 MSH: Rcvd from EC:FA:BC:CB:30:05
+  13.51 BROKER 18:38:31.936 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  13.51 BROKER 18:38:31.971 MQT: stat/bureau/essai-mesh-noeud/POWER1 = OFF
+  13.51 BROKER 18:38:31.995 MSH: Rcvd from EC:FA:BC:CB:30:05
+  13.51 BROKER 18:38:31.996 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  13.53 NOEUD 18:38:31.267 MSH: Next packet 1 to resend of type 5, TTL 0
+  13.64 NOEUD 18:38:31.457 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  13.74 BROKER 18:38:32.219 MSH: Rcvd from EC:FA:BC:CB:30:05
+  13.74 BROKER 18:38:32.220 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  14.59 NOEUD 18:38:32.377 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  14.64 BROKER 18:38:33.136 MSH: Rcvd from EC:FA:BC:CB:30:05
+  14.64 BROKER 18:38:33.138 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  15.65 NOEUD 18:38:33.423 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  15.69 BROKER 18:38:34.181 MSH: Rcvd from EC:FA:BC:CB:30:05
+  15.69 BROKER 18:38:34.182 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  16.62 NOEUD 18:38:34.424 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  16.70 BROKER 18:38:35.183 MSH: Rcvd from EC:FA:BC:CB:30:05
+  16.70 BROKER 18:38:35.184 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  17.14 BROKER 18:38:35.611 CMD: MeshBroker
+  17.14 BROKER 18:38:35.611 SRC: Serial
+  17.14 BROKER 18:38:35.612 CMD: Grp 0, Cmd 'MESHBROKER', Idx 1, Len 0, Pld -99, Data ''
+  17.14 BROKER 18:38:35.615 MSH: Broker MAC 4E:C3:82:BF:2E:D0
+  17.14 BROKER 18:38:35.632 MQT: stat/bureau/essai-mesh-broker/RESULT = {"MeshBroker":11}
+  17.58 NOEUD 18:38:35.423 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  17.70 BROKER 18:38:36.182 MSH: Rcvd from EC:FA:BC:CB:30:05
+  17.70 BROKER 18:38:36.183 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  18.55 NOEUD 18:38:36.374 MSH: Topic in payload 'tele/bureau/essai-mesh-noeud/STATE'
+  18.66 NOEUD 18:38:36.375 MSH:  Data in payload '{"Time":"2026-11-27T18:38:36","Uptime":"0T00:24:31","UptimeSec":1471,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,'
+  18.66 NOEUD 18:38:36.385 MSH:  Data in payload '"MqttCount":1,"POWER1":"OFF","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}'
+  18.66 NOEUD 18:38:36.397 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T18:38:36","Uptime":"0T00:24:31","UptimeSec":1471,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"OFF","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  18.66 NOEUD 18:38:36.433 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  18.66 NOEUD 18:38:36.452 MSH: Next packet 2 to resend of type 5, TTL 2
+  18.66 NOEUD 18:38:36.458 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  18.78 NOEUD 18:38:36.503 MSH: Next packet 2 to resend of type 5, TTL 1
+  18.78 NOEUD 18:38:36.508 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  18.78 NOEUD 18:38:36.553 MSH: Next packet 2 to resend of type 5, TTL 0
+  18.78 NOEUD 18:38:36.603 MSH: Next packet 1 to resend of type 5, TTL 2
+  18.78 NOEUD 18:38:36.606 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  18.88 NOEUD 18:38:36.652 MSH: Next packet 1 to resend of type 5, TTL 1
+  18.88 NOEUD 18:38:36.655 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  18.88 NOEUD 18:38:36.703 MSH: Next packet 1 to resend of type 5, TTL 0
+  18.92 BROKER 18:38:37.192 MSH: Rcvd from EC:FA:BC:CB:30:05
+  18.92 BROKER 18:38:37.193 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  18.92 BROKER 18:38:37.217 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  18.92 BROKER 18:38:37.217 MSH: Rcvd from EC:FA:BC:CB:30:05
+  18.92 BROKER 18:38:37.267 MSH: Rcvd from EC:FA:BC:CB:30:05
+  18.92 BROKER 18:38:37.268 MSH: Packet 2 from EC:FA:BC:CB:30:05 to queue
+  18.92 BROKER 18:38:37.365 MSH: Rcvd from EC:FA:BC:CB:30:05
+  18.92 BROKER 18:38:37.366 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  18.92 BROKER 18:38:37.373 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T18:38:36","Uptime":"0T00:24:31","UptimeSec":1471,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"OFF","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  18.92 BROKER 18:38:37.414 MSH: Rcvd from EC:FA:BC:CB:30:05
+  18.92 BROKER 18:38:37.415 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  19.62 NOEUD 18:38:37.414 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  19.68 BROKER 18:38:38.173 MSH: Rcvd from EC:FA:BC:CB:30:05
+  19.68 BROKER 18:38:38.175 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  20.67 BROKER 18:38:39.164 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  20.67 BROKER 18:38:39.164 MSH: Rcvd from EC:FA:BC:CB:30:05
+  20.67 NOEUD 18:38:38.413 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  21.63 NOEUD 18:38:39.411 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  21.68 BROKER 18:38:40.170 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  21.68 BROKER 18:38:40.170 MSH: Rcvd from EC:FA:BC:CB:30:05
+  22.60 NOEUD 18:38:40.411 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  22.68 BROKER 18:38:41.169 MSH: Rcvd from EC:FA:BC:CB:30:05
+  22.68 BROKER 18:38:41.170 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  23.13 BROKER 18:38:41.618 CMD: Publish cmnd/bureau/essai-mesh-noeud/Power
+  23.13 BROKER 18:38:41.618 SRC: Serial
+  23.13 BROKER 18:38:41.619 CMD: Grp 0, Cmd 'PUBLISH', Idx 1, Len 34, Pld -99, Data 'cmnd/bureau/essai-mesh-noeud/Power'
+  23.13 BROKER 18:38:41.636 MQT: cmnd/bureau/essai-mesh-noeud/Power =
+  23.24 NOEUD 18:38:41.060 SRC: MQTT
+  23.24 NOEUD 18:38:41.062 CMD: Grp 0, Cmd 'POWER', Idx 1, Len 2, Pld -99, Data ''
+  23.24 NOEUD 18:38:41.064 MSH: Topic in payload 'stat/bureau/essai-mesh-noeud/RESULT'
+  23.24 NOEUD 18:38:41.065 MSH:  Data in payload '{"POWER1":"OFF"}'
+  23.24 NOEUD 18:38:41.069 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"OFF"}
+  23.24 NOEUD 18:38:41.076 MSH: Topic in payload 'stat/bureau/essai-mesh-noeud/POWER1'
+  23.36 NOEUD 18:38:41.081 MSH:  Data in payload 'OFF'
+  23.36 NOEUD 18:38:41.085 MSH: stat/bureau/essai-mesh-noeud/POWER1 = OFF
+  23.36 NOEUD 18:38:41.110 MSH: Next packet 2 to resend of type 5, TTL 2
+  23.36 NOEUD 18:38:41.113 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  23.36 NOEUD 18:38:41.160 MSH: Next packet 2 to resend of type 5, TTL 1
+  23.36 NOEUD 18:38:41.172 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  23.46 NOEUD 18:38:41.211 MSH: Next packet 2 to resend of type 5, TTL 0
+  23.46 NOEUD 18:38:41.260 MSH: Next packet 1 to resend of type 5, TTL 2
+  23.46 NOEUD 18:38:41.263 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  23.58 NOEUD 18:38:41.311 MSH: Next packet 1 to resend of type 5, TTL 1
+  23.58 NOEUD 18:38:41.314 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  23.58 NOEUD 18:38:41.361 MSH: Next packet 1 to resend of type 5, TTL 0
+  23.58 NOEUD 18:38:41.412 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  23.68 BROKER 18:38:41.767 MSH: Intercept payload 'cmnd/bureau/essai-mesh-noeud/Power'
+  23.68 BROKER 18:38:41.775 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  23.68 BROKER 18:38:41.871 MSH: Rcvd from EC:FA:BC:CB:30:05
+  23.68 BROKER 18:38:41.872 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  23.68 BROKER 18:38:41.922 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"OFF"}
+  23.68 BROKER 18:38:41.930 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  23.68 BROKER 18:38:41.930 MSH: Rcvd from EC:FA:BC:CB:30:05
+  23.68 BROKER 18:38:42.023 MSH: Rcvd from EC:FA:BC:CB:30:05
+  23.68 BROKER 18:38:42.024 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  23.68 BROKER 18:38:42.073 MSH: Rcvd from EC:FA:BC:CB:30:05
+  23.68 BROKER 18:38:42.074 MSH: Packet 2 from EC:FA:BC:CB:30:05 to queue
+  23.68 BROKER 18:38:42.077 MQT: stat/bureau/essai-mesh-noeud/POWER1 = OFF
+  23.68 BROKER 18:38:42.172 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  23.68 BROKER 18:38:42.172 MSH: Rcvd from EC:FA:BC:CB:30:05
+  24.64 NOEUD 18:38:42.413 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  24.69 BROKER 18:38:43.172 MSH: Rcvd from EC:FA:BC:CB:30:05
+  24.69 BROKER 18:38:43.173 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  25.62 NOEUD 18:38:43.413 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  25.69 BROKER 18:38:44.172 MSH: Rcvd from EC:FA:BC:CB:30:05
+  25.69 BROKER 18:38:44.173 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  26.58 NOEUD 18:38:44.415 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  26.68 BROKER 18:38:45.174 MSH: Rcvd from EC:FA:BC:CB:30:05
+  26.68 BROKER 18:38:45.175 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  27.22 NOEUD 18:38:45.012 SRC: MQTT
+  27.22 NOEUD 18:38:45.014 CMD: Grp 0, Cmd 'POWER', Idx 1, Len 3, Pld 1, Data '1'
+  27.22 NOEUD 18:38:45.017 MSH: Topic in payload 'stat/bureau/essai-mesh-noeud/RESULT'
+  27.22 NOEUD 18:38:45.018 MSH:  Data in payload '{"POWER1":"ON"}'
+  27.22 NOEUD 18:38:45.022 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"ON"}
+  27.22 NOEUD 18:38:45.028 MSH: Topic in payload 'stat/bureau/essai-mesh-noeud/POWER1'
+  27.22 NOEUD 18:38:45.034 MSH:  Data in payload 'ON'
+  27.22 NOEUD 18:38:45.038 MSH: stat/bureau/essai-mesh-noeud/POWER1 = ON
+  27.23 BROKER 18:38:45.621 CMD: Publish cmnd/bureau/essai-mesh-noeud/Power 1
+  27.23 BROKER 18:38:45.622 SRC: Serial
+  27.23 BROKER 18:38:45.623 CMD: Grp 0, Cmd 'PUBLISH', Idx 1, Len 36, Pld -99, Data 'cmnd/bureau/essai-mesh-noeud/Power 1'
+  27.23 BROKER 18:38:45.638 MQT: cmnd/bureau/essai-mesh-noeud/Power = 1
+  27.23 BROKER 18:38:45.719 MSH: Intercept payload 'cmnd/bureau/essai-mesh-noeud/Power'
+  27.23 BROKER 18:38:45.733 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  27.33 NOEUD 18:38:45.062 MSH: Next packet 2 to resend of type 5, TTL 2
+  27.33 NOEUD 18:38:45.099 CFG: Enregistré en flash à F7, Compte 29, Octets 4096
+  27.33 NOEUD 18:38:45.110 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  27.33 NOEUD 18:38:45.112 MSH: Next packet 2 to resend of type 5, TTL 1
+  27.33 NOEUD 18:38:45.118 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  27.33 NOEUD 18:38:45.162 MSH: Next packet 2 to resend of type 5, TTL 0
+  27.43 NOEUD 18:38:45.212 MSH: Next packet 1 to resend of type 5, TTL 2
+  27.43 NOEUD 18:38:45.218 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  27.43 NOEUD 18:38:45.262 MSH: Next packet 1 to resend of type 5, TTL 1
+  27.43 NOEUD 18:38:45.271 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  27.54 BROKER 18:38:45.869 MSH: Rcvd from EC:FA:BC:CB:30:05
+  27.54 BROKER 18:38:45.871 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  27.54 BROKER 18:38:45.877 MSH: Rcvd from EC:FA:BC:CB:30:05
+  27.54 BROKER 18:38:45.878 MSH: Packet 2 from EC:FA:BC:CB:30:05 to queue
+  27.54 BROKER 18:38:45.924 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"ON"}
+  27.54 BROKER 18:38:45.975 MSH: Rcvd from EC:FA:BC:CB:30:05
+  27.54 BROKER 18:38:45.977 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  27.54 BROKER 18:38:46.026 MQT: stat/bureau/essai-mesh-noeud/POWER1 = ON
+  27.54 BROKER 18:38:46.031 MSH: Rcvd from EC:FA:BC:CB:30:05
+  27.54 BROKER 18:38:46.032 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  27.54 NOEUD 18:38:45.312 MSH: Next packet 1 to resend of type 5, TTL 0
+  27.65 NOEUD 18:38:45.417 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  27.69 BROKER 18:38:46.176 MSH: Rcvd from EC:FA:BC:CB:30:05
+  27.69 BROKER 18:38:46.177 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  28.68 NOEUD 18:38:46.416 MSH: Topic in payload 'tele/bureau/essai-mesh-noeud/STATE'
+  28.68 NOEUD 18:38:46.417 MSH:  Data in payload '{"Time":"2026-11-27T18:38:46","Uptime":"0T00:24:41","UptimeSec":1481,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,'
+  28.68 NOEUD 18:38:46.427 MSH:  Data in payload '"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}'
+  28.68 NOEUD 18:38:46.438 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T18:38:46","Uptime":"0T00:24:41","UptimeSec":1481,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  28.68 NOEUD 18:38:46.470 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  28.68 NOEUD 18:38:46.491 MSH: Next packet 2 to resend of type 5, TTL 2
+  28.68 NOEUD 18:38:46.494 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  28.79 NOEUD 18:38:46.541 MSH: Next packet 2 to resend of type 5, TTL 1
+  28.79 NOEUD 18:38:46.550 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  28.79 NOEUD 18:38:46.591 MSH: Next packet 2 to resend of type 5, TTL 0
+  28.91 NOEUD 18:38:46.640 MSH: Next packet 1 to resend of type 5, TTL 2
+  28.91 NOEUD 18:38:46.650 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  28.91 NOEUD 18:38:46.691 MSH: Next packet 1 to resend of type 5, TTL 1
+  28.91 NOEUD 18:38:46.694 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  28.91 NOEUD 18:38:46.740 MSH: Next packet 1 to resend of type 5, TTL 0
+  28.97 BROKER 18:38:47.228 MSH: Rcvd from EC:FA:BC:CB:30:05
+  28.97 BROKER 18:38:47.229 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  28.97 BROKER 18:38:47.253 MSH: Rcvd from EC:FA:BC:CB:30:05
+  28.97 BROKER 18:38:47.254 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  28.97 BROKER 18:38:47.308 MSH: Rcvd from EC:FA:BC:CB:30:05
+  28.97 BROKER 18:38:47.310 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  28.97 BROKER 18:38:47.408 MSH: Rcvd from EC:FA:BC:CB:30:05
+  28.97 BROKER 18:38:47.409 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  28.97 BROKER 18:38:47.442 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T18:38:46","Uptime":"0T00:24:41","UptimeSec":1481,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  28.97 BROKER 18:38:47.468 MSH: Rcvd from EC:FA:BC:CB:30:05
+  28.97 BROKER 18:38:47.470 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  29.54 BROKER 18:38:48.030 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  29.56 NOEUD 18:38:47.393 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  29.66 BROKER 18:38:48.152 MSH: Rcvd from EC:FA:BC:CB:30:05
+  29.66 BROKER 18:38:48.153 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  30.61 NOEUD 18:38:49.394 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  30.67 BROKER 18:38:49.153 MSH: Rcvd from EC:FA:BC:CB:30:05
+  30.67 BROKER 18:38:49.154 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  31.15 BROKER 18:38:49.611 CMD: Status 10
+  31.15 BROKER 18:38:49.612 SRC: Serial
+  31.15 BROKER 18:38:49.613 CMD: Grp 0, Cmd 'STATUS', Idx 1, Len 2, Pld 10, Data '10'
+  31.15 BROKER 18:38:49.622 MQT: stat/bureau/essai-mesh-broker/STATUS10 = {"StatusSNS":{"Time":"2026-11-27T18:38:49","MESH":{"channel":11,"nodes":1,"MAC":["EC:FA:BC:CB:30:05"]}}}
+  31.15 BROKER 18:38:49.635 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  31.57 NOEUD 18:38:50.408 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  31.67 BROKER 18:38:50.167 MSH: Rcvd from EC:FA:BC:CB:30:05
+  31.67 BROKER 18:38:50.169 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  32.62 NOEUD 18:38:51.401 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  32.67 BROKER 18:38:51.161 MSH: Rcvd from EC:FA:BC:CB:30:05
+  32.67 BROKER 18:38:51.162 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+  33.59 NOEUD 18:38:52.402 MSH: Sent to 4E:C3:82:BF:2E:D0 status 0
+  33.68 BROKER 18:38:52.161 MSH: Rcvd from EC:FA:BC:CB:30:05
+  33.68 BROKER 18:38:52.162 MSH: Packet 1 from EC:FA:BC:CB:30:05 to queue
+# note : retirees a la copie, artefacts du port serie du noeud sans rapport avec TasMesh : 45812 lignes "serie desactivee" (log serie coupe a 600 s) et 66 echos repetes de "CMD: MeshNode" (un seul garde)

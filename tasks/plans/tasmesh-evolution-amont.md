@@ -145,8 +145,16 @@ page web du broker (`/?m=1`) : Broker MAC, canal 11, Node MAC, « Node last mess
    rien ne part, sans erreur. Mesuré le 2026-11-27 07:30-07:31 (`Intercept payload` sans `Sent to`), disparu après `Restart 1` du broker
    (07:33, `Peer ... added successful` puis `Sent to ... status 0`). Correctif : vider `MESH.peers` (et `lastTeleMsgs`) dans `MESHstartBroker`,
    ou réenregistrer les pairs connus après `esp_now_init()`.
+   **Correctif CHOISI le 2026-11-27 : réenregistrer** (boucle `esp_now_add_peer` sur `MESH.peers` dans `MESHstartBroker`, après
+   `MESHsetKey`, canal courant) : les nœuds gardent topic et abonnement MQTT ; vider la liste les laisserait sans topic jusqu'à un
+   nouveau `MeshNode`. Posé dans le fork et dans le worktree : commit d013bd086 (adresse noreply) sur la branche locale
+   `fix-tasmesh-rerun-broker` empilée sur 354dfdc9d, NON poussée ; brouillon `outils_docs/historique/essais_tasmesh_2026-11-27/pr_bogue4_brouillon.md`.
+   **VÉRIFIÉ sur cartes le 2026-11-27 18:38** (broker recompilé 18:30, passé de COM3 à COM4 après le rebranchement du hub, identifié
+   par `Status 5` sans reset) : après le second `MeshBroker`, `Power` et `Power 1` repartent (`Sent to EC:FA:BC:CB:30:05 status 0`) et
+   sont exécutés par le nœud (`POWER1 = ON`) sans nouveau `MeshNode` ; `Status 10` = `"nodes":1` (journal `essai_mesh_183853`).
+   À publier après #25342 et la PR du bogue 3, même procédure que pour celle-ci.
 Ordre des PR proposé : #25342 d'abord ; puis 3 (une ligne, même fonction) ; puis 4 ; puis 2 (MqttLog).
-Journaux des essais (2026-11-27, lignes répétées regroupées, aucun secret) : `outils_docs/historique/essais_tasmesh_2026-11-27/` ; `essai_mesh_063553` = essai AVANT correctif, MqttLog 0 (commande exécutée par le broker ; le plantage MqttLog 3 de 06:33 n'était pas enregistré, il est décrit au bogue 2), `071202` = correctif vérifié, `073033` = commande trop longue + bogue 4, `073131` = témoin du bogue 4, `073339` = après redémarrage, Backlog courts.
+Journaux des essais (2026-11-27, lignes répétées regroupées, aucun secret) : `outils_docs/historique/essais_tasmesh_2026-11-27/` ; `essai_mesh_063553` = essai AVANT correctif, MqttLog 0 (commande exécutée par le broker ; le plantage MqttLog 3 de 06:33 n'était pas enregistré, il est décrit au bogue 2), `071202` = correctif vérifié, `073033` = commande trop longue + bogue 4, `073131` = témoin du bogue 4, `073339` = après redémarrage, Backlog courts, `183853` = correctif du bogue 4 vérifié (échos série parasites du nœud retirés à la copie).
 - [ ] Journaux gardés (syslog, page Build), compilés comme les autres : compilation par la page Build, jamais pendant un autre build, jamais `pio` direct
 
 Limites connues à ne pas masquer dans un message amont : pas de reconnexion automatique du nœud (la doc le dit), commandes de plus de 160 caractères perdues, aucune persistance (règles nécessaires pour relancer `MeshBroker` et `MeshNode` après un redémarrage).
