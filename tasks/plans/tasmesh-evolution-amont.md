@@ -107,7 +107,10 @@ Décision de l'utilisateur (2026-11-27) : le broker RESTE sur COM3 en attendant 
 après tout redémarrage : aucune persistance). Avec un nœud sain : `MeshNode 4EC382BF2ED0`, à vérifier contre `MSH: Broker MAC` du jour.
 - [x] Même mot de passe Wi-Fi sur les deux cartes : la clé de chiffrement est le mot de passe du réseau Wi-Fi ACTIF (`MESHsetKey` lit `SET_STAPWD1 + Settings->sta_active`, 32 octets au plus) ; sur le nœud, le réseau actif au moment de `MeshNode` doit porter le même mot de passe, sinon aucun paquet n'est déchiffré — preuve : `Status 11` des deux cartes le 2026-11-27, `"AP":1`, canal 11, et paquets déchiffrés des deux côtés (journal ci-dessous)
 - [x] Séquence : broker en ligne, `MeshBroker` (relever MAC du point d'accès et canal dans le journal) ; sur le nœud `MeshChannel <canal>` puis `MeshNode <MAC du broker>` ; attendre l'heure reçue (`PACKET_TYPE_TIME`) et l'enregistrement du topic — preuve : 2026-11-27 06:35, `MeshNode 4EC382BF2ED0` (MAC SANS deux-points ; `MeshChannel` inutile : le nœud lit le canal du SSID `ESP_BF2ED0`, `xdrv_57_9_tasmesh.ino::CmndMeshNode`), `RTC: Synced by Mesh`, broker -> `tele/bureau/essai-mesh-noeud/LWT = Online` en 1,6 s
-- [ ] Mesures à relever : enregistrement du nœud (liste du broker, page web), un `cmnd/<topic nœud>/...` court (moins de 160 caractères) du broker vers le nœud, un `tele/<topic nœud>/...` du nœud vers le broker, arrêt du nœud puis son LWT hors ligne (heartbeat) — 2026-11-27, nouvelle Wemos (MAC ec:fa:bc:cb:30:05, quartz 26 MHz sain) : inscription OK, `tele/.../STATE` relayé et publié par le broker OK, battement chaque seconde OK, LWT `Offline` 4 s après `Restart 1` du nœud OK. **`cmnd` broker -> nœud ÉCHOUE** (voir les deux bogues ci-dessous)
+- [x] Mesures à relever : enregistrement du nœud (liste du broker, page web), un `cmnd/<topic nœud>/...` court (moins de 160 caractères) du broker vers le nœud, un `tele/<topic nœud>/...` du nœud vers le broker, arrêt du nœud puis son LWT hors ligne (heartbeat) — 2026-11-27, nouvelle Wemos (MAC ec:fa:bc:cb:30:05, quartz 26 MHz sain) : inscription OK, `tele/.../STATE` relayé et publié par le broker OK, battement chaque seconde OK, LWT `Offline` 4 s après `Restart 1` du nœud OK. **`cmnd` broker -> nœud ÉCHOUE** (voir les bogues ci-dessous) ; avec le correctif #25342 : `Power`, `Backlog Power; Status 11`,
+`Backlog Power 1; Power 0` exécutés par le nœud — preuve : journaux `essai_mesh_071202.log` et `essai_mesh_073339.log` (`outils_docs/historique/essais_tasmesh_2026-11-27/`),
+page web du broker (`/?m=1`) : Broker MAC, canal 11, Node MAC, « Node last message 86 ms », topic ; `Status 10` du broker :
+`"MESH":{"channel":11,"nodes":1,"MAC":["EC:FA:BC:CB:30:05"]}`
 
 **Bogues trouvés sur cartes réelles le 2026-11-27 (code amont actuel)** :
 1. **Aucune commande ne va du broker au nœud.** `xdrv_57_9_tasmesh.ino::MESHinterceptMQTTonBroker` compare `cmnd/<topic>/Power` au
@@ -118,14 +121,26 @@ après tout redémarrage : aucune persistance). Avec un nœud sain : `MeshNode 4
    `if (strlen(_topic) <= strlen(stopic)) { continue; }`. Candidat idéal pour la PREMIÈRE PR (petit, prouvé sur carte).
    **Corrigé dans le fork et VÉRIFIÉ le 2026-11-27 07:11** (broker recompilé, `20261127-064837-...-broker-upload.log` SUCCESS) :
    `Power`, `Power 1`, `Power 0` publiés vers `cmnd/bureau/essai-mesh-noeud/` -> `MSH: Intercept payload` sur le broker, commande
-   exécutée par le nœud, `stat/.../POWER1` republié par le broker ~1 s après (journal `essai_mesh_071202.log` du scratchpad).
+   exécutée par le nœud, `stat/.../POWER1` republié par le broker ~1 s après (journal `essai_mesh_071202.log` dans `outils_docs/historique/essais_tasmesh_2026-11-27/`).
    **PR ouverte le 2026-11-27** : https://github.com/arendst/Tasmota/pull/25342 (worktree `../Tasmota-pr-tasmesh`, branche
    `fix-tasmesh-broker-intercept`, commit 354dfdc9d sur c1711ca20, auteur en adresse noreply, CLA cochée, fil ajouté au suivi).
 2. **Le nœud plante avec `MqttLog` >= 3** (Exception 29, ~1 s après `MeshNode`) : `MESHrouteMQTTtoMESH` écrit 2 lignes DEBUG par paquet,
    republiées en `stat/<topic>/LOGGING` par le mesh, qui en écrivent d'autres ; `packetToResend` grossit jusqu'à épuiser la RAM (13 Ko libres).
    Ce fork met `MqttLog 3` par défaut (l'amont 0) : essai refait avec `MqttLog 0` sur le nœud. À corriger en amont : ne pas router
    `LOGGING` par le mesh, ou baisser ces deux lignes en `LOG_LEVEL_DEBUG_MORE`.
-Journal de l'essai : scratchpad de la session `essai_mesh_063553.log` (non durable, à recopier si l'utilisateur le veut).
+3. **Une commande trop longue pour un paquet est EXÉCUTÉE PAR LE BROKER** (pas seulement perdue, contrairement à la doc) : topic + données
+   > `MESH_PAYLOAD_SIZE` (160) -> `MESHinterceptMQTTonBroker` logue `Intercept payload oversized` et renvoie `false`, donc la commande
+   tombe dans `MqttDataHandler` du broker. Mesuré le 2026-11-27 07:30 : `Backlog` de 23 `Power` (196 octets) exécuté par le broker
+   (23 `{"Command":"Error","Input":"POWER"}`). Sur un broker à relais, un `Backlog` destiné à un nœud commuterait ceux du broker.
+   Correctif évident : `return true` (message consommé, avec un log d'erreur) au lieu de `false`.
+4. **Relancer `MeshBroker` rend le broker muet envers les nœuds déjà connus** : `MESHstartBroker` fait `esp_now_deinit()` /
+   `esp_now_init()` (table des pairs ESP-NOW vidée) sans vider `MESH.peers` ; à la réinscription, `MESHcheckPeerList` trouve le nœud
+   et ne rappelle pas `esp_now_add_peer` ; `MESHsendPacket` envoie par `esp_now_send(NULL, ...)` (tous les pairs de la table vide) :
+   rien ne part, sans erreur. Mesuré le 2026-11-27 07:30-07:31 (`Intercept payload` sans `Sent to`), disparu après `Restart 1` du broker
+   (07:33, `Peer ... added successful` puis `Sent to ... status 0`). Correctif : vider `MESH.peers` (et `lastTeleMsgs`) dans `MESHstartBroker`,
+   ou réenregistrer les pairs connus après `esp_now_init()`.
+Ordre des PR proposé : #25342 d'abord ; puis 3 (une ligne, même fonction) ; puis 4 ; puis 2 (MqttLog).
+Journaux des essais (2026-11-27, lignes répétées regroupées, aucun secret) : `outils_docs/historique/essais_tasmesh_2026-11-27/` ; `essai_mesh_063553` = essai AVANT correctif, MqttLog 0 (commande exécutée par le broker ; le plantage MqttLog 3 de 06:33 n'était pas enregistré, il est décrit au bogue 2), `071202` = correctif vérifié, `073033` = commande trop longue + bogue 4, `073131` = témoin du bogue 4, `073339` = après redémarrage, Backlog courts.
 - [ ] Journaux gardés (syslog, page Build), compilés comme les autres : compilation par la page Build, jamais pendant un autre build, jamais `pio` direct
 
 Limites connues à ne pas masquer dans un message amont : pas de reconnexion automatique du nœud (la doc le dit), commandes de plus de 160 caractères perdues, aucune persistance (règles nécessaires pour relancer `MeshBroker` et `MeshNode` après un redémarrage).
