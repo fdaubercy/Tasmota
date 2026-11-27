@@ -144,7 +144,7 @@ page web du broker (`/?m=1`) : Broker MAC, canal 11, Node MAC, « Node last mess
    **VÉRIFIÉ sur cartes le 2026-11-27 19:42-19:51** (nœud recompilé 19:42, `MqttLog` 3, 4 puis 2, 6 min) : 0 plantage nœud ou broker, 0 LOGGING
    émis ou publié, Heap du nœud 13 Ko constant, `Status 10` = 1 nœud, `Power` envoyé par le broker exécuté par le nœud. Journal
    `essai_mesh_195112.log` (réduit : fragments série, adresses réseau et accusés du mesh retirés, note en fin de fichier). Brouillon de PR
-   `pr_bogue2_brouillon.md` ; branche du worktree `fix-tasmesh-node-mqttlog` depuis `upstream/development` (indépendante de #25342).
+   `pr_bogue2_brouillon.md` ; branche du worktree `fix-tasmesh-node-mqttlog` depuis `upstream/development` (indépendante de #25342). **PUBLIÉE le 2026-11-27 : arendst/Tasmota#25349** (branche poussée sur le fork, e2f83bb0a ; ligne d'attribution Claude Code ajoutée en fin de description, case ESP32 décochée ; CI en cours à la publication).
    Case ESP32 de la liste de contrôle laissée décochée : le broker n'a PAS été recompilé avec ce changement. Les journaux bruts
    `191545`/`193206` du scratchpad (essais intermédiaires) : NE PAS copier, morceaux bruts du tampon du nœud (un « ASSWORD1: » coupé y est passé).
    Bogue 4 revérifié à 18:58 (boucle de réinscription réellement exécutée, broker vivant 4,5 min, journal scratchpad `essai_mesh_190308`) ;

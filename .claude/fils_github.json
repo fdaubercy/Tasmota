@@ -28,5 +28,17 @@
     "type": "discussions",
     "numero": 25297,
     "sujet": "Discussion TasMesh : ESP32 comme noeud et commandes noeud a noeud"
+  },
+  {
+    "depot": "arendst/Tasmota",
+    "type": "issues",
+    "numero": 25342,
+    "sujet": "PR TasMesh : relais des commandes broker vers noeuds"
+  },
+  {
+    "depot": "arendst/Tasmota",
+    "type": "issues",
+    "numero": 25349,
+    "sujet": "PR amont TasMesh : un noeud ne publie plus son log en MQTT (bogue 2)"
   }
 ]
