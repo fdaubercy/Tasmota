@@ -1,0 +1,216 @@
+   0.13 BROKER 19:44:47.690 CMD: Restart 1
+   0.13 BROKER 19:44:47.690 SRC: Serial
+   0.13 BROKER 19:44:47.691 CMD: Grp 0, Cmd 'RESTART', Idx 1, Len 1, Pld 1, Data '1'
+   0.13 BROKER 19:44:47.696 MQT: stat/bureau/essai-mesh-broker/RESULT = {"Restart":"Restarting"}
+   1.61 BROKER 19:44:49.172 APP: Redémarre
+   2.07 BROKER 
+   2.07 BROKER 
+   2.07 BROKER 00:00:00.002 HDW: ESP32-D0WD-V3 v3.1
+   2.07 BROKER 00:00:00.007 UFS: FlashFS mounted with 300 kB free
+   2.07 BROKER 00:00:00.009 CFG: Loaded from File, Compte 22
+   2.07 BROKER 00:00:00.017 CFG: CR 516/699, Busy 0, Id08 '%s-%04d'
+   2.07 BROKER 00:00:00.017 QPC: Count 1
+   2.07 BROKER 00:00:00.020 TYA: Active=0
+   2.07 BROKER 00:00:00.035 ROT: Mode 1
+   2.07 BROKER 00:00:00.054 CFG: No '*.autoconf' file found
+   2.07 BROKER 00:00:00.058 LED: Berry Animation WebUI initialized
+   2.07 BROKER 00:00:00.065 BRY: Berry initialized, RAM used 5899 bytes
+   2.07 BROKER 00:00:00.071 BRY: No 'preinit.be'
+   2.07 BROKER 00:00:00.073 SHT: About to load settings from file /.drvset027
+   2.07 BROKER 00:00:00.073 SHT: Utiliser par défaut
+   2.07 BROKER 00:00:00.076 MSH: Initialized
+   2.07 BROKER 00:00:00.077 SRC: Restart
+   2.07 BROKER clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+   2.07 BROKER configsip: 0, SPIWP:0xee
+   2.07 BROKER entry 0x4008053c
+   2.07 BROKER ets Jul 29 2019 12:21:46
+   2.07 BROKER load:0x3fff0030,len:288
+   2.07 BROKER load:0x40078000,len:13376
+   2.07 BROKER load:0x40080400,len:2848
+   2.07 BROKER mode:DIO, clock div:2
+   2.07 BROKER rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+   2.22 BROKER 00:00:00.090 DOM: Support 0 Device(s), 0 Button(s), 0 Switch(es) and 11 Sensors
+   2.22 BROKER 00:00:00.090 Projet ESSAI-MESH-BROKER - Essai Mesh broker Version 16.0.0.7(Essai TasMesh broker)-3.3.12(2026-11-27T18:30:38)
+   2.22 BROKER 00:00:00.108 CFG: Domoticz loaded from file
+   2.22 BROKER 00:00:00.127 BRY: No 'autoexec.be'
+   2.35 BROKER 00:00:00.270 WIF: Tentative de connexion...
+   5.76 BROKER 00:00:03.643 WIF: Tentative de connexion...
+   6.76 BROKER 00:00:04.662 WIF: Tentative de connexion...
+   7.73 BROKER 00:00:05.633 WIF: Tentative de connexion...
+   8.77 BROKER 00:00:06.653 WIF: Connecté
+   9.03 BROKER 00:00:06.919 mDN: Initialisé 'bureau-essai-mesh-broker-3792.local'
+  10.23 BROKER 00:00:08.099 NTP: No reply from <IPv4>
+  10.23 BROKER 00:00:08.120 QPC: Reset
+  11.42 BROKER 00:00:09.235 RTC: UTC 2026-11-27T18:44:59Z, DST 2026-03-29T02:00:00, STD 2026-10-25T03:00:00
+  11.42 BROKER 19:44:59.000 RTC: Synced by NTP
+  11.42 BROKER 19:44:59.078 CFG: Saved, Compte 23, Octets 4096
+  12.11 BROKER 19:44:59.554 MQT: Tentative de connexion...
+  12.11 BROKER 19:44:59.597 MQT: Connecté
+  12.11 BROKER 19:44:59.600 MQT: tele/bureau/essai-mesh-broker/LWT = Online (persistant)
+  12.11 BROKER 19:44:59.602 MQT: cmnd/bureau/essai-mesh-broker/POWER =
+  12.11 BROKER 19:44:59.603 MQT: S'abonner à cmnd/bureau/essai-mesh-broker/#
+  12.11 BROKER 19:44:59.615 MQT: S'abonner à cmnd/tasmotas/#
+  12.11 BROKER 19:44:59.616 MQT: S'abonner à cmnd/ESSAI-MESH-BROKER_fb/#
+  12.11 BROKER 19:44:59.619 MQT: tele/bureau/essai-mesh-broker/INFO1 = {"Info1":{"Module":"ESP32-DevKit","Version":"16.0.0.7(Essai TasMesh broker)","FallbackTopic":"cmnd/ESSAI-MESH-BROKER_fb/","GroupTopic":"cmnd/tasmotas/"}}
+  12.11 BROKER 19:44:59.672 MQT: tele/bureau/essai-mesh-broker/INFO3 = {"Info3":{"RestartReason":"Software reset CPU","BootCount":17}}
+  12.11 BROKER 19:44:59.762 APP: Nb. de boot 17
+  12.44 BROKER 19:45:00.327 CFG: Saved, Compte 24, Octets 4096
+  25.01 NOEUD 19:45:13.035 CMD: Status 2
+  25.01 NOEUD 19:45:13.036 SRC: Serial
+  25.11 NOEUD 19:45:13.039 CMD: Grp 0, Cmd 'STATUS', Idx 1, Len 1, Pld 2, Data '2'
+  25.11 NOEUD 19:45:13.047 MQT: stat/bureau/essai-mesh-noeud/STATUS2 = {"StatusFWR":{"Version":"16.0.0.7(Essai TasMesh noeud)","BuildDateTime":"2026-11-27T19:42:07","Boot":31,"Core":"2.7.8","SDK":"2.2.2-dev(38a443e)","CpuFrequency":80,"Hardware":"ESP8266EX","CR":"467/699"}}
+  27.04 NOEUD 19:45:15.037 CMD: MqttLog 3
+  27.04 NOEUD 19:45:15.037 SRC: Serial
+  27.04 NOEUD 19:45:15.039 CMD: Grp 0, Cmd 'MQTTLOG', Idx 1, Len 1, Pld 3, Data '3'
+  27.04 NOEUD 19:45:15.044 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"MqttLog":3}
+  27.37 NOEUD 19:45:15.322 CFG: Enregistré en flash à F4, Compte 56, Octets 4096
+  29.15 BROKER 19:45:17.017 CMD: MeshBroker
+  29.15 BROKER 19:45:17.018 SRC: Serial
+  29.15 BROKER 19:45:17.019 CMD: Grp 0, Cmd 'MESHBROKER', Idx 1, Len 0, Pld -99, Data ''
+  29.15 BROKER 19:45:17.027 MSH: Broker MAC 4E:C3:82:BF:2E:D0
+  29.15 BROKER 19:45:17.033 MQT: stat/bureau/essai-mesh-broker/RESULT = {"MeshBroker":11}
+  33.07 NOEUD 19:45:21.042 CMD: MeshNode 4EC382BF2ED0
+  33.07 NOEUD 19:45:21.043 SRC: Serial
+  33.07 NOEUD 19:45:21.045 CMD: Grp 0, Cmd 'MESHNODE', Idx 1, Len 12, Pld 4, Data '4EC382BF2ED0'
+  34.67 NOEUD 19:45:22.644 MSH: Successfully connected to Mesh Broker using MAC 4EC382BF2ED0 as ESP_BF2ED0 on channel 11
+  34.67 NOEUD 19:45:22.667 MSH: Peer 4E:C3:82:BF:2E:D0 added successful
+  34.67 NOEUD 19:45:22.668 MSH: Register node with topic 'bureau/essai-mesh-noeud'
+  34.67 NOEUD 19:45:22.683 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"MeshNode":11}
+  34.78 NOEUD 19:45:22.000 RTC: Synced by Mesh
+  34.78 NOEUD 19:45:22.003 MSH: Packet to resend ...
+  34.78 NOEUD 19:45:22.080 CFG: Enregistré en flash à FB, Compte 57, Octets 4096
+  34.78 NOEUD 19:45:22.700 RTC: UTC 2026-11-27T18:45:22Z, DST 2026-03-29T02:00:00, STD 2026-10-25T03:00:00
+  34.90 BROKER 19:45:22.664 MSH: Peer EC:FA:BC:CB:30:05 added successful
+  34.90 BROKER 19:45:22.667 MQT: S'abonner à cmnd/bureau/essai-mesh-noeud/#
+  34.90 BROKER 19:45:22.672 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  34.90 BROKER 19:45:22.790 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"MeshNode":11}
+  40.33 NOEUD 19:45:27.226 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:27","Uptime":"0T00:01:04","UptimeSec":64,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  40.59 BROKER 19:45:28.452 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:27","Uptime":"0T00:01:04","UptimeSec":64,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  50.36 NOEUD 19:45:37.263 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:37","Uptime":"0T00:01:14","UptimeSec":74,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  50.61 BROKER 19:45:38.448 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:37","Uptime":"0T00:01:14","UptimeSec":74,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  59.05 NOEUD 19:45:46.005 MSH: Packet to resend ...
+  59.07 BROKER 19:45:46.978 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  60.33 NOEUD 19:45:47.255 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:47","Uptime":"0T00:01:24","UptimeSec":84,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  60.59 BROKER 19:45:48.445 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:47","Uptime":"0T00:01:24","UptimeSec":84,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  70.25 NOEUD 19:45:57.237 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:57","Uptime":"0T00:01:34","UptimeSec":94,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  70.58 BROKER 19:45:58.441 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:45:57","Uptime":"0T00:01:34","UptimeSec":94,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  80.37 NOEUD 19:46:07.268 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:07","Uptime":"0T00:01:44","UptimeSec":104,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  80.62 BROKER 19:46:08.492 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:07","Uptime":"0T00:01:44","UptimeSec":104,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  89.07 NOEUD 19:46:16.049 MSH: Packet to resend ...
+  89.13 BROKER 19:46:17.022 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+  90.29 NOEUD 19:46:18.258 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:18","Uptime":"0T00:01:55","UptimeSec":115,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+  90.63 BROKER 19:46:18.493 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:18","Uptime":"0T00:01:55","UptimeSec":115,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 100.31 NOEUD 19:46:28.240 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:28","Uptime":"0T00:02:05","UptimeSec":125,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 100.58 BROKER 19:46:28.437 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:28","Uptime":"0T00:02:05","UptimeSec":125,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 110.31 NOEUD 19:46:38.228 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:38","Uptime":"0T00:02:15","UptimeSec":135,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 110.58 BROKER 19:46:38.435 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:38","Uptime":"0T00:02:15","UptimeSec":135,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 119.04 NOEUD 19:46:47.052 MSH: Packet to resend ...
+ 119.13 BROKER 19:46:47.025 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 120.32 NOEUD 19:46:48.266 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:48","Uptime":"0T00:02:25","UptimeSec":145,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 120.62 BROKER 19:46:48.490 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:48","Uptime":"0T00:02:25","UptimeSec":145,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 130.31 NOEUD 19:46:58.249 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:58","Uptime":"0T00:02:35","UptimeSec":155,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 130.60 BROKER 19:46:58.438 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:46:58","Uptime":"0T00:02:35","UptimeSec":155,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 140.33 NOEUD 19:47:08.238 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:08","Uptime":"0T00:02:45","UptimeSec":165,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 140.58 BROKER 19:47:08.442 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:08","Uptime":"0T00:02:45","UptimeSec":165,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 149.12 NOEUD 19:47:17.054 MSH: Packet to resend ...
+ 149.14 BROKER 19:47:17.027 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 150.35 NOEUD 19:47:18.267 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:18","Uptime":"0T00:02:55","UptimeSec":175,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 150.63 BROKER 19:47:18.493 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:18","Uptime":"0T00:02:55","UptimeSec":175,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 160.27 NOEUD 19:47:28.247 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:28","Uptime":"0T00:03:05","UptimeSec":185,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 160.58 BROKER 19:47:28.440 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:28","Uptime":"0T00:03:05","UptimeSec":185,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 170.26 NOEUD 19:47:38.237 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:38","Uptime":"0T00:03:15","UptimeSec":195,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 170.58 BROKER 19:47:38.439 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:38","Uptime":"0T00:03:15","UptimeSec":195,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 179.04 NOEUD 19:47:47.049 MSH: Packet to resend ...
+ 179.14 BROKER 19:47:47.023 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 180.33 NOEUD 19:47:48.267 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:48","Uptime":"0T00:03:25","UptimeSec":205,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 180.63 BROKER 19:47:48.490 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:48","Uptime":"0T00:03:25","UptimeSec":205,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 190.33 NOEUD 19:47:58.249 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:58","Uptime":"0T00:03:35","UptimeSec":215,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 190.58 BROKER 19:47:58.439 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:47:58","Uptime":"0T00:03:35","UptimeSec":215,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 200.30 NOEUD 19:48:08.234 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:08","Uptime":"0T00:03:45","UptimeSec":225,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 200.58 BROKER 19:48:08.442 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:08","Uptime":"0T00:03:45","UptimeSec":225,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 209.06 NOEUD 19:48:17.008 MSH: Packet to resend ...
+ 209.07 BROKER 19:48:16.982 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 210.29 NOEUD 19:48:17.222 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:17","Uptime":"0T00:03:54","UptimeSec":234,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 210.59 BROKER 19:48:18.443 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:17","Uptime":"0T00:03:54","UptimeSec":234,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 213.09 NOEUD 19:48:20.042 CMD: MqttLog 4
+ 213.09 NOEUD 19:48:20.043 SRC: Serial
+ 213.09 NOEUD 19:48:20.045 CMD: Grp 0, Cmd 'MQTTLOG', Idx 1, Len 1, Pld 4, Data '4'
+ 213.09 NOEUD 19:48:20.053 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"MqttLog":4}
+ 213.32 BROKER 19:48:21.098 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"MqttLog":4}
+ 213.84 NOEUD 19:48:20.827 CFG: Enregistré en flash à FA, Compte 58, Octets 4096
+ 220.26 NOEUD 19:48:27.225 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:27","Uptime":"0T00:04:04","UptimeSec":244,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 220.58 BROKER 19:48:28.448 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:27","Uptime":"0T00:04:04","UptimeSec":244,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 230.31 NOEUD 19:48:37.257 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:37","Uptime":"0T00:04:14","UptimeSec":254,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 230.60 BROKER 19:48:38.451 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:37","Uptime":"0T00:04:14","UptimeSec":254,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 238.99 NOEUD 19:48:46.012 MSH: Packet to resend ...
+ 239.09 BROKER 19:48:46.986 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 240.26 NOEUD 19:48:47.245 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:47","Uptime":"0T00:04:24","UptimeSec":264,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 240.59 BROKER 19:48:48.454 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:47","Uptime":"0T00:04:24","UptimeSec":264,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 250.31 NOEUD 19:48:57.233 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:57","Uptime":"0T00:04:34","UptimeSec":274,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 250.59 BROKER 19:48:58.453 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:48:57","Uptime":"0T00:04:34","UptimeSec":274,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 260.25 NOEUD 19:49:07.228 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:07","Uptime":"0T00:04:44","UptimeSec":284,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 260.59 BROKER 19:49:08.451 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:07","Uptime":"0T00:04:44","UptimeSec":284,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 268.99 NOEUD 19:49:16.010 MSH: Packet to resend ...
+ 269.09 BROKER 19:49:16.984 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 270.32 NOEUD 19:49:17.258 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:17","Uptime":"0T00:04:54","UptimeSec":294,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 270.60 BROKER 19:49:18.452 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:17","Uptime":"0T00:04:54","UptimeSec":294,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 280.31 NOEUD 19:49:27.242 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:27","Uptime":"0T00:05:04","UptimeSec":304,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 280.59 BROKER 19:49:28.453 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:27","Uptime":"0T00:05:04","UptimeSec":304,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 290.31 NOEUD 19:49:37.227 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:37","Uptime":"0T00:05:14","UptimeSec":314,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 290.59 BROKER 19:49:38.452 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:37","Uptime":"0T00:05:14","UptimeSec":314,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 299.06 NOEUD 19:49:46.013 MSH: Packet to resend ...
+ 299.08 BROKER 19:49:46.987 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 300.37 NOEUD 19:49:47.260 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:47","Uptime":"0T00:05:24","UptimeSec":324,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 300.60 BROKER 19:49:48.455 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:47","Uptime":"0T00:05:24","UptimeSec":324,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 310.27 NOEUD 19:49:57.250 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:57","Uptime":"0T00:05:34","UptimeSec":334,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 310.59 BROKER 19:49:58.456 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:49:57","Uptime":"0T00:05:34","UptimeSec":334,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 318.43 BROKER 19:50:06.272 MQT: tele/bureau/essai-mesh-broker/SENSOR = {"Time":"2026-11-27T19:50:06","MESH":{"channel":11,"nodes":1,"MAC":["EC:FA:BC:CB:30:05"]}}
+ 318.43 BROKER 19:50:06.286 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 318.43 BROKER 19:50:06.292 MQT: tele/bureau/essai-mesh-noeud/LWT = Offline
+ 318.43 BROKER 19:50:06.320 MQT: tele/bureau/essai-mesh-noeud/LWT = Online
+ 320.34 NOEUD 19:50:07.230 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:07","Uptime":"0T00:05:44","UptimeSec":344,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 320.59 BROKER 19:50:08.463 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:07","Uptime":"0T00:05:44","UptimeSec":344,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 330.02 NOEUD 19:50:17.039 MSH: Packet to resend ...
+ 330.12 BROKER 19:50:18.013 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 330.34 NOEUD 19:50:17.267 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:17","Uptime":"0T00:05:55","UptimeSec":355,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 330.61 BROKER 19:50:18.463 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:17","Uptime":"0T00:05:55","UptimeSec":355,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 333.11 NOEUD 19:50:21.042 CMD: MqttLog 2
+ 333.11 NOEUD 19:50:21.043 SRC: Serial
+ 333.11 NOEUD 19:50:21.045 CMD: Grp 0, Cmd 'MQTTLOG', Idx 1, Len 1, Pld 2, Data '2'
+ 333.11 NOEUD 19:50:21.054 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"MqttLog":2}
+ 333.33 BROKER 19:50:21.115 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"MqttLog":2}
+ 333.85 NOEUD 19:50:21.827 CFG: Enregistré en flash à F9, Compte 59, Octets 4096
+ 340.34 NOEUD 19:50:28.268 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:28","Uptime":"0T00:06:05","UptimeSec":365,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 340.62 BROKER 19:50:28.464 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:28","Uptime":"0T00:06:05","UptimeSec":365,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 350.29 NOEUD 19:50:38.258 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:38","Uptime":"0T00:06:15","UptimeSec":375,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 350.61 BROKER 19:50:38.464 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:38","Uptime":"0T00:06:15","UptimeSec":375,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 360.06 NOEUD 19:50:48.039 MSH: Packet to resend ...
+ 360.12 BROKER 19:50:48.013 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 360.28 NOEUD 19:50:48.253 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:48","Uptime":"0T00:06:25","UptimeSec":385,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 360.61 BROKER 19:50:48.463 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:48","Uptime":"0T00:06:25","UptimeSec":385,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 370.34 NOEUD 19:50:58.246 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:58","Uptime":"0T00:06:35","UptimeSec":395,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 370.60 BROKER 19:50:58.461 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:50:58","Uptime":"0T00:06:35","UptimeSec":395,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 373.16 BROKER 19:51:01.020 CMD: Status 1
+ 373.16 BROKER 19:51:01.021 SRC: Serial
+ 373.16 BROKER 19:51:01.022 CMD: Grp 0, Cmd 'STATUS', Idx 1, Len 1, Pld 1, Data '1'
+ 373.16 BROKER 19:51:01.025 MQT: stat/bureau/essai-mesh-broker/STATUS1 = {"StatusPRM":{"Baudrate":115200,"SerialConfig":"8N1","GroupTopic":"tasmotas","OtaUrl":"","RestartReason":"Software reset CPU","Uptime":"0T00:06:10","StartupUTC":"2026-11-27T18:44:51","Sleep":50,"CfgHolder":1615,"BootCount":17,"BCResetTime":"2026-11-27T03:09:23","SaveCount":24}}
+ 376.16 BROKER 19:51:04.020 CMD: Status 10
+ 376.16 BROKER 19:51:04.021 SRC: Serial
+ 376.16 BROKER 19:51:04.022 CMD: Grp 0, Cmd 'STATUS', Idx 1, Len 2, Pld 10, Data '10'
+ 376.16 BROKER 19:51:04.030 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 376.16 BROKER 19:51:04.032 MQT: stat/bureau/essai-mesh-broker/STATUS10 = {"StatusSNS":{"Time":"2026-11-27T19:51:04","MESH":{"channel":11,"nodes":1,"MAC":["EC:FA:BC:CB:30:05"]}}}
+ 379.10 NOEUD 19:51:07.108 SRC: MQTT
+ 379.10 NOEUD 19:51:07.110 CMD: Grp 0, Cmd 'POWER', Idx 1, Len 2, Pld -99, Data ''
+ 379.20 NOEUD 19:51:07.117 MSH: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"ON"}
+ 379.20 NOEUD 19:51:07.133 MSH: stat/bureau/essai-mesh-noeud/POWER1 = ON
+ 379.33 BROKER 19:51:07.032 CMD: Publish cmnd/bureau/essai-mesh-noeud/Power
+ 379.33 BROKER 19:51:07.033 SRC: Serial
+ 379.33 BROKER 19:51:07.035 CMD: Grp 0, Cmd 'PUBLISH', Idx 1, Len 34, Pld -99, Data 'cmnd/bureau/essai-mesh-noeud/Power'
+ 379.33 BROKER 19:51:07.049 MQT: cmnd/bureau/essai-mesh-noeud/Power =
+ 379.33 BROKER 19:51:07.074 MSH: Intercept payload 'cmnd/bureau/essai-mesh-noeud/Power'
+ 379.33 BROKER 19:51:07.079 MSH: Sent to EC:FA:BC:CB:30:05 status 0
+ 379.33 BROKER 19:51:07.176 MQT: stat/bureau/essai-mesh-noeud/RESULT = {"POWER1":"ON"}
+ 379.33 BROKER 19:51:07.328 MQT: stat/bureau/essai-mesh-noeud/POWER1 = ON
+ 380.29 NOEUD 19:51:08.233 MSH: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:51:08","Uptime":"0T00:06:45","UptimeSec":405,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+ 380.59 BROKER 19:51:08.456 MQT: tele/bureau/essai-mesh-noeud/STATE = {"Time":"2026-11-27T19:51:08","Uptime":"0T00:06:45","UptimeSec":405,"Heap":13,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":1,"POWER1":"ON","Hostname":"bureau-essai-mesh-noeud-4101","IPAddress":"0.0.0.0"}
+# note : copie reduite de 70 014 lignes. Retirees : 67928 fragments de lecture serie du noeud (sans rapport avec TasMesh), 5 lignes d'adresses reseau du broker (IPv4, IPv6, INFO2, serveur web, adresse NTP), 1866 accuses de reception du mesh (Rcvd from, Packet to queue, Sent to broker, Next packet, Topic/Data in payload). Garde : build, MqttLog, STATE du noeud, Power, Status 1 et 10. Resultat : 0 plantage, 0 ligne LOGGING emise par le noeud ni publiee par le broker.

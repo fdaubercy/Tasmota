@@ -126,8 +126,29 @@ page web du broker (`/?m=1`) : Broker MAC, canal 11, Node MAC, « Node last mess
    `fix-tasmesh-broker-intercept`, commit 354dfdc9d sur c1711ca20, auteur en adresse noreply, CLA cochée, fil ajouté au suivi).
 2. **Le nœud plante avec `MqttLog` >= 3** (Exception 29, ~1 s après `MeshNode`) : `MESHrouteMQTTtoMESH` écrit 2 lignes DEBUG par paquet,
    republiées en `stat/<topic>/LOGGING` par le mesh, qui en écrivent d'autres ; `packetToResend` grossit jusqu'à épuiser la RAM (13 Ko libres).
-   Ce fork met `MqttLog 3` par défaut (l'amont 0) : essai refait avec `MqttLog 0` sur le nœud. À corriger en amont : ne pas router
-   `LOGGING` par le mesh, ou baisser ces deux lignes en `LOG_LEVEL_DEBUG_MORE`.
+   Ce fork met `MqttLog 3` par défaut (l'amont 0) : essai refait avec `MqttLog 0` sur le nœud.
+   **Analyse du 2026-11-27 soir : DEUX causes.** (a) Boucle : `MqttPublishLoggingAsync` vide le tampon par `GetLog` et publie par
+   `MqttPublishLib`, que le nœud détourne vers `MESHrouteMQTTtoMESH`, qui écrit des lignes DEBUG ; la vidange ne rattrape jamais la fin,
+   `packetToResend` grossit, Exception 29 (reproduit à 18:52, journal scratchpad `essai_mesh_185511`). Baisser les lignes en DEBUG_MORE ne
+   suffit pas (`Next packet`/`Sent to` par paquet relancent la boucle d'un appel à l'autre) : premier correctif essayé = plafonner le niveau publié à
+   `LOG_LEVEL_INFO` sur un nœud (aucune ligne INFO n'est écrite par paquet) ; insuffisant, ABANDONNÉ, voir (c). (b) Longueur ignorée : `MESHrouteMQTTtoMESH` fait `strlen(_data)`
+   alors qu'une ligne du tampon de log n'est pas terminée par 0 : le nœud envoie TOUT le reste du tampon, octets `\1` compris ; le broker
+   les journalise et casse son propre tampon de log : broker planté dans `SyslogAsync` (Exception 3, essai 19:10 avec le seul correctif (a),
+   lignes LOGGING de 869 et 1940 car. avec 12 et 27 `\x01`). Essayé : passer `plength` et terminer le dernier morceau par 0 ; ABANDONNÉ, voir (c).
+   (c) Essai des deux à 19:26-19:32 : plus aucun plantage, MAIS 38 des 40 LOGGING publiés portaient encore `` et des lignes voisines
+   (cause déduite du code et des paquets, non prouvée : `MESHrouteMQTTtoMESH` appelle `AddLog` avant de copier `_data`, ce qui peut décaler
+   le tampon de log sous le pointeur). Trois causes en trois endroits -> **voie A choisie par l'utilisateur le 2026-11-27** : un nœud
+   ne publie plus son LOGGING (retour anticipé, `xdrv_02_9_mqtt.ino::MqttPublishLoggingAsync`, 3 lignes) ; les deux autres défauts sont
+   neutralisés sans être corrigés. Défaut latent hors LOGGING, non traité : `strlen(_data)` au lieu de `plength` dans
+   `xdrv_57_9_tasmesh.ino::MESHrouteMQTTtoMESH` (charge binaire tronquée) ; PR séparée possible, à proposer.
+   **VÉRIFIÉ sur cartes le 2026-11-27 19:42-19:51** (nœud recompilé 19:42, `MqttLog` 3, 4 puis 2, 6 min) : 0 plantage nœud ou broker, 0 LOGGING
+   émis ou publié, Heap du nœud 13 Ko constant, `Status 10` = 1 nœud, `Power` envoyé par le broker exécuté par le nœud. Journal
+   `essai_mesh_195112.log` (réduit : fragments série, adresses réseau et accusés du mesh retirés, note en fin de fichier). Brouillon de PR
+   `pr_bogue2_brouillon.md` ; branche du worktree `fix-tasmesh-node-mqttlog` depuis `upstream/development` (indépendante de #25342).
+   Case ESP32 de la liste de contrôle laissée décochée : le broker n'a PAS été recompilé avec ce changement. Les journaux bruts
+   `191545`/`193206` du scratchpad (essais intermédiaires) : NE PAS copier, morceaux bruts du tampon du nœud (un « ASSWORD1: » coupé y est passé).
+   Bogue 4 revérifié à 18:58 (boucle de réinscription réellement exécutée, broker vivant 4,5 min, journal scratchpad `essai_mesh_190308`) ;
+   le broker avait redémarré seul à 18:40 (« Software reset CPU », pile dans la tâche idle) : cause non trouvée, non reproduite.
 3. **Une commande trop longue pour un paquet est EXÉCUTÉE PAR LE BROKER** (pas seulement perdue, contrairement à la doc) : topic + données
    > `MESH_PAYLOAD_SIZE` (160) -> `MESHinterceptMQTTonBroker` logue `Intercept payload oversized` et renvoie `false`, donc la commande
    tombe dans `MqttDataHandler` du broker. Mesuré le 2026-11-27 07:30 : `Backlog` de 23 `Power` (196 octets) exécuté par le broker
