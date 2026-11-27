@@ -3,7 +3,7 @@ chantier: tasmesh-evolution-amont
 titre: Faire évoluer TasMesh en amont (commandes de nœud à nœud, charge utile, clés par pair)
 statut: actif
 cree: 2026-11-16
-maj: 2026-11-16
+maj: 2026-11-27
 objectif: Sonder arendst/Tasmota par une discussion courte, puis proposer de petits PR isolés sur TasMesh si les mainteneurs y sont favorables
 famille: modbus-reseau
 liens: rgx-ethernet-uplink
@@ -83,18 +83,49 @@ Résultat des PR (2026-11-17, `gh pr view`) : #25289 FUSIONNÉE par arendst à 1
 - [ ] Agents `controleur-secrets` puis commit en français sans accents, PR en anglais
 
 ## A4b — Banc d'essai sur cartes réelles (préparé le 2026-11-17, rien flashé)
-**REPORTÉ le 2026-11-18 (décision de l'utilisateur).** Raison : le seul ESP8266 disponible est la lumière de porte de cave
-(`tasmota-cave-lumiere-porte`, ESP8285, en service) et aucun ESP32 de rechange pour le broker. Reprendre quand un ESP8266 de test
-et un ESP32 libres existent (ou si l'utilisateur accepte d'immobiliser la lumière de porte, sauvegarde avant). Rien n'a été flashé,
-ni `user_config_override.h` ni aucun env modifié.
+Reporté le 2026-11-18 (pas de matériel libre), **REPRIS le 2026-11-26** : ESP8266 de test commandé et reçu par l'utilisateur
+(nœud), ESP32 du portail de jardin (COM3, `tasmota32-garage-portail-jardin-modbus`, pas encore en service) EMPRUNTÉ comme broker,
+avec l'accord de l'utilisateur. Envs TEMPORAIRES `tasmota32-bureau-essai-tasmesh-broker` (sans FS) et
+`tasmota-bureau-essai-tasmesh-noeud` dans le cenv ; section commune `FIRMWARE_ESP32_ESSAI_TASMESH_BROKER` /
+`FIRMWARE_ESP8266_ESSAI_TASMESH_NOEUD` dans `user_config_override.h` (accord de l'utilisateur) : `USE_TASMESH` seul (le bloc commun
+« TasMesh » pose déjà heartbeat et délai), Wi-Fi maison, DHCP, sans Range Extender. L'identité du portail n'est PAS réutilisée :
+il passe par l'AP du P4 et est lui-même Range Extender, ce qui fausserait le canal et la clé.
+**Remise en état après l'essai** : COM3 en « Effacer puis téléverser » de `tasmota32-garage-portail-jardin-modbus` (persist au
+dépôt ; la sauvegarde HTTP est impossible, carte derrière le NAPT du P4), puis retirer les deux envs et la section d'essai.
+Le Wi-Fi maison a 3 points d'accès : relever BSSID et canal du broker à `MeshBroker`, un changement de point d'accès change le canal.
 Objectif choisi : prouver que le CODE ACTUEL de l'amont (après #25289 et #25290) fonctionne, comme état de référence avant tout travail sur
 l'ESP32 nœud. Matériel déclaré : UN ESP8266 libre (nœud). Aucun ESP32 libre déclaré : le broker manque (voir la première case).
-- [ ] Choisir la carte du broker (ESP32, Wi-Fi maison + MQTT) : une carte du parc utilisée brièvement avec restauration de sa configuration (sauvegarde de la page Build avant), ou un ESP32 de rechange
-- [ ] Env du nœud : ESP8266 1 Mo à partir de `tasmota-base-1M`, avec `USE_TASMESH` (+11 Ko de code, à vérifier contre la place libre de l'env) ; flash par câble (un nœud coupe Wi-Fi et serveur web une fois `MeshNode` lancé)
-- [ ] Env du broker : ESP32 avec `USE_TASMESH`, `USE_TASMESH_HEARTBEAT`, `TASMESH_OFFLINE_DELAY 3` (la dernière n'a aucune valeur par défaut). Ces lignes iraient dans `tasmota/user_config_override.h` : ACCORD DE L'UTILISATEUR requis avant (règle du dépôt), à poser par section d'env pour ne rien changer aux autres cartes
-- [ ] Même mot de passe Wi-Fi sur les deux cartes : la clé de chiffrement est le mot de passe du réseau Wi-Fi ACTIF (`MESHsetKey` lit `SET_STAPWD1 + Settings->sta_active`, 32 octets au plus) ; sur le nœud, le réseau actif au moment de `MeshNode` doit porter le même mot de passe, sinon aucun paquet n'est déchiffré
-- [ ] Séquence : broker en ligne, `MeshBroker` (relever MAC du point d'accès et canal dans le journal) ; sur le nœud `MeshChannel <canal>` puis `MeshNode <MAC du broker>` ; attendre l'heure reçue (`PACKET_TYPE_TIME`) et l'enregistrement du topic
-- [ ] Mesures à relever : enregistrement du nœud (liste du broker, page web), un `cmnd/<topic nœud>/...` court (moins de 160 caractères) du broker vers le nœud, un `tele/<topic nœud>/...` du nœud vers le broker, arrêt du nœud puis son LWT hors ligne (heartbeat)
+- [x] Choisir la carte du broker (ESP32, Wi-Fi maison + MQTT) : une carte du parc utilisée brièvement avec restauration de sa configuration (sauvegarde de la page Build avant), ou un ESP32 de rechange — preuve : identification esptool du 2026-11-26 (COM3 = ESP32 4 Mo sans PSRAM, carte du portail ESP32 ; COM4 = P4 maître, COM12 = cuve S3, exclus), emprunt accordé par l'utilisateur le 2026-11-26
+- [x] Env du nœud : ESP8266 1 Mo à partir de `tasmota-base-1M`, avec `USE_TASMESH` (+11 Ko de code, à vérifier contre la place libre de l'env) ; flash par câble (un nœud coupe Wi-Fi et serveur web une fois `MeshNode` lancé) — preuve : journal Build `20261126-223058-tasmota-bureau-essai-tasmesh-noeud-compiler.log` (SUCCESS, Flash 71,5 %), 7 symboles TasMesh dans la carte mémoire, flashé sur COM37 le 2026-11-27 (`20261127-030955-...-noeud-erase_upload.log`, SUCCESS)
+- [x] Env du broker : ESP32 avec `USE_TASMESH`, `USE_TASMESH_HEARTBEAT`, `TASMESH_OFFLINE_DELAY 3` (la dernière n'a aucune valeur par défaut). Ces lignes iraient dans `tasmota/user_config_override.h` : ACCORD DE L'UTILISATEUR requis avant (règle du dépôt), à poser par section d'env pour ne rien changer aux autres cartes — preuve : journal Build `20261127-024258-tasmota32-bureau-essai-tasmesh-broker-erase_upload.log` (SUCCESS, sommes vérifiées) ; en ligne en 192.168.0.194, `MeshBroker` -> `{"MeshBroker":11}`, `MSH: Broker MAC 4E:C3:82:BF:2E:D0` (2026-11-27 03:15)
+
+**Essai du 2026-11-27, BLOQUÉ par l'ESP8266 reçu** : la carte (MAC 48:3f:da:8a:f0:56, flash 4 Mo, sur adaptateur FTDI COM37) a une horloge
+trop rapide (esptool : quartz mesuré 27,01 MHz ; uptime +2,8 % contre l'horloge du PC sur 50 s ; série propre seulement à 119 631 bauds
+au lieu de 115 200). Sa radio ne voit AUCUN réseau (`WifiScan` : 0, la maison en a trois) : pas d'IP, `MeshNode 4EC382BF2ED0` ->
+« No Mesh Broker found », redémarrage logiciel périodique. Le code TasMesh n'est pas en cause : il faut un autre ESP8266.
+Décision de l'utilisateur (2026-11-27) : le broker RESTE sur COM3 en attendant l'ESP8266 de remplacement (`MeshBroker` à relancer
+après tout redémarrage : aucune persistance). Avec un nœud sain : `MeshNode 4EC382BF2ED0`, à vérifier contre `MSH: Broker MAC` du jour.
+- [x] Même mot de passe Wi-Fi sur les deux cartes : la clé de chiffrement est le mot de passe du réseau Wi-Fi ACTIF (`MESHsetKey` lit `SET_STAPWD1 + Settings->sta_active`, 32 octets au plus) ; sur le nœud, le réseau actif au moment de `MeshNode` doit porter le même mot de passe, sinon aucun paquet n'est déchiffré — preuve : `Status 11` des deux cartes le 2026-11-27, `"AP":1`, canal 11, et paquets déchiffrés des deux côtés (journal ci-dessous)
+- [x] Séquence : broker en ligne, `MeshBroker` (relever MAC du point d'accès et canal dans le journal) ; sur le nœud `MeshChannel <canal>` puis `MeshNode <MAC du broker>` ; attendre l'heure reçue (`PACKET_TYPE_TIME`) et l'enregistrement du topic — preuve : 2026-11-27 06:35, `MeshNode 4EC382BF2ED0` (MAC SANS deux-points ; `MeshChannel` inutile : le nœud lit le canal du SSID `ESP_BF2ED0`, `xdrv_57_9_tasmesh.ino::CmndMeshNode`), `RTC: Synced by Mesh`, broker -> `tele/bureau/essai-mesh-noeud/LWT = Online` en 1,6 s
+- [ ] Mesures à relever : enregistrement du nœud (liste du broker, page web), un `cmnd/<topic nœud>/...` court (moins de 160 caractères) du broker vers le nœud, un `tele/<topic nœud>/...` du nœud vers le broker, arrêt du nœud puis son LWT hors ligne (heartbeat) — 2026-11-27, nouvelle Wemos (MAC ec:fa:bc:cb:30:05, quartz 26 MHz sain) : inscription OK, `tele/.../STATE` relayé et publié par le broker OK, battement chaque seconde OK, LWT `Offline` 4 s après `Restart 1` du nœud OK. **`cmnd` broker -> nœud ÉCHOUE** (voir les deux bogues ci-dessous)
+
+**Bogues trouvés sur cartes réelles le 2026-11-27 (code amont actuel)** :
+1. **Aucune commande ne va du broker au nœud.** `xdrv_57_9_tasmesh.ino::MESHinterceptMQTTonBroker` compare `cmnd/<topic>/Power` au
+   préfixe `cmnd/<topic>/` et sort par `if (strlen(_topic) != strlen(stopic)) return false;` : jamais égal pour une vraie commande,
+   donc la commande tombe dans `MqttDataHandler` du BROKER, qui l'exécute lui-même (`{"Command":"Error","Input":"POWER"}` observé,
+   rien reçu par le nœud). Régression de #24809 (2026-05-30, « Tasmesh safety fixes ») : la ligne était `strlen(_topic) != strlen(_topic)`
+   (faute de frappe sans effet). Le `return false` dans la boucle ignore en plus les pairs suivants. Correctif évident :
+   `if (strlen(_topic) <= strlen(stopic)) { continue; }`. Candidat idéal pour la PREMIÈRE PR (petit, prouvé sur carte).
+   **Corrigé dans le fork et VÉRIFIÉ le 2026-11-27 07:11** (broker recompilé, `20261127-064837-...-broker-upload.log` SUCCESS) :
+   `Power`, `Power 1`, `Power 0` publiés vers `cmnd/bureau/essai-mesh-noeud/` -> `MSH: Intercept payload` sur le broker, commande
+   exécutée par le nœud, `stat/.../POWER1` republié par le broker ~1 s après (journal `essai_mesh_071202.log` du scratchpad).
+   **PR ouverte le 2026-11-27** : https://github.com/arendst/Tasmota/pull/25342 (worktree `../Tasmota-pr-tasmesh`, branche
+   `fix-tasmesh-broker-intercept`, commit 354dfdc9d sur c1711ca20, auteur en adresse noreply, CLA cochée, fil ajouté au suivi).
+2. **Le nœud plante avec `MqttLog` >= 3** (Exception 29, ~1 s après `MeshNode`) : `MESHrouteMQTTtoMESH` écrit 2 lignes DEBUG par paquet,
+   republiées en `stat/<topic>/LOGGING` par le mesh, qui en écrivent d'autres ; `packetToResend` grossit jusqu'à épuiser la RAM (13 Ko libres).
+   Ce fork met `MqttLog 3` par défaut (l'amont 0) : essai refait avec `MqttLog 0` sur le nœud. À corriger en amont : ne pas router
+   `LOGGING` par le mesh, ou baisser ces deux lignes en `LOG_LEVEL_DEBUG_MORE`.
+Journal de l'essai : scratchpad de la session `essai_mesh_063553.log` (non durable, à recopier si l'utilisateur le veut).
 - [ ] Journaux gardés (syslog, page Build), compilés comme les autres : compilation par la page Build, jamais pendant un autre build, jamais `pio` direct
 
 Limites connues à ne pas masquer dans un message amont : pas de reconnexion automatique du nœud (la doc le dit), commandes de plus de 160 caractères perdues, aucune persistance (règles nécessaires pour relancer `MeshBroker` et `MeshNode` après un redémarrage).
