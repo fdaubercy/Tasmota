@@ -133,6 +133,12 @@ page web du broker (`/?m=1`) : Broker MAC, canal 11, Node MAC, « Node last mess
    tombe dans `MqttDataHandler` du broker. Mesuré le 2026-11-27 07:30 : `Backlog` de 23 `Power` (196 octets) exécuté par le broker
    (23 `{"Command":"Error","Input":"POWER"}`). Sur un broker à relais, un `Backlog` destiné à un nœud commuterait ceux du broker.
    Correctif évident : `return true` (message consommé, avec un log d'erreur) au lieu de `false`.
+   **Corrigé dans le fork et VÉRIFIÉ le 2026-11-27 08:01** (broker `20261127-074155-...-broker-upload.log` SUCCESS) : même `Backlog`
+   de 196 octets -> `MSH: Intercept payload oversized 160, dropped`, 0 `Power` exécuté par le broker (23 avant) ; `Backlog Power 1;
+   Power 0` toujours exécuté par le nœud (journal `essai_mesh_080155.log`). PR PRÊTE, NON PUBLIÉE : worktree `../Tasmota-pr-tasmesh`,
+   branche locale `fix-tasmesh-oversized-command` (commit f041e357c, empilé sur 354dfdc9d de #25342, auteur noreply), texte anglais
+   dans `outils_docs/historique/essais_tasmesh_2026-11-27/pr_bogue3_brouillon.md` (ligne 1 = titre). À publier APRÈS la fusion de #25342 : rebaser sur `upstream/development`, relire le
+   texte avec l'utilisateur, `controleur-secrets`, `preparateur-push`, push de la branche sur origin, `gh pr create`.
 4. **Relancer `MeshBroker` rend le broker muet envers les nœuds déjà connus** : `MESHstartBroker` fait `esp_now_deinit()` /
    `esp_now_init()` (table des pairs ESP-NOW vidée) sans vider `MESH.peers` ; à la réinscription, `MESHcheckPeerList` trouve le nœud
    et ne rappelle pas `esp_now_add_peer` ; `MESHsendPacket` envoie par `esp_now_send(NULL, ...)` (tous les pairs de la table vide) :
