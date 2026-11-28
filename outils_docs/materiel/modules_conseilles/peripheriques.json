@@ -1,0 +1,577 @@
+{
+ "date": "2026-11-26",
+ "categories": {
+  "devkit": [
+   {
+    "nom": "Espressif ESP32-S3-DevKitC-1-N16R8 (officiel)",
+    "caracteristiques": "Module ESP32-S3-WROOM-1, flash 16 Mo, PSRAM octale 8 Mo, antenne PCB (variante -1U-N16R8 : antenne externe). Alimentation par USB (port UART ou port USB OTG natif), ou broches 5V/G, ou 3V3/G (exclusives). Deux rangees J1/J3 de 22 broches (44 broches). GPIO35, 36, 37 indisponibles (PSRAM octale). LED RGB sur GPIO38.",
+    "tasmota": "Supporte par Tasmota32 (cible ESP32-S3, PSRAM octale) ; c'est la carte des envs S3 du depot.",
+    "liens": {
+     "fabricant": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html",
+     "photo": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/esp32-s3-devkitc-1-v1.1-isometric.png",
+     "aliexpress": "https://fr.aliexpress.com/item/1005005775857406.html",
+     "aliexpress_prix": "13,89 EUR pour la variante affichee « S3-DevKitC-1U N16R8 » (fiche AliExpress, vendeur non identifie comme Espressif, 2026-11-26)",
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html"
+    ],
+    "incertitudes": [
+     "Boutique officielle Espressif non trouvee sur AliExpress ni Amazon.fr (resultats = clones) ; l'annonce AliExpress citee mentionne Espressif dans le titre sans preuve d'origine.",
+     "Connecteur USB : la doc v1.1 lue parle de Micro-USB pour le port UART ; les clones vendus sont en USB-C."
+    ]
+   },
+   {
+    "nom": "Clone ESP32-S3 DevKitC-1 N16R8 (44 broches, double USB-C)",
+    "caracteristiques": "ESP32-S3-WROOM-1-N16R8 (16 Mo flash, 8 Mo PSRAM), 44 broches, USB-C, brochage annonce identique au DevKitC-1.",
+    "tasmota": "Meme firmware Tasmota32 S3 que l'officiel.",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005013033169318.html",
+     "aliexpress_prix": "6,99 EUR (liste de recherche AliExpress, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0FYFF8CB2",
+     "amazon_prix": "11,99 EUR (« ESP32-S3 WROOM-1-N16R8 ESP32-S3-DevKitC-1 », resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/w/wholesale-esp32-s3-devkitc-1-n16r8.html"
+    ],
+    "incertitudes": [
+     "Vendeur sans marque : verifier N16R8 (et non N8R2) dans la variante choisie et la largeur entre rangees (25,4 mm) avant de viser une carte porteuse.",
+     "Autre annonce vue : https://fr.aliexpress.com/item/1005009148540140.html a 9,49 EUR (+1000 vendus)."
+    ]
+   },
+   {
+    "nom": "eletechsup DNS3485 : carte porteuse ESP32-S3 44 broches, RS485 + alimentation 7-30 V, bornier 3,96 mm, boitier rail DIN en option",
+    "caracteristiques": "Entree DC 7-30 V protegee contre l'inversion, sortie 5 V >= 0,5 A protegee court-circuit ; RS485 haut debit (0,05 a 1000 kbit/s) avec TVS ; toutes les IO sorties sauf les 3 prises par le RS485 (TX, RX, IO1) ; borniers 3,96 mm (26-16 AWG) ; 80x58x12 mm (carte), 95x61x35 mm (boitier). Accepte les ESP32-S3 de 25,4 mm et 28 mm de large.",
+    "tasmota": "RS485 cote Tasmota : ModBus Bridge (USE_MODBUS_BRIDGE, ModBusSend) ou driver Berry du depot. Le TX enable (GPIO_MBR_TX_ENA) ne semble pas necessaire si la direction est automatique (non dit par la fiche).",
+    "liens": {
+     "fabricant": "https://eletechsup.com/products/dns3485-esp32-s3-wifi-ble-rs485-485-bus-expansion-board-2-4g",
+     "photo": "https://cdn.shopify.com/s/files/1/0707/8622/0189/files/Sb0af5483dcf0404f8422d2eb8007cd034.webp?v=1755267746",
+     "aliexpress": "https://fr.aliexpress.com/item/1005013245854984.html",
+     "aliexpress_prix": "17,69 EUR variante « only Board » (fiche AliExpress, 2026-11-26)",
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://eletechsup.com/products/dns3485-esp32-s3-wifi-ble-rs485-485-bus-expansion-board-2-4g (prix eletechsup : only Board 15,70 USD ; avec boitier rail 18,55 USD)"
+    ],
+    "incertitudes": [
+     "La fiche dit « Supports two widths : 25.4MM & 28MM » : compatibilite mecanique avec le DevKitC-1 officiel non verifiee sur piece.",
+     "Le GPIO de direction du RS485 (IO1 ?) et l'eventuel mode automatique ne sont pas detailles : demander le schema."
+    ]
+   },
+   {
+    "nom": "eletechsup DNDINS3 : bornier a vis rail DIN pour ESP32-S3 44 broches (sans RS485)",
+    "caracteristiques": "Sort toutes les broches sauf RST sur bornier 3,96 mm (26-16 AWG, vis M2/M2.5) ; 80x58x9 mm (carte), 95x61x35 mm (boitier UM80 rail DIN35/C45) ; ESP32-S3 de 25,4 mm et 28 mm.",
+    "tasmota": "Simple adaptateur passif : rien a configurer dans Tasmota.",
+    "liens": {
+     "fabricant": "https://eletechsup.com/products/dndins3-esp32-s3-din-rail-mounting-expansion-board-all-pinout-3-96-screw-terminal-module-usb-otg-n16r8-n8r8-for-wi-fi-bluetooth-le",
+     "photo": "https://cdn.shopify.com/s/files/1/0707/8622/0189/files/Sa58e885b1c4e4abe91642975fe9822a06_13e94993-e8ae-4957-ae1f-66a751c2864c.webp?v=1738857858",
+     "aliexpress": "https://fr.aliexpress.com/item/1005013504015205.html",
+     "aliexpress_prix": "8,69 EUR (liste de recherche AliExpress, 2026-11-26)",
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://eletechsup.com/products/dndins3-esp32-s3-din-rail-mounting-expansion-board-all-pinout-3-96-screw-terminal-module-usb-otg-n16r8-n8r8-for-wi-fi-bluetooth-le (only board 8,99 USD ; avec rail 11,99 USD)",
+     "outils_docs/LIENS_WEB.md (lien deja cite dans le depot)"
+    ],
+    "incertitudes": [
+     "Pas d'alimentation embarquee : prevoir un abaisseur vers 5 V.",
+     "Amazon : l'ASIN B0GCXMCQ1T cite dans LIENS_WEB.md (amazon.com) donne « Page introuvable » sur amazon.fr ; aucune annonce eletechsup trouvee par la recherche.",
+     "Compatibilite avec le DevKitC-1 officiel non verifiee sur piece."
+    ]
+   }
+  ],
+  "platine16": [
+   {
+    "nom": "eletechsup R413E16 « 16 Channel Multifunction RS485 Module » (carte coeur A, enfichable) + platine 16 relais",
+    "caracteristiques": "Carte coeur : DC 5 V, 11-15 mA ; RS485 et RS232 TTL ; ModBus RTU (jusqu'a 247 esclaves) et commandes AT reconnues automatiquement ; 16 sorties TTL 5 V (niveau bas par defaut, pont M0 pour niveau haut) ; 6 ordres (open, close, momentary, self-locking, interlock, delay 0-255 s en ModBus) ; version A 40x30x22 mm pour s'enficher sur une platine relais existante, version B 40x30x11,5 mm pour PCB. Usine : 9600 bauds 8N1, adresse 0x01 ; relecture des 16 etats par la fonction 0x03 (PROTOCOLE_MODBUS.md §8).",
+    "tasmota": "Pas de driver Tasmota dedie : pilote par ModBusSend (USE_MODBUS_BRIDGE) via le module Berry modBus_Conn16channels.be du depot (ecriture 0x06, relecture 0x03).",
+    "liens": {
+     "fabricant": "https://eletechsup.com/products/r413e16-rs485-relay-16ch-multifunction-npn-pnp-io-control-core-board-modbus-rtu-eletechsup-oem-odm",
+     "photo": "https://cdn.shopify.com/s/files/1/0707/8622/0189/files/10_27e965e5-d4d6-4806-995d-a7f8b1e02928.jpg?v=1740746146",
+     "aliexpress": null,
+     "aliexpress_prix": null,
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://eletechsup.com/products/r413e16-... : variantes « 16ch Relay Board » 15,99 USD, « Core board A » 4,99 USD, « Core board B » 4,99 USD, « USB to RS485 » 2,99 USD",
+     "c:/Users/fdaub/Documents/Github/Tasmota/outils_docs/Electronique/Connecteur ModBus/16 Channel  Multifunction RS485 Module Manual.docx (texte identique a la fiche eletechsup)",
+     "c:/Users/fdaub/Documents/Github/Tasmota/outils_docs/reference_berry/PROTOCOLE_MODBUS.md §8"
+    ],
+    "incertitudes": [
+     "Tension de bobine de la variante « 16ch Relay Board » (5, 12 ou 24 V) non lue : la fiche dit seulement « for 5-24V 1-16CH Relay Module ».",
+     "L'enfichage de la version A sur la platine (connecteur 20 broches) vient d'un fil de forum (community.allstarlink.org), pas du fabricant.",
+     "Annonce AliExpress de la carte coeur non identifiee (la recherche « R413E16 » ne rend rien de pertinent) ; l'ASIN B0DDXSNH4W (manuals.plus) donne « Page introuvable » sur amazon.fr.",
+     "Alternative integree (relais sur la meme carte) : eletechsup R4D3B16, 16 relais 12 V 10 A rail DIN, 22,99 USD chez eletechsup, 19,98 EUR variante « Only Board » sur https://fr.aliexpress.com/item/1005001709515551.html (2026-11-26) ; jeu de commandes et relecture 0x03 non verifies."
+    ]
+   },
+   {
+    "nom": "eletechsup R4D8A08 : 8 relais 12 V RS485 ModBus RTU + AT, boitier rail DIN (variante 8 voies probable du manuel du depot) ; alternative R421A08",
+    "caracteristiques": "R4D8A08 : DC 12 V (10-13 V), 12 mA au repos a 224 mA (8 relais colles), deux modes ModBus RTU et AT, delay 255 s (ModBus) / 9999 s (AT), rail DIN35, 17,99 a 19,99 USD. R421A08 : DC 12 V (9-13 V), ModBus seul, 64 esclaves, 90x62x19,5 mm, contacts 10 A 250 VAC / 30 VDC, 15,99 USD. Le manuel du depot « 8 Channel Rail RS485 Relay » decrit 100x72 mm, boitier UM72 rail DIN, adresse par A0-A5 (64 adresses), debit par cavaliers 2400-19200 (usine 9600).",
+    "tasmota": "Pilotage par ModBusSend (USE_MODBUS_BRIDGE) ; commandes 0x06 identiques a la carte 16 voies (meme manuel de commandes).",
+    "liens": {
+     "fabricant": "https://eletechsup.com/products/dc-12v-8-ch-rs485-relay-board-modbus-rtu-uart-remote-control-switch-din35-rail-box-for-plc-automation-control",
+     "photo": "https://cdn.shopify.com/s/files/1/0707/8622/0189/files/H1e09c683f082437a9395b32200d18596q.webp?v=1738857388",
+     "aliexpress": "https://fr.aliexpress.com/item/1005013653416681.html",
+     "aliexpress_prix": "21,39 EUR pour la variante affichee « 4CH 12V Only Board » (annonce « Eletechsup ... 4/8 canaux 10 A rail DIN », 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0BCDXFVHG",
+     "amazon_prix": "24,77 EUR (« XIAOJUN DC 24V 8 RS485 Relay Board Modbus RTU UART DIN35 Rail Box », revendeur, reference eletechsup non confirmee, 2026-11-26)"
+    },
+    "sources": [
+     "https://eletechsup.com/products/r421a08-...",
+     "https://eletechsup.com/products/dc-12v-8-ch-rs485-relay-board-modbus-rtu-uart-remote-control-switch-din35-rail-box-for-plc-automation-control (R4D8A08, 17,99 USD)",
+     "c:/Users/fdaub/Documents/Github/Tasmota/outils_docs/Electronique/Connecteur ModBus/8 Channel Rail RS485 Relay Manual.docx"
+    ],
+    "incertitudes": [
+     "Le manuel 8 voies du depot (ModBus + AT, 100x72 mm, boitier UM72) colle au R4D8A08 (seul des deux a annoncer le mode AT) ; la fiche R4D8A08 lue ne donne pas les dimensions : a confirmer.",
+     "Relecture des 8 etats par 0x03 (utilisee pour la carte 16 voies, §8) non verifiee sur ces cartes.",
+     "Alternative « carte coeur 8 voies » du meme vendeur : R413D08 (DC 5 V ou 6-24 V, RS485 + TTL, AT + ModBus, 3,99 USD)."
+    ]
+   },
+   {
+    "nom": "eletechsup R421C32 : 32 relais 12 V ou 24 V RS485 ModBus RTU, boitier rail DIN en option",
+    "caracteristiques": "Version 12 V ou 24 V ; 8 mA au repos, 1050 mA les 32 relais colles (12 V) ; 64 esclaves ; 180x90x20 mm (carte), 195x115x43 mm (boitier UM100) ; contacts 10 A 250 VAC ; delay 0-255 s.",
+    "tasmota": "Pilotage par ModBusSend (USE_MODBUS_BRIDGE).",
+    "liens": {
+     "fabricant": "https://eletechsup.com/products/r421c32-dc-12v-24v-32ch-modbus-rtu-rs485-relay-switch-board-uart-serial-port-module-din-rail-box-plc-expanding-board",
+     "photo": "https://cdn.shopify.com/s/files/1/0707/8622/0189/files/Hcef2159f3aaa4c53b4d2a8051ad0353bb.webp?v=1738857358",
+     "aliexpress": "https://fr.aliexpress.com/item/1005009311176877.html",
+     "aliexpress_prix": "84,39 EUR variante « 12V » (annonce 32 canaux rail DIN, 6 modes, vendeur non identifie, 2026-11-26)",
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://eletechsup.com/products/r421c32-... (36,99 a 39,99 USD selon couleur/version)"
+    ],
+    "incertitudes": [
+     "L'annonce AliExpress n'est pas confirmee comme eletechsup R421C32.",
+     "Relecture des etats par 0x03 non verifiee : le module Berry du depot en depend (etat constate)."
+    ]
+   }
+  ],
+  "analogique": [
+   {
+    "nom": "Adafruit ADS1115 (produit 1085) : CAN 16 bits, 4 voies, PGA, I2C, STEMMA QT",
+    "caracteristiques": "Alimentation 2,0 a 5,5 V ; 4 voies simples ou 2 differentielles ; adresses I2C 0x48 a 0x4B (broche ADDR).",
+    "tasmota": "Driver natif USE_ADS1115 (tasmota/tasmota_xsns_sensor/xsns_12_ads1115.ino), adresses 0x48-0x4B, cadence jusqu'a 860 SPS dans le driver ; a activer dans l'env s'il manque.",
+    "liens": {
+     "fabricant": "https://www.adafruit.com/product/1085",
+     "photo": "https://cdn-shop.adafruit.com/970x728/1085-10.jpg",
+     "aliexpress": null,
+     "aliexpress_prix": null,
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://www.adafruit.com/product/1085 (14,95 USD)"
+    ],
+    "incertitudes": [
+     "Alimenter l'ADS1115 en 3,3 V avec l'ESP32-S3 : aucune entree ne doit depasser VDD + 0,3 V."
+    ]
+   },
+   {
+    "nom": "Module ADS1115 generique (carte bleue ou rouge, 4 voies, 16 bits, I2C)",
+    "caracteristiques": "Meme puce ADS1115 ; alimentation 2,0-5,5 V ; 4 voies ; adresse 0x48 par defaut.",
+    "tasmota": "Driver natif USE_ADS1115 (xsns_12_ads1115.ino).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005009256359161.html",
+     "aliexpress_prix": "1,25 EUR (liste de recherche, +800 vendus, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0H6C6DCWN",
+     "amazon_prix": "10,49 EUR le lot de 3 (resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/w/wholesale-ads1115.html"
+    ],
+    "incertitudes": [
+     "Les annonces « ADS1115 ADS1015 » melangent parfois les deux puces : verifier le marquage BOGI (ADS1115).",
+     "ADS1115 isole trouve : M5Stack VMeter (ADS1115 isole, 31,39 EUR, https://fr.aliexpress.com/item/1005012074883870.html) ; une seule voie, connecteur Grove. Sinon proteger chaque entree (resistance serie + diode/TVS) sur la carte porteuse."
+    ]
+   },
+   {
+    "nom": "Diviseur 0-24 V vers ADS1115 : module « Voltage Sensor 0-25V » ou diviseur sur mesure",
+    "caracteristiques": "Le module courant est un pont 30 kOhm / 7,5 kOhm (rapport 5:1) : 25 V donnent 5 V en sortie, trop pour un ADS1115 alimente en 3,3 V. Pour 0-24 V vers 0-3,0 V il faut un rapport ~8:1 (ex. 68 kOhm / 10 kOhm : 24 V -> 3,06 V).",
+    "tasmota": "Lecture par USE_ADS1115 puis mise a l'echelle (regle ou Berry).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/32347347435.html",
+     "aliexpress_prix": "0,91 EUR variante « 1 piece » (fiche AliExpress, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07YC89B8F",
+     "amazon_prix": "8,99 EUR le lot de 5 (Hailege DC 0-25 V, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "Calcul ; valeurs du module 0-25V a confirmer sur l'annonce choisie"
+    ],
+    "incertitudes": [
+     "Valeurs de resistances du module « 0-25V » non lues sur une fiche fabricant (connues de memoire) : a mesurer.",
+     "Ne pas utiliser le module 0-25 V tel quel sur un ADS1115 en 3,3 V au-dela de ~16 V d'entree."
+    ]
+   }
+  ],
+  "mesure_4_20mA_courant": [
+   {
+    "nom": "Convertisseur 4-20 mA vers 0-3,3 V / 0-5 V / 0-10 V (module a resistance de charge et ampli, non isole)",
+    "caracteristiques": "Alimentation DC 7-30 V ; entree 0/4-20 mA ; sortie reglable 3,3 / 5 / 10 V (zero et gain par potentiometres) ; non isole.",
+    "tasmota": "Sortie vers ADS1115 (USE_ADS1115) ou entree ADC de l'ESP32 (GPIO ADC Input).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005001709082456.html",
+     "aliexpress_prix": "4,89 EUR (liste de recherche, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0FLXSXTJ7",
+     "amazon_prix": "12,59 EUR (« 0/4-20 mA vers 0-3,3 V 5 V 10 V », resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/w/wholesale-4-20mA-to-voltage-module-3.3v.html ; autre annonce 0,87 EUR : https://fr.aliexpress.com/item/1005012209733185.html"
+    ],
+    "incertitudes": [
+     "Version a regler sur 3,3 V max si elle attaque un ADS1115 alimente en 3,3 V.",
+     "Alternative sans module : resistance de 150 Ohm (20 mA -> 3,0 V) directement sur l'entree ADS1115."
+    ]
+   },
+   {
+    "nom": "Waveshare Modbus RTU Analog Input 8CH : 8 entrees 12 bits tension/courant, RS485 isole",
+    "caracteristiques": "Alimentation DC 7-36 V ; 8 voies ; version 8CH : 0-5 V/1-5 V et 0-20 mA (defaut)/4-20 mA ; version (B) : 0-10 V/2-10 V et 0/4-20 mA ; 12 bits, precision <= 3 pour mille ; isolation d'alimentation et isolation magnetique du RS485, fusible rearmable et TVS ; 9600 8N1 par defaut, adresse 1-255.",
+    "tasmota": "Esclave ModBus RTU : lu par ModBusSend (USE_MODBUS_BRIDGE) ou un driver Berry.",
+    "liens": {
+     "fabricant": "https://www.waveshare.com/modbus-rtu-analog-input-8ch.htm",
+     "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/m/o/modbus-rtu-analog-input-8ch-1.jpg",
+     "aliexpress": "https://fr.aliexpress.com/item/1005013016783190.html",
+     "aliexpress_prix": "37,59 EUR (liste de recherche, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0CLV4X7CH",
+     "amazon_prix": "37,99 EUR (Waveshare module d'acquisition analogique industriel 8-Ch 12 bits, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://www.waveshare.com/modbus-rtu-analog-input-8ch.htm (24,99 USD)"
+    ],
+    "incertitudes": [
+     "Adresse esclave d'usine non indiquee sur la page lue."
+    ]
+   },
+   {
+    "nom": "eletechsup AMAIE08 (8 voies 4-20 mA, ModBus RTU) ou N4AIA04 (4 voies 4-20 mA/0-5 V/0-10 V)",
+    "caracteristiques": "AMAIE08 : 8 voies 0-20/4-20 mA, alimentation DC 7-25 V, 8-50 mA, isolation RS485 3000 VDC, ModBus RTU (lecture 03/04, ecriture 06/16), 1200-115200 bauds (9600 par defaut), capteurs 2/3 fils (22,99 USD). N4AIA04 : DC 12 V, 4-20 mA / 0-5 V / 0-10 V, RS485 ModBus RTU (3,99 USD).",
+    "tasmota": "Esclaves ModBus RTU : ModBusSend (USE_MODBUS_BRIDGE).",
+    "liens": {
+     "fabricant": "https://eletechsup.com/products/8ch-12v-24v-4-20ma-0-20ma-current-collector-module-rs485-modbus-rtu-board-for-shunt-hall-fluxgate-pressure-2-3-wire-sensor",
+     "photo": "https://cdn.shopify.com/s/files/1/0707/8622/0189/files/S8513c6e9d17b4c8387b0b05f630152c73_77a624da-c432-498d-9824-6f05f2c98e1b.webp?v=1738856646",
+     "aliexpress": null,
+     "aliexpress_prix": null,
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://eletechsup.com/products/8ch-12v-24v-4-20ma-0-20ma-current-collector-module-rs485-modbus-rtu-board-for-shunt-hall-fluxgate-pressure-2-3-wire-sensor",
+     "recherche eletechsup.com « 4-20mA modbus » (titres et prix), 2026-11-26",
+     "c:/Users/fdaub/Documents/Github/Tasmota/outils_docs/Electronique/Connecteur ModBus/Manuel Connecteur ModBus Analogique.pdf : c'est un N4IOA01, SORTIE 4-20 mA (pas une mesure)"
+    ],
+    "incertitudes": [
+     "Resolution de l'AMAIE08 non lue ; fiche N4AIA04 non lue (titre seulement) ; annonces AliExpress/Amazon non cherchees."
+    ]
+   },
+   {
+    "nom": "Peacefair PZEM-004T v3.0 (100 A, tore ferme ou ouvert) : energie AC monophasee, TTL ModBus RTU",
+    "caracteristiques": "Mesure 80-260 VAC (0,1 V, 0,5 %), 0-10 A (version 10A, shunt) ou 0-100 A (version 100A, tore externe), puissance, energie, frequence, facteur de puissance ; TTL optocouplee, ModBus RTU 9600 8N1, adresse 0x01-0xF7 (0xF8 = diffusion).",
+    "tasmota": "Driver natif USE_PZEM_AC (PZEM014/016) : GPIO « PZEM016 Rx » + « PZEM0XX Tx ». En 3,3 V : resistance de 1 kOhm a ajouter entre VDD et l'opto RX (doc Tasmota).",
+    "liens": {
+     "fabricant": "https://tasmota.github.io/docs/PZEM-0XX/",
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005007243815951.html",
+     "aliexpress_prix": "10,19 EUR (liste de recherche, « PZEM 004T 4.0 », 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0BD4X2V7S",
+     "amazon_prix": "24,87 EUR (« Pzem-004t V3 », 80-260 V 100 A, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://tasmota.github.io/docs/PZEM-0XX/",
+     "https://narodmon.com/img/sens/PZEM-004Tv3.pdf",
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/include/tasmota_configurations_ESP32.h (USE_PZEM_AC)"
+    ],
+    "incertitudes": [
+     "Les annonces vendent aussi une « version 4.0 » : compatibilite avec le driver PZEM016 non verifiee.",
+     "Plages lues sur une copie tierce du manuel V3.0 (narodmon.com/img/sens/PZEM-004Tv3.pdf), pas sur le site Peacefair ; adresse d'usine non lue."
+    ]
+   },
+   {
+    "nom": "Pince SCT-013-030 (30 A / 1 V, tore ouvrant, sortie jack 3,5 mm)",
+    "caracteristiques": "30 A pour 1 V de sortie (resistance de charge integree), ouverture 13x13 mm.",
+    "tasmota": "Natif par l'ADC de l'ESP32 : GPIO « ADC CT Power » (GPIO_ADC_CT_POWER dans tasmota_template.h), avec point milieu de polarisation. Par ADS1115 (max 860 SPS) la mesure RMS a 50 Hz est limite.",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/4000927920771.html",
+     "aliexpress_prix": "5,09 EUR (liste de recherche, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07MY361ZW",
+     "amazon_prix": "9,99 EUR (ARCELI SCT-013-030, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://manuals.plus/yhdc/sct013-split-core-current-transformer-manual.pdf",
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/include/tasmota_template.h (GPIO_ADC_CT_POWER)"
+    ],
+    "incertitudes": [
+     "Fiche YHDC officielle non lue ; precision 1 % ou 2-3 % selon les sources."
+    ]
+   },
+   {
+    "nom": "Module ACS712 (5 A / 20 A / 30 A, effet Hall, AC/DC)",
+    "caracteristiques": "Alimentation 5 V ; sortie analogique centree a 2,5 V a courant nul (185 mV/A en 5 A).",
+    "tasmota": "Lecture par ADS1115 ou ADC ; pas de driver dedie. Sortie jusqu'a ~4,5 V : diviseur indispensable vers l'ESP32-S3 ou un ADS1115 en 3,3 V.",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005006391760222.html",
+     "aliexpress_prix": "1,59 EUR (liste de recherche, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07XT7R4KS",
+     "amazon_prix": "8,99 EUR le lot de 2 (Hailege ACS712 20A, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/w/wholesale-acs712-module.html"
+    ],
+    "incertitudes": [
+     "Sensibilite citee de la fiche Allegro de memoire, non relue."
+    ]
+   },
+   {
+    "nom": "Module BL0942 (mesure tension et courant AC 220 V, sortie UART)",
+    "caracteristiques": "Puce BL0942 ; mesure tension/courant AC ; UART ; detection de passage a zero.",
+    "tasmota": "Driver natif USE_BL09XX (tasmota_xnrg_energy/xnrg_14_bl09xx.ino, BL0942 comme sur les Shelly Gen3). Le depot l'utilise deja (calibrage des projecteurs).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005013015677834.html",
+     "aliexpress_prix": "4,79 EUR (liste de recherche, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0HJW58VWC",
+     "amazon_prix": "19,79 EUR (module BL0942 sortie UART, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/tasmota_xnrg_energy/xnrg_14_bl09xx.ino"
+    ],
+    "incertitudes": [
+     "Isolation du module vis-a-vis du secteur non verifiee : UART au potentiel du secteur sur beaucoup de modules BL0942."
+    ]
+   }
+  ],
+  "interfaces": [
+   {
+    "nom": "Module TTL vers RS485 a direction automatique 3,3-5 V (SP3485 / « controle automatique du flux »)",
+    "caracteristiques": "Alimentation 3,3-5 V ; RS485 demi-duplex ; direction automatique (pas de broche DE/RE).",
+    "tasmota": "ModBus Bridge (USE_MODBUS_BRIDGE). Tasmota sait aussi piloter DE/RE (GPIO « ModBr Tx Ena », GPIO_MBR_TX_ENA) : un module MAX485 non automatique marche aussi.",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005007176292527.html",
+     "aliexpress_prix": "1,21 EUR (liste de recherche, +900 vendus, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B09TK2JV9T",
+     "amazon_prix": "9,49 EUR le lot de 2 (« flux automatique », 3,3 V 5 V, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/w/wholesale-ttl-rs485-automatic-flow-control-3.3v.html",
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/include/tasmota_template.h (GPIO_MBR_TX_ENA)"
+    ],
+    "incertitudes": [
+     "Les modules dits MAX13487 sont en 5 V (Analog Devices) : en 3,3 V prendre un SP3485 ou verifier la puce."
+    ]
+   },
+   {
+    "nom": "Waveshare TTL TO RS485 (B) : convertisseur isole rail DIN",
+    "caracteristiques": "Alimentation 3,3-5 V ; isolation galvanique (alimentation et signal) ; protection foudre 600 W et surtensions ; demi-duplex ; montage rail.",
+    "tasmota": "ModBus Bridge (USE_MODBUS_BRIDGE).",
+    "liens": {
+     "fabricant": "https://www.waveshare.com/ttl-to-rs485-b.htm",
+     "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/t/t/ttl-to-rs485-b-1.jpg",
+     "aliexpress": "https://fr.aliexpress.com/item/1005010499321367.html",
+     "aliexpress_prix": "3,19 EUR pour un module isole generique « inversion automatique » (autre produit, liste de recherche)",
+     "amazon": "https://www.amazon.fr/dp/B0BPT4GWR7",
+     "amazon_prix": "19,99 EUR (« Waveshare Rail-Mount TTL to RS485 Galvanic Isolated Converter 600W », resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://www.waveshare.com/ttl-to-rs485-b.htm (10,99 USD)"
+    ],
+    "incertitudes": [
+     "Direction automatique et puce non indiquees sur la page Waveshare lue.",
+     "Le lien AliExpress pointe un module isole generique, pas le Waveshare."
+    ]
+   },
+   {
+    "nom": "Carte 8 entrees optocouplees 12/24 V vers 3,3 V (PC817, NPN/PNP)",
+    "caracteristiques": "8 voies ; entree 12/24 V ; sortie niveau 3,3 V ou 5 V selon la variante ; isolation par optocoupleur.",
+    "tasmota": "Entrees en GPIO « Switch » ou « Button » (natif), ou via MCP23017/PCF8574.",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005013655626377.html",
+     "aliexpress_prix": "2,48 EUR pour la variante affichee « 2 Channel » ; la 8 voies coute plus (fiche AliExpress, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07VMFMZFH",
+     "amazon_prix": "21,99 EUR (8 canaux 24 V vers 3,3 V, sortie PNP, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/w/wholesale-8-channel-optocoupler-isolation-module-24v-to-3.3v.html ; autre : https://fr.aliexpress.com/item/4000458797117.html (11,39 EUR)"
+    ],
+    "incertitudes": [
+     "Choisir la variante « 24V -> 3.3V » : le sens de conversion varie selon la reference."
+    ]
+   },
+   {
+    "nom": "Module relais 1/2/4/8 voies a optocoupleur, commande 3,3 V",
+    "caracteristiques": "Variantes 3,3 / 5 / 12 / 24 V de bobine ; declenchement niveau haut ou bas par cavalier ; optocoupleur.",
+    "tasmota": "GPIO « Relay » / « Relay_i » (natif).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005010279657848.html",
+     "aliexpress_prix": "5,49 EUR (liste de recherche, +800 vendus, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0CCS1QS39",
+     "amazon_prix": "14,99 EUR le lot de 5 (1 canal 3 V/3,3 V a optocoupleur, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/w/wholesale-relay-module-3.3v-optocoupler.html"
+    ],
+    "incertitudes": [
+     "Une carte « 5 V » commandee en 3,3 V peut ne pas coller : prendre la variante 3,3 V ou bobine 12/24 V avec JD-VCC separe."
+    ]
+   },
+   {
+    "nom": "Expandeur I2C MCP23017 (16 E/S)",
+    "caracteristiques": "16 E/S, I2C, adresses 0x20-0x26.",
+    "tasmota": "Drivers natifs USE_MCP230xx (xsns_29_mcp230xx.ino) et USE_MCP23XXX_DRV ; 0x27 non supporte.",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005012328809464.html",
+     "aliexpress_prix": "9,99 EUR (carte d'extension, liste de recherche, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07P2H1NZG",
+     "amazon_prix": "13,49 EUR (Waveshare MCP23017 IO Expansion Board, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/tasmota_xsns_sensor/xsns_29_mcp230xx.ino"
+    ],
+    "incertitudes": [
+     "Module CJMCU-23017 bon marche non releve."
+    ]
+   },
+   {
+    "nom": "Expandeur I2C PCF8574 / PCF8574A (8 E/S)",
+    "caracteristiques": "8 E/S quasi bidirectionnelles, I2C.",
+    "tasmota": "Driver natif USE_PCF8574 : PCF8574 0x20-0x26, PCF8574A 0x39-0x3F (0x27 et 0x38 non supportes).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005013528928634.html",
+     "aliexpress_prix": "0,50 EUR variante « Blue » (fiche AliExpress, prix suspect a reverifier, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07DK4WDRW",
+     "amazon_prix": "5,99 EUR le lot de 3 (DollaTek, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/tasmota_xdrv_driver/ (pcf8574, en-tete du driver)"
+    ],
+    "incertitudes": [
+     "Module PCF8574T avec interrupteurs DIP d'adresse (8 modules chainables) ; prix tres bas a reverifier au panier."
+    ]
+   },
+   {
+    "nom": "Sonde DS18B20 etanche (inox, cable 1 m)",
+    "caracteristiques": "1-Wire, -55 a +125 C, 3,0-5,5 V, resistance de tirage 4,7 kOhm.",
+    "tasmota": "Driver natif USE_DS18x20 (GPIO « DS18x20 »).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005013294661164.html",
+     "aliexpress_prix": "21,39 EUR pour la variante affichee « 1M-3P » (probablement un lot ; fiche AliExpress, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0GYZVLXDH",
+     "amazon_prix": "10,99 EUR le lot de 5 (inox 1 m, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/my_user_config.h (USE_DS18x20)"
+    ],
+    "incertitudes": [
+     "Plage et tension citees de memoire (fiche Maxim non relue)."
+    ]
+   },
+   {
+    "nom": "Module MPU6050 GY-521 (accelerometre + gyroscope)",
+    "caracteristiques": "I2C, adresse 0x68 (0x69 avec AD0).",
+    "tasmota": "Driver natif USE_MPU6050 (xsns_32_mpu6050.ino) ; le depot l'utilise (INCLINAISON_MPU6050.md).",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005013557807138.html",
+     "aliexpress_prix": "0,86 EUR variante « Domestic chips » (puce chinoise, pas InvenSense ; fiche AliExpress, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07BVXN2GP",
+     "amazon_prix": "6,99 EUR (ARCELI GY-521, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "c:/Users/fdaub/Documents/Github/Tasmota/tasmota/tasmota_xsns_sensor/xsns_32_mpu6050.ino"
+    ],
+    "incertitudes": []
+   }
+  ],
+  "alimentation": [
+   {
+    "nom": "Mean Well DDR-15G-5 : DC-DC rail DIN 9-36 V vers 5 V 3 A, isole",
+    "caracteristiques": "Entree 9-36 VDC ; sortie 5 V 2,7 A (entree 9-12 V) ou 3 A (12-36 V) ; ondulation 50 mVc-c ; rendement 84 % ; isolation E/S 4 kVDC (distributeur) ; -40 a +85 C.",
+    "tasmota": "Sans objet.",
+    "liens": {
+     "fabricant": "https://www.meanwell.com/webapp/product/search.aspx?prod=DDR-15",
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005012510295730.html",
+     "aliexpress_prix": "20,99 EUR pour la variante affichee par defaut DDR-15L-24V (choisir DDR-15G-5 ; fiche AliExpress, 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B07B6553JY",
+     "amazon_prix": "24,86 EUR (« Mean Well DDR-15G-5 5 V/DC 3 A 15 W », resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://www.meanwell.com/catalog/product/files/basic-html/page96.html",
+     "https://ie.farnell.com/mean-well/ddr-15g-5/dc-dc-converter-5v-3a/dp/3002987"
+    ],
+    "incertitudes": [
+     "La serie HDR (ex. HDR-15-5) n'est PAS un DC-DC : entree 85-264 VAC ou 120-370 VDC (catalogue Mean Well page26, DigiKey HDR-15-5). Elle ne convient pas a une entree 12/24 VDC ; elle sert si l'armoire part du secteur.",
+     "Variante DDR-15L-5 (entree 18-75 V) existe."
+    ]
+   },
+   {
+    "nom": "Pololu D24V22F5 : abaisseur 5 V 2,5 A, entree 5,3-36 V",
+    "caracteristiques": "Entree 5,3-36 V ; sortie 5 V ; 2,5 A typique a 24 V d'entree.",
+    "tasmota": "Sans objet.",
+    "liens": {
+     "fabricant": "https://www.pololu.com/product/2858",
+     "photo": "https://a.pololu-files.com/picture/0J6897.600x480.jpg?33ca5feeed3fd67fb97d30c8245f7d6a",
+     "aliexpress": null,
+     "aliexpress_prix": null,
+     "amazon": null,
+     "amazon_prix": null
+    },
+    "sources": [
+     "https://www.pololu.com/product/2858 (26,95 USD)"
+    ],
+    "incertitudes": [
+     "Aucun resultat sur Amazon.fr pour « Pololu D24V22F5 » ; revendeurs europeens non cherches.",
+     "Alternative bon marche vue sur Amazon.fr : abaisseur « 36V/24V/12V a 5V 3A », 6,99 EUR les 2, https://www.amazon.fr/dp/B0FS1FN2H4 (puce non indiquee)."
+    ]
+   },
+   {
+    "nom": "Module abaisseur generique LM2596 (entree jusqu'a 40 V, sortie reglable)",
+    "caracteristiques": "Entree 4-40 V ; sortie reglable 1,25-35 V ; 2-3 A.",
+    "tasmota": "Sans objet.",
+    "liens": {
+     "fabricant": null,
+     "photo": null,
+     "aliexpress": "https://fr.aliexpress.com/item/1005013422047387.html",
+     "aliexpress_prix": "4,99 EUR (fiche AliExpress « LM2596-ADJ DC 4V-40V vers 1.23-35V 3A », 2026-11-26)",
+     "amazon": "https://www.amazon.fr/dp/B0HGQ4RML8",
+     "amazon_prix": "10,99 EUR le lot de 6 (LM2596S reglable 3 A, resultats de recherche Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+     "https://fr.aliexpress.com/item/1005013422047387.html (titre de l'annonce)"
+    ],
+    "incertitudes": [
+     "Courant reel et rendement non verifies ; regler et verrouiller le potentiometre a 5,0 V avant de brancher l'ESP32."
+    ]
+   }
+  ]
+ }
+}

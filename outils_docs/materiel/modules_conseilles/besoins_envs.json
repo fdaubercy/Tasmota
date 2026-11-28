@@ -1,0 +1,389 @@
+{
+  "_lecture": "Relevé en lecture seule du 2026-11-26. Persist lus par garde_lecture (valeurs masquées), blocs serveur jamais lus. 'relais' = sorties physiques de la carte elle-même ; 'relais_deportes' = sorties pilotées par ModBus, MQTT ou la carte 16 relais (pas de matériel local). Un bloc 'déclaré ON, non chargé' est actif dans le persist mais exclu par le cenv ou sans broche : ce n'est pas un besoin.",
+  "platine16": {
+    "module_commande": "« 16 Channel Multifunction RS485 Module » (nom du manuel constructeur ; aucune marque ni référence commerciale dans les docs)",
+    "nature": "Module de commande seul (16 sorties TTL 5 V, niveau bas par défaut, cavalier M0 pour inverser), PAS une platine relais : il pilote une platine 16 relais séparée (relais inversés : contact fermé quand la commande est à 0 V).",
+    "alimentation": "DC 5 V, 10 à 15 mA (module de commande). Le manuel dit qu'il peut commander des platines relais 5 à 24 V.",
+    "nombre_sorties": 16,
+    "relais_utilises": "16 déclarés et actifs sur le maître P4 (relai4 à relai19, Conn16channel1 id 1) dont 2 nommés : Caméra de garage, Projecteur de garage ; les 14 autres portent un nom générique « Relai N ».",
+    "protocole": "RS485 (et TTL/RS232 sur la version à embase), deux jeux reconnus automatiquement : AT en ASCII et ModBus RTU (fonction 06 écriture : 01 Open, 02 Close, 03 Toggle, 04 Latch, 05 Momentary, 06 Delay 0-255 s, 07 Open all, 08 Close all ; fonction 03 lecture des 16 états en une trame). Registres 0x00FE débit, 0x00FF adresse (1-247).",
+    "debit": "Usine 9600 bauds 8N1, adresse 0x01. En service : 19200 bauds 8N1 (drivers.ModBus.debit du P4), réglé à la main avant intégration ; changement effectif après coupure d'alimentation.",
+    "versions": "A : 40 x 30 x 22 mm, 9,2 g, à enficher sur une platine relais existante ; B : 40 x 30 x 11,5 mm, 6,2 g, à intégrer sur un PCB.",
+    "platine_relais": "Référence, tension de bobine et alimentation de la platine 16 relais elle-même : NON TROUVÉES dans le dépôt.",
+    "lien_achat": "Aucun trouvé pour le module ni pour la platine. (Le lien AliExpress de CHANGELOG.md:681 concerne le capteur de niveau de la cuve, pas cette carte.)",
+    "sources": [
+      "outils_docs/Electronique/Connecteur ModBus/16 Channel  Multifunction RS485 Module Manual.docx",
+      "outils_docs/Electronique/Connecteur ModBus/16 Channel  Multifunction RS485 Module commamd.docx",
+      "outils_docs/reference_berry/PROTOCOLE_MODBUS.md §8",
+      "data/fs/modBus_Conn16channels.be (en-tête NOTES)",
+      "data/garage/tasmota32p4-serveur-modbus/_persist.json::drivers.ModBus (debit, Conn16channels)"
+    ],
+    "incertitudes": "Sens physique « Open » contre « Fermeture » à confirmer sur la carte (PROTOCOLE_MODBUS §8) ; position du cavalier M0 non notée ; modèle de la platine relais à relever sur le matériel."
+  },
+  "envs": [
+    {
+      "env": "tasmota-jardin-pompe-piscine",
+      "categorie": "commerce",
+      "lieu": "jardin",
+      "appareil": "Sonoff S2X (ESP8266EX, 1 Mo), pompe de piscine, (IP masquee) ; config_decodee module 7",
+      "statut": "en service (mémoire project_statut_cartes)",
+      "sources": ["platformio_tasmota_cenv.ini::en-tête JARDIN", "data/jardin/tasmota-pompe-piscine/config_decodee.json::module"]
+    },
+    {
+      "env": "tasmota32-jardin-projecteur-led",
+      "categorie": "commerce",
+      "lieu": "jardin",
+      "appareil": "Projecteur LED de jardin, module NOUS B2T (ESP32, 1 relais, bouton, interrupteur, mesure d'énergie BL0942)",
+      "statut": "en service",
+      "sources": ["data/jardin/tasmota32-projecteur-led/_persist.json::modules.projecteur", "tasks/plans/envs-grenier-rdc-sonoff-cave.md (template NOUS B2T)"]
+    },
+    {
+      "env": "tasmota32-jardin-projecteur-barbecue",
+      "categorie": "commerce",
+      "lieu": "jardin",
+      "appareil": "Projecteur LED du barbecue, module NOUS B2T (ESP32, 1 relais, BL0942)",
+      "sources": ["data/jardin/tasmota32-projecteur-barbecue/_persist.json::modules.projecteur"]
+    },
+    {
+      "env": "tasmota-cave-lumiere-porte",
+      "categorie": "commerce",
+      "lieu": "cave",
+      "appareil": "Sonoff ESP8285, lumière de la cave et contact de porte, (IP masquee) ; template « Contacteur Cave »",
+      "sources": ["platformio_tasmota_cenv.ini::en-tête CAVE", "data/cave/tasmota-lumiere-porte/config_decodee.json::templatename"]
+    },
+    {
+      "env": "tasmota-rdc-tv-salon",
+      "categorie": "commerce",
+      "lieu": "rdc",
+      "appareil": "Sonoff Basic ESP8266EX, prise de la TV du salon, (IP masquee)",
+      "sources": ["platformio_tasmota_cenv.ini::en-tête RDC", "data/rdc/tasmota-tv-salon/config_decodee.json::module"]
+    },
+    {
+      "env": "tasmota32-rdc-vr-porte",
+      "categorie": "commerce",
+      "lieu": "rdc",
+      "appareil": "Sonoff Dual R3 (ESP32 sans PSRAM), volet de la porte d'entrée, (IP masquee), topic volet/entree ; dossier de données vide, pas en service, remplacé par tasmota32s3-rdc-grenier",
+      "sources": ["tasks/plans/envs-grenier-rdc-sonoff-cave.md (ligne Sonoff Dual R3)", "mémoire project_statut_cartes"]
+    },
+    {
+      "env": "tasmota32-bureau-interrupteur-energie",
+      "categorie": "commerce",
+      "lieu": "bureau",
+      "appareil": "Disjoncteur différentiel connecté du PC du bureau (ESP32 : relais bistable 2 bobines GPIO2/12, BL0942 sur 13/14, sonde de température ADC GPIO34, bouton GPIO0, LED 5 et 15)",
+      "sources": ["data/bureau/tasmota32-interrupteur-energie/_persist.json::modules.differentiel, template.NAME"],
+      "incertitudes": "Classé commerce par déduction (relais bistable + BL0942 + ADC temp + nom « Disjoncteur Différentiel » = disjoncteur DIN du commerce flashé) ; la marque n'est écrite nulle part, et l'en-tête du classeur de brochage dit « ESP32 DevKitC V4 » (en-tête générique généré, probablement faux)."
+    },
+    {
+      "env": "tasmota32-cave-serveur-rly",
+      "categorie": "personnalise",
+      "lieu": "cave",
+      "statut": "Secours de la cave S3, même identité (IP .48, topic) : jamais les deux allumées. cenv : « gelé, non maintenu » (2026-10-24) ; mémoire : maintenue depuis le 23/11 et remise sur .48 le 26/11. Même besoin que tasmota32s3-cave-serveur-rly.",
+      "role": "Serveur relais de la cave : pompe vide-cave, ventilation, thermo-hygromètre",
+      "puce_actuelle": "ESP32 (ESP32-WROOM-32E), sans PSRAM",
+      "carte_actuelle": "Carte AliExpress générique « ESP32 Relay x8 », alimentation 7-30 V DC",
+      "relais": [
+        {"n": 1, "usage": "Pompe vide-cave (GPIO32)"},
+        {"n": 2, "usage": "Ventilation cave (GPIO33)"},
+        {"n": 3, "usage": "LED machines (GPIO25)"},
+        {"n": 4, "usage": "Pompe cuve (GPIO26)"},
+        {"n": 5, "usage": "Lavage (GPIO27)"},
+        {"n": "6-8", "usage": "libres (GPIO14, 12, 13)"}
+      ],
+      "entrees_num": [
+        {"n": 1, "usage": "Bouton pompe cave (GPIO4)"},
+        {"n": 2, "usage": "Bouton 2 = BOOT (GPIO0)"},
+        {"n": 3, "usage": "Bouton 3 (GPIO18)"},
+        {"n": 4, "usage": "Capteur de niveau bas de la cave, contact (GPIO2)"},
+        {"n": 5, "usage": "Capteur de niveau haut de la cave, contact (GPIO15)"}
+      ],
+      "analogiques": [],
+      "capteurs": ["DHT22/AM2301 (GPIO22)"],
+      "bus": {"rs485": "aucun (ModBus OFF)", "ethernet": "non", "ecran": "non", "ws2812": "non", "sd": "non", "i2c": "OFF"},
+      "autres": "LED d'état GPIO23.",
+      "sources": ["data/cave/tasmota32-serveur-rly/_persist.json::modules", "platformio_tasmota_cenv.ini::[env:tasmota32-cave-serveur-rly]", "Brochage GPIO - tasmota32-serveur-rly.xlsx"],
+      "incertitudes": "Courant et tension des charges (pompes, ventilation) non indiqués."
+    },
+    {
+      "env": "tasmota32s3-cave-serveur-rly",
+      "categorie": "personnalise",
+      "lieu": "cave",
+      "statut": "Identité de production depuis le 22/11 ; éteinte le 26/11 au profit de l'ESP32 pour un déploiement (mémoire). Carte de remplacement déjà choisie : voir carte_actuelle.",
+      "role": "Serveur relais de la cave + maître ModBus de l'écran de la cave (esclave id 1)",
+      "puce_actuelle": "ESP32-S3 (WROOM-1U-N16R8, 8 Mo de PSRAM)",
+      "carte_actuelle": "Waveshare ESP32-S3-ETH-8DI-8RO (relais par TCA9554 I2C 0x20, RS485 isolé, Ethernet W5500, RTC PCF85063, carte TF, buzzer), alimentation 7-36 V DC",
+      "relais": [
+        {"n": 1, "usage": "Pompe vide-cave (CH1, TCA9554)"},
+        {"n": 2, "usage": "Ventilation cave (CH2)"},
+        {"n": 3, "usage": "LED machines (CH3)"},
+        {"n": 4, "usage": "Pompe cuve (CH4)"},
+        {"n": 5, "usage": "Lavage (CH5)"},
+        {"n": "6-8", "usage": "libres (CH6-CH8)"}
+      ],
+      "entrees_num": [
+        {"n": 1, "usage": "Bouton pompe cave (DI1/GPIO4)"},
+        {"n": 2, "usage": "Bouton 2 = BOOT (GPIO0)"},
+        {"n": 3, "usage": "Bouton 3 (DI2/GPIO5)"},
+        {"n": 4, "usage": "Niveau bas cave (DI3/GPIO6, entrée isolée)"},
+        {"n": 5, "usage": "Niveau haut cave (DI4/GPIO7, entrée isolée)"}
+      ],
+      "entrees_deportees": "5 touches de l'écran de la cave (boutons virtuels ModBus_TasmotaSlaveModBus1, ids 11-15)",
+      "analogiques": [],
+      "capteurs": ["AM2301/DHT22 (GPIO21, en-tête GPIO)"],
+      "bus": {"rs485": "maître ModBus id 0, GPIO17/18 (transceiver de la carte), esclave : écran cave id 1 ; aussi par UDP", "ethernet": "W5500 SPI (INT12, MOSI13, MISO14, SCLK15, CS16) ACTIF", "ecran": "non (écran = carte séparée)", "ws2812": "LED RGB de la carte GPIO38, déclarée OFF", "sd": "carte TF de la carte, OFF", "i2c": "SDA42 SCL41 (TCA9554, RTC)", "conn16": "non"},
+      "autres": "LED témoin externe GPIO48 ; alexa sur ventilation et LED machines.",
+      "sources": ["data/cave/tasmota32s3-serveur-rly/_persist.json::modules, drivers", "platformio_tasmota_cenv.ini::commentaire avant [env:tasmota32s3-cave-serveur-rly]", "outils_docs/cartes_relais_cave/README.md", "Brochage GPIO - tasmota32s3-serveur-rly.xlsx"],
+      "incertitudes": "Courant des charges non indiqué."
+    },
+    {
+      "env": "tasmota32s3-cave-ecran",
+      "categorie": "personnalise",
+      "lieu": "cave",
+      "role": "Écran tactile de la cave, ESCLAVE ModBus id 1 du serveur de la cave (RS485 + UDP par range extender)",
+      "puce_actuelle": "ESP32-S3 avec PSRAM 8 Mo (base N16R8)",
+      "carte_actuelle": "Waveshare ESP32-S3-Touch-LCD-7B (ST7262 1024x600 RGB + tactile GT911 I2C 0x5D, SP3485 à sens auto) : carte du commerce intégrée, pas un module à choisir",
+      "relais": [],
+      "entrees_num": [],
+      "entrees_deportees": "5 touches d'écran (Lumières, Lave-linge, Pompe cuve, Pompe vide-cave, Redémarrer le serveur) remontées au maître",
+      "analogiques": [],
+      "capteurs": [],
+      "bus": {"rs485": "esclave id 1, RX16 TX15 (SP3485 de la carte)", "ethernet": "non", "ecran": "7B intégré, HASPmota", "ws2812": "non", "sd": "OFF", "i2c": "SDA8 SCL9 (tactile)"},
+      "sources": ["data/cave/tasmota32s3-ecran/_persist.json::modules.ecranCave, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32s3-cave-ecran]"],
+      "incertitudes": ""
+    },
+    {
+      "env": "tasmota32s3-rdc-grenier",
+      "categorie": "personnalise",
+      "lieu": "rdc",
+      "statut": "en sommeil (mémoire : greniers en sommeil)",
+      "role": "Serveur du grenier du RDC : 3 volets (porte d'entrée, cuisine, trappe), maître ModBus (RS485 + UDP), maître du range extender (id 0)",
+      "puce_actuelle": "ESP32-S3 (N16R8, PSRAM 8 Mo)",
+      "carte_actuelle": "Waveshare ESP32-S3-ETH-8DI-8RO (même carte que la cave S3), base sans écran",
+      "relais": [
+        {"n": 1, "usage": "Volet porte d'entrée, montée (CH1, TCA9554)"},
+        {"n": 2, "usage": "Volet porte d'entrée, descente (CH2)"},
+        {"n": 3, "usage": "Volet cuisine (CH3)"},
+        {"n": 4, "usage": "Volet cuisine 2 (CH4)"},
+        {"n": 5, "usage": "Trappe du grenier (CH5)"},
+        {"n": 6, "usage": "Trappe du grenier 2 (CH6)"},
+        {"n": 7, "usage": "Caméra de façade (CH7)"},
+        {"n": 8, "usage": "libre (CH8)"}
+      ],
+      "entrees_num": [
+        {"n": 1, "usage": "Bouton volet porte montée (DI1/GPIO4)"},
+        {"n": 2, "usage": "Bouton volet porte descente (DI2/GPIO5)"},
+        {"n": 3, "usage": "Bouton volet cuisine montée (DI3/GPIO6)"},
+        {"n": 4, "usage": "Bouton volet cuisine descente (DI4/GPIO7)"},
+        {"n": 5, "usage": "Bouton trappe ouverture/fermeture (DI5/GPIO8)"},
+        {"n": 6, "usage": "Fin de course trappe ouverte (DI6/GPIO9)"},
+        {"n": 7, "usage": "Fin de course trappe fermée (DI7/GPIO10)"}
+      ],
+      "analogiques": [],
+      "capteurs": ["DHT22 (GPIO21)"],
+      "bus": {"rs485": "maître ModBus id 0, RX18 TX17 ; esclave prévu OFF : « ECRAN-GRENIER-RDC (carte à venir) » id 1", "ethernet": "OFF", "ecran": "non (prévu sur une autre carte)", "ws2812": "LED RGB de la carte GPIO38 (voyant d'état)", "sd": "OFF", "i2c": "SDA42 SCL41 (TCA9554)"},
+      "autres": "LED1 GPIO48 ; Shutter mode 1 x3.",
+      "sources": ["data/rdc/tasmota32s3-grenier/_persist.json::modules.volets, Thermo-Hygrometre, autres, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32s3-rdc-grenier]"],
+      "incertitudes": "Moteurs des volets (tension, courant) non indiqués ; écran du grenier à venir non défini."
+    },
+    {
+      "env": "tasmota32s3-bureau-serveur-debits-pac",
+      "categorie": "personnalise",
+      "lieu": "bureau",
+      "role": "Carte d'acquisition des débits de la PAC (sans écran), ESCLAVE ModBus id 1 de la carte d'affichage",
+      "puce_actuelle": "ESP32-S3 (N16R8, PSRAM 8 Mo)",
+      "carte_actuelle": "ESP32-S3 DevKitC-1 (N16R8)",
+      "relais": [],
+      "entrees_num": [
+        {"n": 1, "usage": "Débitmètre 1, FlowRateMeter (GPIO4)"},
+        {"n": 2, "usage": "Débitmètre 2, FlowRateMeter (GPIO5)"},
+        {"n": 3, "usage": "Débitmètre 3, Counter (GPIO6)"},
+        {"n": 4, "usage": "Débitmètre 4, Counter (GPIO7)"},
+        {"n": 5, "usage": "Débitmètre 5, Counter (GPIO15)"},
+        {"n": 6, "usage": "Débitmètre 6, Counter (GPIO16)"}
+      ],
+      "analogiques": ["7 valeurs calculées (débits 1-6 et états), pas d'entrée analogique physique"],
+      "capteurs": ["6 débitmètres à effet Hall à impulsions (YF-B2 probable, G1/2, 1-25 L/min)"],
+      "bus": {"rs485": "esclave id 1, RX17 TX18", "ethernet": "non", "ecran": "non", "ws2812": "non (ledRGB OFF)", "sd": "non", "i2c": "ON (SDA9 SCL8) mais aucun composant I2C actif"},
+      "autres": "LED link GPIO38, LED1 GPIO39.",
+      "sources": ["data/bureau/tasmota32s3-serveur-debits-pac/_persist.json::modules.debits, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32s3-bureau-serveur-debits-pac]", "tasks/plans/debitmetres-chauffage.md"],
+      "incertitudes": "Modèle exact des débitmètres « YF-B2 probable » selon le plan ; tension d'alimentation des débitmètres non lue."
+    },
+    {
+      "env": "tasmota32s3-bureau-ecran-debits-pac",
+      "categorie": "personnalise",
+      "lieu": "bureau",
+      "role": "Écran d'affichage des débits de la PAC, MAÎTRE ModBus (id 0) de la carte d'acquisition (esclave id 1)",
+      "puce_actuelle": "ESP32-S3 avec PSRAM 8 Mo (base N16R8)",
+      "carte_actuelle": "Waveshare ESP32-S3-Touch-LCD-7B (ST7262 1024x600 + GT911) : carte du commerce intégrée, pas un module à choisir",
+      "relais": [],
+      "entrees_num": [],
+      "analogiques": ["7 valeurs reçues de l'esclave ModBus (débits 1-6, états)"],
+      "capteurs": [],
+      "bus": {"rs485": "maître id 0, RX16 TX15 (SP3485 de la carte)", "ethernet": "non", "ecran": "7B intégré, HASPmota ou LVGL", "ws2812": "non", "sd": "OFF", "i2c": "SDA8 SCL9 (tactile)"},
+      "sources": ["data/bureau/tasmota32s3-ecran-debits-pac/_persist.json::modules.ecranDebits, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32s3-bureau-ecran-debits-pac]"],
+      "incertitudes": ""
+    },
+    {
+      "env": "tasmota32s3-etage2-grenier",
+      "categorie": "personnalise",
+      "lieu": "etage2",
+      "statut": "en sommeil",
+      "role": "Gestionnaire de la trappe et de la lumière du grenier du 2e étage",
+      "puce_actuelle": "ESP32-S3 (N16R8, PSRAM 8 Mo)",
+      "carte_actuelle": "ESP32-S3 DevKitC-1 (N16R8)",
+      "relais": [
+        {"n": 1, "usage": "Lumière grenier 2e (GPIO40)"},
+        {"n": 2, "usage": "Trappe de grenier 2e (GPIO41), Shutter mode 1"},
+        {"n": 3, "usage": "« Relai 2 » (GPIO42), usage non nommé"}
+      ],
+      "entrees_num": [{"n": 1, "usage": "Bouton 1 (GPIO4), bouton de la trappe"}],
+      "analogiques": [],
+      "capteurs": ["aucun actif (DHT GPIO20 déclaré OFF)"],
+      "bus": {"rs485": "OFF", "ethernet": "non", "ecran": "non", "ws2812": "non (ledRGB OFF)", "sd": "non", "i2c": "OFF"},
+      "autres": "LED link GPIO38, LED1 GPIO13, LED témoin d'état de trappe GPIO39.",
+      "sources": ["data/etage2/tasmota32s3-grenier/_persist.json::modules.grenier, drivers.voletRoulants"],
+      "incertitudes": "relai1 porte nbLeds 131 alors que son type est un relais (224) : champ résiduel, pas un ruban. capteursPosition de la trappe ON sans broche lue (inclinaison MPU6050 OFF) : capteurs de position réels non identifiés."
+    },
+    {
+      "env": "tasmota32p4-garage-serveur-modbus",
+      "categorie": "personnalise",
+      "lieu": "garage",
+      "statut": "en service",
+      "role": "Maître du garage : maître ModBus (RS485 19200 8N1 + UDP), pilote la carte 16 relais et 3 esclaves Tasmota (cuve id 2, rideau id 3, portail id 4), Shutters du rideau et du portail, liaison MQTT avec projecteurs/pompe/cuve, maître du range extender",
+      "puce_actuelle": "ESP32-P4 (+ coprocesseur ESP32-C6 Wi-Fi en SDIO)",
+      "carte_actuelle": "Waveshare ESP32-P4-Module-DEV-KIT (AliExpress 1005008825801203), sans RS485 intégré : module RS485 externe sur GPIO4/5",
+      "relais": [],
+      "relais_deportes": [
+        {"n": "1", "usage": "LEDs de la cuve (ruban WS2815 de l'esclave cuve)", "voie": "ModBus esclave 2"},
+        {"n": "2-3", "usage": "Grande porte de garage + « Relai 2 »", "voie": "ModBus esclave 3 (rideau)"},
+        {"n": "4-19", "usage": "16 relais de la carte 16 relais : Caméra de garage, Projecteur de garage, 14 génériques", "voie": "ModBus Conn16channel1 id 1"},
+        {"n": "20, 22", "usage": "Portail 1 vantail, portail 2 vantaux (impulsions)", "voie": "ModBus esclave 4 (portail)"},
+        {"n": "24-26", "usage": "Projecteur jardin, pompe piscine, projecteur barbecue", "voie": "MQTT"}
+      ],
+      "entrees_num": [
+        {"n": 1, "usage": "Bouton 1 (GPIO21)"},
+        {"n": 2, "usage": "Bouton ruban cuve (GPIO22)"},
+        {"n": 3, "usage": "Bouton portail simple ouverture (GPIO1)"},
+        {"n": 4, "usage": "Bouton portail double ouverture (GPIO2)"},
+        {"n": 5, "usage": "Compteur d'impulsions « Consommation électrique garage » (GPIO20)"}
+      ],
+      "entrees_deportees": "Fins de course rideau fermé/ouvert (esclave 3), capteur de fermeture du portail (esclave 4)",
+      "analogiques": ["Niveau de cuve, tension sonde, pleine échelle ADS1115 : reçus de l'esclave cuve ; volume cuve par MQTT. ADS1115 local OFF."],
+      "capteurs": ["T° eau de cuve reçue de l'esclave cuve ; DS3231 RTC I2C (SDA7 SCL8) ACTIF ; T° garage DHT déclarée OFF"],
+      "bus": {"rs485": "maître id 0, RX4 TX5, 19200 8N1, module RS485 externe", "ethernet": "ACTIF (PHY de la carte : MDC31, MDIO52, Pwr51)", "ecran": "non", "ws2812": "non", "sd": "ACTIVE", "i2c": "SDA7 SCL8 (DS3231)", "i2s": "codec audio ES8311 ACTIF (carte)", "coprocesseur": "ESP32-C6 en SDIO (GPIO39-44)", "conn16": "OUI, 16 relais déportés utilisés"},
+      "autres": "Déclaré ON mais non chargé ou non câblé : LoRaWan (toutes broches -1, exclu par le cenv), ledLink et led1 (broche -1).",
+      "sources": ["data/garage/tasmota32p4-serveur-modbus/_persist.json::modules.garage, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32p4-garage-serveur-modbus]", "mémoire project_carte_p4_waveshare"],
+      "incertitudes": "PSRAM du P4 non lue dans les sources consultées ; type du compteur GPIO20 (sortie impulsions du compteur électrique ?) non vérifié."
+    },
+    {
+      "env": "tasmota32s3-garage-serveur-modbus",
+      "categorie": "personnalise",
+      "lieu": "garage",
+      "statut": "Remplacée par le P4, gardée en secours (cenv : gelée le 2026-10-24)",
+      "role": "Ancien maître du garage : maître ModBus, carte 16 relais, esclaves cuve (2) et rideau (3)",
+      "puce_actuelle": "ESP32-S3 (N16R8, PSRAM 8 Mo)",
+      "carte_actuelle": "ESP32-S3 DevKitC-1 (N16R8)",
+      "relais": [],
+      "relais_deportes": [
+        {"n": "1", "usage": "LEDs de la cuve", "voie": "ModBus esclave 2"},
+        {"n": "2-17", "usage": "16 relais génériques « Relai 1-16 »", "voie": "ModBus Conn16channel1 id 1"}
+      ],
+      "entrees_num": [
+        {"n": 1, "usage": "Capteur 2, contact (GPIO16), usage non nommé"},
+        {"n": 2, "usage": "Compteur « Consommation électrique garage » (GPIO40)"}
+      ],
+      "analogiques": ["Niveau de cuve reçu de l'esclave 2 ; ADS1115 local OFF"],
+      "capteurs": ["T° eau de cuve reçue de l'esclave 2 ; DHT22 GPIO20 OFF"],
+      "bus": {"rs485": "maître id 0, RX4 TX5", "ethernet": "OFF", "ecran": "non", "ws2812": "non (ledRGB OFF)", "sd": "OFF", "i2c": "SDA9 SCL8, aucun composant actif", "conn16": "OUI, 16 relais"},
+      "autres": "Déclarés ON dans le persist mais propres au P4 ou non chargés : I2S/ES8311, LoRaWan. LED link 38, LED1 13.",
+      "sources": ["data/garage/tasmota32s3-serveur-modbus/_persist.json::modules.garage, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32s3-garage-serveur-modbus]"],
+      "incertitudes": "Persist non maintenu depuis le gel : peut ne plus refléter le câblage."
+    },
+    {
+      "env": "tasmota32s3-garage-capteurs-cuve-modbus",
+      "categorie": "personnalise",
+      "lieu": "garage",
+      "statut": "en service",
+      "role": "Esclave ModBus id 2 : capteurs de la cuve d'eau de pluie et ruban LED",
+      "puce_actuelle": "ESP32-S3 (N16R8, PSRAM 8 Mo)",
+      "carte_actuelle": "ESP32-S3 DevKitC-1 (N16R8) ; carte porteuse KiCad v0.3 en projet (PCB/), entrée 12 V",
+      "relais": [{"n": 1, "usage": "Ruban LED WS2815 131 pixels, 12 V (données GPIO6), alimenté directement par l'alimentation"}],
+      "entrees_num": [{"n": 1, "usage": "Bouton du ruban (GPIO7)"}],
+      "analogiques": [
+        "ADS1115 I2C 0x48 (SDA9 SCL8), alimenté en 3,3 V : A0 actif = niveau de cuve, capteur 0-10 V (1 à 4 m d'eau, ~30-31 mV/cm)",
+        "Prévus par le PCB et la config ADS1115 : A1 0-10 V, A2 et A3 boucles 0-20/4-20 mA (alimentation capteurs +12 V)",
+        "2 valeurs calculées (tension sonde, pleine échelle)"
+      ],
+      "capteurs": ["DS18B20 T° eau de cuve (GPIO18)"],
+      "bus": {"rs485": "esclave id 2, RX4 TX5", "ethernet": "non", "ecran": "non", "ws2812": "ruban WS2815 131 px GPIO6 + LED RGB de la carte GPIO48", "sd": "non", "i2c": "SDA9 SCL8 (ADS1115)"},
+      "autres": "LED link GPIO38, LED1 GPIO39. Déclaré ON mais non chargé : LoRaWan (exclu par le cenv, aucune broche).",
+      "sources": ["data/garage/tasmota32s3-capteurs-cuve-modbus/_persist.json::modules.cuve, drivers.I2C.environnement.ADS1115, drivers.leds", "Schémas de branchement.../tasmota32s3-capteurs-cuve-modbus/PCB/bilan.json", "outils_docs/historique/CHANGELOG.md (capteur 0-10 V, lien AliExpress du capteur)"],
+      "incertitudes": "Usage réel prévu de A1-A3 non nommé ; consommation du capteur 0-10 V ~20 mA selon le bilan (estimation)."
+    },
+    {
+      "env": "tasmota32s3-garage-rideau-garage-modbus",
+      "categorie": "personnalise",
+      "lieu": "garage",
+      "statut": "flashée, jamais vérifiée sur carte (mémoire)",
+      "role": "Esclave ModBus id 3 : rideau (grande porte) du garage ; le Shutter tourne sur le P4",
+      "puce_actuelle": "ESP32-S3 (N16R8, PSRAM 8 Mo)",
+      "carte_actuelle": "ESP32-S3 DevKitC-1 (N16R8)",
+      "relais": [
+        {"n": 1, "usage": "Grande porte de garage (GPIO41)"},
+        {"n": 2, "usage": "« Relai 2 » (GPIO42), usage non nommé"}
+      ],
+      "entrees_num": [
+        {"n": 1, "usage": "Fin de course fermeture (GPIO47)"},
+        {"n": 2, "usage": "Fin de course ouverture (GPIO21)"}
+      ],
+      "analogiques": [],
+      "capteurs": [],
+      "bus": {"rs485": "esclave id 3, RX4 TX5", "ethernet": "non", "ecran": "non", "ws2812": "non (ledRGB OFF)", "sd": "non", "i2c": "OFF"},
+      "autres": "LED link 38, LED1 39. voletRoulants déclaré ON dans le persist mais le cenv n'embarque pas les volets sur cette carte (Shutter sur le P4).",
+      "sources": ["data/garage/tasmota32s3-rideau-garage-modbus/_persist.json::modules.rideau, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32s3-garage-rideau-garage-modbus]"],
+      "incertitudes": "Commande du moteur du rideau (impulsion ou marche/arrêt, tension) non indiquée."
+    },
+    {
+      "env": "tasmota32s3-garage-portail-jardin-modbus",
+      "categorie": "personnalise",
+      "lieu": "garage",
+      "statut": "Remplacée par paliers par l'ESP32 ci-dessous, même identité : un seul besoin pour les deux envs",
+      "role": "Esclave ModBus id 4 : portail de jardin (2 impulsions de 1 s vers la carte électronique du portail) ; Shutters sur le P4",
+      "puce_actuelle": "ESP32-S3 (N16R8, PSRAM 8 Mo)",
+      "carte_actuelle": "ESP32-S3 DevKitC-1 (brochage recopié du rideau)",
+      "relais": [
+        {"n": 1, "usage": "Impulsion ouverture 1 vantail (GPIO41), auto-OFF 1 s"},
+        {"n": 2, "usage": "Impulsion ouverture 2 vantaux (GPIO42), auto-OFF 1 s"}
+      ],
+      "entrees_num": [{"n": 1, "usage": "Capteur de fermeture du portail (GPIO47)"}],
+      "analogiques": [],
+      "capteurs": [],
+      "bus": {"rs485": "esclave id 4, RX4 TX5", "ethernet": "non", "ecran": "non", "ws2812": "non", "sd": "non", "i2c": "OFF"},
+      "sources": ["data/garage/tasmota32s3-portail-jardin-modbus/_persist.json::modules.portail, drivers, _incertain", "platformio_tasmota_cenv.ini::[env:tasmota32s3-garage-portail-jardin-modbus]"],
+      "incertitudes": "Bloc _incertain du persist : LED 38/39 à confirmer, polarité du capteur non vérifiée, rien essayé sur carte. Alimentation du module au portail : voir outils_docs/materiel/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md (non lu)."
+    },
+    {
+      "env": "tasmota32-garage-portail-jardin-modbus",
+      "categorie": "personnalise",
+      "lieu": "garage",
+      "statut": "Remplaçant du S3 (palier 1 : ModBus et LED coupés), même identité",
+      "role": "Esclave ModBus id 4 : portail de jardin",
+      "puce_actuelle": "ESP32 (ESP32-D0WD-V3, flash 4 Mo, sans PSRAM)",
+      "carte_actuelle": "Carte « ESP32 Relay x4 Modbus v1.3 » (ESP32-WROOM-32E, SP3485E, USB-C), COM3",
+      "relais": [
+        {"n": 1, "usage": "Impulsion ouverture 1 vantail (GPIO23, inversé)"},
+        {"n": 3, "usage": "Impulsion ouverture 2 vantaux (GPIO4, inversé)"},
+        {"n": "2, 4", "usage": "libres (GPIO5, 13)"}
+      ],
+      "entrees_num": [
+        {"n": 1, "usage": "Capteur de fermeture du portail (entrée optocouplée 1, GPIO25)"},
+        {"n": "2-4", "usage": "libres (GPIO26, 27, 33)"}
+      ],
+      "analogiques": [],
+      "capteurs": [],
+      "bus": {"rs485": "sur la carte (RX18 TX19 DE32), esclave id 4 prévu, OFF au palier 1", "ethernet": "non", "ecran": "non", "ws2812": "non", "sd": "non", "i2c": "OFF"},
+      "autres": "LED d'état GPIO15, prévue OFF au palier 1.",
+      "sources": ["data/garage/tasmota32-portail-jardin-modbus/_persist.json::modules.portail, drivers", "platformio_tasmota_cenv.ini::[env:tasmota32-garage-portail-jardin-modbus]", "Brochage GPIO - tasmota32-portail-jardin-modbus.xlsx"],
+      "incertitudes": "Ordre des vis, numérotation des relais et fonction de la borne 2 vis (alimentation ?) non vérifiés (classeur de brochage)."
+    }
+  ]
+}

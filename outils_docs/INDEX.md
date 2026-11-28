@@ -102,6 +102,7 @@ avec le plan cité). Détail technique de chaque outil (modules, bancs) : `outil
 | Écran 7B des débits | même dossier, `bureau/tasmota32s3-ecran-debits-pac/WAVESHARE_ESP32-S3-Touch-LCD-7B.md` |
 | ADS1115, ruban LED | `outils_docs/Electronique/ADS1115/` (le ruban LED y est rangé par erreur) |
 | Portail de jardin | `outils_docs/materiel/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md` |
+| Modules du commerce conseillés par env (ESP32-S3, platine 16 relais, ADS1115, 4-20 mA, liens et photos) | `outils_docs/materiel/MODULES_CONSEILLES.xlsx` ; données `outils_docs/materiel/modules_conseilles/`, générateur `outils_pc/genere_modules_conseilles.py` (Python système, Excel) ; pages AliExpress lues par `playwright-cli` |
 | Cartes relais de la cave | `outils_docs/cartes_relais_cave/README.md` |
 | Écran MIPI-DSI sur P4 (recherche, rien essayé) | `outils_docs/materiel/ECRAN_TACTILE_ESP32P4.md` |
 | Chauffage, équilibrage | `outils_docs/chauffage/EQUILIBRAGE_CHAUFFAGE_NOURRICE.md` |

@@ -1,0 +1,383 @@
+{
+  "_date": "2026-11-26",
+  "_regle_platine": "Platine 16 relais ModBus (carte coeur eletechsup R413E16 version A enfichée sur une platine 16 relais) : dès qu'un env a plus de relais que la carte ESP32-S3 n'en porte, ou quand il est maître du bus et pilote déjà la platine. Chaîne : maître RS485 -> R413E16 -> platine relais. Réglages en service : 19200 bauds 8N1, adresse 1 (usine : 9600 bauds, adresse 1). Pilotée par data/fs/modBus_Conn16channels.be (écriture 0x06, relecture 0x03).",
+  "_regle_analogique": "Mesures analogiques : ADS1115 alimenté en 3,3 V (driver USE_ADS1115). 0-10 V : pont diviseur 68 k / 10 k (pas le module « 0-25 V », qui divise par 5 et sort jusqu'à 5 V). 4-20 mA : convertisseur 4-20 mA vers 0-3,3 V sur une voie de l'ADS1115, ou module ModBus Waveshare Analog Input 8CH pour plusieurs voies. ACS712 : alimenté en 5 V, sortie jusqu'à 4,5 V, diviseur obligatoire.",
+  "feuilles": [
+    {
+      "id": "Garage maitre P4",
+      "envs": [
+        "tasmota32p4-garage-serveur-modbus"
+      ],
+      "statut": "En service. Le P4 est CONSERVÉ : la ligne S3 n'est qu'une option de secours.",
+      "voie_a": [
+        {
+          "ref": "P:Waveshare TTL TO RS485 (B)",
+          "role": "RS485 isolé du maître (remplace le module RS485 externe des GPIO 4/5)"
+        },
+        {
+          "ref": "P:eletechsup R413E16",
+          "role": "Platine 16 relais déportés (déjà en place) : caméra, projecteur, 14 génériques"
+        },
+        {
+          "ref": "P:Mean Well DDR-15G-5",
+          "role": "Alimentation 5 V rail DIN depuis 12/24 V"
+        },
+        {
+          "ref": "C:Waveshare ESP32-S3-ETH-8DI-8RO",
+          "role": "Option S3 de secours seulement : Ethernet W5500, RS485 isolé, 8 entrées pour les 4 boutons et le compteur d'impulsions",
+          "remarque": "Perd l'audio ES8311, le coprocesseur C6 et la carte SD du P4. Variante -C (CAN) à refuser."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Option S3 de secours : dev-kit"
+        },
+        {
+          "ref": "P:eletechsup DNS3485",
+          "role": "Carte porteuse rail DIN avec RS485 et alimentation 7-30 V"
+        },
+        {
+          "ref": "P:Carte 8 entrees optocouplees",
+          "role": "4 boutons et compteur d'impulsions isolés"
+        },
+        {
+          "ref": "P:eletechsup R413E16",
+          "role": "Platine 16 relais déportés"
+        }
+      ]
+    },
+    {
+      "id": "Garage maitre S3 (secours)",
+      "envs": [
+        "tasmota32s3-garage-serveur-modbus"
+      ],
+      "statut": "Gelé (ancien maître, secours du P4). Même besoin que le maître : RS485 maître, platine 16 relais, 1 contact, 1 compteur.",
+      "voie_a": [
+        {
+          "ref": "C:Waveshare ESP32-S3-ETH-8DI-8RO",
+          "role": "Carte maître : RS485 isolé, Ethernet, entrées pour le contact et le compteur",
+          "remarque": "Seule carte S3 au support Tasmota attesté (USE_TCA9554, EthType 8)."
+        },
+        {
+          "ref": "P:eletechsup R413E16",
+          "role": "Platine 16 relais déportés"
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit actuel (N16R8)"
+        },
+        {
+          "ref": "P:eletechsup DNS3485",
+          "role": "Carte porteuse RS485 et alimentation"
+        },
+        {
+          "ref": "P:eletechsup R413E16",
+          "role": "Platine 16 relais déportés"
+        }
+      ]
+    },
+    {
+      "id": "Cuve (esclave 2)",
+      "envs": [
+        "tasmota32s3-garage-capteurs-cuve-modbus"
+      ],
+      "statut": "En service sur DevKitC-1 ; carte porteuse KiCad v0.3 en projet. Besoins : ADS1115 (niveau 0-10 V sur A0 ; A1 0-10 V, A2 et A3 4-20 mA prévus), DS18B20, ruban WS2815 131 px en 12 V, 1 bouton, RS485 esclave.",
+      "voie_a": [
+        {
+          "ref": "C:KinCony B4",
+          "role": "Carte rail DIN avec ADS1115 intégré (2 x 0-5 V, 2 x 4-20 mA), 4 entrées, RS485",
+          "remarque": "Capteur de niveau 0-10 V : diviseur par 2 obligatoire pour une entrée 0-5 V. GPIO libre pour le ruban WS2815 non vérifié. Aucun prix trouvé. Support Tasmota non attesté (PCF8574 et ADS1115 gérés)."
+        },
+        {
+          "ref": "P:Waveshare Modbus RTU Analog Input 8CH",
+          "role": "Variante : mesures 0-10 V et 4-20 mA par ModBus sur un module à part",
+          "remarque": "Ajoute un second esclave sur le bus ; lecture par le maître à câbler en Berry."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit actuel (N16R8)"
+        },
+        {
+          "ref": "P:Adafruit ADS1115",
+          "role": "ADS1115 alimenté en 3,3 V (niveau de cuve)"
+        },
+        {
+          "ref": "P:Module ADS1115 generique",
+          "role": "Variante économique de l'ADS1115"
+        },
+        {
+          "ref": "P:Convertisseur 4-20 mA",
+          "role": "Boucles 4-20 mA prévues sur A2 et A3"
+        },
+        {
+          "ref": "P:Sonde DS18B20",
+          "role": "Température de l'eau",
+          "remarque": "Prix AliExpress douteux (21,39 € la variante affichée)."
+        },
+        {
+          "ref": "P:Module TTL vers RS485",
+          "role": "RS485 esclave (3,3 V : prendre un SP3485, pas un MAX13487 5 V)"
+        },
+        {
+          "ref": "P:Mean Well DDR-15G-5",
+          "role": "5 V depuis le 12 V du ruban"
+        }
+      ]
+    },
+    {
+      "id": "Rideau (esclave 3)",
+      "envs": [
+        "tasmota32s3-garage-rideau-garage-modbus"
+      ],
+      "statut": "En service sur DevKitC-1. Besoins : 2 relais, 2 fins de course, RS485 esclave. Le Shutter tourne sur le P4. Platine 16 relais : pas sur cette carte, car un esclave ModBus ne peut pas être maître de la platine sur le même bus RS485. Variante : prendre ces relais sur la platine déjà pilotée par le P4 (14 relais génériques libres), l'esclave ne gardant que ses entrées.",
+      "voie_a": [
+        {
+          "ref": "C:KinCony KC868-A2v3",
+          "role": "2 relais 10 A, 2 entrées contact sec optocouplées, RS485, rail DIN",
+          "remarque": "Relais sur GPIO directs (40, 39) : utilisables par Tasmota. Pas de template blakadder ; direction RS485 non indiquée."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit actuel"
+        },
+        {
+          "ref": "P:eletechsup DNS3485",
+          "role": "Carte porteuse RS485 et alimentation"
+        },
+        {
+          "ref": "P:Module relais 1/2/4/8",
+          "role": "Module 2 relais à optocoupleur, commande 3,3 V"
+        },
+        {
+          "ref": "P:Carte 8 entrees optocouplees",
+          "role": "Fins de course isolées"
+        }
+      ]
+    },
+    {
+      "id": "Portail (esclave 4)",
+      "envs": [
+        "tasmota32s3-garage-portail-jardin-modbus",
+        "tasmota32-garage-portail-jardin-modbus"
+      ],
+      "statut": "S3 et ESP32 portent la MÊME identité (jamais ensemble). Besoins : 2 relais impulsionnels de 1 s, 1 capteur de fermeture, RS485 esclave, alimentation prise sur l'OpenGate 1 (24 V, jusqu'à ~28 V en charge). Détail : outils_docs/materiel/PORTAIL_JARDIN_MODULE_ET_ALIMENTATION.md. Platine 16 relais : pas sur cette carte, car un esclave ModBus ne peut pas être maître de la platine sur le même bus RS485. Variante : prendre ces relais sur la platine déjà pilotée par le P4 (14 relais génériques libres), l'esclave ne gardant que ses entrées.",
+      "voie_a": [
+        {
+          "ref": "C:KinCony KC868-A2v3",
+          "role": "2 relais, 2 entrées contact sec, RS485, 12/24 V",
+          "remarque": "Plage exacte d'alimentation non publiée : à vérifier face aux ~28 V du portail en charge."
+        },
+        {
+          "ref": "C:Waveshare ESP32-S3-Relay-6CH",
+          "role": "Variante 7-36 V, RS485 isolé (template blakadder)",
+          "remarque": "Aucune entrée : capteur de fermeture sur un GPIO nu."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit"
+        },
+        {
+          "ref": "P:eletechsup DNS3485",
+          "role": "Carte porteuse RS485, alimentation 7-30 V"
+        },
+        {
+          "ref": "P:Module relais 1/2/4/8",
+          "role": "2 relais d'impulsion"
+        },
+        {
+          "ref": "P:Carte 8 entrees optocouplees",
+          "role": "Capteur de fermeture isolé"
+        }
+      ]
+    },
+    {
+      "id": "Cave (serveur relais)",
+      "envs": [
+        "tasmota32s3-cave-serveur-rly",
+        "tasmota32-cave-serveur-rly"
+      ],
+      "statut": "Carte S3 déjà choisie (Waveshare 8DI-8RO) ; l'ESP32 Relay x8 est le secours de même identité. Besoins : 5 relais (pompe vide-cave, ventilation, LED machines, pompe cuve, lavage), 5 entrées (3 boutons, niveaux bas et haut), AM2301, Ethernet, maître ModBus de l'écran de la cave.",
+      "voie_a": [
+        {
+          "ref": "C:Waveshare ESP32-S3-ETH-8DI-8RO",
+          "role": "Carte en place : 8 relais, 8 entrées isolées, RS485 isolé, Ethernet",
+          "remarque": "5 relais sur 8 : pas besoin de platine 16 relais."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit"
+        },
+        {
+          "ref": "P:eletechsup DNS3485",
+          "role": "Carte porteuse RS485 et alimentation"
+        },
+        {
+          "ref": "P:eletechsup R413E16",
+          "role": "Platine 16 relais déportés (5 utilisés) : la carte est déjà maître ModBus de l'écran"
+        },
+        {
+          "ref": "P:eletechsup R4D8A08",
+          "role": "Variante : 8 relais ModBus en boîtier rail DIN",
+          "remarque": "Relecture des états par 0x03 non vérifiée : modBus_Conn16channels.be en dépend."
+        },
+        {
+          "ref": "P:Carte 8 entrees optocouplees",
+          "role": "Boutons et capteurs de niveau isolés"
+        }
+      ]
+    },
+    {
+      "id": "Grenier RDC",
+      "envs": [
+        "tasmota32s3-rdc-grenier"
+      ],
+      "statut": "En sommeil. Carte déjà choisie (Waveshare 8DI-8RO). Besoins : 7 relais (6 volets, caméra), 7 entrées (5 boutons, 2 fins de course), DHT22, maître ModBus et du range extender.",
+      "voie_a": [
+        {
+          "ref": "C:Waveshare ESP32-S3-ETH-8DI-8RO",
+          "role": "Carte prévue : 8 relais, 8 entrées isolées, RS485, Ethernet",
+          "remarque": "7 relais sur 8 : une platine 16 relais devient utile au-delà de 8."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit"
+        },
+        {
+          "ref": "P:eletechsup DNS3485",
+          "role": "Carte porteuse RS485 et alimentation"
+        },
+        {
+          "ref": "P:eletechsup R413E16",
+          "role": "Platine 16 relais déportés (7 utilisés, marge pour d'autres volets)"
+        },
+        {
+          "ref": "P:Carte 8 entrees optocouplees",
+          "role": "Boutons et fins de course isolés"
+        }
+      ]
+    },
+    {
+      "id": "Grenier 2e etage",
+      "envs": [
+        "tasmota32s3-etage2-grenier"
+      ],
+      "statut": "En sommeil sur DevKitC-1. Besoins : 3 relais (lumière, trappe, un sans nom), 1 bouton. Platine 16 relais : inutile pour 3 relais portés par la carte ; à prévoir si d'autres relais s'ajoutent (le grenier 2e n'a pas de RS485 aujourd'hui).",
+      "voie_a": [
+        {
+          "ref": "C:Waveshare ESP32-S3-Relay-6CH",
+          "role": "6 relais 10 A, 7-36 V, rail DIN, template blakadder",
+          "remarque": "Aucune entrée : le bouton se branche sur un GPIO nu de l'en-tête."
+        },
+        {
+          "ref": "C:LILYGO T-Relay-S3",
+          "role": "Variante moins chère : 6 relais (74HC595), 7-28 V",
+          "remarque": "Pas de RS485 ; photo hébergée par un tiers."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit actuel"
+        },
+        {
+          "ref": "P:eletechsup DNDINS3",
+          "role": "Bornier à vis rail DIN"
+        },
+        {
+          "ref": "P:Module relais 1/2/4/8",
+          "role": "Module 4 relais à optocoupleur"
+        }
+      ]
+    },
+    {
+      "id": "Debits PAC (acquisition)",
+      "envs": [
+        "tasmota32s3-bureau-serveur-debits-pac"
+      ],
+      "statut": "Pas encore essayée sur carte. Besoins : 6 entrées d'impulsions (débitmètres à effet Hall, 2 FlowRateMeter, 4 Counter), RS485 esclave, pas de relais.",
+      "voie_a": [
+        {
+          "ref": "C:Waveshare ESP32-S3-ETH-8DI-8RO",
+          "role": "8 entrées isolées sur GPIO directs (Counter possible), RS485",
+          "remarque": "Relais inutilisés. Fréquence maximale des entrées optocouplées non vérifiée face aux impulsions des débitmètres."
+        },
+        {
+          "ref": "C:Waveshare ESP32-S3-POE-ETH-8DI-8DO",
+          "role": "Variante sans relais (8 sorties transistor), PoE",
+          "remarque": "Aucun support Tasmota trouvé."
+        }
+      ],
+      "voie_b": [
+        {
+          "ref": "P:Espressif ESP32-S3-DevKitC-1",
+          "role": "Dev-kit actuel"
+        },
+        {
+          "ref": "P:eletechsup DNS3485",
+          "role": "Carte porteuse RS485 et alimentation"
+        }
+      ]
+    }
+  ],
+  "deja_en_place": [
+    {
+      "env": "tasmota32s3-cave-ecran",
+      "materiel": "Waveshare ESP32-S3-Touch-LCD-7B (1024x600, GT911, SP3485), esclave ModBus id 1 du serveur de la cave : carte intégrée, rien à choisir."
+    },
+    {
+      "env": "tasmota32s3-bureau-ecran-debits-pac",
+      "materiel": "Waveshare ESP32-S3-Touch-LCD-7B, maître ModBus id 0 de l'acquisition des débits : carte intégrée, rien à choisir."
+    }
+  ],
+  "commerce": [
+    {
+      "env": "tasmota-jardin-pompe-piscine",
+      "materiel": "Sonoff S2X (ESP8266)"
+    },
+    {
+      "env": "tasmota32-jardin-projecteur-led",
+      "materiel": "Prise NOUS B2T (ESP32, BL0942)"
+    },
+    {
+      "env": "tasmota32-jardin-projecteur-barbecue",
+      "materiel": "Prise NOUS B2T (ESP32, BL0942)"
+    },
+    {
+      "env": "tasmota-cave-lumiere-porte",
+      "materiel": "Sonoff ESP8285"
+    },
+    {
+      "env": "tasmota-rdc-tv-salon",
+      "materiel": "Sonoff Basic (ESP8266)"
+    },
+    {
+      "env": "tasmota32-rdc-vr-porte",
+      "materiel": "Sonoff Dual R3 (pas en service, dossier de données vide)"
+    },
+    {
+      "env": "tasmota32-bureau-interrupteur-energie",
+      "materiel": "Disjoncteur différentiel DIN (relais bistable, BL0942, sonde ADC) ; marque non écrite dans le dépôt"
+    }
+  ],
+  "liens_morts": [
+    "B0DDXSNH4W",
+    "B0GCXMCQ1T"
+  ],
+  "prix_douteux": [
+    "Expandeur I2C PCF8574",
+    "Sonde DS18B20"
+  ]
+}

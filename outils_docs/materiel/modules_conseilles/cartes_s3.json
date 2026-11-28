@@ -1,0 +1,800 @@
+[
+  {
+    "nom": "Waveshare ESP32-S3-Relay-1CH",
+    "fabricant": "Waveshare",
+    "puce": "ESP32-S3 (defaut ESP32-S3R8)",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM (tableau comparatif de la page produit)",
+    "relais": "1 relais, 1 NO, <=10 A 250 VAC / 30 VDC, optocouple",
+    "entrees_num": null,
+    "entrees_ana": null,
+    "rs485": "Oui, isole, direction automatique (materielle), TVS, 120 ohms par cavalier",
+    "ethernet": null,
+    "i2c": null,
+    "alim": "5 V UNIQUEMENT (bornier ou USB-C)",
+    "boitier": "Boitier rail DIN 35 mm, 91,6 x 23,3 x 58,7 mm",
+    "tasmota": "Aucun template blakadder trouve. Brochage simple (relais sur GPIO1/GPIO2) : template a ecrire a la main.",
+    "brochage": {
+      "relais": "GPIO1 et GPIO2 cites par le wiki pour le relais (role exact de chacun non precise)",
+      "rs485": null,
+      "i2c": null
+    },
+    "liens": {
+      "fabricant": "https://www.waveshare.com/esp32-s3-relay-1ch.htm",
+      "fabricant_prix": "17,99 a 19,99 USD (waveshare.com, 2026-11-26)",
+      "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/e/s/esp32-s3-relay-1ch-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005013088740272.html",
+      "aliexpress_prix": "29,99 EUR, prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": "https://www.amazon.fr/dp/B0FMYHFPMH",
+      "amazon_prix": "28,99 EUR (Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+      "https://www.waveshare.com/wiki/ESP32-S3-Relay-1CH",
+      "https://www.waveshare.com/esp32-s3-relay-1ch.htm",
+      "https://fr.aliexpress.com/w/wholesale-esp32-s3-relay-1ch%20waveshare.html"
+    ],
+    "incertitudes": "Alimentation 5 V seulement : ne repond PAS au critere 12/24 V. Les cartes 1-2 relais en 12/24 V sont la KC868-A2v3 et la LILYGO T-Connect Pro. GPIO du relais ambigu (1 ou 2)."
+  },
+  {
+    "nom": "Waveshare ESP32-S3-Relay-6CH",
+    "fabricant": "Waveshare",
+    "puce": "ESP32-S3 (module ESP32-S3-WROOM-1U-N16)",
+    "flash_psram": "16 Mo flash ; PSRAM non indiquee par la page produit",
+    "relais": "6 relais 1NO+1NC, <=10 A 250 VAC / 30 VDC, optocouples",
+    "entrees_num": "Aucune (seul le bouton BOOT GPIO0)",
+    "entrees_ana": null,
+    "rs485": "Oui, isole, direction automatique (materielle), TVS, 120 ohms par cavalier",
+    "ethernet": null,
+    "i2c": "Pas de bus dedie ; connecteur 40 broches compatible HAT Raspberry Pi Pico (RTC, CAN, capteurs...)",
+    "alim": "7-36 V DC (bornier) ou 5 V USB-C",
+    "boitier": "Boitier ABS rail DIN 35 mm, 145 x 90 x 40 mm",
+    "tasmota": "Template blakadder : {\"NAME\":\"Waveshare ESP32-S3-Relay-6CH\",\"ARCH\":\"ESP32S3\",\"GPIO\":[1,224,225,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3200,3232,1,1,480,0,0,0,0,0,1376,1,1,226,227,0,1,228,229,1,1],\"FLAG\":0,\"BASE\":1} (rouge/vert de la LED inverses). Page ESPHome aussi.",
+    "brochage": {
+      "relais": "CH1 GPIO1, CH2 GPIO2, CH3 GPIO41, CH4 GPIO42, CH5 GPIO45, CH6 GPIO46",
+      "rs485": "TX GPIO17, RX GPIO18 (direction auto)",
+      "buzzer": "GPIO21",
+      "led_ws2812": "GPIO38",
+      "bouton": "GPIO0",
+      "i2c": null
+    },
+    "liens": {
+      "fabricant": "https://www.waveshare.com/esp32-s3-relay-6ch.htm",
+      "fabricant_prix": "28,99 USD (waveshare.com, 2026-11-26)",
+      "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/e/s/esp32-s3-relay-6ch-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005006990371375.html",
+      "aliexpress_prix": "53,39 EUR, prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": "https://www.amazon.fr/dp/B0CXPG4XGZ",
+      "amazon_prix": "43,99 EUR (Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+      "https://www.waveshare.com/wiki/ESP32-S3-Relay-6CH",
+      "https://www.waveshare.com/esp32-s3-relay-6ch.htm",
+      "https://templates.blakadder.com/waveshare_ESP32-S3-Relay-6CH.html"
+    ],
+    "incertitudes": "PSRAM : la page produit ne cite que N16, ne pas supposer 8 Mo. L'annonce AliExpress ne cite pas 'Waveshare' mais decrit la carte 6 canaux a Pico HAT."
+  },
+  {
+    "nom": "Waveshare ESP32-S3-ETH-8DI-8RO",
+    "fabricant": "Waveshare",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U-N16R8)",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM",
+    "relais": "8 relais 1NO+1NC, <=10 A 250 VAC / 30 VDC, optocouples, pilotes par expandeur TCA9554PWR (0x20)",
+    "entrees_num": "8 entrees isolees (optocoupleur bidirectionnel), 5-36 V, contact sec ou NPN/PNP",
+    "entrees_ana": null,
+    "rs485": "Oui, isole, direction automatique materielle, TVS, 120 ohms par cavalier",
+    "ethernet": "W5500 (SPI) 10/100",
+    "i2c": "Bus interne SDA GPIO42 / SCL GPIO41 (RTC PCF85063 + TCA9554) ; pas de connecteur dedie cite",
+    "alim": "7-36 V DC (bornier) ou 5 V USB-C",
+    "boitier": "Boitier ABS rail DIN 35 mm, 175 x 90 x 40 mm",
+    "tasmota": "Supporte (discussion arendst/Tasmota #24205) : compiler avec USE_TCA9554, USE_RTC_CHIPS, USE_PCF85063 ; EthType 8 pour le W5500 ; SetOption73 1 pour detacher les entrees des relais ; SetOption37 24 pour la LED. Template blakadder (version PoE, cense marcher aussi sur celle-ci) : {\"NAME\":\"ESP32S3-POE-ETH-8DI-8RO\",\"GPIO\":[40,1,1,1,32,33,34,35,36,37,38,39,5600,704,672,736,5568,1,1,1,1,1,0,0,0,0,0,1376,1,1,608,640,1,1,1,480,1,1],\"FLAG\":0,\"BASE\":1} + regle : rule3 on file#tca9554.dat do {\"NAME\":\"TCA9554\",\"GPIO\":[224,225,226,227,228,229,230,231]} endon. Page ESPHome aussi.",
+    "brochage": {
+      "relais": "EXIO1-EXIO8 du TCA9554PWR (I2C 0x20)",
+      "entrees": "DI1-DI8 = GPIO4-GPIO11",
+      "rs485": "TX GPIO17, RX GPIO18 (direction auto)",
+      "ethernet_w5500": "INT GPIO12, MOSI GPIO13, MISO GPIO14, SCLK GPIO15, CS GPIO16",
+      "i2c": "SDA GPIO42, SCL GPIO41 (RTC INT GPIO40)",
+      "carte_tf": "MISO GPIO45, MOSI GPIO47, SCLK GPIO48",
+      "led_ws2812": "GPIO38",
+      "buzzer": "GPIO46",
+      "bouton": "GPIO0"
+    },
+    "liens": {
+      "fabricant": "https://www.waveshare.com/esp32-s3-eth-8di-8ro.htm",
+      "fabricant_prix": "44,99 a 49,99 USD selon version (waveshare.com, 2026-11-26)",
+      "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/e/s/esp32-s3-eth-8di-8ro-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005013429337369.html",
+      "aliexpress_prix": "73,39 EUR (annonce a variantes ESP32-S3-ETH-8DI-8RO / ESP32-S3-POE-ETH-8DI-8RO), prix lu sur l'annonce le 2026-11-26",
+      "amazon": "https://www.amazon.fr/dp/B0F93T93BL",
+      "amazon_prix": "63,99 EUR (Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+      "https://www.waveshare.com/wiki/ESP32-S3-ETH-8DI-8RO",
+      "https://www.waveshare.com/esp32-s3-eth-8di-8ro.htm",
+      "https://templates.blakadder.com/waveshare_ESP32-S3-POE-ETH-8DI-8RO.html",
+      "https://github.com/arendst/Tasmota/discussions/24205",
+      "https://www.amazon.fr/s?k=ESP32-S3-ETH-8DI-8RO"
+    ],
+    "incertitudes": "Le template de la discussion #24205 differe en fin de tableau (8864, 480, 8800, 8832 aux positions GPIO45-48 = carte TF) de celui de blakadder (1, 480, 1, 1) : les deux sont cites. Il existe une variante -C avec CAN a la place du RS485 : la refuser pour du ModBus. Fonctionnement du template sur la version non PoE suppose par arendst, non confirme."
+  },
+  {
+    "nom": "Waveshare ESP32-S3-POE-ETH-8DI-8RO",
+    "fabricant": "Waveshare",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U-N16R8)",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM",
+    "relais": "8 relais 1NO+1NC, <=10 A 250 VAC / 30 VDC, via TCA9554PWR (0x20)",
+    "entrees_num": "8 entrees isolees, 5-36 V, contact sec ou NPN/PNP",
+    "entrees_ana": null,
+    "rs485": "Oui, isole, direction automatique materielle",
+    "ethernet": "W5500 + module PoE (802.3af)",
+    "i2c": "Bus interne SDA GPIO42 / SCL GPIO41",
+    "alim": "7-36 V DC, PoE, ou 5 V USB-C",
+    "boitier": "Boitier ABS rail DIN 35 mm, 175 x 90 x 40 mm",
+    "tasmota": "Template blakadder dedie (meme tableau que la version ETH) ; voir la fiche ESP32-S3-ETH-8DI-8RO pour les defines et la regle TCA9554.",
+    "brochage": {
+      "identique_a": "ESP32-S3-ETH-8DI-8RO (meme wiki Waveshare)"
+    },
+    "liens": {
+      "fabricant": "https://www.waveshare.com/esp32-s3-eth-8di-8ro.htm?sku=30838",
+      "fabricant_prix": "44,99 a 49,99 USD selon version (waveshare.com, 2026-11-26)",
+      "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/e/s/esp32-s3-eth-8di-8ro-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005013429337369.html",
+      "aliexpress_prix": "73,39 EUR (meme annonce a variantes que la version ETH), prix lu le 2026-11-26",
+      "amazon": "https://www.amazon.fr/dp/B0F93TK7F5",
+      "amazon_prix": "69,99 EUR (Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+      "https://www.waveshare.com/esp32-s3-eth-8di-8ro.htm",
+      "https://templates.blakadder.com/waveshare_ESP32-S3-POE-ETH-8DI-8RO.html",
+      "https://github.com/arendst/Tasmota/discussions/24205",
+      "https://www.amazon.fr/s?k=ESP32-S3-ETH-8DI-8RO"
+    ],
+    "incertitudes": "Photo : celle de la version ETH (meme boitier). Prix exact par version non attribue par la page Waveshare."
+  },
+  {
+    "nom": "Waveshare ESP32-S3-POE-ETH-8DI-8DO",
+    "fabricant": "Waveshare",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U-N16R8)",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM",
+    "relais": "Aucun : 8 sorties isolees a drain ouvert (Darlington, 5-40 V, 500 mA max par voie), capables de commander des relais externes",
+    "entrees_num": "8 entrees isolees, 5-36 V, NPN/PNP",
+    "entrees_ana": null,
+    "rs485": "Oui, isole, direction automatique ; CAN isole aussi",
+    "ethernet": "W5500 + PoE 802.3af",
+    "i2c": null,
+    "alim": "7-36 V DC ou 5 V USB-C",
+    "boitier": "Boitier rail DIN 35 mm, 175 x 90 x 40 mm",
+    "tasmota": "Aucun template trouve.",
+    "brochage": {},
+    "liens": {
+      "fabricant": "https://www.waveshare.com/esp32-s3-poe-eth-8di-8do.htm",
+      "fabricant_prix": "42,99 USD (waveshare.com, 2026-11-26)",
+      "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/e/s/esp32-s3-poe-eth-8di-8do-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005009699222671.html",
+      "aliexpress_prix": "79,69 EUR, prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.waveshare.com/esp32-s3-poe-eth-8di-8do.htm",
+      "https://fr.aliexpress.com/w/wholesale-esp32-s3-eth-8di-8ro.html"
+    ],
+    "incertitudes": "Brochage non releve. Carte 'sans relais' gardee pour les entrees/sorties 24 V isolees."
+  },
+  {
+    "nom": "Waveshare ESP32-S3-Touch-LCD-4.3B",
+    "fabricant": "Waveshare",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1-N16R8)",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM",
+    "relais": "Aucun : 2 sorties isolees drain ouvert 5-36 V, 450 mA",
+    "entrees_num": "2 entrees isolees 5-36 V (sec ou NPN/PNP)",
+    "entrees_ana": null,
+    "rs485": "Oui, commutation automatique ; isolement non affirme par la page ; CAN aussi",
+    "ethernet": null,
+    "i2c": "Connecteur I2C dedie SDA GPIO8 / SCL GPIO9 (partage avec tactile et RTC PCF85063)",
+    "alim": "7-36 V DC ou 5 V USB-C, batterie Li 3,7 V possible",
+    "boitier": "PAS rail DIN : carte nue 112,4 x 75,1 mm ou boitier 116,3 x 79 mm (pas de support rail fourni)",
+    "tasmota": "Aucun template trouve. Expandeur CH422G (DI/DO, reset tactile) absent du depot : pilotage en Berry a ecrire. Ecran RGB 800x480 (LVGL/HASPmota a verifier).",
+    "brochage": {
+      "tactile": "IRQ GPIO4, reset par CH422G EXIO1",
+      "entrees_sorties": "DI0 EXIO0, DI1 EXIO5, DO0 OD0, DO1 OD1 (expandeur CH422G)",
+      "rs485": "RX GPIO43, TX GPIO44 (auto)",
+      "can": "TX GPIO15, RX GPIO16",
+      "i2c": "SDA GPIO8, SCL GPIO9"
+    },
+    "liens": {
+      "fabricant": "https://www.waveshare.com/esp32-s3-touch-lcd-4.3b.htm",
+      "fabricant_prix": "36,99 a 43,99 USD (sans / avec boitier, waveshare.com, 2026-11-26)",
+      "photo": "https://www.waveshare.com/media/catalog/product/cache/1/image/800x800/9df78eab33525d08d6e5fb8d27136e95/e/s/esp32-s3-touch-lcd-4.3b-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005009834535947.html",
+      "aliexpress_prix": "44,79 EUR, prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": "https://www.amazon.fr/dp/B0D925SBYF",
+      "amazon_prix": "53,99 EUR sans boitier ; 60,99 EUR avec boitier (B0DCNSRT31) (Amazon.fr, 2026-11-26)"
+    },
+    "sources": [
+      "https://docs.waveshare.com/ESP32-S3-Touch-LCD-4.3B",
+      "https://www.waveshare.com/esp32-s3-touch-lcd-4.3b.htm"
+    ],
+    "incertitudes": "Ecran tactile 4,3 pouces 800x480 capacitif ; pas de montage rail DIN. Isolement du RS485 non precise."
+  },
+  {
+    "nom": "KinCony KC868-A2v3",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1 N16R8 ; photos : WROOM-1U)",
+    "flash_psram": "N16R8 (16 Mo / 8 Mo selon la reference)",
+    "relais": "2 relais COM/NO/NC, max 250 V 10 A",
+    "entrees_num": "2 entrees contact sec optocouplees (cable jusqu'a 500 m) + 2 GPIO 1-Wire",
+    "entrees_ana": null,
+    "rs485": "Oui (puce et isolement non precises)",
+    "ethernet": "W5500 100 Mbit/s",
+    "i2c": "Extendeur I2C pour peripheriques externes ; SDA GPIO48 / SCL GPIO47",
+    "alim": "12/24 V DC (protection inversion par NTC)",
+    "boitier": "Rail DIN avec coque plastique, PCB 87 x 93 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Relais sur GPIO directs (pas d'expandeur). Socle pour module 4G SIM7600 ou 2G SIM800L.",
+    "brochage": {
+      "relais": "R1 GPIO40, R2 GPIO39",
+      "entrees": "GPIO16, GPIO17 ; libres IO18, IO8, IO4, IO5, IO6, IO38",
+      "rs485": "TX GPIO7, RX GPIO15",
+      "i2c": "SDA GPIO48, SCL GPIO47 (OLED SSD1306 0x3C)",
+      "ethernet_w5500": "CLK GPIO42, MOSI GPIO43, MISO GPIO44, CS GPIO41, INT GPIO2, RST GPIO1",
+      "modem_4g": "TX GPIO10, RX GPIO9"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/esp32-s3-2-channel-relay-module.html",
+      "fabricant_prix": null,
+      "photo": "https://www.kincony.com/images/A2v3/A2v3-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005009199524600.html",
+      "aliexpress_prix": "53,39 EUR (107 vendus), prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/esp32-s3-2-channel-relay-module.html",
+      "https://devices.esphome.io/devices/kincony-kc868-a2v3/",
+      "https://fr.aliexpress.com/w/wholesale-kc868%20a2v3.html"
+    ],
+    "incertitudes": "Direction RS485 non indiquee (aucune broche DE dans le YAML ESPHome, ce qui ne prouve pas une direction automatique). Brochage tire du YAML ESPHome, pas d'une fiche officielle."
+  },
+  {
+    "nom": "KinCony B4",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U N16R8)",
+    "flash_psram": "N16R8",
+    "relais": "4 relais, max 250 VAC 7 A",
+    "entrees_num": "4 entrees contact sec optocouplees + GPIO 1-Wire (4 ou 7 selon le paragraphe)",
+    "entrees_ana": "4 voies ADS1115 16 bits : A1-A2 0-5 V, A3-A4 4-20 mA",
+    "rs485": "Oui (isolement et direction non precises)",
+    "ethernet": "RJ45 100 Mbit/s (W5500 d'apres le YAML ESPHome)",
+    "i2c": "SDA GPIO8 / SCL GPIO18",
+    "alim": "12-24 V DC (page produit) ; 12 V selon une autre page KinCony",
+    "boitier": "Rail DIN, 115 x 83 x 56 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Expandeur PCF8574 : driver present dans le depot (tasmota_xdrv_driver/xdrv_28_pcf8574_v2.ino). ADS1115 : driver present (USE_ADS1115, tasmota_configurations_ESP32.h).",
+    "brochage": {
+      "relais": "PCF8574 0x24 broches 4-7",
+      "entrees": "PCF8574 0x24 broches 0-3",
+      "analogique": "ADS1115 0x48",
+      "rs485": "TX GPIO38, RX GPIO39",
+      "i2c": "SDA GPIO8, SCL GPIO18",
+      "ethernet_w5500": "CLK GPIO1, MOSI GPIO2, MISO GPIO41, CS GPIO42, INT GPIO43, RST GPIO44",
+      "gpio_libres": "GPIO47, 48, 17, 40 (pull-up) ; GPIO13, 14, 21, 0"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/?p=7720",
+      "fabricant_prix": null,
+      "photo": "https://www.kincony.com/images/B4/B4-1.jpg",
+      "aliexpress": null,
+      "aliexpress_prix": null,
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/?p=7720",
+      "https://devices.esphome.io/devices/kincony-b4/"
+    ],
+    "incertitudes": "Aucune annonce AliExpress ni Amazon identifiee pour le B4. Alimentation 12 ou 12-24 V selon la page. Direction RS485 non indiquee."
+  },
+  {
+    "nom": "KinCony KC868-A6v3",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1 N16R8)",
+    "flash_psram": "N16R8",
+    "relais": "6 relais, max 250 VAC 10 A",
+    "entrees_num": "6 entrees contact sec optocouplees (500 m) + 2 GPIO 1-Wire + 7 GPIO libres",
+    "entrees_ana": "4 voies 0-5 V DC (page produit)",
+    "rs485": "Oui, puce MS2548 (MAX13478) ; RS232 SP3232 aussi",
+    "ethernet": "Non liste dans les specifications",
+    "i2c": "Extendeur I2C ; SDA GPIO12 / SCL GPIO11",
+    "alim": "12 V DC (protection inversion)",
+    "boitier": "Rail DIN avec coque plastique, 148 x 106 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Expandeur PCF8574 : driver present dans le depot (tasmota_xdrv_driver/xdrv_28_pcf8574_v2.ino). Socle LoRa SX1278 ou nRF24L01.",
+    "brochage": {
+      "relais": "PCF8574 0x24 broches 0-5",
+      "entrees": "PCF8574 0x22 broches 0-5",
+      "analogique": "A1 GPIO4, A2 GPIO5, A3 GPIO6, A4 GPIO7",
+      "rs485": "TX GPIO17, RX GPIO18",
+      "rs232": "TX GPIO9, RX GPIO10",
+      "i2c": "SDA GPIO12, SCL GPIO11 (OLED 0x3C)",
+      "1wire": "GPIO15, GPIO16"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/esp32-s3-6-channel-relay-module.html",
+      "fabricant_prix": null,
+      "photo": "https://www.kincony.com/images/KC868-A6v3/KC868-A6v3-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005008500352552.html",
+      "aliexpress_prix": "48,59 EUR (53 vendus) ; autres vendeurs 56,90 a 143,39 EUR ; prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/esp32-s3-6-channel-relay-module.html",
+      "https://devices.esphome.io/devices/kincony-kc868-a6v3/",
+      "https://fr.aliexpress.com/w/wholesale-kc868%20a6v3.html"
+    ],
+    "incertitudes": "Conflit : la page KinCony donne 4 x 0-5 V et pas d'Ethernet ; le YAML ESPHome lit A3/A4 en mA (x6,67) et declare un DAC GP8403 0-10 V. Alimentation 12 V seulement. Direction RS485 non indiquee. Amazon.fr : aucune annonce correspondante dans la recherche du 2026-11-26."
+  },
+  {
+    "nom": "KinCony KC868-A8v3",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U N16R8)",
+    "flash_psram": "N16R8 (le forum KinCony parle de 'PSRAM 16M')",
+    "relais": "8 relais COM/NO/NC, 250 V 10 A",
+    "entrees_num": "8 entrees contact sec optocouplees (500 m) + 4 GPIO 1-Wire",
+    "entrees_ana": "2 voies ADC directes (A1 GPIO7, A2 GPIO6) dans le YAML ESPHome ; aucune sur la page produit",
+    "rs485": "Oui (isolement non precise)",
+    "ethernet": "W5500 100 Mbit/s",
+    "i2c": "Extendeur I2C ; SDA GPIO8 / SCL GPIO18",
+    "alim": "12/24 V DC",
+    "boitier": "Rail DIN avec coque plastique, PCB 105 x 148 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Expandeur PCF8575 (16 bits) d'apres le YAML ESPHome : AUCUNE occurrence de 8575 dans le driver C du depot (xdrv_28_pcf8574_v2.ino), donc relais/entrees a piloter en Berry (I2C brut) sauf verification contraire. RTC DS3231, carte SD, OLED SSD1306, RF433.",
+    "brochage": {
+      "relais": "PCF8575 0x22 broches 0-7",
+      "entrees": "PCF8575 0x22 broches 8-15",
+      "rs485": "TX GPIO39, RX GPIO38",
+      "i2c": "SDA GPIO8, SCL GPIO18 (OLED 0x3C)",
+      "ethernet_w5500": "CLK GPIO1, MOSI GPIO2, MISO GPIO41, CS GPIO42, INT GPIO43, RST GPIO44",
+      "gpio_libres": "GPIO13, 40, 14, 48 (pull-up) ; GPIO5, GPIO0"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/esp32-s3-8-channel-relay-module.html",
+      "fabricant_prix": "80,00 USD, epuise (shop.kincony.com, d'apres la recherche du 2026-11-26)",
+      "photo": "https://www.kincony.com/images/KC868-A8v3/A8v3-1.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005009217043631.html",
+      "aliexpress_prix": "77,69 EUR (154 vendus), prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/esp32-s3-8-channel-relay-module.html",
+      "https://devices.esphome.io/devices/kincony-kc868-a8v3/",
+      "https://kincony.com/forum/showthread.php?tid=8166",
+      "https://fr.aliexpress.com/w/wholesale-kc868%20a8v3.html"
+    ],
+    "incertitudes": "PSRAM : 'PSRAM 16M' (forum) contre N16R8 (8 Mo). Direction RS485 non indiquee. Le firmware KCS v3 d'une A8v3 ne demarre pas sur l'ancienne KC868-A8 (forum). Amazon.fr : aucune annonce correspondante dans la recherche du 2026-11-26."
+  },
+  {
+    "nom": "KinCony B16",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U N16R8)",
+    "flash_psram": "N16R8",
+    "relais": "16 relais, max 250 VAC 7 A",
+    "entrees_num": "16 entrees contact sec optocouplees (500 m) + 7 GPIO 1-Wire",
+    "entrees_ana": "ADS1115 16 bits : A1-A2 0-5 V, A3-A4 4-20 mA",
+    "rs485": "Oui (isolement et direction non precises)",
+    "ethernet": "RJ45 100 Mbit/s (W5500 d'apres le YAML)",
+    "i2c": "Extendeur I2C ; SDA GPIO8 / SCL GPIO18",
+    "alim": "12 V DC",
+    "boitier": "Rail DIN, 160 x 83 x 59 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Expandeur PCF8575 (16 bits) d'apres le YAML ESPHome : AUCUNE occurrence de 8575 dans le driver C du depot (xdrv_28_pcf8574_v2.ino), donc relais/entrees a piloter en Berry (I2C brut) sauf verification contraire. ADS1115 : driver present (USE_ADS1115, tasmota_configurations_ESP32.h).",
+    "brochage": {
+      "relais": "PCF8575 0x22 broches 0-15",
+      "entrees": "PCF8575 0x24 broches 0-15",
+      "analogique": "ADS1115 0x48",
+      "rs485": "TX GPIO39, RX GPIO38",
+      "i2c": "SDA GPIO8, SCL GPIO18 (OLED 0x3C)",
+      "ethernet_w5500": "CLK GPIO1, MOSI GPIO2, MISO GPIO41, CS GPIO42, INT GPIO43, RST GPIO44",
+      "gpio_libres": "GPIO48, 47, 40, 7 (pull-up) ; GPIO13, 14, 21, 0"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/?p=7407",
+      "fabricant_prix": "170,00 USD, epuise (shop.kincony.com, d'apres la recherche du 2026-11-26)",
+      "photo": "https://www.kincony.com/images/B16/B16-1.jpg",
+      "aliexpress": null,
+      "aliexpress_prix": null,
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/?p=7407",
+      "https://devices.esphome.io/devices/kincony-b16/"
+    ],
+    "incertitudes": "Aucune annonce AliExpress identifiee (recherche 'kincony b16 esp32-s3' sans resultat exact). Alimentation 12 V seulement. Calibre 7 A. Amazon.fr : aucune annonce correspondante dans la recherche du 2026-11-26."
+  },
+  {
+    "nom": "KinCony F16",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U N16R8)",
+    "flash_psram": "N16R8",
+    "relais": "16 relais OMRON amovibles COM/NO, 250 VAC 16 A / 30 VDC 16 A",
+    "entrees_num": "16 entrees contact sec optocouplees (500 m)",
+    "entrees_ana": "A1-A2 0-5 V, A3-A4 4-20 mA (ADC directs)",
+    "rs485": "Oui (isolement et direction non precises)",
+    "ethernet": "W5500 100 Mbit/s",
+    "i2c": "SDA GPIO8 / SCL GPIO18 (OLED)",
+    "alim": "12/24 V DC (relais 12 V par defaut)",
+    "boitier": "Rail DIN, 262 x 127 x 62 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Expandeur PCF8575 (16 bits) d'apres le YAML ESPHome : AUCUNE occurrence de 8575 dans le driver C du depot (xdrv_28_pcf8574_v2.ino), donc relais/entrees a piloter en Berry (I2C brut) sauf verification contraire. Module Tuya integre.",
+    "brochage": {
+      "relais": "PCF8575 0x25 broches 0-15",
+      "entrees": "PCF8575 0x24 broches 0-15",
+      "analogique": "A1 GPIO5, A2 GPIO7 (tension), A3 GPIO6, A4 GPIO4 (courant)",
+      "rs485": "TX GPIO16, RX GPIO17",
+      "i2c": "SDA GPIO8, SCL GPIO18",
+      "ethernet_w5500": "CLK GPIO42, MOSI GPIO43, MISO GPIO44, CS GPIO41, INT GPIO2, RST GPIO1",
+      "rf433": "GPIO40",
+      "gpio_libres": "GPIO48, 47, 21, 15 (pull-up) ; GPIO13, 14"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/esp32-s3-tuya-relay-board-16a.html",
+      "fabricant_prix": "230 USD, epuise (shop.kincony.com, d'apres la recherche du 2026-11-26)",
+      "photo": "https://www.kincony.com/images/F16/ESP32-F16-1.jpg",
+      "aliexpress": null,
+      "aliexpress_prix": null,
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/esp32-s3-tuya-relay-board-16a.html",
+      "https://devices.esphome.io/devices/kincony-f16/",
+      "https://smarthomeshopuk.com/products/kincony-f16-16-channel-esp32-s3-relay-controller-din-rail"
+    ],
+    "incertitudes": "Prix UK constate par la recherche : 199,99 GBP (smarthomeshopuk). Direction RS485 non indiquee."
+  },
+  {
+    "nom": "KinCony CO16",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U N16R8)",
+    "flash_psram": "N16R8",
+    "relais": "16 relais, max 250 VAC 7 A",
+    "entrees_num": "16 entrees contact sec optocouplees (500 m)",
+    "entrees_ana": "16 voies ADS1115 16 bits, 0-10 V ou 4-20 mA par cavalier ; jusqu'a 4 sondes PT100 (MAX31865)",
+    "rs485": "Oui (ModBus, BACnet)",
+    "ethernet": "RJ45 100 Mbit/s",
+    "i2c": null,
+    "alim": "12-24 V DC",
+    "boitier": "Rail DIN, 225 x 83 x 56 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. ADS1115 : driver present (USE_ADS1115, tasmota_configurations_ESP32.h). 4 ADS1115 a des adresses differentes (page ESPHome).",
+    "brochage": {},
+    "liens": {
+      "fabricant": "https://www.kincony.com/?p=8000",
+      "fabricant_prix": null,
+      "photo": "https://www.kincony.com/images/CO16/CO16-2.jpg",
+      "aliexpress": null,
+      "aliexpress_prix": null,
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/?p=8000",
+      "https://devices.esphome.io/devices/kincony-co16/"
+    ],
+    "incertitudes": "Cavalier 0-10 V / 4-20 mA : par voie ou global, non dit. Brochage non releve. Aucune annonce AliExpress identifiee. La fiche Shopify parle d'entrees seches au lieu d'analogiques."
+  },
+  {
+    "nom": "KinCony KC868-A16v3",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U N16R8)",
+    "flash_psram": "N16R8",
+    "relais": "AUCUN relais : 16 sorties MOSFET (carte '16CH Mosfet')",
+    "entrees_num": "16 entrees (PCF8574) + 6 GPIO directs",
+    "entrees_ana": "A1-A2 tension, A3-A4 courant (mA) d'apres le YAML ESPHome",
+    "rs485": "Oui",
+    "ethernet": "W5500",
+    "i2c": "SDA GPIO9 / SCL GPIO10",
+    "alim": "12/24 V DC",
+    "boitier": "Rail DIN",
+    "tasmota": "Un utilisateur a fait marcher l'Ethernet sous Tasmota (EthType 8, broches W5500 sur ETH_POWER/MDIO/MDC) ; pas de template v3 publie. KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Expandeur PCF8574 : driver present dans le depot (tasmota_xdrv_driver/xdrv_28_pcf8574_v2.ino).",
+    "brochage": {
+      "sorties": "PCF8574 0x24 (1-8), 0x25 (9-16)",
+      "entrees": "PCF8574 0x21 (1-8), 0x22 (9-16)",
+      "analogique": "A1 GPIO4, A2 GPIO6, A3 GPIO7, A4 GPIO5",
+      "rs485": "TX GPIO16, RX GPIO17",
+      "i2c": "SDA GPIO9, SCL GPIO10",
+      "ethernet_w5500": "CLK GPIO42, MOSI GPIO43, MISO GPIO44, CS GPIO15, INT GPIO2, RST GPIO1"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/product/esp32-home-automation/page/3",
+      "fabricant_prix": null,
+      "photo": null,
+      "aliexpress": "https://fr.aliexpress.com/item/1005008499242334.html",
+      "aliexpress_prix": "62,39 EUR, prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://devices.esphome.io/devices/kincony-kc868-a16v3/",
+      "https://www.kincony.com/forum/printthread.php?tid=8395",
+      "https://fr.aliexpress.com/w/wholesale-kc868-a16v3.html"
+    ],
+    "incertitudes": "Sorties MOSFET, pas relais : a classer hors du creneau 16 relais (voir B16, F16, CO16). Page produit et photo non lues."
+  },
+  {
+    "nom": "KinCony AIO Hybrid",
+    "fabricant": "KinCony",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U N16R8)",
+    "flash_psram": "N16R8",
+    "relais": "5 relais OMRON amovibles COM/NO, 250 VAC 16 A / 30 VDC 16 A",
+    "entrees_num": "12 entrees contact sec optocouplees (500 m)",
+    "entrees_ana": "A1-A2 0-5 V, A3-A4 4-20 mA ; + 4 sorties DAC 0-10 V",
+    "rs485": "Oui",
+    "ethernet": "RJ45 100 Mbit/s (W5500 d'apres le YAML)",
+    "i2c": "SDA GPIO8 / SCL GPIO18",
+    "alim": "12/24 V DC",
+    "boitier": "Rail DIN, 218 x 127 x 64 mm",
+    "tasmota": "KinCony annonce Tasmota parmi les firmwares possibles (lien de telechargement sur sa page), mais aucun template blakadder trouve ; seule une page ESPHome (devices.esphome.io) donne le brochage. Relais sur PCF8574 (0x26) : Expandeur PCF8574 : driver present dans le depot (tasmota_xdrv_driver/xdrv_28_pcf8574_v2.ino). Entrees sur PCF8575 (0x24) : Expandeur PCF8575 (16 bits) d'apres le YAML ESPHome : AUCUNE occurrence de 8575 dans le driver C du depot (xdrv_28_pcf8574_v2.ino), donc relais/entrees a piloter en Berry (I2C brut) sauf verification contraire. Module Tuya, Zigbee par module externe, IR, RF433.",
+    "brochage": {
+      "relais": "PCF8574 0x26 broches 3-7",
+      "entrees": "PCF8575 0x24",
+      "analogique": "A1 GPIO5, A2 GPIO7, A3 GPIO6, A4 GPIO4",
+      "i2c": "SDA GPIO8, SCL GPIO18",
+      "ethernet_w5500": "CLK GPIO42, MOSI GPIO43, MISO GPIO44, CS GPIO41, INT GPIO2, RST GPIO1",
+      "ws2812": "GPIO21",
+      "ir": "TX GPIO14, RX GPIO17",
+      "dac": "MCP4728"
+    },
+    "liens": {
+      "fabricant": "https://www.kincony.com/esp32s3-all-in-one-smart-controller-aio-hybrid.html",
+      "fabricant_prix": "160,00 USD, epuise (shop.kincony.com, d'apres la recherche du 2026-11-26)",
+      "photo": "https://www.kincony.com/images/AIO-hybrid/AIO-Hybrid-1.jpg",
+      "aliexpress": null,
+      "aliexpress_prix": null,
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://www.kincony.com/esp32s3-all-in-one-smart-controller-aio-hybrid.html",
+      "https://devices.esphome.io/devices/kincony-aio/"
+    ],
+    "incertitudes": "La page dit '4 channels at DC 0-5V (A1,A2)' : 2 ou 4 voies 0-5 V, ambigu. RS485 absent du YAML ESPHome (broches inconnues). D'autres pages AIO KinCony decrivent une version a 4 entrees."
+  },
+  {
+    "nom": "LILYGO T-Relay-S3",
+    "fabricant": "LILYGO",
+    "puce": "ESP32-S3 (ESP32-S3-WROOM-1U)",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM",
+    "relais": "6 relais NO/NC, 10 A (250 VAC / 24 VDC), via registre a decalage SN74HC595 ; extensible a 24 voies (3 cartes T-Relay Chain)",
+    "entrees_num": null,
+    "entrees_ana": null,
+    "rs485": null,
+    "ethernet": null,
+    "i2c": "SDA GPIO16 / SCL GPIO17 (d'apres le template blakadder)",
+    "alim": "7-28 V DC par bornier (TinyTronics) ou 5 V USB-C ; un autre vendeur dit 7-24 V",
+    "boitier": "Boitier rail DIN (EN 60715) fourni",
+    "tasmota": "Template blakadder : {\"NAME\":\"LilyGo T-RelayS3\",\"GPIO\":[8352,1,1,1,1,8288,8320,8384,1,1,1,1,1,1,1,1,640,608,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1} ; compiler USE_SHIFT595, USE_RTC_CHIPS, USE_DS3231 ; Shift595DeviceCount N pour les extensions.",
+    "brochage": {
+      "74hc595": "OE GPIO0, SRCLK GPIO5, RCLK GPIO6, SER GPIO7 (decode des codes du template : ordre SRCLK, RCLK, OE, SER consecutifs verifie dans tasmota/include/tasmota_template.h)",
+      "i2c": "SDA GPIO16, SCL GPIO17 (RTC)",
+      "rs485": null
+    },
+    "liens": {
+      "fabricant": "https://lilygo.cc/products/t-relay-s3",
+      "fabricant_prix": "39,50 EUR TTC (TinyTronics, 2026-11-26)",
+      "photo": "https://catalog.tinytronics.nl/cdn-cgi/image/width=600,height=600,fit=pad,format=auto/catalog/products_2023/H629-T-RELAY-S3-LILYGO_5.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005005916829050.html",
+      "aliexpress_prix": "27,59 EUR (variante avec support DIN), prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://wiki.lilygo.cc/products/t-relay-series/t-relay-s3/",
+      "https://templates.blakadder.com/lilygo_T-Relay-S3.html",
+      "https://www.tinytronics.nl/en/development-boards/microcontroller-boards/with-wi-fi/lilygo-t-relays3-esp32-s3-relay-developement-board-6-channels",
+      "https://fr.aliexpress.com/w/wholesale-t-relay%20s3%20lilygo.html"
+    ],
+    "incertitudes": "Pas de RS485 ni d'entrees. Photo hebergee par TinyTronics (revendeur), pas par LILYGO. Plage d'alimentation 7-28 V ou 7-24 V selon le vendeur. Le template configure les LED comme relais 7 et 8. Amazon.fr : aucune annonce correspondante dans la recherche du 2026-11-26."
+  },
+  {
+    "nom": "LILYGO T-Connect Pro",
+    "fabricant": "LILYGO",
+    "puce": "ESP32-S3 (ESP32-S3R8)",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM octal",
+    "relais": "1 relais 10 A",
+    "entrees_num": null,
+    "entrees_ana": null,
+    "rs485": "Oui, module TD501D485H-A ; RS232 (TD501D232H) et CAN (TD501MCANFD, isole 2500 V) aussi",
+    "ethernet": "W5500 (SPI)",
+    "i2c": "Bus du tactile : SDA GPIO39 / SCL GPIO40",
+    "alim": "12-24 V DC (bornier) ou 5 V USB-C",
+    "boitier": "Montable rail DIN (cnx-software), 88 x 72 x 60 mm avec socle",
+    "tasmota": "Aucun template trouve. Ecran ST7796 222x480 SPI + tactile CST226SE, LoRa SX1262.",
+    "brochage": {
+      "ecran": "MOSI GPIO11, MISO GPIO13, SCLK GPIO12, CS GPIO21, DC GPIO41, BL GPIO46",
+      "tactile": "SDA GPIO39, SCL GPIO40, RST GPIO47, INT GPIO3",
+      "ethernet_w5500": "MOSI GPIO11, MISO GPIO13, SCLK GPIO12, CS GPIO10, INT GPIO9, RST GPIO48",
+      "rs485": "TX GPIO17, RX GPIO18",
+      "rs232": "TX GPIO4, RX GPIO5",
+      "can": "TX GPIO6, RX GPIO7",
+      "lora": "CS GPIO14, RST GPIO42, DIO1 GPIO45, BUSY GPIO38",
+      "relais": null
+    },
+    "liens": {
+      "fabricant": "https://lilygo.cc/en-us/products/t-connect-pro",
+      "fabricant_prix": "70,36 USD + port (boutique LILYGO, cite par cnx-software en 03/2025)",
+      "photo": "https://www.cnx-software.com/wp-content/uploads/2025/03/LILYGO-T-Connect-Pro-ESP32-S3-LoRa-Industrial-Controller.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005009233277833.html",
+      "aliexpress_prix": "84,39 EUR (80 vendus), prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://wiki.lilygo.cc/products/t-connect-series/t-connect-pro/",
+      "https://www.cnx-software.com/2025/03/05/lilygo-t-connect-pro-industrial-iot-controller-offers-ethernet-wifi-bluetooth-lora-rs232-rs485-and-can-bus/"
+    ],
+    "incertitudes": "GPIO du relais non publie dans le wiki. Isolement du RS485 non ecrit (le TD501D485H est en principe un module isole, non confirme par la page). Photo hebergee par cnx-software. Prix de 2025, non revu le 2026-11-26. Amazon.fr : aucune annonce correspondante dans la recherche du 2026-11-26."
+  },
+  {
+    "nom": "M5Stack StamPLC (K141)",
+    "fabricant": "M5Stack",
+    "puce": "ESP32-S3 (ESP32-S3FN8 sur module Stamp-S3A)",
+    "flash_psram": "8 Mo flash, pas de PSRAM (FN8)",
+    "relais": "4 relais, 5 A 250 VAC / 5 A 28 VDC",
+    "entrees_num": "8 entrees optocouplees (EL3H4), 5-36 V DC",
+    "entrees_ana": "Aucune sur la base (module d'extension StamPLC IO : 2 voies 0-10 V / 0-20 mA)",
+    "rs485": "Oui (PWR-485), broche de direction GPIO46 ; CAN aussi",
+    "ethernet": null,
+    "i2c": "SDA GPIO13 / SCL GPIO15 (INT GPIO14) ; ports Grove PORT.A (G2/G1) et PORT.C (G5/G4)",
+    "alim": "6-36 V DC (jack DC5521)",
+    "boitier": "Rail DIN ; ecran ST7789v2, RTC, INA226, LM75B",
+    "tasmota": "Aucun template trouve. Relais et entrees via expandeur AW9523B (0x59) : dans le depot, AW9523 n'apparait que dans le driver Berry tasmota/berry/drivers/M5CoreS3.be (propre au M5CoreS3), pas de driver C generique : pilotage en Berry a ecrire.",
+    "brochage": {
+      "relais": "AW9523B 0x59 P0_0-P0_3",
+      "entrees": "AW9523B P0_4-P0_7, P1_4-P1_7",
+      "rs485": "TX GPIO0 (aussi BOOT), RX GPIO39, DIR GPIO46",
+      "can": "TX GPIO42, RX GPIO43",
+      "i2c": "SDA GPIO13, SCL GPIO15, INT GPIO14, RST expandeurs GPIO3",
+      "buzzer": "GPIO44",
+      "lcd": "MOSI GPIO8, SCK GPIO7, RS GPIO6, CS GPIO12, RST GPIO3"
+    },
+    "liens": {
+      "fabricant": "https://docs.m5stack.com/en/core/StamPLC",
+      "fabricant_prix": "42,90 USD (DigiKey US, d'apres la recherche du 2026-11-26)",
+      "photo": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1129/K141_01.webp",
+      "aliexpress": "https://fr.aliexpress.com/item/1005008688668506.html",
+      "aliexpress_prix": "45,19 EUR (215 vendus), prix d'appel lu sur la page de recherche AliExpress (variante la moins chere), 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://docs.m5stack.com/en/core/StamPLC",
+      "https://www.digikey.com/en/products/detail/m5stack-technology-co-ltd/K141/26459381",
+      "https://fr.aliexpress.com/w/wholesale-stamplc%20m5stack.html"
+    ],
+    "incertitudes": "Pas de PSRAM. 8 entrees (doc M5Stack) contre 4 (Hackster) : 8 retenu. Les sorties d'alimentation PWR-485/PWR-CAN sont reliees directement a l'entree. TX RS485 partage avec BOOT (GPIO0). Amazon.fr : aucune annonce correspondante dans la recherche du 2026-11-26."
+  },
+  {
+    "nom": "Seeed EdgeBox-ESP-100",
+    "fabricant": "Seeed Studio",
+    "puce": "ESP32-S3",
+    "flash_psram": "16 Mo flash / 8 Mo PSRAM",
+    "relais": "Aucun : 6 sorties isolees 24 V 1 A (type non precise)",
+    "entrees_num": "4 entrees isolees 24 V",
+    "entrees_ana": "4 voies (ADC SGM58031 0x48), 4-20 mA ou 0-20 mA par defaut, 0-10 V en option ; 2 sorties 0-5 V (PWM filtre)",
+    "rs485": "Oui, isole, broche de direction RTS GPIO8 ; CAN isole aussi",
+    "ethernet": "W5500 100 Mbit/s",
+    "i2c": "SDA GPIO20 / SCL GPIO19 (INT GPIO9)",
+    "alim": "10,8-36 V DC (24 V conseille)",
+    "boitier": "Rail DIN ou mural",
+    "tasmota": "Aucun template trouve.",
+    "brochage": {
+      "entrees": "DI0-DI3 = GPIO4-GPIO7",
+      "sorties": "DO0-DO5 = GPIO40, 39, 38, 37, 36, 35",
+      "sorties_ana": "AO0 GPIO42, AO1 GPIO41",
+      "rs485": "TX GPIO17, RX GPIO18, RTS GPIO8",
+      "can": "TX GPIO1, RX GPIO2",
+      "ethernet_w5500": "CS GPIO10, MISO GPIO11, MOSI GPIO12, SCLK GPIO13, INT GPIO14, RST GPIO15",
+      "i2c": "SDA GPIO20, SCL GPIO19 (RTC PCF8563 0x51, FRAM 0x50, ADC 0x48)",
+      "buzzer": "GPIO45"
+    },
+    "liens": {
+      "fabricant": "https://wiki.seeedstudio.com/Edgebox-ESP-100-Arduino/",
+      "fabricant_prix": "179 USD au lancement (cnx-software) ; 100,85 GBP HT chez DigiKey UK (recherche du 2026-11-26)",
+      "photo": "https://media-cdn.seeedstudio.com/media/catalog/product/cache/bb49d3ec4ee05b6f018e93f896b8a25d/e/d/edgebox-esp100_1.jpg",
+      "aliexpress": null,
+      "aliexpress_prix": null,
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://wiki.seeedstudio.com/Edgebox-ESP-100-Arduino/",
+      "https://www.cnx-software.com/2022/12/21/edgebox-esp-100-esp32-s3-industrial-controller-with-rs485-can-bus-dio-4g-lte/",
+      "https://www.digikey.co.uk/en/products/detail/seeed-technology-co-ltd/102991735/17180829"
+    ],
+    "incertitudes": "Gamme analogique par defaut : 0-20 mA (tableau) ou 4-20 mA (note), contradictoire. Type des sorties non precise. Amazon.fr : aucune annonce correspondante dans la recherche du 2026-11-26."
+  },
+  {
+    "nom": "NORVI ESP-HMI-5C (CI / VI)",
+    "fabricant": "NORVI (Iconic Devices)",
+    "puce": null,
+    "flash_psram": "4 Mo flash / 8 Mo PSRAM (page contradictoire)",
+    "relais": "Aucun : 4 sorties transistor 100 mA 40 V",
+    "entrees_num": "4 entrees 18-32 V (sink/source)",
+    "entrees_ana": "4 voies : 4-20 mA (CI) ou 0-10 V (VI), ADC 12 bits",
+    "rs485": "Oui, MAX485, direction DE GPIO4",
+    "ethernet": "W5500",
+    "i2c": null,
+    "alim": "24 V DC",
+    "boitier": "Rail DIN ou pattes ; ecran 5 pouces tactile",
+    "tasmota": "Aucun template trouve.",
+    "brochage": {
+      "rs485": "DE GPIO4"
+    },
+    "liens": {
+      "fabricant": "https://norvi.io/products/esp32-based-hmi-controller-s3-lvg-plc-arduino/",
+      "fabricant_prix": "137,50 USD (norvi.io, 2026-11-26)",
+      "photo": "https://norvi.io/wp-content/uploads/2026/03/ESP32-HMI-5C_.jpg",
+      "aliexpress": null,
+      "aliexpress_prix": null,
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://norvi.io/products/esp32-based-hmi-controller-s3-lvg-plc-arduino/"
+    ],
+    "incertitudes": "Puce laissee a null : la page dit a la fois ESP32-WROOM32 et 'ESP32 S3 Integration'. Tactile resistif ou capacitif selon la section. Aucune carte NORVI ESP32-S3 a relais sur rail DIN confirmee."
+  },
+  {
+    "nom": "Carte generique eletechsup 'ESP32 S3 Modbus RS485 IO 8DI 6CH relais 4-20mA 0-10V'",
+    "fabricant": "eletechsup (marque indiquee sur l'annonce)",
+    "puce": "ESP32-S3 (titre de l'annonce)",
+    "flash_psram": null,
+    "relais": "6 relais 10 A + 4 sorties MOS (titre)",
+    "entrees_num": "8 entrees (titre)",
+    "entrees_ana": "Courant 4-20 mA et tension 0-10 V (titre ; nombre de voies non lu)",
+    "rs485": "Oui, ModBus (titre)",
+    "ethernet": null,
+    "i2c": null,
+    "alim": "7-30 V DC (titre)",
+    "boitier": null,
+    "tasmota": "Inconnu.",
+    "brochage": {},
+    "liens": {
+      "fabricant": null,
+      "fabricant_prix": null,
+      "photo": "https://ae-pic-a1.aliexpress-media.com/kf/S626e7108eabb49aa992d8fa3b232b1e9F.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005012799450840.html",
+      "aliexpress_prix": "66,69 EUR (3 vendus), prix lu sur l'annonce le 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://fr.aliexpress.com/item/1005012799450840.html"
+    ],
+    "incertitudes": "Tout vient du TITRE de l'annonce (aucune fiche technique lue, specifications AliExpress vides). La recherche web ne trouve chez eletechsup qu'une carte ESP32-C3 (ESC3B04) et des cartes ModBus sans ESP : la puce S3 n'est donc attestee que par ce titre. Montage DIN, isolement, brochage, PSRAM inconnus. A ne retenir qu'apres lecture de la notice du vendeur."
+  },
+  {
+    "nom": "Carte generique 'ESP32-S3 N16R8 controle industriel W5500, 4 relais, CAN, 485'",
+    "fabricant": "Inconnu (annonce AliExpress)",
+    "puce": "ESP32-S3 N16R8 (titre)",
+    "flash_psram": "16 Mo / 8 Mo (d'apres N16R8 du titre)",
+    "relais": "4 relais (titre)",
+    "entrees_num": null,
+    "entrees_ana": null,
+    "rs485": "Oui (titre : '485') ; CAN aussi",
+    "ethernet": "W5500 (titre)",
+    "i2c": null,
+    "alim": null,
+    "boitier": "Variantes 'Board' et 'With case' sur l'annonce",
+    "tasmota": "Inconnu.",
+    "brochage": {},
+    "liens": {
+      "fabricant": null,
+      "fabricant_prix": null,
+      "photo": "https://ae-pic-a1.aliexpress-media.com/kf/Se7edd8ef1187443b88ee531695e9a2f1K.jpg",
+      "aliexpress": "https://fr.aliexpress.com/item/1005013411277504.html",
+      "aliexpress_prix": "30,19 EUR (2 vendus), prix lu sur l'annonce le 2026-11-26",
+      "amazon": null,
+      "amazon_prix": null
+    },
+    "sources": [
+      "https://fr.aliexpress.com/item/1005013411277504.html"
+    ],
+    "incertitudes": "Tout vient du TITRE de l'annonce. Alimentation, calibre des relais, entrees, montage DIN et brochage inconnus. Seule piste trouvee pour 4 relais + Ethernet + RS485 en ESP32-S3 a bas prix, a verifier."
+  }
+]
