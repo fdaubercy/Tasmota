@@ -3,7 +3,7 @@ chantier: rgx-ethernet-uplink
 titre: PR amont Range Extender, Ethernet comme liaison montante (discussion arendst/Tasmota#25280)
 statut: actif
 cree: 2026-11-16
-maj: 2026-11-16
+maj: 2026-11-26
 source: compiled-sprouting-waffle.md
 objectif: Faire démarrer l'AP du Range Extender quand seul l'Ethernet a une IP, en un PR propre accepté par arendst
 famille: modbus-reseau
@@ -47,7 +47,7 @@ garde `#if defined(ESP32) && defined(USE_ETHERNET)` déjà utilisée par `HasIP(
 - [x] Compiler ESP32 avec `USE_WIFI_RANGE_EXTENDER` + `USE_ETHERNET` (+ NAPT), pour S3, P4 et ESP32 classique — preuve : journaux %TEMP%
 gx2_*.log, SUCCESS : tasmota32s3-rgx flash 72,4 %, tasmota32p4-rgx flash 56,3 %, tasmota32-rgx flash 75,9 %
 - [x] Compiler ESP32 sans Ethernet, et ESP8266 avec Range Extender (garde `#ifdef`) — preuve : b4_sans_eth.log SUCCESS (flash 74,0 %), firmware.map : EthernetInit 0, ETHClass 0, RgxUplinkUp 1 ; ESP8266 : b2 tasmota-rgx SUCCESS ; (la C3 ne convenait pas : Ethernet present)
-- [ ] Avant tout flash de la S3 : sauvegarde de la carte (page Build, onglet Sauvegarde configuration), envoi du firmware SANS effacement ; AP configuree par commandes Backlog RgxSSID/RgxPassword/RgxAddress/RgxSubnet/RgxState/RgxNAPT (valeurs fournies par l'utilisateur, jamais ecrites dans un fichier du worktree)
+- [x] Avant tout flash de la S3 : sauvegarde de la carte (page Build, onglet Sauvegarde configuration), envoi du firmware SANS effacement ; AP configuree par commandes Backlog RgxSSID/RgxPassword/RgxAddress/RgxSubnet/RgxState/RgxNAPT (valeurs fournies par l'utilisateur, jamais ecrites dans un fichier du worktree) — preuve : 17/11/2026, lecture complete de la flash par esptool (16 Mo, md5 4ecf4f01..., outils_docs/sauvegardes_cartes/tasmota32s3-rdc-grenier/, ignore par git) au lieu de la page Build (carte injoignable en reseau), puis write-flash app0 seule a 0xE0000, hash verifie, persist garde (Status 5 : hostname et IP inchanges)
 - [ ] Essai carte 1 : S3 + W5500, câble branché, Wi-Fi STA non configuré ou hors de portée : l'AP s'ouvre, un esclave reçoit un bail DHCP avec le bon DNS
 - [ ] Essai carte 2 : l'esclave sort sur Internet par le NAPT (ping, résolution DNS, MQTT)
 - [ ] Essai carte 3 : `RgxPort` ajoute une redirection avec l'IP Ethernet
