@@ -60,11 +60,11 @@ la validation d'un plan), tant que VS Code est ouvert (extension « Suivi du pla
 
 | Plan | Objectif | Avancement | Attend | Mis à jour |
 |---|---|---|---|---|
+| [tasmesh-evolution-amont](plans/tasmesh-evolution-amont.md) | Sonder arendst/Tasmota par une discussion courte, puis proposer de petits PR isolés sur TasMesh si les mainte… | 35 % (7/20) | 1 à vous, 1 sur carte | 2026-11-27 |
+| [rgx-ethernet-uplink](plans/rgx-ethernet-uplink.md) | Faire démarrer l'AP du Range Extender quand seul l'Ethernet a une IP, en un PR propre accepté par arendst | 43 % (12/29) | 1 à vous, 6 sur carte | 2026-11-26 |
 | [voie-mqtt](plans/voie-mqtt.md) | Commander des esclaves, lire leurs capteurs et être averti de leurs changements d'état par MQTT, à côté de Mo… | 95 % (60/64) | 2 à vous, 1 sur carte | 2026-11-21 |
 | [plan-maison-echelle](plans/plan-maison-echelle.md) | Remplacer les pièces schématiques du plan de la maison par un vrai plan à l'échelle (en mètres), un étage par… | 3 % (1/25) | — | 2026-11-19 |
 | [voie-reseau-ethernet](plans/voie-reseau-ethernet.md) | Qu'une carte en voie Ethernet garde tous ses services et ses esclaves, et ne devienne jamais injoignable si l… | 47 % (18/33) | 7 sur carte, 1 à vous | 2026-11-18 |
-| [rgx-ethernet-uplink](plans/rgx-ethernet-uplink.md) | Faire démarrer l'AP du Range Extender quand seul l'Ethernet a une IP, en un PR propre accepté par arendst | 41 % (11/29) | 1 à vous, 7 sur carte | 2026-11-16 |
-| [tasmesh-evolution-amont](plans/tasmesh-evolution-amont.md) | Sonder arendst/Tasmota par une discussion courte, puis proposer de petits PR isolés sur TasMesh si les mainte… | 35 % (7/20) | 1 à vous, 1 sur carte | 2026-11-16 |
 | [plan-maison](plans/plan-maison.md) | Document visuel qui place chaque carte Tasmota dans sa pièce et montre qui parle à qui, par quel moyen et qui… | 94 % (36/38) | 1 à vous, 1 sur carte | 2026-11-15 |
 | [ruban-cuve](plans/ruban-cuve.md) | Piloter le ruban WS2812 de la cuve en AUTO/MANUEL (bouton et ModBus) et préparer la carte cuve v0.2 | 77 % (23/31) | 3 sur carte | 2026-11-02 |
 | [sniffeur-i2c](plans/sniffeur-i2c.md) | Voir en direct le trafic I2C de n'importe quelle carte du parc, décodé jusqu'au registre, et lire ou écrire u… | 72 % (33/43) | 3 sur carte, 1 à vous | 2026-10-31 |
