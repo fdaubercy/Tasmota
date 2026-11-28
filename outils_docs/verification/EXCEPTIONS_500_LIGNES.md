@@ -103,3 +103,9 @@ lecture des modules, des autoexec, des persists, du cenv (ProjectConfig) et du m
 qu'un decoupage ; 501 lignes avant le scenario `delai_sans_mise_en_route_valide`, +13 pour le delai calcule depuis une heure non
 synchronisee ; +23 le meme jour : registre des voies des relais, plan binomes-berry A22). Banc unique de la pompe vide-cave : tous les scenarios partagent le meme montage (`monte`, bouchon `TasmotaStub`, vrais
 `controleGeneral.be` et `globalFonctions.be`) ; le couper dupliquerait ce montage. Ne pas le decouper pour satisfaire le compteur.
+
+`outils_docs/scripts_python/outils_pc/pont_serie.py` fait **537 lignes**, et c'est **voulu** (decide le 2026-11-28 : exception plutot
+qu'un decoupage ; 520 lignes avant la liaison HTTP, +17 pour l'ouverture `http://IP` et l'option `--ip`). Decomposition : 62 lignes de
+docstring d'en-tete (sortie de `--help` et mode d'emploi), 61 vides, 21 de commentaires ; la plus grosse fonction (`main`) fait 76 lignes.
+La page (`pont_serie_web.py`) et la liaison HTTP (`pont_http.py`) vivent deja dans des modules voisins. Ne pas le decouper pour satisfaire
+le compteur, ni tasser ses commentaires (lecon du 2026-10-18).
