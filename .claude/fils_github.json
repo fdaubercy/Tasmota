@@ -40,5 +40,11 @@
     "type": "issues",
     "numero": 25349,
     "sujet": "PR amont TasMesh : un noeud ne publie plus son log en MQTT (bogue 2)"
+  },
+  {
+    "depot": "arendst/Tasmota",
+    "type": "issues",
+    "numero": 25351,
+    "sujet": "PR amont TasMesh : commande trop longue jetee par le broker (bogue 3)"
   }
 ]
