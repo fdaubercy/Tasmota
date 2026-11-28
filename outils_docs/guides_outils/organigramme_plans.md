@@ -35,7 +35,10 @@ en ligne peut mettre une minute à refléter une publication. Les fiches des ét
 - `liens:` : les plans voisins, toutes familles ;
 - `spec:` : le ou les specs de `docs/superpowers/specs/`.
 
-L'avancement et les dates viennent des cases cochées et de l'historique git, rien à saisir.
+L'avancement et les dates viennent des cases cochées et de l'historique git, rien à saisir. L'avancement est celui
+du parseur des plans, comme dans le panneau VS Code et `tasks/README.md` : seules comptent les cases des sections
+d'action (`## A1`, `## A1b`…), et le % est la moyenne des actions. Les « Améliorations restantes » ne comptent pas.
+Les totaux de famille et le total général sont des parts d'étapes terminées. Node est nécessaire.
 
 ### Commandes
 

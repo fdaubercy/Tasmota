@@ -47,7 +47,8 @@ Obligatoire à la clôture (voir « Règles d'usage »). Texte libre, non compt�
 
 ## Règles de calcul
 
-- Une **action** est un titre `## A<n> — titre` (séparateurs acceptés : `—`, `–`, `-`, `.`, `:`).
+- Une **action** est un titre `## A<n> — titre` (séparateurs acceptés : `—`, `–`, `-`, `.`, `:`). Une action ajoutée
+  après coup peut porter une lettre minuscule (`## A1b — titre`) : elle compte comme une action à part entière.
 - Une **étape** est une case `- [ ]` ou `- [x]` placée sous une action, imbrication comprise.
 - **% d'une action** = étapes cochées / étapes. Une action sans étape vaut 0 % et lève une alerte.
 - **% global** = moyenne des % des actions (chaque action pèse autant).

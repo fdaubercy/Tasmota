@@ -5,7 +5,7 @@
 // Banc : node .claude/mods/suivi-plan/tests/test_parseur.mjs (les lignes marquees MUTANT
 // sont remplacees par le banc pour verifier qu'il detecte une regression).
 
-const RE_ACTION = /^##\s+A(\d+)\s*[—–\-.:]\s*(.*?)\s*$/
+const RE_ACTION = /^##\s+A(\d+[a-z]?)\s*[—–\-.:]\s*(.*?)\s*$/
 const RE_TITRE2 = /^##\s+(.*?)\s*$/
 const RE_TITRE1 = /^#\s+(.*?)\s*$/
 const RE_ETAPE = /^(\s*)[-*+]\s+\[( |x|X)\]\s+(.*?)\s*$/

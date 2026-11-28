@@ -9,6 +9,7 @@ import http.client
 import re
 import socket
 import sys
+import tempfile
 import threading
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -88,6 +89,28 @@ def main():
         statut, corps = requete(port, "GET", "/retard")
         verifie(statut, 200, "GET /retard : 200")
         json.loads(corps)
+        # avancement = celui du parseur des plans : A1b compte, Ameliorations et blocs de code non (ici 60 % si tout est compte)
+        with tempfile.TemporaryDirectory() as depot:
+            (Path(depot) / "tasks" / "plans").mkdir(parents=True)
+            (Path(depot) / "tasks" / "plans" / "essai.md").write_text(
+                "---\nstatut: actif\nfamille: build\ncree: 2026-01-01\n---\n# T\n## A1 — a\n- [x] x\n## A1b — b\n- [x] y\n"
+                "- [ ] z\n## Améliorations restantes\n- [ ] plus tard\n```\n- [x] exemple\n```\n", encoding="utf-8")
+            racine = org.RACINE
+            try:
+                org.RACINE = depot
+                p = org.donnees()["plans"][0]
+            finally:
+                org.RACINE = racine
+            verifie((p["pct"], p["etapes"]), (75, "2/3"), "avancement : meme calcul que le parseur des plans")
+        parseur, message = org.PARSEUR, "aucune exception"
+        try:
+            org.PARSEUR = parseur + ".absent"
+            org.avancements(["# T\n"])
+        except RuntimeError as e:
+            message = str(e)
+        finally:
+            org.PARSEUR = parseur
+        verifie("Cannot find module" in message, True, "parseur absent : erreur levee, cause lisible (pas de calcul de repli)")
     finally:
         serveur.shutdown()
         serveur.server_close()

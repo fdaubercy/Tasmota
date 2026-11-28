@@ -1,7 +1,8 @@
 """Organigramme des plans (tasks/plans/*.md) : donnees, page web (vue arbre) et PowerPoint.
 
 Sources : l'en-tete de chaque plan (statut, objectif, famille, parent, liens, spec) + les dates du
-premier et du dernier commit git du fichier (repli : cree/maj de l'en-tete) + le % des cases cochees.
+premier et du dernier commit git du fichier (repli : cree/maj de l'en-tete) + l'avancement calcule par le
+parseur des plans, celui du panneau VS Code et de tasks/README.md (necessite Node).
 Sorties dans outils_docs/organigramme_plans/ :
   plans.json                 donnees (relues par le script PowerPoint)
   index.html                 page autonome, clic sur un plan = detail, lien vers le plan et son spec
@@ -51,16 +52,34 @@ def _dates_git():
     return dates
 
 
-def lis_plan(nom, dates):
+# Parseur UNIQUE des plans (format : tasks/plans/_FORMAT.md) : aucune regle de comptage n'est recopiee ici
+PARSEUR = os.path.join(RACINE, ".claude", "mods", "suivi-plan", "hooks", "parseur-plan.mjs")
+JS_AVANCEMENT = """
+import fs from "node:fs"
+import { pathToFileURL } from "node:url"
+const { analyse } = await import(pathToFileURL(process.argv[1]).href)
+const textes = JSON.parse(fs.readFileSync(0, "utf8"))
+console.log(JSON.stringify(textes.map(t => { const a = analyse(t); return [a.global ?? 0, a.fait, a.total] })))
+"""
+
+
+def avancements(textes):
+    """[(pct, faites, total), ...] des textes de plans, en un seul appel a node ; echoue plutot que de compter autrement."""
+    r = subprocess.run(["node", "--input-type=module", "-e", JS_AVANCEMENT, PARSEUR], input=json.dumps(textes),
+                       capture_output=True, text=True, encoding="utf-8")
+    if r.returncode:
+        raise RuntimeError("parseur des plans en echec (node) : " + r.stderr.strip()[:2000])  # node ecrit la cause en tete
+    return json.loads(r.stdout)
+
+
+def lis_plan(nom, t, avancement, dates):
     chemin = f"tasks/plans/{nom}.md"
-    t = open(os.path.join(RACINE, chemin), encoding="utf-8").read().replace("\r\n", "\n")
     m = re.match(r"---\n(.*?)\n---\n", t, re.S)
     meta = {}
     for ligne in m.group(1).split("\n"):
         k, _, v = ligne.partition(":")
         meta[k.strip()] = re.sub(r"\s+#\s.*$", "", v).strip()
-    faites = len(re.findall(r"^\s*- \[x\]", t, re.M))
-    total = faites + len(re.findall(r"^\s*- \[ \]", t, re.M))
+    pct, faites, total = avancement
     dernier, ajout = dates.get(chemin, ("", ""))
     liste = lambda c: [x.strip() for x in meta.get(c, "").split(",") if x.strip()]
     return {
@@ -69,7 +88,7 @@ def lis_plan(nom, dates):
         "parent": meta.get("parent", ""), "liens": liste("liens"), "specs": liste("spec"),
         "cree": ajout or meta.get("cree", ""),
         "maj": max(dernier, meta.get("maj", "")),
-        "pct": round(100 * faites / total) if total else 0, "etapes": f"{faites}/{total}",
+        "pct": pct, "etapes": f"{faites}/{total}",
         "url": GITHUB + chemin, "urls_spec": [GITHUB + "docs/superpowers/specs/" + s for s in liste("spec")]}
 
 
@@ -77,7 +96,11 @@ def donnees():
     noms = sorted(f[:-3] for f in os.listdir(os.path.join(RACINE, "tasks", "plans"))
                   if f.endswith(".md") and not f.startswith("_"))
     dates = _dates_git()
-    plans = [lis_plan(n, dates) for n in noms]
+    textes = []
+    for n in noms:
+        with open(os.path.join(RACINE, "tasks", "plans", n + ".md"), encoding="utf-8") as f:
+            textes.append(f.read().replace("\r\n", "\n"))
+    plans = [lis_plan(n, t, a, dates) for n, t, a in zip(noms, textes, avancements(textes))]
     connus = {p["nom"] for p in plans}
     for p in plans:  # une cle de lien qui ne designe aucun plan est une faute de frappe : on la signale
         for q in p["liens"] + ([p["parent"]] if p["parent"] else []):

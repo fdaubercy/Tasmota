@@ -64,6 +64,11 @@ const ligne = P.ligneStatut(nominal)
 verifie("ligneStatut : chantier, %, action en cours, prochaine", ligne.startsWith("Plan essai") && ligne.includes("50 %") && ligne.includes("A1 2/4") && ligne.includes("prochaine : étape à faire"), ligne)
 verifie("ligneStatut d'un plan fini : terminé", P.ligneStatut(P.analyse("# X\n## A1 — a\n- [x] b\n")).includes("100 % · terminé"))
 verifie("ligneStatut d'un plan vide : aucune action", P.ligneStatut(P.analyse(vecteurs["vide.md"])).includes("aucune action"))
+// Une action ajoutee apres coup porte une lettre (A1b) : sans elle, ses cases disparaissaient sans alerte
+const lettres = P.analyse("# T\n## A1 — a\n- [x] x\n## A1b — b\n- [x] y\n- [ ] z\n")
+verifie("action à lettre (A1b) : comptée comme une action à part",
+  lettres.actions.map(a => `${a.id} ${a.fait}/${a.total}`).join() === "A1 1/1,A1b 1/2" && lettres.global === 75 && lettres.alertes.length === 0,
+  JSON.stringify(lettres.actions.map(a => `${a.id} ${a.fait}/${a.total}`)))
 const res = P.resume(nominal, "tasks/plans/essai.md")
 verifie("resume : % global, actions, prochaines, améliorations ; 25 lignes au plus",
   res.includes("50 %") && res.includes("A1 50 % (2/4)") && res.includes("Prochaines étapes") && res.includes("1 [conversation], 1 [projet]") && res.split("\n").length <= 25, res)
