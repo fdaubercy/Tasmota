@@ -1,0 +1,23 @@
+; Copie des deux envs temporaires du banc d'essai TasMesh du 2026-11-27 (retires de platformio_tasmota_cenv.ini le 2026-11-28).
+; Pour refaire l'essai : recoller ce bloc dans platformio_tasmota_cenv.ini et recreer dans tasmota/user_config_override.h une section
+; '#elif defined(FIRMWARE_ESP32_ESSAI_TASMESH_BROKER) || defined(FIRMWARE_ESP8266_ESSAI_TASMESH_NOEUD)' (USE_TASMESH, DHCP, topics bureau/essai-mesh-*).
+; Cette section n'est pas conservee ici : elle partageait le fichier a secrets de l'override. Voir le plan tasks/plans/tasmesh-evolution-amont.md, A4b.
+
+;----------------------------------------------------------------------------------------------------------------------------------------------------
+; ESSAI TasMesh sur cartes reelles (plan tasks/plans/tasmesh-evolution-amont.md, A4b, 2026-11-26) : envs TEMPORAIRES, a retirer apres l'essai.
+; Section commune FIRMWARE_ESP32_ESSAI_TASMESH_BROKER / FIRMWARE_ESP8266_ESSAI_TASMESH_NOEUD de user_config_override.h : USE_TASMESH, Wi-Fi maison, DHCP.
+; Broker : la carte ESP32 du portail (COM3) EMPRUNTEE ; remise en etat apres l'essai = « Effacer puis televerser » de
+; tasmota32-garage-portail-jardin-modbus (son persist est au depot). Aucun FS : ni Berry de carte, ni persist.
+; Noeud : ESP8266 de test, flash par cable (un noeud coupe Wi-Fi et serveur web apres MeshNode).
+;----------------------------------------------------------------------------------------------------------------------------------------------------
+[env:tasmota32-bureau-essai-tasmesh-broker]
+extends                 = env:tasmota32-base
+build_flags             = ${env:tasmota32-base.build_flags}
+                          -D FIRMWARE_ESP32_ESSAI_TASMESH_BROKER
+custom_files_upload     =
+upload_port             = COM3
+
+[env:tasmota-bureau-essai-tasmesh-noeud]
+extends                 =   env:tasmota-base-1M
+build_flags             =   ${env:tasmota-base-1M.build_flags}
+                            -D FIRMWARE_ESP8266_ESSAI_TASMESH_NOEUD

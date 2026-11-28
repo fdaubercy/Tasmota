@@ -913,7 +913,7 @@ Pour tout nouveau ESP32-P4, mettre à jour l'ESP32-C6 vers la derniere version d
         // -- Options for tasmota32s3-rdc-grenier ------
         #elif defined(FIRMWARE_ESP32S3_RDC_GRENIER)
             #undef CFG_HOLDER
-            #define CFG_HOLDER  1611    // propre a cet env, incremente par le pre-script (cfg_holder.py)
+            #define CFG_HOLDER  1612    // propre a cet env, incremente par le pre-script (cfg_holder.py)
             // -- CODE_IMAGE_STR is the name shown between brackets on the 
             //    Information page or in INFO MQTT messages
             #ifdef CODE_IMAGE_STR
