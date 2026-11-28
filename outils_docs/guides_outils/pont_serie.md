@@ -12,7 +12,8 @@ Avec le Python de PlatformIO (il fournit `pyserial`) :
 
 Options (`pont_serie.py::main`) :
 
-- `--port auto|COM11|loop://|aucun` : `auto` prend le seul port USB présent, sinon le pont démarre port fermé.
+- `--port auto|COM11|loop://|http://IP|aucun` : `auto` prend le seul port USB présent, sinon le pont démarre port fermé.
+- `--ip 192.168.1.50` : liaison HTTP vers la console web de la carte à cette adresse (remplace `--port`).
 - `--vitesse 115200`, `--tcp 7000`, `--journal fichier.log` (copie brute sans couleurs).
 - `--sans-couleurs` pour une carte non Tasmota, `--relance-log` pour renvoyer `SerialLog` à la carte.
 - `--lister` affiche les ports série et sort. `--local` limite l'écoute à 127.0.0.1. `--sans-navigateur` n'ouvre pas la page.
@@ -26,6 +27,7 @@ Pendant un build, ne jamais passer par la cible PlatformIO (c'est un `pio run`) 
 - Bouton Démarrer / Arrêter : Arrêter libère le port (pour un flash) sans fermer la page. Le port et la vitesse se changent depuis la page.
 - Envoi en Texte (fin de ligne au choix), en Hex ou en Binaire, avec CRC ModBus en option ; réception affichée en Texte ou en Hex.
 - Bouton « + Terminal » : lance un pont secondaire (option `--enfant`) sur le premier port TCP libre, pour suivre plusieurs cartes côte à côte. Il s'arrête avec le pont qui l'a lancé.
+- Liaison HTTP, sans câble : choisir « HTTP : console web de la carte (IP) » dans la liste des ports, saisir l'IP (port facultatif, `192.168.1.50:8080`), puis Démarrer. Le pont lit la console web de Tasmota (`/cs`, toutes les 2 s) et y envoie les commandes ; le reste de la page et le flux TCP brut marchent comme avec un COM. La dernière IP est gardée par le navigateur. Module : `pont_http.py`.
 - Case « Relancer le log série Tasmota » : Tasmota coupe son log série 600 s après son démarrage, le pont renvoie `SerialLog` à l'ouverture du port et à chaque coupure annoncée. La case est propre à chaque terminal.
 
 ## Pièges
@@ -37,6 +39,7 @@ Pendant un build, ne jamais passer par la cible PlatformIO (c'est un `pio run`) 
 - Port TCP déjà pris : le pont sort avant d'avoir pris le port série. Un autre pont tourne probablement, utiliser `--tcp 7001`.
 - Le pont ne crée pas de journal par défaut : sans `--journal`, rien n'est gardé sur disque (la cible PlatformIO écrit `%TEMP%\pont_serie_<env>.log`).
 - Le testeur UDP peut passer par le pont avec `pont:7000` au lieu d'un COM.
+- Liaison HTTP : les lignes lues suivent le niveau `WebLog` de la carte, pas `SerialLog`. Commandes en mode Texte seulement (Hex et Binaire refusés), une commande par ligne : la fin de ligne « Aucune » est refusée. Une commande sans réponse dans les 3 s n'est pas annoncée en échec (la carte a pu l'exécuter) : lire le log avant de la renvoyer. Depuis un autre appareil, une liaison vers ce PC (`127.x`, `localhost`, `169.254.x`) est refusée. Une carte protégée par `WebPassword` est refusée (non géré). Une carte derrière le NAPT d'un Range Extender n'est pas joignable depuis le PC. Dix secondes sans réponse : la liaison est fermée comme un COM débranché.
 
 ## Bancs
 
@@ -45,6 +48,9 @@ Depuis la racine du dépôt, avec le Python de PlatformIO (`PYPIO`) :
 ```
 PYPIO outils_docs/scripts_python/outils_pc/test_pont_serie_acces.py
 PYPIO outils_docs/scripts_python/outils_pc/test_testeur_udp.py
+PYPIO outils_docs/scripts_python/outils_pc/test_pont_http.py
 ```
+
+Le troisième simule la console web d'une carte en local et lance le vrai pont avec `--ip`.
 
 Le premier lance le vrai `pont_serie.py` en `loop://` sur un port TCP libre (accès depuis le réseau, jeton, relance du log) avec des mutants. Le second couvre le groupe « pont ». Code de sortie 0 = vert. Aucun banc n'ouvre un vrai COM ni le port 7000.

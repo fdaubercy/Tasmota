@@ -307,7 +307,7 @@ def temoin_relance():
     """Copie du pont : intacte -> 2 SerialLog ; detection de l'annonce retiree -> 1 seul (celui du cochage)."""
     dossier = tempfile.mkdtemp(prefix="banc_pont_relance_")
     try:
-        for nom in ("pont_serie.py", "pont_serie_web.py", "acces_web.py", "acces_repli.py", "acces_icone.py", "acces_barre.py"):
+        for nom in ("pont_serie.py", "pont_serie_web.py", "pont_http.py", "acces_web.py", "acces_repli.py", "acces_icone.py", "acces_barre.py"):
             shutil.copy(os.path.join(ICI, nom), dossier)
         for etape, attendu in (("reference : copie intacte", 2), ("detection de l'annonce retiree", 1)):
             if attendu == 1:
@@ -331,7 +331,7 @@ def temoins(ip):
     """Copie du pont : intacte -> refus ; mutee -> le cas de refus correspondant echoue."""
     dossier = tempfile.mkdtemp(prefix="banc_pont_acces_")
     try:
-        for nom in ("pont_serie.py", "pont_serie_web.py", "acces_web.py", "acces_repli.py", "acces_icone.py", "acces_barre.py"):
+        for nom in ("pont_serie.py", "pont_serie_web.py", "pont_http.py", "acces_web.py", "acces_repli.py", "acces_icone.py", "acces_barre.py"):
             shutil.copy(os.path.join(ICI, nom), dossier)
 
         def mesure():

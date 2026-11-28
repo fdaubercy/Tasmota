@@ -6,7 +6,8 @@ Le pont reconnait une requete HTTP a ses premiers octets ("GET ", "POST") et la 
                   Evenements : message (texte colore), 'note' (messages du pont, echo des envois),
                   'octets' (octets bruts recus, en hexa : vue Reception = Hex), 'etat'.
     GET  /etat    etat du port serie + ports presents (reliste les ports a chaque appel)
-    POST /ouvrir  corps JSON {"port": "COM11", "vitesse": 115200} : ouvre (ou rouvre) le port serie
+    POST /ouvrir  corps JSON {"port": "COM11", "vitesse": 115200} : ouvre (ou rouvre) le port serie ;
+                  "port": "http://192.168.1.50" ouvre la liaison HTTP vers la console web de la carte (pont_http.py)
     POST /fermer  ferme le port serie (le libere pour un flash) ; le serveur et la page restent en marche
     POST /cmd     corps = commande Tasmota, transmise a la carte (ex. "Status 4") suivie de \\n
     POST /envoi   corps JSON, sur le modele du moniteur serie de VS Code :
@@ -38,6 +39,7 @@ from http import HTTPStatus
 from types import SimpleNamespace
 
 import acces_web
+import pont_http
 
 FINS_LIGNE = {"aucune": b"", "LF": b"\n", "CR": b"\r", "CRLF": b"\r\n"}
 MAX_ENVOI = 1024        # octets par envoi
@@ -63,6 +65,7 @@ PAGE = """<!doctype html>
 <div class="barre">
  <span title="liaison page <-> pont"><span class="pastille" id="pastilleWeb"></span><span id="etatWeb">connexion...</span></span>
  <label>Port <select id="port" title="ports serie presents (USB d'abord)"></select></label>
+ <input id="ip" size="16" placeholder="IP de la carte" title="console web Tasmota de la carte a cette adresse (logs du niveau WebLog, commandes en mode Texte)">
  <button id="rafraichir" title="relister les ports serie">&#x21bb;</button>
  <label>Vitesse <select id="vitesse"></select></label>
  <button id="bascule" class="ferme">Demarrer</button>
@@ -88,7 +91,7 @@ PAGE = """<!doctype html>
 <script>
 const $=id=>document.getElementById(id);
 const logs=$('logs'),suivre=$('suivre'),filtre=$('filtre'),selPort=$('port'),selVitesse=$('vitesse'),bascule=$('bascule'),cmd=$('cmd');
-const modeEnvoi=$('modeEnvoi'),finLigne=$('finLigne'),crc=$('crc'),recep=$('recep');
+const modeEnvoi=$('modeEnvoi'),finLigne=$('finLigne'),crc=$('crc'),recep=$('recep'),ipSaisie=$('ip');
 let classes=[],reste='',etat={ouvert:false},tampon=[],historique=[],posHisto=0,relanceSynchro=false;
 const AIDES={texte:'Commande Tasmota (Entree pour envoyer), ex. Status 4',
   hex:'Octets en hexadecimal (Entree pour envoyer), ex. 01 06 00 01 01 00',
@@ -124,13 +127,19 @@ function recoit(k,d){tampon.push([k,d]);if(tampon.length>6000)tampon.splice(0,10
 function redessine(){logs.innerHTML='';classes=[];reste='';for(const [k,d] of tampon)if(visible(k))affiche(k,d);}
 function majModeEnvoi(){const m=modeEnvoi.value;cmd.placeholder=AIDES[m];
   finLigne.style.display=m==='texte'?'':'none';$('blocCrc').style.display=m==='texte'?'none':'';}
+const estHttp=p=>!!p&&p.toLowerCase().startsWith('http://');
+function majIp(){ipSaisie.style.display=selPort.value==='http'?'':'none';}
 function remplitPorts(e){
-  const choisi=selPort.value||e.port;selPort.innerHTML='';
+  const courant=estHttp(e.port)?'http':e.port;  // liaison HTTP : entree 'http' + IP dans le champ
+  const choisi=selPort.value||courant;selPort.innerHTML='';
   const ports=e.ports.slice();
-  if(e.port&&!ports.some(p=>p.port===e.port))ports.unshift({port:e.port,description:'(port courant)',usb:false});
+  if(courant&&courant!=='http'&&!ports.some(p=>p.port===e.port))ports.unshift({port:e.port,description:'(port courant)',usb:false});
   if(!ports.length){const o=new Option('aucun port detecte','');selPort.add(o);}
   for(const p of ports)selPort.add(new Option(p.port+' - '+p.description+(p.usb?' (USB)':''),p.port));
-  if([...selPort.options].some(o=>o.value===(e.ouvert?e.port:choisi)))selPort.value=e.ouvert?e.port:choisi;}
+  selPort.add(new Option('HTTP : console web de la carte (IP)','http'));
+  if(e.ouvert&&courant==='http')ipSaisie.value=e.port.slice(7);
+  if([...selPort.options].some(o=>o.value===(e.ouvert?courant:choisi)))selPort.value=e.ouvert?courant:choisi;
+  majIp();}
 function remplitVitesses(e){
   const choisie=selVitesse.value||String(e.vitesse);selVitesse.innerHTML='';
   const vs=e.vitesses.slice();if(!vs.includes(e.vitesse))vs.push(e.vitesse);vs.sort((a,b)=>a-b);
@@ -138,11 +147,11 @@ function remplitVitesses(e){
   selVitesse.value=e.ouvert?String(e.vitesse):choisie;}
 function appliqueEtat(e){
   etat=e;remplitPorts(e);remplitVitesses(e);
-  selPort.disabled=selVitesse.disabled=e.ouvert;cmd.disabled=!e.ouvert;
+  selPort.disabled=selVitesse.disabled=ipSaisie.disabled=e.ouvert;cmd.disabled=!e.ouvert;
   bascule.textContent=e.ouvert?'Arreter':'Demarrer';bascule.className=e.ouvert?'ouvert':'ferme';
   bascule.disabled=!e.ouvert&&!selPort.value;
   $('pastillePort').style.background=e.ouvert?'#23d18b':'#808080';
-  $('infoPort').textContent=e.ouvert?(e.port+' @ '+e.vitesse+' bauds'):'port ferme';
+  $('infoPort').textContent=e.ouvert?(e.port+(estHttp(e.port)?' (console web)':' @ '+e.vitesse+' bauds')):'port ferme';
   $('nomPont').textContent='terminal :'+e.tcp;
   // 1er etat : le choix memorise pour ce terminal est renvoye au pont, sauf si --relance-log l'impose
   if(!relanceSynchro&&!e.relanceImposee){relanceSynchro=true;
@@ -154,9 +163,13 @@ function poste(url,corps){return fetch(url,{method:'POST',headers:{'X-Pont':'1',
   .then(r=>r.text().then(t=>{if(!r.ok)ajoute('\\x1b[91m[page] '+(t||r.status)+'\\x1b[0m\\n');return r.ok;}));}
 function releve(){return fetch('/etat').then(r=>r.json()).then(appliqueEtat);}
 bascule.onclick=()=>{bascule.disabled=true;
-  (etat.ouvert?poste('/fermer'):poste('/ouvrir',JSON.stringify({port:selPort.value,vitesse:parseInt(selVitesse.value)})))
+  const port=selPort.value==='http'?'http://'+ipSaisie.value.trim():selPort.value;
+  if(selPort.value==='http')ecrit('ip',ipSaisie.value.trim());
+  (etat.ouvert?poste('/fermer'):poste('/ouvrir',JSON.stringify({port:port,vitesse:parseInt(selVitesse.value)})))
   .finally(()=>releve());};
 $('rafraichir').onclick=releve;
+ipSaisie.value=lit('ip','');majIp();
+ipSaisie.addEventListener('keydown',e=>{if(e.key==='Enter'&&!etat.ouvert)bascule.click();});
 $('nouveau').onclick=()=>{  // onglet ouvert DANS le clic (sinon bloque comme popup), dirige une fois le pont pret
   const w=window.open('','_blank');$('nouveau').disabled=true;
   try{w.document.title='Pont serie';w.document.body.style.cssText='background:#1e1e1e;color:#d4d4d4;font:13px Consolas,monospace';
@@ -167,7 +180,7 @@ $('nouveau').onclick=()=>{  // onglet ouvert DANS le clic (sinon bloque comme po
   .catch(e=>{if(w)w.close();ajoute('\\x1b[91m[page] '+e.message+'\\x1b[0m\\n');})
   .finally(()=>{$('nouveau').disabled=false;});};
 selPort.addEventListener('focus',()=>{if(!etat.ouvert)releve();});
-selPort.addEventListener('change',()=>{bascule.disabled=!selPort.value;});
+selPort.addEventListener('change',()=>{bascule.disabled=!selPort.value;majIp();if(selPort.value==='http')ipSaisie.focus();});
 cmd.addEventListener('keydown',e=>{
   if(e.key==='ArrowUp'||e.key==='ArrowDown'){if(!historique.length)return;e.preventDefault();
     posHisto=Math.max(0,Math.min(historique.length,posHisto+(e.key==='ArrowUp'?-1:1)));
@@ -422,6 +435,9 @@ def traite(pont, client, adresse):
             except (ValueError, KeyError, TypeError):
                 _texte(client, "400 Bad Request", "attendu : {\"port\": \"COM11\", \"vitesse\": 115200}")
                 return
+            if pont_http.est_boucle(port) and not acces_web.est_local(adresse):   # pas de rebond vers les outils du PC
+                _texte(client, "403 Forbidden", "liaison HTTP vers ce PC refusee depuis un autre appareil")
+                return
             ok, message = pont.ouvre(port, vitesse)
             _texte(client, "200 OK" if ok else "409 Conflict", message)
         elif chemin == "/envoi":
@@ -430,8 +446,15 @@ def traite(pont, client, adresse):
             except (ValueError, TypeError) as erreur:      # JSONDecodeError herite de ValueError
                 _texte(client, "400 Bad Request", str(erreur))
                 return
+            if pont_http.est_http(pont.nom_port) and pont.serie is not None:
+                if not description.startswith("texte"):
+                    _texte(client, "400 Bad Request", "liaison HTTP : commandes en mode Texte seulement")
+                    return
+                if not octets.endswith((b"\n", b"\r")):   # sinon gardee en tampon et collee a la suivante
+                    _texte(client, "400 Bad Request", "liaison HTTP : choisir une fin de ligne LF, CR ou CRLF")
+                    return
             if not pont.ecrit(octets):
-                _texte(client, "409 Conflict", "port serie ferme : cliquer sur Demarrer")
+                _texte(client, "409 Conflict", "port ferme ou carte injoignable : cliquer sur Demarrer")
                 return
             print(f"envoi web -> carte : {description}")
             pont.diffuse(f"\x1b[95m[envoi] {description}\x1b[0m\n", note=True)

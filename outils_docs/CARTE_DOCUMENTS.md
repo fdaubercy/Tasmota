@@ -305,7 +305,8 @@ dates (audits, diagnostics, specs, `ANALYSE_*`) gardent leurs numeros : ce sont 
     `simple-server.py`, `multi_server_explorer.py`, `image_base64.py`.
   - `outils_pc/` — les outils PC autour des cartes, qui s'importent entre eux (`ecoute_udp.py`
     importe le sniffeur MQTT ; le sniffeur ModBus, 7 modules voisins) : `pont_serie.py`
-    (+ `pont_serie_web.py`) et ceux-ci :
+    (+ `pont_serie_web.py`, et `pont_http.py` pour la liaison HTTP vers la console web d'une carte,
+    banc `test_pont_http.py`) et ceux-ci :
   - `acces_web.py` (banc `test_acces_web.py`) — commun aux pages des outils (pont serie, testeur UDP,
     sniffeurs MQTT et ModBus, syslog, synchro du fork), decide le 2026-10-17 : au lancement, lien
     cliquable dans la console (Ctrl+clic) et navigateur ouvert (`--sans-navigateur` pour l'eviter) ;

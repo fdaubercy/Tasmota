@@ -28,6 +28,9 @@ Usage (Python de PlatformIO, qui fournit pyserial) :
               --sans-couleurs  --local  --sans-navigateur  --lister (affiche les ports serie et sort)
               --relance-log (relance le log serie Tasmota, voir plus bas)
     --port auto (defaut) : prend le SEUL port USB present ; sinon demarre port ferme.
+    --ip 192.168.1.50 (ou --port http://192.168.1.50) : liaison HTTP, sans cable, vers la console web
+    de la carte (pont_http.py : logs du niveau WebLog, commandes en mode Texte seulement). Sur la page :
+    choix « HTTP (IP) » dans la liste des ports.
     Deux cartes en meme temps : bouton « + Terminal » de la page (ci-dessous), ou deux ponts
     lances a la main avec deux --tcp differents (7000, 7001...).
 
@@ -73,6 +76,7 @@ import serial
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import acces_web  # noqa: E402  (module voisin : jeton, liens, ouverture du navigateur)
+import pont_http  # noqa: E402  (module voisin : liaison HTTP vers la console web d'une carte)
 import pont_serie_web  # noqa: E402  (module voisin : page et routes HTTP)
 
 RACINE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -232,16 +236,23 @@ class Pont:
         """Ouvre (ou rouvre) le port serie. Renvoie (ok, message)."""
         with self.verrou_serie:
             self._ferme_sans_verrou()
+            http = pont_http.est_http(nom_port)
             try:
-                serie = serial.serial_for_url(nom_port, do_not_open=True, baudrate=int(vitesse), timeout=0.2)
-                serie.dtr, serie.rts = False, False   # ne pas resetter l'ESP32
-                serie.open()
+                if http:   # console web de la carte, vue comme un port (pont_http.py) ; vitesse sans objet
+                    serie = pont_http.LiaisonHttp(nom_port)
+                    nom_port = serie.url
+                else:
+                    serie = serial.serial_for_url(nom_port, do_not_open=True, baudrate=int(vitesse), timeout=0.2)
+                    serie.dtr, serie.rts = False, False   # ne pas resetter l'ESP32
+                    serie.open()
             except (serial.SerialException, ValueError, OSError) as erreur:
-                ok, message = False, f"impossible d'ouvrir {nom_port} : {erreur} (moniteur ou flash en cours ?)"
+                piste = "carte allumee, IP juste ?" if http else "moniteur ou flash en cours ?"
+                ok, message = False, f"impossible d'ouvrir {nom_port} : {erreur} ({piste})"
             else:
                 self.serie, self.nom_port, self.vitesse = serie, nom_port, int(vitesse)
                 self.traine = b""
-                ok, message = True, f"port {nom_port} ouvert a {vitesse} bauds"
+                ok, message = True, (f"liaison {nom_port} ouverte (console web de la carte)" if http
+                                     else f"port {nom_port} ouvert a {vitesse} bauds")
         print(message)
         self.annonce(message)
         if ok:
@@ -297,7 +308,8 @@ class Pont:
 
     def relance_serie(self, raison):
         """SerialLog reapplique si la relance est activee ET le port ouvert. True si la commande est partie."""
-        if not self.relance_log or not self.ecrit(COMMANDE_REVEIL_SERIE):
+        # liaison HTTP : le log web n'est pas coupe, et la case ne doit pas ecrire dans la carte par la console web
+        if not self.relance_log or pont_http.est_http(self.nom_port) or not self.ecrit(COMMANDE_REVEIL_SERIE):
             return False
         message = f"log serie Tasmota relance (SerialLog, {raison})"
         print(message)
@@ -431,7 +443,9 @@ class Pont:
 
 def main():
     options = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    options.add_argument("--port", default="auto", help="port serie : auto (seul port USB), COM11, /dev/ttyUSB0, loop://, aucun")
+    options.add_argument("--port", default="auto",
+                         help="port serie : auto (seul port USB), COM11, /dev/ttyUSB0, loop://, http://IP, aucun")
+    options.add_argument("--ip", help="liaison HTTP vers la console web de la carte a cette IP (remplace --port)")
     options.add_argument("--vitesse", type=int, default=115200)
     options.add_argument("--tcp", type=int, default=7000, help="port TCP (TCP brut ET HTTP)")
     options.add_argument("--journal", help="copie brute (sans couleurs) du flux dans ce fichier")
@@ -473,7 +487,10 @@ def main():
         print("relance du log serie Tasmota activee (--relance-log)")
     # Port serie ouvert si possible ; sinon le pont demarre quand meme, port FERME, a ouvrir
     # depuis la page web (bouton Demarrer, choix du port et de la vitesse).
-    nom_port = None if args.port.lower() == "aucun" else choisit_port(args.port)
+    if args.ip:
+        nom_port = args.ip.strip() if pont_http.est_http(args.ip.strip()) else pont_http.PREFIXE + args.ip.strip()
+    else:
+        nom_port = None if args.port.lower() == "aucun" else choisit_port(args.port)
     if nom_port:
         pont.ouvre(nom_port, args.vitesse)
     threading.Thread(target=pont.lit_serie, daemon=True).start()
