@@ -530,3 +530,9 @@ gardes ; entree ecrite a la main, pas par le script.
 -   `0078ac6c2` Fix typo in program version string in Vietnamese (#25336)
 -   `b711f2e6c` changes for IDF 6.2 compat (#25337)
 -   `770e76ab8` WebUI incomplete or corrupt HTTP responses after a short TCP write (#25335)
+
+## 2026-11-28 07:04 — 1 commit(s) recupere(s) d'upstream
+
+`arendst/Tasmota:development` → `fdaubercy/Tasmota:development` (merge_type : merge)
+
+-   `10212dfeb` Modify command args in settings.json for upload port
