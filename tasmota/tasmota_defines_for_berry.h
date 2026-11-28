@@ -38,7 +38,6 @@
 #define __UINT_LEAST16_MAX__ 0xffff
 #define D_SAT_FIX_NO_FIX "None"
 #define D_CMND_SETSENSOR "SetSensor"
-#define USE_PWM_DIMMER 
 #define __ATOMIC_ACQUIRE 2
 #define USE_IAQ 
 #define SYS_LOG_HOST "192.168.0.3"
@@ -110,7 +109,7 @@
 #define D_LOG_CONFIG "CFG: "
 #define D_SHOW_HIDDEN_FILES "Affichez les fichiers cachés"
 #define D_CONFIGURATION_RESET "Configuration réinitialisée"
-#define __XTENSA_MARCH_EARLIEST 260003
+#define __XTENSA_MARCH_EARLIEST 270012
 #define I2CDRIVERS_64_95 0xFFFFFFFF
 #define MATTER_ENABLED false
 #define __XCHAL_DCACHE_LINEWIDTH 4
@@ -173,8 +172,8 @@
 #define D_SENSOR_SDIO_D2 "SDIO D2"
 #define D_SENSOR_SDIO_D3 "SDIO D3"
 #define COLOR_TIMER_TAB_TEXT "#faffff"
-#define STA_SSID1 "MAISON"
-#define STA_SSID2 "Relai Wifi 2.4G KuWFi"
+#define STA_SSID1 "SERVEUR-RLY-CAVE-GATEWAY"
+#define STA_SSID2 "MAISON"
 #define D_SUBNET_MASK "Masque sous-réseau"
 #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
@@ -189,7 +188,6 @@
 #define D_WEMO_EVENT_SERVICE "WeMo event service"
 #define TUYA_SETOPTION_137 false
 #define D_SENSOR_PCF8574_INT "PCF8574 Int"
-#define USE_DOMOTICZ 
 #define D_CMND_ZIGBEE_PERMITJOIN "PermitJoin"
 #define D_SENSOR_ARIRFSEL "ALux IrSel"
 #define D_JSON_CHARGE "Charge"
@@ -225,7 +223,7 @@
 #define D_CMND_PIP_QMOD "QMOD"
 #define D_SENSOR_BOILER_OT_TX "OpenTherm TX"
 #define D_SCRIPT_CHARS_LEFT "car. restant"
-#define WIFI_GATEWAY "192.168.0.254"
+#define WIFI_GATEWAY "192.168.4.1"
 #define D_SENSOR_LD2410_RX "LD2410 Rx"
 #define D_JSON_LINK_COUNT "LinkCount"
 #define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
@@ -392,6 +390,7 @@
 #define D_NEOPOOL_FILTRATION_BACKWASH "Rétro-lavage"
 #define D_JSON_WITH_IP_ADDRESS "with IP address"
 #define GUI_TRASH_FILE 
+#define WIFI_RGX_NAPT 1
 #define D_CMND_SHUTTER_INVERT "Invert"
 #define THERMOSTAT_TIME_STD_DEV_PEAK_DET_OK 10
 #define D_IMPORT_ACTIVE "Énergie act conso"
@@ -441,6 +440,7 @@
 #define THERMOSTAT_TEMP_HYSTERESIS 1
 #define D_AS3935_OFF "Inactif"
 #define BE_LV_WIDGET_LIST 
+#define TLS_HANDSHAKE_TIMEOUT 10000
 #define __UINTMAX_TYPE__ long long unsigned int
 #define D_JSON_BOOTVERSION "Boot"
 #define D_CMND_HSBCOLOR "HSBColor"
@@ -463,6 +463,7 @@
 #define D_JSON_FLOWRATE "FlowRate"
 #define D_FP_ENROLL_REMOVEFINGER "Retirer le doigt"
 #define __FLT_EVAL_METHOD_TS_18661_3__ 0
+#define USE_UNIVERSAL_DISPLAY 
 #define D_CMND_AP "Ap"
 #define D_NEOPOOL_RELAY_FILTRATION "Filtration"
 #define D_SO_PWMCT "PWMCT"
@@ -471,7 +472,7 @@
 #define D_SENSOR_CC1101_CS "CC1101 CS"
 #define D_CMND_LEDPWM_OFF "LedPwmOff"
 #define D_JSON_IRHVAC_CELSIUS "Celsius"
-#define PROJECT "SERVEUR-RLY-CAVE"
+#define PROJECT "ECRAN-CAVE"
 #define D_UTC_TIME "UTC"
 #define __UINT32_MAX__ 0xffffffffUL
 #define D_CHARGE "Charge"
@@ -483,6 +484,7 @@
 #define USE_SONOFF_SPM 
 #define D_SENSOR_RC522_RST "RC522 Rst"
 #define D_THERMOSTAT_DUTY_CYCLE "Duty cycle"
+#define WIFI_RGX_SUBNETMASK "255.255.255.0"
 #define D_SENSOR_I2S_MCLK "I2S MClk"
 #define D_JSON_SELECTED "selected"
 #define D_UPGRADE_STARTED "Mise à jour lancée"
@@ -590,7 +592,6 @@
 #define D_SENSOR_SAIR_RX "SAir Rx"
 #define D_SENSOR_CC1101_GDO2 "CC1101 GDO2"
 #define D_FRAME_RATE "Fréq. image"
-#define USE_WEBFILES 
 #define USE_ZIGBEE_AUTOBIND_PRESSURE 1
 #define D_JSON_CONNECT_FAILED "Connect failed"
 #define D_LOG_DOMOTICZ "DOM: "
@@ -675,7 +676,6 @@
 #define D_AP_PASSWORD "Mot de passe"
 #define __STDC_HOSTED__ 1
 #define D_CMND_ENERGYCOLS "EnergyCols"
-#define USE_LVGL_PSRAM 
 #define D_RESTORE_CONFIGURATION "Restauration de la config."
 #define D_JSON_HUMIDITY "Humidity"
 #define IR_RCV_TOLERANCE 25
@@ -684,6 +684,7 @@
 #define D_LOG_SERIAL "SER: "
 #define BE_LV_WIDGET_CANVAS 
 #define KNX_ENERGY_TOTAL 25
+#define USE_WIFI_RANGE_EXTENDER_CLIENTS 
 #define D_FAILED_TO_START "Échec du démarrage"
 #define D_NEOPOOL_RELAY_HEATING "Chauffage"
 #define D_RSLT_COMMAND "COMMAND"
@@ -805,6 +806,7 @@
 #define D_SENSOR_MCP2515_CS "MCP2515 CS"
 #define APP_LEDSTATE LED_MQTT
 #define D_PROGRAM_FLASH_SIZE "Taille Flash Programme"
+#define USE_MODBUS 
 #define memcpy_P memcpy
 #define D_CMND_PUBLISH "Publish"
 #define D_CMND_SHUTTER_CLOSETIME "CloseDuration"
@@ -833,7 +835,6 @@
 #define D_SENSOR_NEOPOOL_TX "NeoPool Tx"
 #define __XCHAL_HAVE_DIV32 1
 #define GUI_EDIT_FILE 
-#define USE_HTTPSERVER 
 #define D_JSON_MOTOR_RPM "setRPM"
 #define D_CMND_SEQUENCE_OFFSET "SequenceOffset"
 #define USE_SGP40 
@@ -850,7 +851,7 @@
 #define FM24CXX_JSON_MAX_BYTES 4096
 #define D_CMND_UPLOAD "Upload"
 #define D_JSON_DOWNTIME "Downtime"
-#define FRIENDLY_NAME "Serveur Relais Cave"
+#define FRIENDLY_NAME "Écran cave"
 #define D_UNIT_CELSIUS "C"
 #define D_JSON_IR_DATA "Data"
 #define MQTT_MAX_INFLIGHT 4
@@ -860,7 +861,7 @@
 #define D_HUE "Hue"
 #define D_Strom_L1 "Courant Ph1"
 #define D_CMND_DEVGROUP_TIE "DevGroupTie"
-#define __XTENSA_MARCH_LATEST 260003
+#define __XTENSA_MARCH_LATEST 270012
 #define D_SENSOR_ADC_CURRENT "ADC Current"
 #define __DECIMAL_DIG__ 17
 #define RF_DATA_RADIX false
@@ -870,8 +871,9 @@
 #define D_CMND_WAKEUPDURATION "WakeUpDuration"
 #define D_MQTT_SERVICE_FOUND "Service MQTT trouvé sur"
 #define __FLT64_EPSILON__ 2.2204460492503131e-16F64
-#define USER_TEMPLATE "{\"NAME\":\"ESP32 Relay x8\",\"GPIO\":[33,1,160,1,32,1,1,1,1,1,1,161,1,1,34,1,1,1,1216,288,1,226,227,228,1,1,1,1,224,225,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
+#define USER_TEMPLATE "{\"NAME\":\"Ecran cave\",\"GPIO\":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],\"FLAG\":0,\"BASE\":1}"
 #define APP_INTERLOCK_MODE false
+#define USE_FTP 
 #define __INT16_MAX__ 0x7fff
 #define D_CT_POWER "Puissance CT"
 #define D_CMND_ZIGBEE_RESTORE "Restore"
@@ -879,7 +881,6 @@
 #define D_DECRYPTION "Decryption"
 #define D_CMND_ZIGBEE_ENDPOINT "Endpoint"
 #define __FLT64_MIN_EXP__ (-1021)
-#define D_CMND_PWM_DIMMER_PWMS "PWMDimmerPWMs"
 #define USE_RDM6300 
 #define D_CMND_RFLOW "Low"
 #define SHELLY_FW_UPGRADE 
@@ -903,7 +904,6 @@
 #define __XCHAL_HAVE_BOOLEANS 1
 #define D_SO_ZIGBEE_NOAUTOQUERY "NoAutoQuery"
 #define D_JSON_AHUM "aHumidity"
-#define D_CMND_BRI_PRESET "BriPreset"
 #define D_SENSOR_MIEL_HVAC_RX "MiEl HVAC Rx"
 #define D_SENSOR_I2C_SDA "I2C SDa"
 #define D_DOMOTICZ_SENSOR_IDX "Sensor idx"
@@ -928,6 +928,7 @@
 #define D_SENSOR_FTC532 "FTC532"
 #define D_RECEIVED_TOPIC "Topic reçu"
 #define D_THERMOSTAT_VALVE_POSITION "Valve Position"
+#define USE_BERRY_ANIMATION 
 #define D_ACTIVATE "Activer"
 #define USE_PZEM_AC 
 #define D_TELEMETRY_PERIOD "Période télémétrie"
@@ -971,7 +972,7 @@
 #define D_CMND_UPGRADE "Upgrade"
 #define D_CMND_ZIGBEE_FORGET "Forget"
 #define USE_ZIGBEE_AUTOBIND_LIFT 1.0
-#define MQTT_TOPIC "cave/serveur-rly-cave"
+#define MQTT_TOPIC "cave/ecran"
 #define SUPPORT_IF_STATEMENT 
 #define D_FP_UPLOADFEATUREFAIL "Erreur de transfert"
 #define WEB_SERVER 2
@@ -1068,6 +1069,7 @@
 #define __cpp_fold_expressions 201603L
 #define D_SENSOR_MAX31855_CLK "MX31855 Clk"
 #define D_CMND_PRESSURE_RESOLUTION "PressRes"
+#define USE_DISPLAY_LVGL_ONLY 
 #define D_JSON_GROUPS "Groups"
 #define DISABLE_REFERER_CHK 
 #define D_CMND_GROUPTOPIC "GroupTopic"
@@ -1081,6 +1083,7 @@
 #define D_BLINK "Blink"
 #define USE_UFILESYS 
 #define D_ZIGBEE_GENERATE_KEY "création d'une clé réseau ZigBee aléatoire"
+#define USE_SHUTTER 
 #define __INTPTR_WIDTH__ 32
 #define LONGITUDE 3.0858052
 #define USE_DS1624 
@@ -1127,9 +1130,11 @@
 #define D_CONFIGURATION_SAVED "Configuration enregistrée"
 #define __cpp_ref_qualifiers 200710L
 #define WS2812_LEDS 30
+#define TASMOTAMODBUSDEBUG 
 #define __INT_LEAST32_MAX__ 0x7fffffffL
 #define D_CMND_PIP_QPIRI "QPIRI"
 #define D_CONSOLE "Console"
+#define USE_WIFI_RANGE_EXTENDER 
 #define D_JSON_RSSI "RSSI"
 #define D_UNIT_MILLIAMPERE "mA"
 #define D_JSON_HCHO "Formaldehyde"
@@ -1322,9 +1327,9 @@
 #define D_SENSOR_CSE7766_RX "CSE7766 Rx"
 #define TUYA_TEMP_SET_RES 1
 #define D_RSLT_HASS_STATE "HASS_STATE"
-#define SDCARD_CS_PIN 5
 #define D_WATER_DEPTH "Profondeur de l’eau"
 #define D_CMND_SHUTTER_LOCK "Lock"
+#define USE_LVGL_OPENHASP 1
 #define GV_SAMPLING_INTERVAL 100
 #define D_CMND_BR_RUN ""
 #define D_STATUS12_STATUS "STK"
@@ -1352,6 +1357,7 @@
 #define MTX_ADDRESS3 0x75
 #define D_SENSOR_MCP23XXX_INT "MCP23xxx Int"
 #define D_AS3935_ABOVE "éclair trop intense"
+#define USE_UNIVERSAL_TOUCH 
 #define D_SENSOR_HC8_RX "HC8 Rx"
 #define D_JSON_IRHVAC_FANSPEED "FanSpeed"
 #define RGB_REMAP_RBGW 6
@@ -1378,6 +1384,7 @@
 #define USE_CSE7766 
 #define USE_BERRY_WEBCLIENT_ASYNC 
 #define D_MDNS_DISCOVERY "Découverte mDNS"
+#define WIFI_RGX_PASSWORD "Lune5676"
 #define D_SAT_FIX_DEAD_RECK "Dead reckoning"
 #define D_UNIT_PARTS_PER_DECILITER "ppd"
 #define RGB_REMAP_BGRW 54
@@ -1416,7 +1423,7 @@
 #define D_SENSOR_BL0940_RX "BL0940 Rx"
 #define D_JSON_SWITCH "Switch"
 #define D_CMND_RFSYNC "Sync"
-#define USER_BACKLOG "Backlog Module 0; Hostname SERVEUR-RLY-CAVE"
+#define USER_BACKLOG "Backlog Hostname ECRAN-CAVE"
 #define D_LOG_MQTT "MQT: "
 #define D_CMND_SAFEPOWER "SafePower"
 #define D_FP_IMAGEFAIL "Erreur d'acquisition"
@@ -1582,7 +1589,7 @@
 #define D_SENSOR_BIOPDU_PZEM0XX_TX "BioPDU PZEM0XX Tx"
 #define USE_SDM120 
 #define FM24CXX_BLOCK_SIZE 256
-#define CFG_HOLDER 1614
+#define CFG_HOLDER 1610
 #define D_MODULE "Module"
 #define D_SENSOR_WS2812 "WS2812"
 #define D_SO_MQTTTLS "MqttTLS"
@@ -1646,7 +1653,6 @@
 #define USE_SCD40 
 #define QUOTEME(x) QUOTEME_1(x)
 #define D_UNIT_MILLIMETER_MERCURY "mmHg"
-#define USE_HOME_ASSISTANT 
 #define D_WARMLIGHT "Chaud"
 #define D_CHANNEL "Canal"
 #define D_HCHO "Formaldehyde"
@@ -1733,8 +1739,8 @@
 #define D_FP_ENROLL_ACTIVE "Actif"
 #define D_JSON_IR_RAWDATA "RawData"
 #define D_CMND_SHUTTER_STOPTOGGLEDIR "StopToggleDir"
-#define USE_EMULATION_WEMO 
 #define D_UNIT_WATTHOUR "Wh"
+#define WIFI_RGX_STATE 1
 #define LANGUAGE_MODULE_NAME 
 #define D_JSON_GPIO "GPIO"
 #define D_SENSOR_CLIENT_TX "Esclave Tx"
@@ -1815,6 +1821,7 @@
 #define D_LQI "LQI"
 #define D_CONFIGURE_TEMPLATE "Configuration du modèle"
 #define D_SENSOR_LOX_O2_RX "LoxO2 RX"
+#define USE_BERRY_ANIMATION_DSL 
 #define D_SO_ZIGBEE_DEVICETOPIC "DeviceTopic"
 #define __XSHAL_ABI 0
 #define D_JSON_LIGHT "Light"
@@ -1851,7 +1858,7 @@
 #define __LDBL_EPSILON__ 2.2204460492503131e-16L
 #define D_CMND_SYSLOG "SysLog"
 #define __UINTMAX_C(c) c ## ULL
-#define SHUTTER_SUPPORT false
+#define SHUTTER_SUPPORT true
 #define GV_USE_ESPINFO 
 #define D_PSR_MAX_MEMORY "Mémoire PS-RAM"
 #define D_JSON_ZIGBEE_EZSP_SENT "ZbEZSPSent"
@@ -1862,6 +1869,7 @@
 #define D_SENSOR_HPMA_TX "HPMA Tx"
 #define USE_4K_RSA 1
 #define D_DISABLED "Désactivé"
+#define USE_WIFI_RANGE_EXTENDER_NAPT 
 #define KNX_ENERGY_VOLTAGE 19
 #define USE_VEML6070_SHOW_RAW 
 #define D_NEOPOOL_MACH_HIDRONISER "Hidroniser"
@@ -1871,6 +1879,7 @@
 #define D_CMND_MQTTWIFITIMEOUT "MqttWifiTimeout"
 #define D_FREQUENCY "Fréquence"
 #define D_TOTAL_ACTIVE "Total Active"
+#define WIFI_RGX_SSID "ECRAN-CAVE-GATEWAY"
 #define MAX31865_PTD_WIRES 2
 #define __FLT32X_MIN__ 2.2250738585072014e-308F32x
 #define __XCHAL_HAVE_DFP_SQRT 0
@@ -1958,7 +1967,7 @@
 #define MQTT_CLEAN_SESSION 1
 #define D_MONTH_DAY_SEPARATOR "-"
 #define __FLT64_IS_IEC_60559__ 1
-#define __XCHAL_MAX_INSTRUCTION_SIZE 3
+#define __XCHAL_MAX_INSTRUCTION_SIZE 4
 #define SAVE_STATE true
 #define __FLT32X_MIN_EXP__ (-1021)
 #define D_JSON_IP6_GLOBAL "IP6Global"
@@ -2021,6 +2030,7 @@
 #define WIFI_NO_SLEEP false
 #define __FLT_HAS_INFINITY__ 1
 #define __GNUC_EXECUTION_CHARSET_NAME "UTF-8"
+#define USE_DISPLAY 
 #define D_JSON_PSRFREEMEMORY "PsrFree"
 #define _USER_CONFIG_OVERRIDE_H_ 
 #define MQTT_DISABLE_MODBUSRECEIVED 0
@@ -2130,6 +2140,7 @@
 #define DEVICE_GROUPS_PORT 4447
 #define USE_ENERGY_POWER_LIMIT 
 #define __INT_FAST8_MAX__ 0x7fffffff
+#define USE_LVGL 
 #define D_JSON_OTHER_HTTP_ERROR "Other http error"
 #define __INTPTR_MAX__ 0x7fffffff
 #define D_JSON_FREQUENCY "Frequency"
@@ -2195,7 +2206,7 @@
 #define D_TO "à"
 #define D_AS3935_CAL_OK "calibration établie à :"
 #define D_SENSOR_LE01MR_RX "LE-01MR Rx"
-#define WIFI_IP_ADDRESS "192.168.0.48"
+#define WIFI_IP_ADDRESS "0.0.0.0"
 #define D_SENSOR_DS18X20 "DS18x20"
 #define __FLT32_MIN_10_EXP__ (-37)
 #define D_FP_PASSVERIFY "Mot-de-passe vérifié"
@@ -2215,7 +2226,7 @@
 #define D_GPIO_DINGTIAN_Q7 "Dingtian Q7"
 #define __UINT16_C(c) c
 #define MDNS_ENABLED true
-#define __XCHAL_M_STAGE 3
+#define __XCHAL_M_STAGE 2
 #define D_JSON_MAXENERGYREACHED "MaxEnergyReached"
 #define D_SENSOR_PZEM017_RX "PZEM017 Rx"
 #define USE_WEBSERVER 
@@ -2291,7 +2302,7 @@
 #define HUMIDITY_RESOLUTION 1
 #define D_CMND_TIME "Time"
 #define WEB_USERNAME "admin"
-#define STA_PASS1 "obdormisti-pervigile%.-ficiendus"
+#define STA_PASS1 "Lune5676"
 #define D_MINUTE_SECOND_SEPARATOR ":"
 #define D_CMND_MQTTLOG "MqttLog"
 #define __INTPTR_TYPE__ int
@@ -2300,7 +2311,7 @@
 #define __WCHAR_TYPE__ short unsigned int
 #define __XCHAL_HAVE_DEPBITS 0
 #define D_GPIO_SHIFT595_SER "74x595 Ser"
-#define USE_DISPLAY_LCD 
+#define USE_MODBUS_BRIDGE_TCP 
 #define __SIZEOF_FLOAT__ 4
 #define USE_DEVICE_GROUPS 
 #define ESP32 1
@@ -2392,7 +2403,6 @@
 #define D_CMND_RESTART "Restart"
 #define WIFI_SUBNETMASK "255.255.255.0"
 #define D_WCFG_7_WIFIMANAGER_RESET_ONLY "ManagerRst"
-#define USE_DISPLAY_MATRIX 
 #define D_JSON_CURRENT_LIMIT "CurrentLimit"
 #define D_CONNECT_FAILED_TO "Échec de connexion à"
 #define D_ENERGY_YESTERDAY "Énergie hier"
@@ -2404,7 +2414,7 @@
 #define D_CMND_LOCATIONSCALE "LocationScale"
 #define D_DISTANCE "Distance"
 #define D_COLOR_RED "Rouge"
-#define MQTT_CLIENT_ID "SERVEUR-RLY-CAVE"
+#define MQTT_CLIENT_ID "ECRAN-CAVE"
 #define D_SENSOR_GM861_TX "GM861 Tx"
 #define D_VERSION "Version"
 #define THERMOSTAT_TIME_MAX_OUTPUT_INCONSIST 3
@@ -2432,7 +2442,6 @@
 #define D_JSON_ALERT "Alert"
 #define __INT64_TYPE__ long long int
 #define __XCHAL_HAVE_DFP_DIV 0
-#define FIRMWARE_ESP32_CAVE_SERVEUR_RLY 1
 #define D_JSON_INVALID_HEXDATA "Invalid Hex data"
 #define ZIGBEE_TOPIC_FNAME false
 #define __FLT_MAX_EXP__ 128
@@ -2457,7 +2466,7 @@
 #define THERMOSTAT_TIME_MIN_ACTION 4
 #define D_SENSOR_LED "LED"
 #define __cpp_inheriting_constructors 201511L
-#define CODE_IMAGE_STR "Serveur 8 Relais"
+#define CODE_IMAGE_STR "Ecran cave"
 #define D_RSLT_INFO "INFO"
 #define MQTT_RESULT_COMMAND false
 #define __INT_LEAST64_MAX__ 0x7fffffffffffffffLL
@@ -2483,6 +2492,7 @@
 #define __LDBL_MIN_EXP__ (-1021)
 #define USE_BL09XX 
 #define D_UPGRADE_BY_FILE_UPLOAD "Mise à jour par téléchargement fichier"
+#define FIRMWARE_ESP32S3_CAVE_ECRAN 1
 #define D_WPA2_PSK "WPA2 PSK"
 #define USE_DHT12 
 #define D_RSLT_STATE "STATE"
@@ -2503,7 +2513,7 @@
 #define THERMOSTAT_TIME_RAMPUP_CYCLE 30
 #define D_AS "comme"
 #define D_AT "at"
-#define SET_ESP32_STACK_SIZE (8 * 1024)
+#define SET_ESP32_STACK_SIZE (24 * 1024)
 #define D_DEBUG "Debug"
 #define D_CMND_POWERLOCK "PowerLock"
 #define __WINT_WIDTH__ 32
@@ -2594,6 +2604,7 @@
 #define D_JSON_WHITE_CONTENT "WhiteContent"
 #define D_STATUS1_PARAMETER "PRM"
 #define __SIZEOF_WCHAR_T__ 2
+#define USE_BM8563 
 #define D_CMND_GPIOS "GPIOs"
 #define D_CMND_ZIGBEE_LOADDUMP "LoadDump"
 #define USE_ENERGY_MARGIN_DETECTION 
@@ -2679,6 +2690,7 @@
 #define DEBUG_TASMOTA_DRIVER 
 #define D_LOG_ETH "ETH: "
 #define D_JSON_IMPORT_POWER "ImportPower"
+#define USE_RTC_CHIPS 
 #define __DBL_DECIMAL_DIG__ 17
 #define KNX_ENERGY_CURRENT 20
 #define __STDC_UTF_32__ 1
@@ -2843,7 +2855,8 @@
 #define D_JSON_ZIGBEEZNPRECEIVED "ZbZNPReceived"
 #define D_UNIT_CENTIMETER "cm"
 #define D_SENSOR_P9813_DAT "P9813 Dat"
-#define MODULE USER_MODULE
+#define WIFI_RGX_IP_ADDRESS "192.168.4.1"
+#define MODULE WEMOS
 #define D_JSON_START_LEARNING "Start learning"
 #define D_KNX_PHYSICAL_ADDRESS "Adresse individuelle"
 #define D_PRFX_ZB "Zb"
@@ -2871,7 +2884,6 @@
 #define D_CMND_STATERETAIN "StateRetain"
 #define D_DOMOTICZ_TEMP_HUM_BARO "Temp,Hum,Baro"
 #define USE_WS2812_CTYPE NEO_GRB
-#define USE_WSSERVER 
 #define D_CMND_HDMI_ADDR "Addr"
 #define D_TARIFF "Tarif"
 #define __INT32_TYPE__ long int
@@ -2971,7 +2983,6 @@
 #define D_FP_ENROLL_INACTIVE "Inactif"
 #define D_UNIT_MILLIMETER "mm"
 #define LIGHT_CHANNEL_MODE false
-#define USE_DISPLAY_SEVENSEG 
 #define __INT16_C(c) c
 #define D_UNIT_KILOMETER "km"
 #define D_CMND_VOLTAGELOW "VoltageLow"
@@ -3006,6 +3017,7 @@
 #define USE_UNISHOX_COMPRESSION 
 #define USE_I2C 
 #define D_CMND_ZIGBEE_LIGHT "Light"
+#define USE_I2S 
 #define D_PROJECT "Projet"
 #define D_RESETTABLE_TOTAL_ACTIVE "Total Active (RST)"
 #define D_CMND_ENERGYCONFIG "EnergyConfig"
@@ -3141,6 +3153,7 @@
 #define USE_LMT01 
 #define D_NEOPOOL_PR_OFF "PrOff"
 #define D_CMND_ZIGBEE_MANUF "Manuf"
+#define FIRMWARE_LVGL 1
 #define D_JSON_SAVECOUNT "SaveCount"
 #define D_JSON_ZIGBEE_OCCUPANCY "Occupancy"
 #define D_DUPLICATE_ACCESSPOINT "Point d'Accès dupliqué"
