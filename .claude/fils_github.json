@@ -46,5 +46,11 @@
     "type": "issues",
     "numero": 25351,
     "sujet": "PR amont TasMesh : commande trop longue jetee par le broker (bogue 3)"
+  },
+  {
+    "depot": "arendst/Tasmota",
+    "type": "issues",
+    "numero": 25352,
+    "sujet": "PR amont TasMesh : noeuds connus joignables apres relance de MeshBroker (bogue 4)"
   }
 ]
